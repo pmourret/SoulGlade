@@ -267,6 +267,7 @@ function renderPhase1(p){
 function renderPhase2(p){
   const done = p.steps.filter(s => s.done).length;
   const total = p.steps.length;
+  const isDone = p.status === 'done';
   const stepsHtml = p.steps.map(s => `
     <div class="step ${s.done ? 'done' : ''}">
       <div class="mark"></div>
@@ -278,8 +279,8 @@ function renderPhase2(p){
     </div>`).join('');
   return `
   <section class="node" data-status="${p.status}">
-    <details class="card" open>
-      <summary><h2>${p.title} <span class="tag active">${p.tagLabel}</span></h2><span class="chev">▸</span></summary>
+    <details class="card"${isDone ? '' : ' open'}>
+      <summary><h2>${p.title} <span class="tag ${isDone ? 'done' : 'active'}">${p.tagLabel}</span></h2><span class="chev">▸</span></summary>
       <div class="card-body">
         <p>${p.summary}</p>
         <div class="progress-row">
