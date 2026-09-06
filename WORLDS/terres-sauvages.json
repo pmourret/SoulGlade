@@ -13,6 +13,11 @@
     "lora_strength": null,
     "prompt_add": ""
   },
+  "readiness": {
+    "places": false,
+    "tones": false,
+    "style": false
+  },
   "tone": "wilderness travel: forests and dusk, campfires, worn traveller's gear, low muted light",
   "ui_skin_token": "world-terres-sauvages",
   "places": [
@@ -37,12 +42,6 @@
   ],
   "_notes": [
     "Monde d'Abyssiaelle (pack rpg-personnage / famille sdxl). ADR-0012, J7bis.",
-    "assets : PLACEHOLDER. Ce monde appellera un LoRA de monde (foret / voyage) et",
-    "sans doute un prompt_add -- ni l'un ni l'autre n'est mesure. Un monde livre",
-    "non mesure est une DETTE DECLAREE, pas un monde pret (ADR-0012, Consequences).",
-    "Meme statut que les prompt_add / checkpoint des styles non-realistes de",
-    "rpg-personnage, deja signales en placeholders dans son universe.json.",
-    "Le cablage de ces assets dans le runner est HORS PERIMETRE de J7bis (ROADMAP).",
     "compatible_families : sdxl seulement -- le monde ne resout pas la famille, il",
     "doit etre compatible avec celle que (type, style) a deja resolue.",
     "FIGE a la creation du personnage (CLAUDE.md §3-§4) : ses assets entrent dans",

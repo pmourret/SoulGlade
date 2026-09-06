@@ -135,6 +135,7 @@ def create_world(wid, label, pack, tone=""):
         "compatible_families": [family],
         "suggested_styles": universe.style_names(pack),
         "assets": {"lora": None, "lora_strength": None, "prompt_add": ""},
+        "readiness": {"places": False, "tones": False, "style": False},
         "tone": (tone or "").strip(),
         "ui_skin_token": f"world-{wid}",
         "places": [],
@@ -144,7 +145,8 @@ def create_world(wid, label, pack, tone=""):
             "PROPOSITION, pas un aiguillage : universe.resolve() continue de",
             "deriver le pack d'un personnage de (type, style) exclusivement",
             "(ADR-0016). Catalogue de lieux vide, a construire depuis l'ecran",
-            "d'edition (ADR-0015). Assets a mesurer avant un monde pret.",
+            "d'edition (ADR-0015). readiness nait a {places, tones, style}:",
+            "false, pose par le createur du monde, jamais calcule (ADR-0023).",
         ],
     }
     world_path(wid).write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
@@ -181,6 +183,17 @@ def assets(wid):
     return {"lora": raw.get("lora"),
             "lora_strength": raw.get("lora_strength"),
             "prompt_add": raw.get("prompt_add", "")}
+
+
+def readiness(wid):
+    """Etat 'pret a vendre' d'un monde, sous forme normalisee
+    {places, tones, style} (ADR-0023). Poses par le createur du monde,
+    jamais calcules ; retro-compatible, un monde sans champ `readiness`
+    n'a encore rien de valide."""
+    raw = load_world(wid).get("readiness") or {}
+    return {"places": bool(raw.get("places", False)),
+            "tones": bool(raw.get("tones", False)),
+            "style": bool(raw.get("style", False))}
 
 
 def tone(wid):
@@ -367,8 +380,8 @@ def _diagnostic():
 
     drift = 0
     for wid in ids:
-        a = assets(wid)
-        etat = "pret" if (a["lora"] or a["prompt_add"]) else "assets vides (dette declaree)"
+        r = readiness(wid)
+        pret = r["places"] and r["tones"] and r["style"]
         fam = compatible_families(wid)
         inconnues = [f for f in fam if familles_reelles and f not in familles_reelles]
         drift += len(inconnues)
@@ -377,7 +390,8 @@ def _diagnostic():
         print(f"    familles  : {', '.join(fam) or '(aucune)'}"
               + (f"   <- inconnues : {', '.join(inconnues)}" if inconnues else ""))
         print(f"    styles    : {', '.join(suggested_styles(wid)) or '(aucun)'}")
-        print(f"    assets    : {etat}")
+        print(f"    readiness : places={r['places']} tones={r['tones']} style={r['style']}"
+              + ("  -> pret a vendre" if pret else ""))
         print(f"    lieux     : {len(places(wid))}")
     for fam in sorted(familles_reelles):
         print(f"\n  famille {fam:8} -> mondes : {', '.join(worlds_for_family(fam)) or '(aucun)'}")

@@ -12,6 +12,11 @@
     "lora_strength": null,
     "prompt_add": ""
   },
+  "readiness": {
+    "places": true,
+    "tones": true,
+    "style": false
+  },
   "tone": "calm and unhurried: natural light, lived-in interiors, quiet outdoor moments",
   "ui_skin_token": "world-slow-life",
   "places": [
@@ -128,8 +133,9 @@
     "compatible_families : le monde ne CHOISIT pas la famille -- il doit etre",
     "compatible avec celle deja resolue par (type, style). Sert a filtrer les",
     "mondes proposables dans le wizard, il n'en resout aucun.",
-    "assets : slow-life est un cadre contemporain sans LoRA de monde ni prompt_add",
-    "-- rien a mesurer ici, contrairement a un monde porteur de LoRA.",
+    "readiness.style : false par choix assume, pas par dette -- differenciation",
+    "portee uniquement par le prompt de chaque lieu/ton/intention, sans LoRA ni",
+    "reference visuelle de monde (ADR-0023).",
     "places : catalogue VIVANT (ADR-0015), pas une simple amorce. Consomme a la",
     "creation du personnage (wizard, J7bis etape 5) ET tant qu'il vit : une scene",
     "de personnage qui reference un lieu (`world_ref`) en herite en direct --",
