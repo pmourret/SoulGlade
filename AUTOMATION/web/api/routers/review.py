@@ -103,7 +103,8 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
             "v": int(f.stat().st_mtime),
             "prompt": row.get("prompt", ""),
             "nettete": m.get("nettete"), "texture": m.get("texture_visage"),
-            "fond": m.get("bruit_fond"), "flag": m.get("flag"),
+            "fond": m.get("bruit_fond"), "mains": m.get("mains"),
+            "flag": m.get("flag"),
         })
     entries = list(store.values())
     refs = [e for e in entries if e.get("role") == "reference"]

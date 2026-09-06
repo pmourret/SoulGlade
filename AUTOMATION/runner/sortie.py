@@ -241,6 +241,35 @@ def mesurer_realisme(path, bbox):
         return None
 
 
+def mesurer_mains(path, cfg):
+    """QC des mains (P4.3, capacite de plateforme "hands" — repasse par
+    ComfyUI, quelques secondes, contrairement a mesurer_realisme). Ne doit
+    JAMAIS faire echouer un batch, meme discipline defensive.
+
+    Seuils lus depuis config.json["qc"]["mains"] (invariant 4, jamais en
+    dur) ; repli sur des valeurs de depart non mesurees si absentes —
+    voir DOCS/cadrage/2026-09-07-p4-3-metrique-mains.md.
+
+    Rend `None`, jamais `{"mains": None}`, quand il n'y a rien a ecrire
+    (aucune main visible, ou echec) : un dict non vide est VRAI en Python
+    meme avec une valeur None dedans, et `reel` sert de condition plus loin
+    (`elif reel or score is not None`) — un `{"mains": None}` y ferait
+    declencher `ranger_mesures` pour rien a ecrire, exactement le bug
+    trouve en testant contre test_execute_jobs_sink.py (reel devenait vrai
+    sur une image sans aucune mesure reelle).
+    """
+    try:
+        import qc_mains
+        seuils = cfg.get("qc", {}).get("mains", {})
+        r = qc_mains.mesure(path, cfg["comfy_url"],
+                            threshold_ok=seuils.get("threshold_ok", 1.0),
+                            threshold_watch=seuils.get("threshold_watch", 0.7))
+        return {"mains": r["score"]} if r["score"] is not None else None
+    except Exception as e:
+        log(f"   mesure des mains impossible : {type(e).__name__} — {e}")
+        return None
+
+
 def appliquer_expression(path, job, cfg, character_id, checker=None, avant=None):
     """Pose l'expression du ton, sous budget d'identite. Rend (params, apres).
 
@@ -377,6 +406,9 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
                         if m2["bbox"] is not None:
                             bbox = m2["bbox"]
                     reel = mesurer_realisme(src, bbox)
+                    mains = mesurer_mains(src, cfg)
+                    if mains:
+                        reel = {**(reel or {}), **mains}
                     dest, export = sort_and_export(src, job, verdict, score, cfg,
                                                    batch_id, character_id=character_id,
                                                    sink=sink)

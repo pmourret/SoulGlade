@@ -2276,6 +2276,8 @@ export interface components {
             texture?: number | null;
             /** Fond */
             fond?: number | null;
+            /** Mains */
+            mains?: number | null;
             /** Flag */
             flag?: string | null;
         } & {

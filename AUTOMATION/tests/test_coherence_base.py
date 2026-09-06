@@ -49,7 +49,7 @@ JOURNAUX_NSFW = [nsfw_batch.journal_path(c) for c in lb.list_characters()]
 # Genres de score que les fichiers portent. `identite_centroide` n'y est pas :
 # il est calcule DEPUIS la base (base.rescorer) et n'existe nulle part ailleurs.
 GENRES_FICHIER = ("identite", "identite_apres_expression", "nettete",
-                  "texture_visage", "bruit_fond")
+                  "texture_visage", "bruit_fond", "mains")
 # le journal arrondit le score a 3 decimales, la base garde le flottant complet
 TOLERANCE = 0.0006
 

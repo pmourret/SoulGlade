@@ -7,6 +7,10 @@
     "graph": null,
     "roles": []
   },
+  "hands": {
+    "graph": "WORKFLOWS/utils/pose_extract_ui.json",
+    "roles": ["source", "keypoints"]
+  },
   "_notes": [
     "Carte de capacites de la couche PLATEFORME (ADR-0017, ADR-0018, ADR-0020,",
     "J8.4) : agnostique du modele, appliquee a une image deja produite. Meme",
@@ -38,6 +42,22 @@
     "en faisant varier UN champ de config a la fois. C'est ce qui le rend",
     "agnostique de la famille de modele malgre des reglages qui, eux, sont",
     "pack-specifiques -- le banc ne les comprend pas, il applique une",
-    "surcharge generique (AUTOMATION/bench.py::CFG_AXES/JOB_AXES)."
+    "surcharge generique (AUTOMATION/bench.py::CFG_AXES/JOB_AXES).",
+    "",
+    "hands.graph : reutilise TEL QUEL WORKFLOWS/utils/pose_extract_ui.json",
+    "(P4.3, deja utilise par pose_tools.py pour la banque de poses) --",
+    "contrairement a upscale, aucune generalisation n'a ete necessaire : ce",
+    "graphe (LoadImage generique -> DWPreprocessor corps+mains -> JSON de",
+    "points-cles) ne fait deja rien de specifique a une photo de reference,",
+    "le repointer sur une image de production finie ne change ni son",
+    "comportement ni ses reglages. Vit sous WORKFLOWS/utils/ plutot que",
+    "WORKFLOWS/platform/ par simple heritage historique (cree pour l'editeur",
+    "de pose avant que cette capacite existe) -- ADR-0017/0018 regissent la",
+    "couche PROPRIETAIRE d'un graphe, jamais son sous-dossier ; aucun",
+    "invariant ne force un deplacement. roles : \"source\" (LoadImage,",
+    "titre \"PHOTO SOURCE\") et \"keypoints\" (SavePoseKpsAsJsonFile, titre",
+    "\"Points-cles JSON\") -- les deux seuls noeuds que AUTOMATION/qc_mains.py",
+    "adresse ; voir DOCS/cadrage/2026-09-07-p4-3-metrique-mains.md pour la",
+    "metrique elle-meme."
   ]
 }

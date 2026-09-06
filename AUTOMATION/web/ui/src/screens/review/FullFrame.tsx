@@ -33,6 +33,7 @@ export function FullFrame(props: {
   filtered: number | null
   trade: Trade
   qc: { ok: number; watch: number; high: number }
+  qcMains: { ok: number; watch: number; high: number }
   bands: Record<string, unknown>
   items: GalleryItem[]
   references: { mesurees: number; total: number }
@@ -46,9 +47,15 @@ export function FullFrame(props: {
   onEdit: () => void
   onDelete: () => void
 }) {
-  const { item, qc } = props
+  const { item, qc, qcMains } = props
   const value = Number.parseFloat(item.score || '0')
   const klass = scoreClass(item.score, qc)
+  // P4.3 : meme mecanisme que le score d'identite (config.json["qc"]["mains"],
+  // pas un corpus calibre) — verdict OK / suspect / cassees, jamais un
+  // paradigme neuf. Mesure et affiche, n'arbitre pas (PROJET.md) : la
+  // metrique ne certifie pas une deformation, voir la limite documentee
+  // dans qc_mains.py et le cadrage de la metrique.
+  const mainsKlass = scoreClass(item.mains == null ? null : String(item.mains), qcMains)
 
   const [zoom, setZoom] = useState(100)
   const [pan, setPan] = useState({ x: 0, y: 0 })
@@ -220,6 +227,23 @@ export function FullFrame(props: {
                 : ''}
             </small>
           </div>
+          {item.mains != null && (
+            <div
+              className="mt-[6px] text-[15px] font-medium leading-none"
+              style={{ color: `var(--${mainsKlass})` }}
+            >
+              mains {item.mains.toFixed(2)}
+              <small className="ml-[4px] font-medium text-dim">
+                {mainsKlass === 'ok'
+                  ? '· ok'
+                  : mainsKlass === 'warn'
+                    ? '· à vérifier'
+                    : mainsKlass === 'bad'
+                      ? '· cassées ?'
+                      : ''}
+              </small>
+            </div>
+          )}
           {/* Two arbitrary properties would be decided by their order in the
               generated sheet, and Tailwind emits `border-top` BEFORE `border`:
               the shorthand then erased the line. Measured — the separator had

@@ -88,9 +88,10 @@ def demesurer(nom):
     """Efface les MESURES d'une image dont les pixels ont change (F3.3).
 
     Ecraser une source depuis l'editeur garde le nom de fichier mais change ce
-    qu'il contient : nettete, texture et bruit de fond ont ete calcules sur
-    l'ancienne version, et un badge qui ment est un bug (frontend.md). L'image
-    repasse donc « non mesuree » et rentre dans le compte de `Mesurer (n)`.
+    qu'il contient : nettete, texture, bruit de fond et mains ont ete
+    calcules sur l'ancienne version, et un badge qui ment est un bug
+    (frontend.md). L'image repasse donc « non mesuree » et rentre dans le
+    compte de `Mesurer (n)`.
 
     Le JUGEMENT humain (`flag`, `juge_le`) est conserve : il porte sur le sujet
     et sur ce que l'image donne a voir, pas sur trois nombres ; l'effacer
@@ -103,7 +104,7 @@ def demesurer(nom):
         if not e:
             return None
         for champ in ("nettete", "texture_visage", "bruit_fond", "identite",
-                      "mesure_le", "bbox"):
+                      "mains", "mesure_le", "bbox"):
             e.pop(champ, None)
         if e:
             d[nom] = e

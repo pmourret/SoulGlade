@@ -64,6 +64,16 @@ verifie((OFM / pc.capability_graph("upscale")).is_file(),
 attend(pc.CapabilityUnavailableError, lambda: pc.require_capability("grain"),
        "capacite non construite (grain) — absente, jamais un null")
 
+# "hands" (P4.3) : reutilise pose_extract_ui.json tel quel (pas de
+# generalisation necessaire, contrairement a upscale — voir _notes de
+# PLATFORM/capabilities.json). Round-trip reel dans test_qc_mains.py,
+# pas duplique ici.
+verifie(pc.capability("hands") is not None, "hands declaree")
+verifie(pc.capability_graph("hands") == "WORKFLOWS/utils/pose_extract_ui.json",
+        "chemin du graphe attendu (reutilise, pas WORKFLOWS/platform/)")
+verifie((OFM / pc.capability_graph("hands")).is_file(),
+        "le graphe declare existe sur le disque")
+
 # ------------------------------------------------------- [2] aucun couplage pack
 print("\n[2] UpscaleRunner ne consulte jamais le pack ni le personnage")
 source = (AUTOMATION / "runner" / "upscale.py").read_text(encoding="utf-8")

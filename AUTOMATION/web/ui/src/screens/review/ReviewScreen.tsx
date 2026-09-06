@@ -71,7 +71,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   const toast = useToast()
   const navigate = useNavigate()
   const { name: focusName } = useParams()
-  const { qc } = useConfig()
+  const { qc, qcMains } = useConfig()
   const { state, refresh: refreshCounts } = useSystemState()
   const { src: lightboxSrc, open: openLightbox } = useLightbox()
 
@@ -488,6 +488,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
                 filtered={filter !== 'tout' ? items.length : null}
                 trade={trade}
                 qc={qc}
+                qcMains={qcMains}
                 bands={bands}
                 items={items}
                 references={references}

@@ -145,5 +145,17 @@ finally:
             cx.commit()
     except Exception:
         pass
+    # mesures.json est PARTAGE (pas par personnage) : [1] (sink=None) peut y
+    # avoir ecrit une entree "probe_scene_*" si une capacite mesuree ne
+    # depend pas de cv2/InsightFace (P4.3, qc_mains) — purge par prefixe de
+    # scene, comme le journal ci-dessus, pas seulement les tables DB.
+    try:
+        import mesures as mes
+        d = mes.charger()
+        propre = {k: v for k, v in d.items() if not k.startswith("probe_scene_")}
+        if propre != d:
+            mes._ecrire(propre)
+    except Exception:
+        pass
 
 sys.exit(1 if KO else 0)

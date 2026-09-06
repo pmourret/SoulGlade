@@ -5133,6 +5133,17 @@
             ],
             "title": "Fond"
           },
+          "mains": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains"
+          },
           "flag": {
             "anyOf": [
               {

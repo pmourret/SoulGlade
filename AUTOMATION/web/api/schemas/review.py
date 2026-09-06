@@ -35,6 +35,11 @@ class GalleryItem(BaseModel):
     nettete: Optional[float] = None
     texture: Optional[float] = None
     fond: Optional[float] = None
+    # P4.3 : taux de detection des mains (DWPose), 0..1, verdict derive cote
+    # front via un seuil de config.json["qc"]["mains"] (meme mecanisme que
+    # le score d'identite) -- jamais dans `bandes`, qui reste reserve aux
+    # sous-scores realisme calibres sur corpus/jugements.
+    mains: Optional[float] = None
     flag: Optional[str] = None
 
 

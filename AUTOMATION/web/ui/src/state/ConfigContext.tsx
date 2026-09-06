@@ -19,10 +19,20 @@ export type QcBands = { ok: number; watch: number; high: number }
 
 const DEFAULT_QC: QcBands = { ok: 0.72, watch: 0.6, high: 0.75 }
 
+/* Mains (P4.3) has no third "excellent" tier — only OK / suspect / cassées
+   (DOCS/cadrage/2026-09-07-p4-3-metrique-mains.md). `high: Infinity` keeps
+   `scoreClass` from ever picking the extra tier rather than special-casing
+   a fourth reader of the thresholds. Defaults mirror the fallback in
+   AUTOMATION/runner/sortie.py::mesurer_mains for a character whose
+   config.json has no qc.mains block yet (unmeasured — same discipline as
+   `"measured": false` elsewhere in the repo). */
+const DEFAULT_QC_MAINS: QcBands = { ok: 1, watch: 0.7, high: Infinity }
+
 type CharacterConfig = Record<string, unknown>
 
 type ConfigContextValue = {
   qc: QcBands
+  qcMains: QcBands
   /** The whole file, for whoever reads a key this layer must not get to choose. */
   config: CharacterConfig | null
 }
@@ -34,6 +44,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
   const { claimed } = useCharacter()
   const [config, setConfig] = useState<CharacterConfig | null>(null)
   const [qc, setQc] = useState<QcBands>(DEFAULT_QC)
+  const [qcMains, setQcMains] = useState<QcBands>(DEFAULT_QC_MAINS)
 
   const load = useCallback(async () => {
     // No character claimed yet (entry gate): /api/config now requires one,
@@ -43,7 +54,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.get<CharacterConfig>('/api/config')
       setConfig(response)
-      const bands = response.qc as Record<string, number> | undefined
+      const bands = response.qc as Record<string, unknown> | undefined
       if (bands) {
         const ok = Number(bands.threshold_ok)
         setQc({
@@ -51,6 +62,14 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
           watch: Number(bands.threshold_watch),
           high: Number(bands.threshold_high ?? ok + 0.03),
         })
+        const mains = bands.mains as Record<string, number> | undefined
+        if (mains) {
+          setQcMains({
+            ok: Number(mains.threshold_ok),
+            watch: Number(mains.threshold_watch),
+            high: Infinity,
+          })
+        }
       }
     } catch {
       /* keep the defaults — a comfort reading must not break the screen */
@@ -62,7 +81,7 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     void load()
   }, [load, claimed])
 
-  const value = useMemo(() => ({ qc, config }), [qc, config])
+  const value = useMemo(() => ({ qc, qcMains, config }), [qc, qcMains, config])
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 
