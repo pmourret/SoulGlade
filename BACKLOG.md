@@ -47,6 +47,16 @@ pas à l'écriture.
   (PuLID + FaceDetailer) — un graphe neuf à écrire, plus une mesure par
   personnage à l'onboarding. Jamais de repli sur le graphe d'une autre
   famille de modèle.
+- **Amener le pipeline de production Abyssiaelle au niveau de Léna**
+  (noté 2026-09-06, sorti du périmètre de la phase 4 après P4.1).
+  `WORKFLOWS/content/abyssiaelle_master_prod_ui.json` reste un brouillon
+  J6 à 13 nœuds (Checkpoint → IPAdapter FaceID → KSampler unique →
+  VAEDecode → SaveImage) : aucun refiner de réalisme, aucun FaceDetailer,
+  aucun upscale câblé, contrairement au pipeline Léna. Une comparaison
+  d'étages de détail (candidats identifiés par
+  `DOCS/recherche/2026-09-06-workflows-detail-visage-mains.md`) ne peut
+  pas être mesurée équitablement sur Abyssiaelle tant que cette base
+  n'existe pas — voir le constat d'ouverture de cette note.
 
 ## Distribution & monétisation
 
