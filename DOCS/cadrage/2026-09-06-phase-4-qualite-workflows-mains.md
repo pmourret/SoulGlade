@@ -188,6 +188,73 @@ de non-régression), soit un rejet documenté.
 **Test** : si adopté, le banc confirme le gain sur Léna. Si rejeté, la
 note explique pourquoi de façon reproductible.
 
+> **Candidat #1 rejeté le 2026-09-07 (IT-1), chiffré au banc.**
+> `LayerUtility: HLFrequencyDetailRestore` — `chflame163/ComfyUI_LayerStyle`,
+> commit `5ba939099b33f998ecfbd63dcbbf089925b64a47`, MIT. Provisionné,
+> câblé sur le pipeline Léna en groupe bypassable, mesuré, puis
+> **entièrement retiré** (graphe, axe de banc, ligne runner, entrée
+> manifeste) — le harnais n'a jamais été committé, il n'est donc pas
+> récupérable par `git log` : cette note est le seul état des lieux, d'où
+> son niveau de détail. Pour rejouer : entrée manifeste en `pip: "skip"`
+> (son `requirements.txt` liste `opencv-contrib-python` en direct, ce que
+> `--no-deps` n'écarte PAS — même risque InsightFace que
+> `comfyui_controlnet_aux`), `blend_modes` et `loguru` à poser à la main,
+> un axe `detail_restore` dans `bench.CFG_AXES`, une ligne dans
+> `WorkflowRunner.__init__`, un groupe bypassable dans le graphe.
+> **Piège vérifié** : ce groupe doit être placé hors du rectangle du
+> groupe 10, sinon `ui_to_api.nodes_in_group` (test géométrique) l'active
+> avec `grain_export` et les deux variantes du banc deviennent
+> identiques.
+>
+> **Ce qui a été essayé**, scène `cafe_terrasse`, dans l'ordre :
+> 1. câblage auto-référencé (même image sur `image` et `detail_image`),
+>    réglages `[64, 32, 16]` puis `[10, 8, 16]` — rejet visuel, effet de
+>    sur-netteté empilé sur le micro-sharpening du groupe 10 ;
+> 2. câblage croisé (`detail_image` = décodage Flux brut du nœud 21,
+>    remis à la taille finale par `ImageResizeKJ`/`get_image_size`),
+>    réglages `[10, 8, 16]` puis `[10, 0, 16]` — rejet visuel, « peau
+>    beaucoup trop lisse et pas naturelle ».
+>
+> **Mesure au banc** (5 seeds, variante 2 réglée `[10, 8, 16]`, la moins
+> mauvaise à l'œil) :
+>
+> | genre | référence | candidat | delta | verdict |
+> |---|---|---|---|---|
+> | netteté | 154,52 (σ 40,4) | 58,20 (σ 7,6) | **−96,32** | dégradée |
+> | texture_visage | 4,936 | 4,202 | **−0,734** | dégradée |
+> | bruit_fond | 1,758 | 1,473 | −0,285 | dégradée |
+> | identité | 0,7732 | 0,7688 | −0,0045 | **stable** |
+> | mains | 0,683 (n=3) | 0,683 (n=3) | 0,0 | insuffisant |
+>
+> **Raison de fond, structurelle.** Ce nœud ne *crée* pas de texture : il
+> déplace du haut de spectre d'une image source vers une image cible.
+> Chez les tiers ça marche parce que la cible est une image régénérée
+> (lissée par diffusion) et la source est l'original pleine résolution.
+> Dans le pipeline Léna le rapport est inversé — la sortie finale est
+> l'image la PLUS nette du graphe (ESRGAN 4x + micro-sharpening à 1080),
+> et aucune image en amont n'en contient davantage. Le nœud n'a donc rien
+> à restituer : il floute la base (`erase_low_freq`) pour y réinjecter un
+> détail plus faible. L'effondrement de l'écart-type de netteté
+> (40,4 → 7,6) le montre — toutes les variantes convergent vers la même
+> mollesse.
+>
+> **Ne pas re-tester ce candidat tel quel.** La conclusion ne dépend pas
+> des réglages mais de la place de l'étage dans le graphe : il faudrait
+> une source de texture plus riche que la sortie finale, qui n'existe pas
+> ici. Le symptôme « peau lisse » relève du **candidat #2** (régénération
+> localisée sous masque de peau, qui *fabrique* de la texture au lieu de
+> la recomposer), pas de celui-ci.
+>
+> **Effet de bord utile** : c'est le premier cas où le banc a été
+> confronté à un jugement humain tranché. Il corrobore le symptôme
+> (netteté, texture) et **corrige** l'interprétation — le premier retour
+> parlait de « perte d'identité », or l'identité reste dans la marge
+> (−0,0045 pour une marge de 0,02). À noter aussi : le verdict *global*
+> est ressorti `insuffisant`, tiré par la seule métrique `mains`
+> (n=3 < min_seeds=5, deux images sans mains visibles), alors que trois
+> métriques étaient concluantes à n=5 — une métrique sous-échantillonnée
+> masque les autres.
+
 ### P4.5 — Plausibilité des proportions du corps *(ajouté 2026-09-07)*
 
 Ouvert par un retour d'usage, pas prévu au découpage initial : deux

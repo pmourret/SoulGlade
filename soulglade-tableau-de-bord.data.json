@@ -35,7 +35,7 @@
     },
     {
       "id": "IT-1",
-      "state": "now",
+      "state": "done",
       "titre": "Un gain de rendu prouvé, pas supposé",
       "quoi": "Le banc de comparaison écrit en J8.5 n'a jamais servi. Sans lui, adopter un étage de détail est une croyance. On le sort de pause, on passe le candidat de P4.1 sur Léna.",
       "dod": "Le banc tourne sur une variante réelle, l'étage candidat est adopté ou rejeté par un chiffre écrit, et le workflow retenu est committé avec son entrée au manifeste.",
@@ -44,7 +44,7 @@
     },
     {
       "id": "IT-2",
-      "state": "next",
+      "state": "now",
       "titre": "Abyssiaelle produit au même niveau que Léna",
       "quoi": "Son pipeline est un brouillon de treize nœuds : ni refiner, ni FaceDetailer, ni upscale. Tant qu'il reste là, la moitié de ta production est bridée et aucune comparaison n'est honnête.",
       "dod": "Le graphe SDXL porte les mêmes étages que le graphe Flux, le banc mesure l'écart avant/après, et le score d'identité tient sur une série réelle.",
@@ -276,14 +276,19 @@
           "d": "emprunter l'étage qui marche, jamais le graphe : contrat de titres de nœuds, nœuds custom cachés, licence (ADR-0024)"
         },
         {
-          "s": "cours",
+          "s": "fait",
           "t": "Sortir le banc de comparaison de pause",
-          "d": "IT-1 — écrit en J8.5, jamais utilisé"
+          "d": "IT-1 — tourne de bout en bout sur Léna, verdict chiffré par variante"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Adopter ou rejeter un étage de détail",
-          "d": "IT-1 — décision chiffrée sur Léna"
+          "d": "IT-1 — HLFrequencyDetailRestore rejeté : netteté −96 pts au banc, cadrage phase 4 § P4.4"
+        },
+        {
+          "s": "dette",
+          "t": "Verdict global du banc masqué par une métrique sous-échantillonnée",
+          "d": "IT-1 — « mains » à n=3 a tiré le global à « insuffisant » alors que trois genres tranchaient à n=5"
         },
         {
           "s": "faire",
@@ -631,6 +636,11 @@
       "e": "tranche",
       "t": "La vidéo entre au découpage, après l'image",
       "d": "Elle dépend entièrement de la production d'image : E12 existe, mais aucune de ses étapes ne s'ouvre avant IT-3. Le MCP reste hors découpage, sans date."
+    },
+    {
+      "e": "tranche",
+      "t": "Le premier étage de détail emprunté est rejeté",
+      "d": "HLFrequencyDetailRestore, mesuré au banc le 07/09 : il déplace de la texture, il n'en crée pas, et aucune image du pipeline Léna n'en contient plus que la sortie finale. Ne pas re-tester tel quel — voir cadrage phase 4, § P4.4."
     },
     {
       "e": "ouvert",
