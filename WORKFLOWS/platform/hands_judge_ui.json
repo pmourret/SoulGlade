@@ -1,0 +1,242 @@
+{
+ "last_node_id": 5,
+ "last_link_id": 3,
+ "nodes": [
+  {
+   "id": 1,
+   "type": "Note",
+   "pos": [
+    0.0,
+    0.0
+   ],
+   "size": [
+    560.0,
+    800.0
+   ],
+   "flags": {},
+   "order": 0,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [],
+   "title": "LIRE D'ABORD",
+   "properties": {
+    "text": ""
+   },
+   "widgets_values": [
+    "JUGE PIXEL DES MAINS -- second etage de la capacite \"hands\"\n================================================================\nPOURQUOI CE GRAPHE EXISTE\nLa capacite \"hands\" v1 (WORKFLOWS/utils/pose_extract_ui.json, DWPose)\nmesure un TAUX DE DETECTION de keypoints. Verifie le 07/09/2026 : DWPose\npose un squelette 21/21 a pleine confiance sur des mains visuellement\ncassees -- l'information manquante n'est pas dans le squelette, elle est\ndans les pixels que le squelette recouvre\n(DOCS/recherche/2026-09-07-signal-geometrique-mains.md).\n\nCe graphe est le second etage : DWPose LOCALISE (il est fiable pour ca,\nmeme sur une main ratee), un modele qui regarde les pixels JUGE le crop.\n\nCE QU'IL RECOIT\nPas l'image de production entiere : le CROP d'UNE main, decoupe en Python\npar AUTOMATION/qc_mains.py (bbox des keypoints deja obtenus + marge).\nUn jugement par main, jamais un jugement global sur l'image -- sinon le\nmodele decrit le visage, le decor, et le signal se dilue.\n\nCONTRAT DE LECTURE (PLATFORM/capabilities.json, capacite \"handsjudge\")\n  source = LoadImage         titre \"CROP MAIN\"\n  save   = SaveText|pysssss  titre \"JUGEMENT MAIN (texte)\"\nCe sont les deux seuls noeuds que qc_mains.py adresse. Renommer un titre\ncasse find_node sans message clair.\n\nPOURQUOI SaveText|pysssss\nFlorence2Run n'est PAS un OUTPUT_NODE : sa sortie `caption` n'apparait\njamais dans /history sans un noeud de sortie en aval. SaveText ecrit avec\nopen(path, \"w\") et NE CREE PAS le sous-dossier -- qc_mains.py le cree\navant de soumettre.\n\nPOURQUOI do_sample = false\nUn juge doit rendre le meme verdict sur le meme crop. Avec do_sample a\ntrue (defaut du noeud), deux soumissions du meme crop peuvent produire\ndeux captions differentes : la mesure ne serait pas reproductible.\n\nPOURQUOI keep_model_loaded = true\nUne image evaluee = jusqu'a deux soumissions (une par main), et un corpus\nen enchaine des dizaines. Recharger Florence-2 a chaque appel dominerait\nle temps de mesure.\n\nMODELE\ngokaygokay/Florence-2-Flux-Large, deja telecharge dans models/LLM/ sur ce\nposte. Declare dans AUTOMATION/comfyui_manifest.json (invariant 12)."
+   ],
+   "color": "#432",
+   "bgcolor": "#653"
+  },
+  {
+   "id": 2,
+   "type": "LoadImage",
+   "pos": [
+    640.0,
+    0.0
+   ],
+   "size": [
+    340.0,
+    340.0
+   ],
+   "flags": {},
+   "order": 1,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "IMAGE",
+     "type": "IMAGE",
+     "links": [
+      1
+     ]
+    },
+    {
+     "name": "MASK",
+     "type": "MASK",
+     "links": null
+    }
+   ],
+   "title": "CROP MAIN",
+   "properties": {
+    "Node name for S&R": "LoadImage"
+   },
+   "widgets_values": [
+    "example.png"
+   ]
+  },
+  {
+   "id": 3,
+   "type": "DownloadAndLoadFlorence2Model",
+   "pos": [
+    640.0,
+    400.0
+   ],
+   "size": [
+    340.0,
+    110.0
+   ],
+   "flags": {},
+   "order": 2,
+   "mode": 0,
+   "inputs": [],
+   "outputs": [
+    {
+     "name": "florence2_model",
+     "type": "FL2MODEL",
+     "links": [
+      2
+     ]
+    }
+   ],
+   "title": "Florence2 - modele",
+   "properties": {
+    "Node name for S&R": "DownloadAndLoadFlorence2Model"
+   },
+   "widgets_values": [
+    "gokaygokay/Florence-2-Flux-Large",
+    "fp16",
+    false
+   ]
+  },
+  {
+   "id": 4,
+   "type": "Florence2Run",
+   "pos": [
+    1040.0,
+    0.0
+   ],
+   "size": [
+    380.0,
+    340.0
+   ],
+   "flags": {},
+   "order": 3,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "link": 1
+    },
+    {
+     "name": "florence2_model",
+     "type": "FL2MODEL",
+     "link": 2
+    }
+   ],
+   "outputs": [
+    {
+     "name": "image",
+     "type": "IMAGE",
+     "links": null
+    },
+    {
+     "name": "mask",
+     "type": "MASK",
+     "links": null
+    },
+    {
+     "name": "caption",
+     "type": "STRING",
+     "links": [
+      3
+     ]
+    },
+    {
+     "name": "data",
+     "type": "JSON",
+     "links": null
+    }
+   ],
+   "title": "Florence2 - jugement main",
+   "properties": {
+    "Node name for S&R": "Florence2Run"
+   },
+   "widgets_values": [
+    "",
+    "more_detailed_caption",
+    false,
+    true,
+    1024,
+    3,
+    false,
+    "",
+    1,
+    "fixed"
+   ]
+  },
+  {
+   "id": 5,
+   "type": "SaveText|pysssss",
+   "pos": [
+    1480.0,
+    0.0
+   ],
+   "size": [
+    340.0,
+    180.0
+   ],
+   "flags": {},
+   "order": 4,
+   "mode": 0,
+   "inputs": [
+    {
+     "name": "text",
+     "type": "STRING",
+     "link": 3,
+     "widget": {
+      "name": "text"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "name": "STRING",
+     "type": "STRING",
+     "links": null
+    }
+   ],
+   "title": "JUGEMENT MAIN (texte)",
+   "properties": {
+    "Node name for S&R": "SaveText|pysssss"
+   },
+   "widgets_values": [
+    "output",
+    "_HANDS_JUDGE/essai.txt",
+    "overwrite",
+    true
+   ]
+  }
+ ],
+ "links": [
+  [
+   1,
+   2,
+   0,
+   4,
+   0,
+   "IMAGE"
+  ],
+  [
+   2,
+   3,
+   0,
+   4,
+   1,
+   "FL2MODEL"
+  ],
+  [
+   3,
+   4,
+   2,
+   5,
+   0,
+   "STRING"
+  ]
+ ],
+ "groups": [],
+ "config": {},
+ "extra": {},
+ "version": 0.4
+}

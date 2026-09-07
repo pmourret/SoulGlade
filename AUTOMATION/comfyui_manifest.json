@@ -94,6 +94,28 @@
       "patches": [],
       "packs": ["platform"],
       "note": "Fournit ExpressionEditor, construit par AUTOMATION/expression.py -- n'apparait dans aucun WORKFLOWS/*.json (graphe assemble en Python), a verifier a la main si expression.py change."
+    },
+    {
+      "id": "comfyui-florence2",
+      "source": "registry",
+      "publisher": "kijai",
+      "version": "1.1.0",
+      "repo": "https://github.com/kijai/ComfyUI-Florence2",
+      "pip": "no-deps",
+      "patches": [],
+      "packs": ["platform"],
+      "note": "Etait deja utilise de fait pour le captioning commun aux deux packs sans avoir jamais ete declare -- gap d'invariant 12 comble le 2026-09-07 en meme temps que l'arrivee de WORKFLOWS/platform/hands_judge_ui.json, qui en depend explicitement (Florence2Run)."
+    },
+    {
+      "id": "comfyui-custom-scripts",
+      "source": "registry",
+      "publisher": "pythongosssss",
+      "version": "1.2.5",
+      "repo": "https://github.com/pythongosssss/ComfyUI-Custom-Scripts",
+      "pip": "no-deps",
+      "patches": [],
+      "packs": ["platform"],
+      "note": "Introduit par WORKFLOWS/platform/hands_judge_ui.json pour SaveText|pysssss : Florence2Run n'est pas un OUTPUT_NODE, sa sortie caption n'atteint /history que via un noeud de sortie en aval. Son root_dir=output resout vers $output/**/*.txt sans modifier user/text_file_dirs.json."
     }
   ],
   "models": [
@@ -113,6 +135,7 @@
     {"filename": "Qwen-Rapid-AIO-NSFW-v23.safetensors", "dest": "diffusion_models", "url": null, "packs": ["nsfw"], "note": "URL a renseigner."},
     {"filename": "face_yolov8m.pt", "dest": "ultralytics/bbox", "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8m.pt", "packs": ["platform"]},
     {"filename": "4x_NMKD-Siax_200k.pth", "dest": "upscale_models", "url": null, "packs": ["platform"], "note": "URL a renseigner (upscaler communautaire, source exacte non verifiee)."},
+    {"filename": "Florence-2-Flux-Large", "dest": "LLM", "url": "https://huggingface.co/gokaygokay/Florence-2-Flux-Large", "packs": ["platform"], "note": "Dossier HuggingFace complet (snapshot_download), pas un fichier unique -- voir DownloadAndLoadFlorence2Model dans comfyui-florence2/nodes.py. Charge par WORKFLOWS/platform/hands_judge_ui.json."},
 
     {"filename": "flux1-krea-dev-fp8.safetensors", "dest": "checkpoints", "url": null, "packs": ["experimental"], "note": "Absent de l'installation reelle au 2026-09-05 -- workflow experiments/krea_nsfw_test_ui.json possiblement non fonctionnel actuellement."},
     {"filename": "krea2_turbo_fp8_scaled.safetensors", "dest": "diffusion_models", "url": null, "packs": ["experimental"], "note": "URL a renseigner."},

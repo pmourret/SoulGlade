@@ -45,9 +45,15 @@ workflows tiers qu'on va inspecter en portent souvent le mécanisme.
 
 ## Critère de sortie
 
-1. Détection des mains cassées mesurée par génération, affichée dans la
-   Revue, arbitrage laissé à l'utilisateur — comme l'identité et le QC
-   aujourd'hui.
+1. Détection des mains cassées mesurée par génération et affichée dans
+   la Revue. **Amendé le 2026-09-07 (ADR-0025)** : l'objectif n'est plus
+   d'informer, c'est de TRIER — une main cassée est un défaut objectif,
+   pas un arbitrage à rendre à l'utilisateur. Le tri automatique ne
+   s'active qu'une fois la fiabilité démontrée sur corpus étiqueté ; la
+   mesure v1 livrée ne la démontre pas (33 % de faux positifs sur les
+   images validées, 0 % de détection sur les deux cas réels du 07/09),
+   donc elle reste informative en attendant un juge qui regarde les
+   pixels.
 2. Au moins un étage de workflow tiers identifié comme amélioration
    candidate, testé sur le banc de comparaison (J8.5, à sortir de pause
    pour l'occasion), adopté ou rejeté avec la raison chiffrée.
@@ -135,6 +141,39 @@ identifie correctement les mains cassées connues sans faux positifs
 grossiers. Aucune retouche automatique — arbitrage utilisateur, comme
 `PROJET.md` le demande.
 
+> **Volet « juge pixel » fermé le 2026-09-07.** Après la fermeture de la
+> piste géométrique le matin même
+> (`DOCS/recherche/2026-09-07-signal-geometrique-mains.md` : l'information
+> n'est pas dans les keypoints DWPose), la suite désignée était un second
+> étage qui regarde les pixels du crop — Florence-2, déjà provisionné.
+> Cette piste a été cadrée
+> (`DOCS/cadrage/2026-09-07-p4-3-juge-pixel-mains.md`) puis **mesurée
+> avant toute intégration**, comme ce cadrage l'imposait. Résultat :
+> **NO-GO**, chiffré dans
+> `DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md`.
+>
+> Sur 42 crops de main issus de 27 images étiquetées, aucune règle simple
+> ne sépare les mains cassées des mains propres, sur aucun des deux modes
+> de tâche testés. La meilleure règle (`more_detailed_caption`, absence de
+> tout mot de main dans la caption) rate une des quatre mains cassées et
+> produit **53 % de faux positifs** — pire que les 33 % qui ont fait
+> écarter la mesure v1 dans ADR-0025. Le mode `caption_to_phrase_grounding`,
+> testé sur les 12 crops du corpus initial, ne sépare rien du tout : il
+> rend une boîte « Hand » sur 12 crops sur 12, flou de peau compris.
+> Raison de fond mesurée : la mention d'une main
+> dans la caption suit la **taille du crop** (aire médiane 106 496 px
+> quand elle apparaît, 16 616 px quand elle manque), pas la qualité
+> anatomique.
+>
+> Conséquence : l'intégration prévue (`juge_pixel`, capacité `handsjudge`,
+> tri `OK -> A_REVOIR`) n'est pas codée, la capacité `hands` reste
+> **informative**, et le critère de sortie 1 ci-dessus n'est **pas**
+> atteint pour son volet « trier ». Ce que P4.3 livre reste ce que la v1
+> mesure honnêtement. Les pistes non fermées (autre poids Florence-2, VLM
+> à VQA ouverte, classifieur dédié) sont listées en fin de rapport ;
+> aucune n'entre dans la phase 4 telle qu'elle est cadrée, et aucune ne
+> s'ouvre sans décision explicite.
+
 ### P4.4 — Adopter (ou rejeter) une amélioration de workflow
 
 Une fois P4.1, P4.2, P4.3 en place : prendre l'étage candidat le plus
@@ -149,11 +188,28 @@ de non-régression), soit un rejet documenté.
 **Test** : si adopté, le banc confirme le gain sur Léna. Si rejeté, la
 note explique pourquoi de façon reproductible.
 
+### P4.5 — Plausibilité des proportions du corps *(ajouté 2026-09-07)*
+
+Ouvert par un retour d'usage, pas prévu au découpage initial : deux
+productions Léna au torse allongé et aux bras incohérents sont passées
+en OK sans qu'aucune mesure ne les voie — ni l'identité (visage
+conforme), ni le réalisme, ni les mains de P4.3 (qui les score 1.0).
+
+Cadré à part : `DOCS/cadrage/2026-09-07-p4-5-proportions.md` (corpus
+étiqueté d'abord, puis choix des indicateurs sur ce corpus, puis mesure
+et affichage). Contrairement aux mains, le signal semble bien présent
+dans le squelette DWPose — une proportion est un rapport de longueurs
+entre points, mesuré dans
+`DOCS/recherche/2026-09-07-signal-geometrique-mains.md`.
+
+Indépendant de P4.2 et P4.4 : peut s'intercaler ou attendre.
+
 ## Séquence et dépendances
 
 - P4.1 en premier (recherche, alimente les trois autres)
 - P4.2 et P4.3 en parallèle si envie (indépendants entre eux)
 - P4.4 en dernier (dépend des trois autres)
+- P4.5 indépendant des autres (ajouté en cours de phase, voir ci-dessus)
 
 Le chantier entier peut durer plusieurs sessions — c'est un vrai
 chantier de qualité, pas une correction. Pas d'urgence à le boucler en
