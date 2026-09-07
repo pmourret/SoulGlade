@@ -94,7 +94,30 @@ puis 4 et 5, puis 3 et 6. Chacun est indépendant et livrable seul.
    `PROJET.md` + `ROADMAP.md` + descriptions de skills mesurée avant et
    après, chiffre reporté ici. Référence avant : **39 734 tokens**
    (mesure du 2026-09-07, `tiktoken` / `cl100k_base`).
-   Mesure après : *(à écrire par la dernière étape du chantier 2)*.
+   **Mesure après le chantier 2 : 6 856 tokens** (2026-09-07, même venv
+   jetable, même `cl100k_base`, même périmètre) — `CLAUDE.md` 1 832,
+   `PROJET.md` 1 458, `ROADMAP.md` **2 942** (contre 35 841),
+   descriptions des 7 skills 624. **Critère atteint**, à 1 144 tokens
+   sous le plafond.
+
+   Écart avec l'attendu de la spécification (~7 040) : **−2,6 %**, dans
+   la marge.
+
+   Deux réserves, dites plutôt qu'arrondies :
+
+   - Ce total est mesuré **après le seul chantier 2**. Les chantiers 1 et
+     3 allongent `CLAUDE.md` d'environ 700 octets (section « Ne pas
+     ouvrir » étoffée, section « Fil conducteur » réécrite), soit ~200
+     tokens : le total en fin de parcours sera de l'ordre de **7 050**,
+     toujours sous 8 k mais avec moins de marge que ce chiffre-ci ne le
+     laisse croire. À re-mesurer une dernière fois après le commit 4.
+   - Le comptage des descriptions de skills donne **2 369 o / 624 tok**,
+     là où la mesure « avant » de la spécification annonçait 2 243 o /
+     603 tok pour les mêmes fichiers, inchangés depuis. La méthode de la
+     mesure « avant » différait donc légèrement de celle de la commande
+     publiée. La référence « avant » consistante avec cette mesure-ci est
+     **39 755**, non 39 734 ; l'écart de 21 tokens ne change rien au
+     gain, qui reste de **−32 899 tokens (−82,8 %)**.
 2. **`ROADMAP.md` sous 20 Ko**, ne contenant que la phase en cours, le
    prochain jalon, V2/V3 et l'exigence transverse. Les sections
    archivées sont retrouvables depuis `ROADMAP.md` par un lien, et
