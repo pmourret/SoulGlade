@@ -14,7 +14,7 @@ Sessions à ce jour :
   plateforme/pack/monde/personnage, découpage du chantier J8 en 5 étapes
 - `2026-09-05-cadrage-v1-et-discipline.md` — refonte du cadrage
   stratégique, cinq règles de discipline, fichiers `PROJET.md`/
-  `BACKLOG.md`/`DOCS/retros/` créés à partir de cette session
+  `DOCS/retros/` créés à partir de cette session
 - `2026-09-05-phase-2-cloture-v1.md` — découpage de la clôture réelle de
   V1 en 4 étapes testables (tests verts, périmètre du parcours nominal,
   audit UX/UI, décision Abyssiaelle/SDXL)
@@ -27,7 +27,8 @@ session du 26/08). Les décisions qui en sortent sont formalisées et
 tenues à jour ailleurs :
 
 - Les règles actuelles de la plateforme : `CLAUDE.md`
-- Le séquencement (quoi, quand) : `ROADMAP.md`
+- Le séquencement (quoi, quand) : le tableau de bord
+  (`soulglade-tableau-de-bord.data.json`)
 - Le pourquoi de chaque décision structurante, avec les alternatives
   écartées : `DOCS/adr/`
 

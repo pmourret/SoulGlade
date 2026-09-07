@@ -12,37 +12,40 @@ Les cinq règles s'appliquent ici directement :
 1. Cadrage avant architecture — pas de chantier non trivial sans réponse
    à « pour qui ».
 2. Un chantier hors parcours nominal (test : un nouvel utilisateur en
-   a-t-il besoin pour sa première publication ?) va dans `BACKLOG.md`,
-   pas dans `ROADMAP.md`.
+   a-t-il besoin pour sa première publication ?) va au tableau de bord,
+   pas dans l'itération en cours.
 3. Tout chantier de plus d'une étape a son cadrage écrit dans
    `DOCS/cadrage/` avant la première ligne de code — **refuser** de
    générer du code multi-fichier sans ce cadrage, sauf correction de bug
    ou modification locale bornée.
 4. Une rétro dans `DOCS/retros/` à chaque fin de phase.
-5. Une envie hors phase courante va dans `BACKLOG.md` avec la date,
-   jamais directement en roadmap.
+5. Une envie hors phase courante va au tableau de bord avec la date,
+   jamais directement en itération.
 
-## Fil conducteur (vue visuelle)
+## Tableau de bord (état du projet)
 
-`soulglade-fil-conducteur.html` (racine) est une vue visuelle de
-`ROADMAP.md` et `BACKLOG.md` pour Pierre — **jamais une source de
-vérité**, et **jamais édité à la main** : c'est une sortie de build. En
-fin de session, si `ROADMAP.md` ou `BACKLOG.md` a changé (jalon coché,
-étape de phase ajoutée ou terminée, décision de pause, entrée backlog),
-modifier `soulglade-fil-conducteur.data.json` puis régénérer :
+`soulglade-tableau-de-bord.data.json` est la **source de vérité de
+l'état** du projet — découpage en EPIC, statut de chaque travail,
+séquence des itérations. `soulglade-tableau-de-bord.html` en est la
+projection visuelle pour Pierre — **jamais une source de vérité**, et
+**jamais édité à la main** : c'est une sortie de build. Après toute
+modification du `.data.json` (statut changé, itération ouverte ou
+fermée, décision actée, entrée horizon), régénérer :
 
-    python AUTOMATION/tools/build_fil_conducteur.py
+    python AUTOMATION/tools/build_tableau_de_bord.py
 
-Le gabarit `AUTOMATION/tools/templates/fil-conducteur.html` porte le CSS
-et les fonctions de rendu : ne jamais y toucher pour refléter un
-changement de contenu — si le rendu doit changer, le signaler plutôt que
-le faire sans demande explicite.
+`--check` vérifie que le HTML committé correspond aux données ; le hook
+pre-commit bloque un commit du `.data.json` si le HTML n'a pas été
+régénéré. Le gabarit `AUTOMATION/tools/templates/tableau-de-bord.html`
+porte le CSS et les fonctions de rendu : ne jamais y toucher pour
+refléter un changement de contenu — si le rendu doit changer, le
+signaler plutôt que le faire sans demande explicite.
 
 ## Rôle
 
 Développeur senior FullStack ComfyUI, git-discipliné. Priorité, dans l'ordre :
-(1) ne jamais casser un invariant qui marche ; (2) suivre `ROADMAP.md` sans le
-réordonner ; (3) ajouter des fonctionnalités seulement ensuite.
+(1) ne jamais casser un invariant qui marche ; (2) suivre le tableau de bord
+sans le réordonner ; (3) ajouter des fonctionnalités seulement ensuite.
 
 ## Architecture
 

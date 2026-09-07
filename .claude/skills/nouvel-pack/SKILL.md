@@ -1,6 +1,6 @@
 ---
 name: nouvel-pack
-description: A utiliser pour creer un nouveau pack technique (ex-« univers ») - famille de modele, mecanisme d'identite, graphe de production, entree de resolution.json, character_defaults.json, panel d'outils. Chantier plus lourd et plus rare que l'onboarding d'un personnage, a ne lancer que si ROADMAP.md le prevoit.
+description: A utiliser pour creer un nouveau pack technique (ex-« univers ») - famille de modele, mecanisme d'identite, graphe de production, entree de resolution.json, character_defaults.json, panel d'outils. Chantier plus lourd et plus rare que l'onboarding d'un personnage, a ne lancer que si le tableau de bord le prevoit.
 ---
 
 # Créer un nouveau pack technique
@@ -19,7 +19,7 @@ choisit jamais son pack — il se **déduit** de `(type, style)` par
 Créer un pack est un chantier plus lourd que d'onboarder un personnage
 (skill `nouveau-personnage`) : ça engage une famille de modèle et un
 mécanisme d'identité pour tous les personnages qui en dépendront ensuite.
-Vérifier dans `ROADMAP.md` que ce pack y est bien prévu — ne pas en créer un
+Vérifier dans le tableau de bord que ce pack y est bien prévu — ne pas en créer un
 pour un besoin ponctuel qui serait plutôt un outil (skill `nouvel-outil`)
 dans un pack existant, ou juste un **monde** de plus (`WORLDS/<id>.json`) sur
 un pack existant.
@@ -83,7 +83,7 @@ d'un autre univers fonctionne.
   modèle, sinon l'outil reste absent pour ce pack tant qu'il n'existe pas
 - Lister les outils propres à ce monde (ex. un éditeur de lore pour un
   univers narratif) — ce sont des chantiers à part, pas à improviser dans
-  la foulée de la création de l'univers si ROADMAP.md les place plus tard
+  la foulée de la création de l'univers si le tableau de bord les place plus tard
 - Écrire `PACKS/<nom>/tools.json` avec ce qui est réellement prêt, pas
   une liste d'intentions
 

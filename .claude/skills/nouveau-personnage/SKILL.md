@@ -120,7 +120,8 @@ wizard ; champs (`CLAUDE.md` §7, ADR-0010/0011/0012) :
 - `universe` : le **pack résolu** de `(type, style)` — écrit par le wizard,
   jamais choisi à la main, jamais modifié ensuite
 - `content_types` : types de contenu actifs — `image` seul en V1,
-  `video`/`voice`/`staging` déclarés inactifs (voir `ROADMAP.md`)
+  `video`/`voice`/`staging` déclarés inactifs (voir `PROJET.md`, § Ce qui
+  n'est explicitement pas dans la V1)
 - `nsfw` : **off par défaut**, armé explicitement dans le paramétrage si
   souhaité (l'interrupteur vit ici, pas dans `config.json`)
 

@@ -123,18 +123,18 @@ Cinq règles matérialisées dans le dépôt, à respecter avant tout code :
 2. **Un chantier hors parcours nominal attend.** Se demander avant tout
    nouveau chantier : "un utilisateur qui n'a jamais installé Soulglade
    en a-t-il besoin pour aller jusqu'à sa première publication ?". Sinon,
-   `BACKLOG.md`.
+   le tableau de bord (section horizon).
 
 3. **Un chantier ambitieux se cadre par écrit avant la première ligne de
-   code.** Tout chantier de plus d'une étape dans `ROADMAP.md` a son
-   fichier dans `DOCS/cadrage/` avant démarrage. Trois questions : à quoi
-   ça sert, hors périmètre, critère de sortie.
+   code.** Tout chantier de plus d'une étape dans le tableau de bord a
+   son fichier dans `DOCS/cadrage/` avant démarrage. Trois questions : à
+   quoi ça sert, hors périmètre, critère de sortie.
 
 4. **Une rétro à chaque fin de phase.** Dossier `DOCS/retros/`, format à
    deux questions : livré non prévu, prévu non livré. Trente minutes
    max.
 
 5. **La motivation est un signal, pas un ordre.** Une envie qui prend en
-   cours de phase va dans `BACKLOG.md` avec la date, jamais directement
-   dans `ROADMAP.md`. Relecture en fin de phase — ce qui parle encore
-   peut être promu par cadrage explicite.
+   cours de phase va dans le tableau de bord (section horizon) avec la
+   date, jamais directement en itération. Relecture en fin de phase — ce
+   qui parle encore peut être promu par cadrage explicite.

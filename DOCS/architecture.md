@@ -52,8 +52,8 @@ résolution (§4, ADR-0012).
   caractéristique propre à un pack en particulier (ADR-0004, inchangé). En
   V1, seul `image` est actif partout ; `vidéo` et `voix` existent comme
   types déclarés mais inactifs, pour tous les types de personnage, afin que
-  les activer plus tard (V2, voir `ROADMAP.md`) soit un changement de
-  valeur, pas une modification de schéma
+  les activer plus tard (V2, voir le tableau de bord, EPIC E12) soit un
+  changement de valeur, pas une modification de schéma
 
 ## 4 · Le verrou d'identité appartient au pack, pas au personnage
 
@@ -164,8 +164,8 @@ dans un ordre précis.
   graphe — sinon il est **absent**, jamais grisé, et l'interface dit
   pourquoi (ADR-0013)
 - La vidéo NSFW suit la même logique une fois la vidéo SFW disponible (V2,
-  voir `ROADMAP.md`) — pas de conception anticipée avant que la vidéo SFW
-  existe
+  voir le tableau de bord, EPIC E12) — pas de conception anticipée avant
+  que la vidéo SFW existe
 
 ## 7 · Registre de personnages et base de données
 
@@ -175,7 +175,7 @@ dans un ordre précis.
 - **Une seule base SQLite**, schéma commun, colonne `character_id` — jamais
   une base par personnage
 - La base doit être source de vérité **avant** la bascule multi-personnage
-  (J0, `ROADMAP.md`) — pas après
+  (J0) — pas après
 
 
 ## 9 · Frontend
@@ -188,15 +188,17 @@ dans un ordre précis.
 ## 10 · Explicitement hors scope pour ce chantier
 
 - Le pipeline audio/vidéo lui-même (les types sont déclarés en V1, §3, mais
-  pas branchés — voir `ROADMAP.md`, V2)
+  pas branchés — voir le tableau de bord, EPIC E12, V2)
 - Mise en scène de plusieurs personnages ensemble (plusieurs verrous
   d'identité simultanés) — V2
 - Univers "art pur" et univers "monde RPG" complet — V2 et V3
 - Un chargeur de plugins dynamique / marketplace d'outils — le registre
   déclaratif simple (§5) suffit tant qu'un seul développeur ajoute les
   outils
-- **Exposition MCP** des actions de la plateforme — hors scope V1/V2 (V3,
-  `ROADMAP.md`). Un serveur MCP existe déjà (`AUTOMATION/
+- **Exposition MCP** des actions de la plateforme — hors scope V1
+  (`PROJET.md`, § Ce qui n'est explicitement pas dans la V1 — Intégration
+  MCP ; tableau de bord, horizon — Exposition MCP en lecture seule). Un
+  serveur MCP existe déjà (`AUTOMATION/
   mcp_server.py`, JSON-RPC sur stdio) : **lecture et validation seulement,
   aucune génération, rien de la branche NSFW exposé, jamais d'écriture**.
   Ce n'est pas un chantier à démarrer de zéro en V3 — c'est un principe déjà

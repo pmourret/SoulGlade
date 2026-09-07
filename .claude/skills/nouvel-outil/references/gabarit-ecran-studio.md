@@ -66,12 +66,15 @@ lecture du code et n'ont été trouvés qu'ainsi.
 
 ### Documentation
 
-`ROADMAP.md` reçoit une entrée par étape, avec le POURQUOI des décisions et
-les bugs réels trouvés en testant (pas seulement en relisant) — c'est ce
+Le POURQUOI des décisions et les bugs réels trouvés en testant (pas
+seulement en relisant) vont dans la rétro de l'itération qui contient ce
+chantier (`DOCS/retros/`) — pas dans une entrée immédiate par étape : le
+tableau de bord ne porte que des statuts courts, jamais de prose. C'est ce
 qui permet de retrouver un piège générique (le cache d'exécution ComfyUI,
 par exemple) la fois suivante sans le redécouvrir. Suivre le ton et le
-niveau de détail déjà en place dans les entrées de l'éditeur de pose et de
-l'éditeur d'expression.
+niveau de détail des anciennes entrées ROADMAP.md de l'éditeur de pose et
+de l'éditeur d'expression (retrouvables via `git log` sur ce fichier avant
+son retrait, IT-0).
 
 ### Checklist (patron 2)
 
@@ -89,6 +92,6 @@ l'éditeur d'expression.
 - [ ] Suite complète de fumigations verte avant chaque commit
 - [ ] Point d'entrée découvrable ajouté (sous-vue Banque ou `tools.json`)
 - [ ] Audit UX/UI (`audit-ux-ui`) passé et ses findings corrigés
-- [ ] `ROADMAP.md` documenté, étape par étape
+- [ ] POURQUOI et bugs réels notés, pour la rétro d'itération à venir
 - [ ] Push seulement si demandé explicitement
 

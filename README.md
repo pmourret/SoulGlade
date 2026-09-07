@@ -6,9 +6,10 @@
 
 ## Statut
 
-Projet personnel, en développement actif. Voir [`ROADMAP.md`](ROADMAP.md)
-pour l'avancement (V1 en cours — fondations et généralisation à deux
-univers réels).
+Projet personnel, en développement actif. Voir
+[`soulglade-tableau-de-bord.html`](soulglade-tableau-de-bord.html) pour
+l'avancement (V1 en cours — fondations et généralisation à deux univers
+réels).
 
 ## Ce que c'est
 
@@ -23,7 +24,7 @@ Univers en place ou en cours :
 - **RPG / personnage** — personnage ancré dans un univers narratif
 
 D'autres univers (art pur, monde RPG complet) sont sur la feuille de route
-mais pas encore construits — voir `ROADMAP.md`.
+mais pas encore construits — voir le tableau de bord.
 
 ## Structure du repo
 
@@ -38,7 +39,7 @@ DOCS/
 .claude/
   skills/                        # connaissances de domaine pour Claude Code
 CLAUDE.md                          # règles pour Claude Code
-ROADMAP.md                           # séquencement du développement
+soulglade-tableau-de-bord.data.json  # état du projet : EPIC, statuts, itérations
 ```
 
 ## Prérequis
@@ -69,7 +70,7 @@ Documentation d'API (Swagger) sur `/docs`.
 | Besoin | Où |
 |---|---|
 | Comprendre les règles actuelles de la plateforme | `CLAUDE.md` |
-| Voir où en est le développement | `ROADMAP.md` |
+| Voir où en est le développement | `soulglade-tableau-de-bord.html` |
 | Comprendre pourquoi une décision structurante a été prise | `DOCS/adr/` |
 | Retrouver la réflexion d'origine, session par session | `DOCS/cadrage/` |
 | Connaissances de domaine (ComfyUI, conventions de code) | `.claude/skills/` |

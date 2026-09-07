@@ -16,7 +16,7 @@ passé. Les décisions qui naissent de ces notes sont formalisées ailleurs :
 - Idées retenues à explorer : `DOCS/ideas/`
 - Le pourquoi d'une décision structurante, avec les alternatives écartées :
   `DOCS/adr/`
-- Le séquencement (quoi, quand) : `ROADMAP.md`
+- Le séquencement (quoi, quand) : le tableau de bord
 
 Notes à ce jour :
 - `2026-09-05-comfyui-studio-v362.md` — inventaire du pack ComfyUI Studio
