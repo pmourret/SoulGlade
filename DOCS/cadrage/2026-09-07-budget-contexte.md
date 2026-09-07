@@ -111,6 +111,14 @@ puis 4 et 5, puis 3 et 6. Chacun est indépendant et livrable seul.
      tokens : le total en fin de parcours sera de l'ordre de **7 050**,
      toujours sous 8 k mais avec moins de marge que ce chiffre-ci ne le
      laisse croire. À re-mesurer une dernière fois après le commit 4.
+
+     **Re-mesure finale, après les six chantiers : 7 152 tokens** —
+     `CLAUDE.md` 2 128 (contre 1 832 : +296, les sections « Ne pas
+     ouvrir » et « Fil conducteur » réécrites), `PROJET.md` 1 458,
+     `ROADMAP.md` 2 942, skills 624. **Critère 1 atteint**, 848 tokens
+     sous le plafond. Gain total **−32 603 tokens, −82,0 %**. La
+     prévision de ~7 050 était basse de 1,4 % : la réécriture de
+     `CLAUDE.md` a coûté un peu plus que les ~200 tokens estimés.
    - Le comptage des descriptions de skills donne **2 369 o / 624 tok**,
      là où la mesure « avant » de la spécification annonçait 2 243 o /
      603 tok pour les mêmes fichiers, inchangés depuis. La méthode de la
