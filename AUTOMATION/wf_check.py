@@ -76,6 +76,11 @@ ROLES_OPTIONNELS = [
     ("KSampler", "img2img denoise"),
     ("ImageScale", "Taille de publication"),
     ("ImageAddNoise", None),
+    # checkpoint de BASE du graphe (swap de checkpoint par style de sortie).
+    # Cherche par fragment de titre, pas par type : un graphe a le droit de
+    # porter un second CheckpointLoaderSimple (refiner) et une recherche par
+    # type seul deviendrait ambigue -- voir runner/comfy.py, role "checkpoint".
+    ("CheckpointLoaderSimple", "CHECKPOINT"),
     # groupe 13 - POSE CONTROLNET (26/08/2026) : DOCS/lena-pose-controlnet.md
     ("LoadImage", "SQUELETTE DE POSE"),
     ("ControlNetLoader", None),

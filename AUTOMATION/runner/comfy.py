@@ -139,7 +139,15 @@ class WorkflowRunner:
             # de Lena (checkpoint all-in-one non nomme par ce role) -> None, et
             # le seul style de son univers est realiste (pas de swap). Sert aux
             # univers a plusieurs styles (rpg-personnage, J6).
-            "checkpoint": ("CheckpointLoaderSimple", None),
+            # Cherche par FRAGMENT DE TITRE depuis IT-2 (7 sept. 2026) : le
+            # graphe SDXL porte desormais un second CheckpointLoaderSimple (le
+            # refiner du groupe 03), et une recherche par type seul devient
+            # ambigue -> find_node leve -> ce role retombe en silence sur None,
+            # donc plus aucun swap de style. Convention : le checkpoint de BASE
+            # d'un graphe porte « CHECKPOINT » dans son titre, un loader
+            # auxiliaire jamais. Lena reste a None (aucun de ses deux loaders ne
+            # le porte), comme avant ce changement.
+            "checkpoint": ("CheckpointLoaderSimple", "CHECKPOINT"),
             # roles du verrou d'identite de l'univers (J5). Resolus ici de
             # facon tolerante ; c'est identity.apply() qui refuse si un role
             # obligatoire manque dans le graphe de ce personnage.

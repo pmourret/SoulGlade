@@ -1,6 +1,6 @@
 {
-  "last_node_id": 13,
-  "last_link_id": 15,
+  "last_node_id": 32,
+  "last_link_id": 41,
   "nodes": [
     {
       "id": 1,
@@ -22,7 +22,7 @@
         "Node name for S&R": "Note"
       },
       "widgets_values": [
-        "WORKFLOW DE PRODUCTION SDXL/Pony -- Abyssiaelle (univers rpg-personnage)\n\nBROUILLON J6 etape 3 : assemble hors interface ComfyUI. A OUVRIR PUIS RE-SAUVEGARDER UNE FOIS DANS COMFYUI avant la premiere vraie production -- verifie/reconstruit les 3 copies de liens et les compteurs d'ID que l'interface maintient normalement seule (voir workflow-comfyui/references/format-ui-mecanique.md).\n\n01 IDENTITE ABYSSIAELLE (IPAdapter FaceID) : LoadImage BASE GELEE + loader unifie + InsightFace + noeud d'application. Poids (weight/weight_faceidv2/start_at/end_at) et image de reference NE SONT PAS ceux des widgets ci-dessous une fois en production -- AUTOMATION/identity/lora_sdxl.py les ecrase depuis CHARACTERS/abyssiaelle/config.json a chaque lancement (CLAUDE.md §8.4). Les widgets ici ne comptent que si le graphe est mis en file DIRECTEMENT depuis l'interface, hors runner.\n\n02 LORA PERSONNAGE (bypass) : abyss1a_v1.safetensors deja entraine (trouve sur ce poste, hors depot) -- cable mais BYPASS par defaut, decision actee avec l'utilisateur (J6) : IPAdapter FaceID reste le verrou primaire, ce LoRA est un complement optionnel active via config.json / identity / lora, jamais par ce widget.\n\n03 CHECKPOINT : place a confirmer par la mesure reelle (juggernautXL_ragnarok choisi comme point de depart raisonnable, pas encore mesure).\n\n04 NEGATIF : SDXL a besoin d'un vrai negatif (contrairement a Flux) -- boilerplate de depart, a affiner a la mesure.\n\nRoles attendus par le runner (AUTOMATION/runner/comfy.py, generalisation SDXL en cours J6 etape 3/4) : POSITIF - scene, NEGATIF, Format -, passe 1, SORTIE production, IPAdapter FaceID - verrou identite, BASE GELEE - reference d'identite, LoRA personnage (bypass)."
+        "WORKFLOW DE PRODUCTION SDXL/Pony -- Abyssiaelle (univers rpg-personnage)\n\nIT-2 (7 sept. 2026) : les quatre etages du graphe Flux de Lena sont portes ici -- 03 refiner (interrupteur, entrees lazy), 04 FaceDetailer, 05 upscale 2K, 06 grain + export. Tous en bypass ou interrupteur a false : c'est CHARACTERS/<perso>/config.json (preset) qui les allume, jamais un second fichier de workflow. Graphe assemble hors interface ComfyUI puis valide par wf_check --roles --famille sdxl et --essai (execute, pas seulement accepte), groupes forces actifs compris. LE ROUVRIR ET LE RE-SAUVEGARDER UNE FOIS DANS COMFYUI reste la bonne habitude apres toute edition a la main : c'est l'interface qui maintient normalement les 3 copies de liens et les compteurs d'ID (workflow-comfyui/references/format-ui-mecanique.md).\n\n01 IDENTITE ABYSSIAELLE (IPAdapter FaceID) : LoadImage BASE GELEE + loader unifie + InsightFace + noeud d'application. Poids (weight/weight_faceidv2/start_at/end_at) et image de reference NE SONT PAS ceux des widgets ci-dessous une fois en production -- AUTOMATION/identity/lora_sdxl.py les ecrase depuis CHARACTERS/abyssiaelle/config.json a chaque lancement (CLAUDE.md §8.4). Les widgets ici ne comptent que si le graphe est mis en file DIRECTEMENT depuis l'interface, hors runner.\n\n02 LORA PERSONNAGE (bypass) : abyss1a_v1.safetensors deja entraine (trouve sur ce poste, hors depot) -- cable mais BYPASS par defaut, decision actee avec l'utilisateur (J6) : IPAdapter FaceID reste le verrou primaire, ce LoRA est un complement optionnel active via config.json / identity / lora, jamais par ce widget.\n\nCHECKPOINT : place a confirmer par la mesure reelle (juggernautXL_ragnarok choisi comme point de depart raisonnable, pas encore mesure).\n\nNEGATIF : SDXL a besoin d'un vrai negatif (contrairement a Flux) -- boilerplate de depart, a affiner a la mesure.\n\nRoles et groupes attendus par le runner (AUTOMATION/runner/comfy.py) : POSITIF - scene, Format -, passe 1, SORTIE production, IPAdapter FaceID - verrou identite, BASE GELEE - reference d'identite, LoRA personnage, CHECKPOINT (fragment de titre : le loader du refiner ne doit JAMAIS porter ce mot), INTERRUPTEUR refiner, img2img denoise, Taille de publication, Grain capteur, Micro-sharpening ; groupes FACEDETAILER, UPSCALE IMAGE 2K, GRAIN + EXPORT. Renommer l'un d'eux casse l'orchestration en silence -- AUTOMATION/tests/test_roles_graphes.py le verifie hors ligne.\n\nEtages MESURES au banc le 07/09 (5 seeds, un axe a la fois) : upscale_2k ADOPTE (nettete 122 -> 262, identite stable), facedetailer NON ADOPTE (aucun gain sur portrait ni sur plan large, garde cable). refiner et grain_export pas encore mesures. Tableaux complets : DOCS/cadrage/2026-09-07-it2-pipeline-abyssiaelle.md."
       ]
     },
     {
@@ -53,14 +53,16 @@
           "type": "CLIP",
           "links": [
             3,
-            4
+            4,
+            30
           ]
         },
         {
           "name": "VAE",
           "type": "VAE",
           "links": [
-            5
+            5,
+            31
           ]
         }
       ],
@@ -98,7 +100,8 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            11
+            11,
+            32
           ]
         }
       ],
@@ -138,7 +141,8 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            12
+            12,
+            33
           ]
         }
       ],
@@ -403,7 +407,8 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            10
+            10,
+            29
           ]
         },
         {
@@ -518,7 +523,8 @@
           "name": "IMAGE",
           "type": "IMAGE",
           "links": [
-            15
+            16,
+            27
           ]
         }
       ],
@@ -544,7 +550,7 @@
         {
           "name": "images",
           "type": "IMAGE",
-          "link": 15
+          "link": 41
         }
       ],
       "outputs": [
@@ -561,6 +567,841 @@
         "OFM/PROD/_BATCH/abyssiaelle"
       ],
       "title": "SORTIE production"
+    },
+    {
+      "id": 14,
+      "type": "CheckpointLoaderSimple",
+      "pos": [
+        1740,
+        60
+      ],
+      "size": [
+        360,
+        98
+      ],
+      "flags": {},
+      "order": 14,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            20
+          ]
+        },
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            18,
+            19
+          ]
+        },
+        {
+          "name": "VAE",
+          "type": "VAE",
+          "links": [
+            17,
+            25
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CheckpointLoaderSimple"
+      },
+      "widgets_values": [
+        "intorealismUltra_sdxlV1NoLightning.safetensors"
+      ],
+      "title": "SDXL photo-realiste - refiner",
+      "color": "#223",
+      "bgcolor": "#335"
+    },
+    {
+      "id": 15,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1740,
+        200
+      ],
+      "size": [
+        360,
+        160
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 18
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            21
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "raw amateur photograph, real skin with visible pores, fine facial hair, uneven skin tone, freckles, natural film grain, 35mm, no retouching"
+      ],
+      "title": "POSITIF refiner - texture de peau",
+      "color": "#232",
+      "bgcolor": "#353"
+    },
+    {
+      "id": 16,
+      "type": "CLIPTextEncode",
+      "pos": [
+        1740,
+        400
+      ],
+      "size": [
+        360,
+        160
+      ],
+      "flags": {},
+      "order": 16,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 19
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            22
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "airbrushed, plastic skin, smooth skin, cgi, 3d render, illustration, waxy, blurry, oversaturated, beauty filter"
+      ],
+      "title": "NEGATIF refiner - anti peau plastique",
+      "color": "#322",
+      "bgcolor": "#533"
+    },
+    {
+      "id": 17,
+      "type": "VAEEncode",
+      "pos": [
+        2160,
+        60
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 17,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "pixels",
+          "type": "IMAGE",
+          "link": 16
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 17
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            23
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEEncode"
+      },
+      "widgets_values": [],
+      "title": "Refiner - encode"
+    },
+    {
+      "id": 18,
+      "type": "KSampler",
+      "pos": [
+        2160,
+        160
+      ],
+      "size": [
+        300,
+        262
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 20
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 21
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 22
+        },
+        {
+          "name": "latent_image",
+          "type": "LATENT",
+          "link": 23
+        }
+      ],
+      "outputs": [
+        {
+          "name": "LATENT",
+          "type": "LATENT",
+          "links": [
+            24
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "KSampler"
+      },
+      "widgets_values": [
+        882314567890123,
+        "randomize",
+        22,
+        5.0,
+        "dpmpp_2m",
+        "karras",
+        0.4
+      ],
+      "title": "img2img denoise 0.40"
+    },
+    {
+      "id": 19,
+      "type": "VAEDecode",
+      "pos": [
+        2160,
+        460
+      ],
+      "size": [
+        300,
+        60
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "samples",
+          "type": "LATENT",
+          "link": 24
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 25
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            26
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "VAEDecode"
+      },
+      "widgets_values": [],
+      "title": "Refiner - decode"
+    },
+    {
+      "id": 20,
+      "type": "Switch any [Crystools]",
+      "pos": [
+        2160,
+        560
+      ],
+      "size": [
+        300,
+        110
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "on_true",
+          "type": "*",
+          "link": 26
+        },
+        {
+          "name": "on_false",
+          "type": "*",
+          "link": 27
+        }
+      ],
+      "outputs": [
+        {
+          "name": "*",
+          "type": "*",
+          "links": [
+            28
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Switch any [Crystools]"
+      },
+      "widgets_values": [
+        false
+      ],
+      "title": "INTERRUPTEUR refiner (false = OFF)",
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 29,
+      "type": "Note",
+      "pos": [
+        2560,
+        60
+      ],
+      "size": [
+        400,
+        600
+      ],
+      "flags": {},
+      "order": 29,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "",
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "03 - REFINER REALISME (interrupteur, OFF par defaut)\n====================================================\nPorte du groupe 07 de Lena (7 sept. 2026, IT-2). Passage img2img court\nsur un checkpoint SDXL photo-realiste : pores, duvet, irregularites de\ncarnation. Ici la generation EST deja du SDXL -- l'interet n'est donc\npas le meme que cote Flux, c'est au banc de le dire (bench axe\n`refiner`), pas a ce commentaire.\n\nACTIVER : preset.refiner = true dans CHARACTERS/abyssiaelle/config.json\n(le runner pose l'interrupteur). Sur false, la branche n'est meme pas\nexecutee (entrees lazy du Switch) : aucun cout quand il est eteint.\n\nORDRE NON NEGOCIABLE : refiner PUIS FaceDetailer (groupe 04). Mesure\ncote Lena : 0.76 d'identite dans cet ordre, 0.42 dans l'autre (un\nautre visage). Le refiner deplace les traits, le FaceDetailer les\nremet -- ici avec le modele VERROUILLE (sortie IPAdapterFaceID, LoRA\nabyss1a compris), pas avec le checkpoint nu.\n\nREGLAGES : denoise pilote par preset.refiner_denoise, seed par job.\nLe checkpoint est celui deja declare au manifeste pour ce pack\n(intorealismUltra) -- aucune dependance nouvelle."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 21,
+      "type": "UltralyticsDetectorProvider",
+      "pos": [
+        1740,
+        960
+      ],
+      "size": [
+        340,
+        80
+      ],
+      "flags": {},
+      "order": 21,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "BBOX_DETECTOR",
+          "type": "BBOX_DETECTOR",
+          "links": [
+            34
+          ]
+        },
+        {
+          "name": "SEGM_DETECTOR",
+          "type": "SEGM_DETECTOR",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UltralyticsDetectorProvider"
+      },
+      "widgets_values": [
+        "bbox/face_yolov8m.pt"
+      ],
+      "title": "Detecteur de visage (bbox)"
+    },
+    {
+      "id": 22,
+      "type": "FaceDetailer",
+      "pos": [
+        1740,
+        1100
+      ],
+      "size": [
+        360,
+        700
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 28
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 29
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 30
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 31
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 32
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 33
+        },
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 34
+        },
+        {
+          "name": "sam_model_opt",
+          "type": "SAM_MODEL",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "segm_detector_opt",
+          "type": "SEGM_DETECTOR",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "detailer_hook",
+          "type": "DETAILER_HOOK",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "scheduler_func_opt",
+          "type": "SCHEDULER_FUNC",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            36
+          ]
+        },
+        {
+          "name": "cropped_refined",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "cropped_enhanced_alpha",
+          "type": "IMAGE",
+          "links": []
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": []
+        },
+        {
+          "name": "detailer_pipe",
+          "type": "DETAILER_PIPE",
+          "links": []
+        },
+        {
+          "name": "cnet_images",
+          "type": "IMAGE",
+          "links": []
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FaceDetailer"
+      },
+      "widgets_values": [
+        512,
+        true,
+        1024,
+        664213456789012,
+        "randomize",
+        20,
+        6.0,
+        "dpmpp_2m",
+        "karras",
+        0.18,
+        8,
+        true,
+        true,
+        0.5,
+        10,
+        3.0,
+        "center-1",
+        0,
+        0.93,
+        0,
+        0.7,
+        "False",
+        10,
+        "",
+        1,
+        false,
+        20,
+        false,
+        false
+      ],
+      "title": "FaceDetailer - modele verrouille (bypass)"
+    },
+    {
+      "id": 30,
+      "type": "Note",
+      "pos": [
+        2160,
+        960
+      ],
+      "size": [
+        400,
+        400
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "",
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "04 - FACEDETAILER (bypass)\n==========================\nPorte du groupe 08 de Lena (IT-2). Detecte le visage (face_yolov8m) et\nle redessine a denoise 0.18 avec le MODELE VERROUILLE : entree `model`\ncablee sur la sortie d'IPAdapterFaceID, donc le LoRA de personnage\n(abyss1a) est dans la chaine. Le brancher sur le checkpoint nu\nrendrait un visage generique -- c'est l'equivalent du \"modele patche\nPuLID\" cote Lena.\n\nACTIVER : preset.facedetailer = true (le runner force le groupe actif).\ncfg 6.0 / dpmpp_2m / karras : reglage SDXL, pas les valeurs Flux du\ngraphe d'origine (cfg 1.0 / euler / simple)."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 23,
+      "type": "UpscaleModelLoader",
+      "pos": [
+        1740,
+        2060
+      ],
+      "size": [
+        340,
+        60
+      ],
+      "flags": {},
+      "order": 23,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "UPSCALE_MODEL",
+          "type": "UPSCALE_MODEL",
+          "links": [
+            35
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UpscaleModelLoader"
+      },
+      "widgets_values": [
+        "4x_NMKD-Siax_200k.pth"
+      ],
+      "title": "4x NMKD-Siax - modele"
+    },
+    {
+      "id": 24,
+      "type": "ImageUpscaleWithModel",
+      "pos": [
+        1740,
+        2160
+      ],
+      "size": [
+        340,
+        60
+      ],
+      "flags": {},
+      "order": 24,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "upscale_model",
+          "type": "UPSCALE_MODEL",
+          "link": 35
+        },
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 36
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            37
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageUpscaleWithModel"
+      },
+      "widgets_values": [],
+      "title": "4x NMKD-Siax"
+    },
+    {
+      "id": 25,
+      "type": "ImageScale",
+      "pos": [
+        1740,
+        2260
+      ],
+      "size": [
+        340,
+        140
+      ],
+      "flags": {},
+      "order": 25,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 37
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            38
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "lanczos",
+        2048,
+        2048,
+        "disabled"
+      ],
+      "title": "Redescendre au format 2K vise"
+    },
+    {
+      "id": 31,
+      "type": "Note",
+      "pos": [
+        2160,
+        2060
+      ],
+      "size": [
+        400,
+        380
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "",
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "05 - UPSCALE IMAGE 2K (bypass)\n==============================\nPorte du groupe 09 de Lena (IT-2). Monte l'image decodee avec un modele\nd'upscale (4x NMKD-Siax) puis la redescend au format vise, SANS\nrepasser par le sampler : ca n'invente pas de detail, ca agrandit.\n\nACTIVER : preset.upscale_2k = true (le runner force le groupe actif).\nBypasser / activer les TROIS noeuds ensemble (loader + upscale +\nrescale) -- ils sont dans ce groupe pour ca.\n\n2048 x 2048 : le seul format d'Abyssiaelle est 1:1 1024. Regler ce\nImageScale si un autre format entre dans son config.json. Si le groupe\n06 est actif, il redescend juste apres a la taille de publication --\n2K pour l'archive, taille d'export pour la publication."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
+    },
+    {
+      "id": 26,
+      "type": "ImageScale",
+      "pos": [
+        3140,
+        60
+      ],
+      "size": [
+        340,
+        140
+      ],
+      "flags": {},
+      "order": 26,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 38
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            39
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageScale"
+      },
+      "widgets_values": [
+        "lanczos",
+        1024,
+        1024,
+        "disabled"
+      ],
+      "title": "Taille de publication (export)"
+    },
+    {
+      "id": 27,
+      "type": "ImageAddNoise",
+      "pos": [
+        3140,
+        240
+      ],
+      "size": [
+        340,
+        130
+      ],
+      "flags": {},
+      "order": 27,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 39
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            40
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageAddNoise"
+      },
+      "widgets_values": [
+        12345,
+        "randomize",
+        0.012
+      ],
+      "title": "Grain capteur (0.012)"
+    },
+    {
+      "id": 28,
+      "type": "ImageCASharpening+",
+      "pos": [
+        3140,
+        410
+      ],
+      "size": [
+        340,
+        60
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 40
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            41
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "ImageCASharpening+"
+      },
+      "widgets_values": [
+        0.3
+      ],
+      "title": "Micro-sharpening"
+    },
+    {
+      "id": 32,
+      "type": "Note",
+      "pos": [
+        3520,
+        60
+      ],
+      "size": [
+        440,
+        440
+      ],
+      "flags": {},
+      "order": 32,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [],
+      "title": "",
+      "properties": {
+        "text": ""
+      },
+      "widgets_values": [
+        "06 - GRAIN + EXPORT (bypass)\n============================\nPorte du groupe 10 de Lena (IT-2). Reduit a la taille de publication,\npuis grain fin et micro-sharpening. Le downscale AVANT le grain est\nimportant : le grain doit etre a l'echelle de l'image publiee, pas de\nl'image 2K.\n\nACTIVER : preset.grain_export = true (le runner force le groupe actif,\npose la taille depuis export_sizes, la force du grain depuis\npreset.grain_strength et le sharpening depuis preset.sharpen).\n\nLes widgets ecrits ici sont des reperes : les trois valeurs sont\npilotees par la config a chaque job. Ces trois noeuds ne touchent\njamais l'identite (post-traitement pur)."
+      ],
+      "color": "#432",
+      "bgcolor": "#653"
     }
   ],
   "links": [
@@ -677,8 +1518,208 @@
       "LATENT"
     ],
     [
-      15,
+      16,
       12,
+      0,
+      17,
+      0,
+      "IMAGE"
+    ],
+    [
+      17,
+      14,
+      2,
+      17,
+      1,
+      "VAE"
+    ],
+    [
+      18,
+      14,
+      1,
+      15,
+      0,
+      "CLIP"
+    ],
+    [
+      19,
+      14,
+      1,
+      16,
+      0,
+      "CLIP"
+    ],
+    [
+      20,
+      14,
+      0,
+      18,
+      0,
+      "MODEL"
+    ],
+    [
+      21,
+      15,
+      0,
+      18,
+      1,
+      "CONDITIONING"
+    ],
+    [
+      22,
+      16,
+      0,
+      18,
+      2,
+      "CONDITIONING"
+    ],
+    [
+      23,
+      17,
+      0,
+      18,
+      3,
+      "LATENT"
+    ],
+    [
+      24,
+      18,
+      0,
+      19,
+      0,
+      "LATENT"
+    ],
+    [
+      25,
+      14,
+      2,
+      19,
+      1,
+      "VAE"
+    ],
+    [
+      26,
+      19,
+      0,
+      20,
+      0,
+      "IMAGE"
+    ],
+    [
+      27,
+      12,
+      0,
+      20,
+      1,
+      "IMAGE"
+    ],
+    [
+      28,
+      20,
+      0,
+      22,
+      0,
+      "*"
+    ],
+    [
+      29,
+      10,
+      0,
+      22,
+      1,
+      "MODEL"
+    ],
+    [
+      30,
+      2,
+      1,
+      22,
+      2,
+      "CLIP"
+    ],
+    [
+      31,
+      2,
+      2,
+      22,
+      3,
+      "VAE"
+    ],
+    [
+      32,
+      3,
+      0,
+      22,
+      4,
+      "CONDITIONING"
+    ],
+    [
+      33,
+      4,
+      0,
+      22,
+      5,
+      "CONDITIONING"
+    ],
+    [
+      34,
+      21,
+      0,
+      22,
+      6,
+      "BBOX_DETECTOR"
+    ],
+    [
+      35,
+      23,
+      0,
+      24,
+      0,
+      "UPSCALE_MODEL"
+    ],
+    [
+      36,
+      22,
+      0,
+      24,
+      1,
+      "IMAGE"
+    ],
+    [
+      37,
+      24,
+      0,
+      25,
+      0,
+      "IMAGE"
+    ],
+    [
+      38,
+      25,
+      0,
+      26,
+      0,
+      "IMAGE"
+    ],
+    [
+      39,
+      26,
+      0,
+      27,
+      0,
+      "IMAGE"
+    ],
+    [
+      40,
+      27,
+      0,
+      28,
+      0,
+      "IMAGE"
+    ],
+    [
+      41,
+      28,
       0,
       13,
       0,
@@ -708,6 +1749,54 @@
         150
       ],
       "color": "#a1309b",
+      "flags": {}
+    },
+    {
+      "id": 3,
+      "title": "03 - REFINER REALISME (interrupteur, OFF par defaut)",
+      "bounding": [
+        1700,
+        0,
+        1320,
+        760
+      ],
+      "color": "#3f789e",
+      "flags": {}
+    },
+    {
+      "id": 4,
+      "title": "04 - FACEDETAILER (bypass)",
+      "bounding": [
+        1700,
+        900,
+        1300,
+        960
+      ],
+      "color": "#8A8",
+      "flags": {}
+    },
+    {
+      "id": 5,
+      "title": "05 - UPSCALE IMAGE 2K (bypass)",
+      "bounding": [
+        1700,
+        2000,
+        1300,
+        520
+      ],
+      "color": "#88A",
+      "flags": {}
+    },
+    {
+      "id": 6,
+      "title": "06 - GRAIN + EXPORT (bypass)",
+      "bounding": [
+        3100,
+        0,
+        900,
+        560
+      ],
+      "color": "#A88",
       "flags": {}
     }
   ],
