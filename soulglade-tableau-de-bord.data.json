@@ -26,7 +26,7 @@
   "iterations": [
     {
       "id": "IT-0",
-      "state": "now",
+      "state": "done",
       "titre": "Le dépôt dit la vérité",
       "quoi": "Le dépôt est public sans licence, et trois vues de pilotage cohabitent. Une demi-journée de ménage qui débloque tout le reste : une licence posée, une seule source d'état.",
       "dod": "Un fichier de licence choisi et posé, le README aligné sur le statut réel, ROADMAP.md / BACKLOG.md / la roadmap de finition / le fil conducteur retirés, et ce tableau généré depuis son .data.json par script.",
@@ -35,7 +35,7 @@
     },
     {
       "id": "IT-1",
-      "state": "next",
+      "state": "now",
       "titre": "Un gain de rendu prouvé, pas supposé",
       "quoi": "Le banc de comparaison écrit en J8.5 n'a jamais servi. Sans lui, adopter un étage de détail est une croyance. On le sort de pause, on passe le candidat de P4.1 sur Léna.",
       "dod": "Le banc tourne sur une variante réelle, l'étage candidat est adopté ou rejeté par un chiffre écrit, et le workflow retenu est committé avec son entrée au manifeste.",
@@ -571,12 +571,12 @@
           "t": "Logs structurés plutôt que prints épars"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Éteindre les roadmaps concurrentes",
           "d": "IT-0 — la roadmap de finition n'a jamais été close ni archivée"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Décider du sort de ce tableau de bord",
           "d": "IT-0 — remplacer le fil conducteur, ou le générer comme lui"
         }
@@ -588,7 +588,7 @@
       "job": "Transverse : ce qui rend le mot « open source » vrai.",
       "items": [
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Poser une licence",
           "d": "IT-0 — le dépôt est public et sans licence : tous droits réservés par défaut, personne ne peut le forker"
         },
@@ -598,7 +598,7 @@
           "d": "ADR-0024, GPL identifiée avant publication"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Aligner le README sur le statut réel",
           "d": "IT-0 — il annonce encore un dépôt à rendre public"
         }
