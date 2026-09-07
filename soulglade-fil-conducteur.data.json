@@ -196,6 +196,10 @@
       "v": "ROADMAP.md"
     },
     {
+      "k": "Historique livré (V1, phase 2)",
+      "v": "DOCS/archives/"
+    },
+    {
       "k": "Invariants techniques",
       "v": "CLAUDE.md"
     },
