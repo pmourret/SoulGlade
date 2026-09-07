@@ -44,16 +44,16 @@
     },
     {
       "id": "IT-2",
-      "state": "now",
+      "state": "done",
       "titre": "Abyssiaelle produit au même niveau que Léna",
       "quoi": "Son pipeline est un brouillon de treize nœuds : ni refiner, ni FaceDetailer, ni upscale. Tant qu'il reste là, la moitié de ta production est bridée et aucune comparaison n'est honnête.",
       "dod": "Le graphe SDXL porte les mêmes étages que le graphe Flux, le banc mesure l'écart avant/après, et le score d'identité tient sur une série réelle.",
       "epics": "E5, E2",
-      "ref": "BACKLOG absorbé — pipeline Abyssiaelle, noté le 06/09"
+      "ref": "DOCS/cadrage/2026-09-07-it2-pipeline-abyssiaelle.md"
     },
     {
       "id": "IT-3",
-      "state": "next",
+      "state": "now",
       "titre": "La machine reconnaît un raté — ou on arrête d'y croire",
       "quoi": "Deux pistes fermées (signal géométrique, juge pixel), une mesure à 33 % de faux positifs, et aucun corpus étiqueté pour arbitrer. Cette itération se termine par un tri qui marche ou par un renoncement écrit.",
       "dod": "Un corpus étiqueté à la main existe, les proportions du corps sont mesurées dessus, et ADR-0025 tranche : le tri automatique passe dans le runner, ou le critère de sortie est amendé.",
@@ -291,14 +291,24 @@
           "d": "IT-1 — « mains » à n=3 a tiré le global à « insuffisant » alors que trois genres tranchaient à n=5"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Amener le pipeline Abyssiaelle au niveau de Léna",
-          "d": "IT-2 — brouillon de 13 nœuds aujourd'hui"
+          "d": "IT-2 — quatre étages câblés, validés dans ComfyUI et mesurés au banc un axe à la fois. Adoptés : upscale 2K (netteté ×2,1) et grain + export (seul « meilleure sur tous les axes »). Rejetés : refiner (texture +0,93 mais identité 0,67 → 0,46) et FaceDetailer seul — qui garde son rôle de réparation derrière le refiner."
         },
         {
           "s": "veille",
           "t": "Graphe d'édition SDXL pour rpg-personnage",
           "d": "absence assumée en clôture V1"
+        },
+        {
+          "s": "dette",
+          "t": "Le banc ne fait varier que des interrupteurs d'étage",
+          "d": "IT-2 — les deux étages rejetés ont leur vraie question dans un réglage continu (refiner_denoise, guide_size du FaceDetailer) que bench.CFG_AXES ne sait pas balayer : ce sont des rejets du réglage livré, pas de l'étage"
+        },
+        {
+          "s": "faire",
+          "t": "Combler la texture de visage du pack SDXL",
+          "d": "IT-2 — 3,29 contre ~4,9 côté Léna. Le seul étage qui la comblait (refiner) coûte l'identité : c'est le sujet du candidat #2 de la phase 4, régénération locale masquée"
         }
       ]
     },
