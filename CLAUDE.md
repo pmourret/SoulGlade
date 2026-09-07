@@ -120,8 +120,21 @@ repo et skills en **français**.
 
 ## Ne pas ouvrir sans raison explicite
 
-`AUDIT.md`, `DOCS/handoffs/`, `DOCS/cadrage/`, JSON ComfyUI bruts,
-`openapi.json`, `schema.d.ts`, `package-lock.json`.
+`AUDIT.md`, `DOCS/handoffs/`, `DOCS/cadrage/`, `DOCS/archives/`, JSON
+ComfyUI bruts, `openapi.json`, `schema.d.ts`, `package-lock.json`.
+
+**Cette règle écrite est la protection principale.** Le
+`permissions.deny` de `.claude/settings.json` n'en couvre qu'une partie :
+il bloque Read, Grep, Glob, Edit/Write et les commandes de fichier
+reconnues dans Bash (`cat`, `head`, `sed`, redirections), mais **jamais**
+un script Python ou Node qui ouvre le fichier lui-même — et sa couverture
+de Grep/Glob est déclarée *best-effort* par la documentation, pas
+garantie. Il est volontairement absent de `DOCS/cadrage/`,
+`DOCS/archives/`, `DOCS/handoffs/`, `CHARACTERS/`, `WORKFLOWS/` et
+`AUTOMATION/tests/fixtures/` : un deny Read y bloquerait aussi
+l'écriture, donc la Règle 3 (cadrage écrit avant le code), les
+invariants 1, 3 et 4, et l'écriture d'un handoff le jour où elle
+reprend.
 
 ## Compact instructions
 

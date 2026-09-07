@@ -54,7 +54,22 @@
       "Read(INPUTS/**)",
       "Read(**/*.db)",
       "Read(**/*.db-wal)",
-      "Read(**/*.db-shm)"
+      "Read(**/*.db-shm)",
+      "Read(AUDIT.md)",
+      "Read(openapi.json)",
+      "Read(schema.d.ts)",
+      "Read(package-lock.json)",
+      "Read(.claude/worktrees/**)",
+      "Read(node_modules/**)",
+      "Read(__pycache__/**)",
+      "Read(.venv/**)",
+      "Read(.toolchain/**)",
+      "Read(.pytest_cache/**)",
+      "Read(.kombai/**)",
+      "Read(AUTOMATION/web/ui/dist/**)",
+      "Read(**/*.pyc)",
+      "Read(**/*.bak)",
+      "Read(**/*.avant-*)"
     ]
   },
   "hooks": {
