@@ -1,10 +1,12 @@
 #!/bin/bash
 # .githooks/pre-commit
 #
-# Mechanically enforces the two invariants that are cheap and reliable to
-# check without knowing the exact test layout of whatever module changed:
+# Mechanically enforces the three invariants that are cheap and reliable
+# to check without knowing the exact test layout of whatever module
+# changed:
 #   1. Personal character data never enters the versioned tree (ADR-0005)
 #   2. Every staged ComfyUI workflow passes static validation
+#   3. The committed fil conducteur matches its data file
 #
 # Everything else in CLAUDE.md §11 (running the tests for the module you
 # touched) stays a human/Claude Code discipline — this hook does not try
@@ -88,6 +90,19 @@ if [ -n "$workflow_files" ]; then
       exit 1
     fi
   done
+fi
+
+# 3. The fil conducteur is a build output committed next to its source --
+#    the one exception to "no build output in the tree" (frontend.md), and
+#    it only holds if the copy is provably in sync. Checked on the data
+#    file, not the HTML: staging data without the rebuilt page is the
+#    failure this catches, and the reverse is caught by --check anyway.
+if echo "$staged_files" | grep -qx 'soulglade-fil-conducteur.data.json'; then
+  if ! python AUTOMATION/tools/build_fil_conducteur.py --check; then
+    echo "COMMIT BLOCKED — soulglade-fil-conducteur.html is stale."
+    echo "Run 'python AUTOMATION/tools/build_fil_conducteur.py' and stage the result."
+    exit 1
+  fi
 fi
 
 echo "Reminder (CLAUDE.md §11): make sure you ran the tests for any module you touched."

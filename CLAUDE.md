@@ -25,13 +25,18 @@ Les cinq règles s'appliquent ici directement :
 ## Fil conducteur (vue visuelle)
 
 `soulglade-fil-conducteur.html` (racine) est une vue visuelle de
-`ROADMAP.md` pour Pierre — **jamais une source de vérité**. En fin de
-session, si `ROADMAP.md` a changé (jalon coché, étape de phase ajoutée
-ou terminée, décision de pause, entrée backlog), mettre à jour
-uniquement l'objet `ROADMAP_DATA` en tête du `<script>` de ce fichier
-pour qu'il corresponde. Ne jamais toucher au CSS ni aux fonctions de
-rendu pour refléter un changement de contenu — si le rendu doit changer,
-le signaler plutôt que le faire sans demande explicite.
+`ROADMAP.md` et `BACKLOG.md` pour Pierre — **jamais une source de
+vérité**, et **jamais édité à la main** : c'est une sortie de build. En
+fin de session, si `ROADMAP.md` ou `BACKLOG.md` a changé (jalon coché,
+étape de phase ajoutée ou terminée, décision de pause, entrée backlog),
+modifier `soulglade-fil-conducteur.data.json` puis régénérer :
+
+    python AUTOMATION/tools/build_fil_conducteur.py
+
+Le gabarit `AUTOMATION/tools/templates/fil-conducteur.html` porte le CSS
+et les fonctions de rendu : ne jamais y toucher pour refléter un
+changement de contenu — si le rendu doit changer, le signaler plutôt que
+le faire sans demande explicite.
 
 ## Rôle
 
