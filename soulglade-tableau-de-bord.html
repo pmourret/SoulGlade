@@ -1,0 +1,964 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soulglade — Tableau de bord applicatif</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* palette reprise des tokens du studio (AUTOMATION/web/ui/src/styles/tokens.css) */
+    --bg:#0b1015; --panel:#14191e; --panel2:#1b2127;
+    --line:#2a3138; --line2:#3b444d;
+    --txt:#dfe5ec; --dim:#9299a1; --dim2:#6a727b;
+    --acc:#90b0c4; --acc-d:#5d7d90; --acc-soft:rgba(144,176,196,.10);
+    --ok:#639564; --warn:#b5943f; --bad:#cc6660; --idle:#4a545d;
+    --f-disp:'Fraunces',Georgia,serif;
+    --f-body:'IBM Plex Sans',system-ui,sans-serif;
+    --f-mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--txt);font-family:var(--f-body);
+    line-height:1.55;-webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:880px;margin:0 auto;padding:3rem 1.4rem 6rem}
+  a{color:var(--acc)}
+
+  /* ---- hero ---- */
+  .cap{font-family:var(--f-disp);font-size:2.1rem;font-weight:600;letter-spacing:-.015em;margin:0 0 .5rem}
+  .sub{color:var(--dim);max-width:62ch;margin:0 0 1.6rem}
+  .stamp{font-family:var(--f-mono);font-size:.75rem;color:var(--dim2);margin-bottom:2.2rem}
+
+  /* la bande de verdict globale — le meme langage que le QC du produit */
+  .verdict{display:flex;gap:2px;height:14px;border-radius:3px;overflow:hidden;margin-bottom:.6rem}
+  .verdict span{display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:.15rem 1.1rem;font-family:var(--f-mono);font-size:.72rem;color:var(--dim);margin-bottom:2.6rem}
+  .legend b{font-weight:500;color:var(--txt)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:.4rem;vertical-align:1px}
+
+  h2.sec{font-family:var(--f-disp);font-size:1.35rem;font-weight:600;margin:0 0 .3rem}
+  .sec-note{color:var(--dim);font-size:.92rem;margin:0 0 1.4rem;max-width:64ch}
+  section{margin-bottom:3.4rem}
+
+  /* ---- regle du jeu ---- */
+  .rules{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:1.1rem 1.3rem}
+  .rules h3{font-size:.95rem;font-weight:600;margin:0 0 .6rem}
+  .rules ul{margin:0;padding-left:1.1rem;color:var(--dim);font-size:.92rem}
+  .rules li{margin-bottom:.25rem}
+  .rules li b{color:var(--txt);font-weight:500}
+
+  /* ---- iterations : une sequence, donc numerotee ---- */
+  .it{display:grid;grid-template-columns:4.2rem 1fr;gap:1rem;padding:1.1rem 0;border-top:1px solid var(--line)}
+  .it:last-child{border-bottom:1px solid var(--line)}
+  .it-id{font-family:var(--f-mono);font-size:.82rem;color:var(--acc);padding-top:.15rem}
+  .it[data-state="now"] .it-id{color:var(--warn)}
+  .it h3{font-family:var(--f-disp);font-size:1.08rem;font-weight:600;margin:0 0 .35rem}
+  .it p{margin:0 0 .5rem;color:var(--dim);font-size:.93rem}
+  .it .dod{font-size:.86rem;color:var(--txt);border-left:2px solid var(--acc-d);padding-left:.7rem}
+  .it .dod b{font-weight:500;color:var(--acc)}
+  .it .touches{font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);margin-top:.5rem}
+  .now-tag{font-family:var(--f-mono);font-size:.68rem;color:var(--warn);border:1px solid var(--warn);
+    border-radius:3px;padding:.05rem .35rem;margin-left:.5rem;vertical-align:2px}
+
+  /* ---- filtres ---- */
+  .filters{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem}
+  .chip{font-family:var(--f-mono);font-size:.74rem;color:var(--dim);background:transparent;
+    border:1px solid var(--line2);border-radius:999px;padding:.25rem .7rem;cursor:pointer}
+  .chip[aria-pressed="true"]{color:var(--bg);background:var(--acc);border-color:var(--acc)}
+  .chip:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+  /* ---- epics ---- */
+  .epic{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin-bottom:.7rem;overflow:hidden}
+  .epic[data-veille]{opacity:.72}
+  .epic summary{cursor:pointer;list-style:none;padding:.95rem 1.15rem;display:grid;
+    grid-template-columns:3.1rem 1fr auto;gap:.9rem;align-items:baseline}
+  .epic summary::-webkit-details-marker{display:none}
+  .epic summary:hover{background:var(--panel2)}
+  .epic-id{font-family:var(--f-mono);font-size:.8rem;color:var(--acc-d)}
+  .epic-name{font-family:var(--f-disp);font-size:1.05rem;font-weight:600}
+  .epic-job{display:block;font-family:var(--f-body);font-size:.87rem;font-weight:400;color:var(--dim);margin-top:.15rem}
+  .epic-bar{display:flex;gap:1.5px;width:88px;height:9px;border-radius:2px;overflow:hidden;align-self:center}
+  .epic-bar span{display:block;flex:1}
+  .items{padding:.2rem 1.15rem 1.1rem}
+  .item{display:grid;grid-template-columns:.55rem 1fr;gap:.75rem;padding:.42rem 0;border-top:1px solid var(--line);font-size:.91rem}
+  .item .tick{width:.4rem;height:.4rem;border-radius:1px;margin-top:.55rem}
+  .item .lbl b{font-weight:500}
+  .item .lbl em{font-style:normal;color:var(--dim);display:block;font-size:.85rem}
+  .item code{font-family:var(--f-mono);font-size:.78rem;color:var(--dim2)}
+  .item[hidden]{display:none}
+  .empty{color:var(--dim2);font-size:.88rem;padding:.6rem 0}
+
+  /* ---- ecarts ---- */
+  .flag{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;
+    background:var(--panel);padding:.85rem 1.1rem;margin-bottom:.6rem}
+  .flag[data-e="tranche"]{border-left-color:var(--ok)}
+  .flag h3{font-size:.95rem;margin:0 0 .25rem;font-weight:600}
+  .flag p{margin:0;color:var(--dim);font-size:.9rem}
+  .flag .mark{font-family:var(--f-mono);font-size:.7rem;color:var(--dim2);margin-right:.45rem}
+
+  .hz{display:grid;grid-template-columns:1fr;gap:0}
+  .hz div{padding:.55rem 0;border-top:1px solid var(--line);font-size:.91rem}
+  .hz div:last-child{border-bottom:1px solid var(--line)}
+  .hz b{font-weight:500}
+  .hz em{font-style:normal;color:var(--dim);display:block;font-size:.85rem}
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);
+    font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);line-height:1.7}
+
+  @media (max-width:620px){
+    .page{padding:2rem 1rem 4rem}
+    .cap{font-size:1.6rem}
+    .epic summary{grid-template-columns:2.6rem 1fr;gap:.6rem}
+    .epic-bar{grid-column:1/-1;width:100%;margin-top:.5rem}
+    .it{grid-template-columns:1fr;gap:.3rem}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1 class="cap">Produire vraiment</h1>
+<p class="sub">Le cap des six prochains mois : que Léna et Abyssiaelle sortent du contenu
+sans retouche manuelle derrière chaque image. Tout le reste — packs vendables, éditeur de
+mondes, publication — attend ce résultat.</p>
+<div class="stamp" id="stamp"></div>
+
+<div class="verdict" id="global-bar"></div>
+<div class="legend" id="global-legend"></div>
+
+<section>
+  <h2 class="sec">La règle du jeu</h2>
+  <p class="sec-note">Itérations sans date, terminées par une définition de fini stricte.
+  Une itération se ferme quand ces six points sont vrais — pas quand le temps est écoulé.</p>
+  <div class="rules">
+    <h3>Définition de fini — commune à toute itération</h3>
+    <ul>
+      <li><b>Cadrage écrit d'abord</b> — <code>DOCS/cadrage/</code>, trois questions : à quoi ça sert, hors périmètre, critère de sortie.</li>
+      <li><b>Tests du module verts</b> — et un test qui aurait attrapé le bug si l'itération en corrige un.</li>
+      <li><b>Aucune erreur silencieuse</b> — toute panne remonte à l'interface, actionnable.</li>
+      <li><b>Décision chiffrée, jamais à l'œil</b> — une amélioration non mesurée n'est pas adoptée.</li>
+      <li><b>Audit UX vérifié en vrai</b> si un écran du parcours nominal est touché.</li>
+      <li><b>Rétro à la fermeture</b> — <code>DOCS/retros/</code>, deux questions, trente minutes.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2 class="sec">Itérations</h2>
+  <p class="sec-note">Séquence, pas calendrier. Chacune produit un résultat visible en usage réel ;
+  aucune ne se lance sans son cadrage.</p>
+  <div id="iterations"></div>
+</section>
+
+<section>
+  <h2 class="sec">EPIC</h2>
+  <p class="sec-note" id="epics-note"></p>
+  <div class="filters" id="filters"></div>
+  <div id="epics"></div>
+</section>
+
+<section>
+  <h2 class="sec">Décisions</h2>
+  <p class="sec-note">Ce qui a été tranché, et ce qui reste ouvert. Une décision tranchée qui touche
+  au cadrage se répercute dans PROJET.md ou dans un ADR — jamais seulement ici.</p>
+  <div id="decisions"></div>
+</section>
+
+<section>
+  <h2 class="sec">Horizon</h2>
+  <p class="sec-note" id="horizon-note"></p>
+  <div id="horizon"></div>
+</section>
+
+<footer id="footer"></footer>
+</div>
+
+<script>
+/* Données injectées au build depuis soulglade-tableau-de-bord.data.json.
+   Ce gabarit ne porte aucun contenu : un changement d'état va dans le JSON,
+   un changement de rendu vient ici. La page n'est jamais éditée à la main. */
+const D = {
+  "maj": "7 septembre 2026",
+  "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
+  "statuts": {
+    "fait": {
+      "label": "fait",
+      "color": "var(--ok)"
+    },
+    "cours": {
+      "label": "en cours",
+      "color": "var(--warn)"
+    },
+    "faire": {
+      "label": "à faire",
+      "color": "var(--acc)"
+    },
+    "dette": {
+      "label": "dette assumée",
+      "color": "var(--bad)"
+    },
+    "veille": {
+      "label": "en veille",
+      "color": "var(--idle)"
+    }
+  },
+  "iterations": [
+    {
+      "id": "IT-0",
+      "state": "now",
+      "titre": "Le dépôt dit la vérité",
+      "quoi": "Le dépôt est public sans licence, et trois vues de pilotage cohabitent. Une demi-journée de ménage qui débloque tout le reste : une licence posée, une seule source d'état.",
+      "dod": "Un fichier de licence choisi et posé, le README aligné sur le statut réel, ROADMAP.md / BACKLOG.md / la roadmap de finition / le fil conducteur retirés, et ce tableau généré depuis son .data.json par script.",
+      "epics": "T2, T1",
+      "ref": "DOCS/adr/ à créer — licence + fin des roadmaps concurrentes"
+    },
+    {
+      "id": "IT-1",
+      "state": "next",
+      "titre": "Un gain de rendu prouvé, pas supposé",
+      "quoi": "Le banc de comparaison écrit en J8.5 n'a jamais servi. Sans lui, adopter un étage de détail est une croyance. On le sort de pause, on passe le candidat de P4.1 sur Léna.",
+      "dod": "Le banc tourne sur une variante réelle, l'étage candidat est adopté ou rejeté par un chiffre écrit, et le workflow retenu est committé avec son entrée au manifeste.",
+      "epics": "E5, E6",
+      "ref": "DOCS/cadrage/2026-09-06-phase-4-qualite-workflows-mains.md"
+    },
+    {
+      "id": "IT-2",
+      "state": "next",
+      "titre": "Abyssiaelle produit au même niveau que Léna",
+      "quoi": "Son pipeline est un brouillon de treize nœuds : ni refiner, ni FaceDetailer, ni upscale. Tant qu'il reste là, la moitié de ta production est bridée et aucune comparaison n'est honnête.",
+      "dod": "Le graphe SDXL porte les mêmes étages que le graphe Flux, le banc mesure l'écart avant/après, et le score d'identité tient sur une série réelle.",
+      "epics": "E5, E2",
+      "ref": "BACKLOG absorbé — pipeline Abyssiaelle, noté le 06/09"
+    },
+    {
+      "id": "IT-3",
+      "state": "next",
+      "titre": "La machine reconnaît un raté — ou on arrête d'y croire",
+      "quoi": "Deux pistes fermées (signal géométrique, juge pixel), une mesure à 33 % de faux positifs, et aucun corpus étiqueté pour arbitrer. Cette itération se termine par un tri qui marche ou par un renoncement écrit.",
+      "dod": "Un corpus étiqueté à la main existe, les proportions du corps sont mesurées dessus, et ADR-0025 tranche : le tri automatique passe dans le runner, ou le critère de sortie est amendé.",
+      "epics": "E6",
+      "ref": "DOCS/adr/0025-tri-automatique-defauts-objectifs.md"
+    },
+    {
+      "id": "IT-4",
+      "state": "next",
+      "titre": "Produire une semaine sans être ralenti",
+      "quoi": "Contenu à remplir depuis ton usage réel, pas depuis le code — ce qui te coûte du temps une fois que le rendu est bon. Candidats repérés : garde-robe en dur dans le front, absence de file d'attente serveur, créateur de lumière manquant.",
+      "dod": "Une semaine de production réelle sans contournement manuel noté, et chaque friction relevée est soit corrigée, soit versée au backlog avec sa raison.",
+      "epics": "E3, E4",
+      "ref": "cadrage à écrire depuis l'usage réel"
+    },
+    {
+      "id": "IT-5",
+      "state": "next",
+      "titre": "Un monde porte enfin un style",
+      "quoi": "Les assets de monde ne sont pas consommés par le runner : aucun monde ne peut valoir readiness.style. C'est le premier pas concret vers un pack vendable, et il sert d'abord ta production.",
+      "dod": "Un monde câblé bout en bout, son style visible sur une image produite, et le drapeau readiness posé en connaissance de cause.",
+      "epics": "E11, E1",
+      "ref": "DOCS/cadrage/2026-09-06-contrat-de-pack.md (C3)"
+    },
+    {
+      "id": "IT-6",
+      "state": "next",
+      "titre": "La vidéo hérite de l'image",
+      "quoi": "La vidéo ne se lance pas avant que l'image soit stable : elle multiplie par le nombre d'images les ratés qu'on ne sait pas encore détecter. Une fois IT-1 à IT-3 fermées, elle devient le prolongement naturel du pipeline — pas un deuxième produit.",
+      "dod": "Une vidéo produite depuis une image déjà validée par le tri, avec le même cœur d'exécution, le même journal et le même export. La dérive d'identité sur la séquence est mesurée, même grossièrement.",
+      "epics": "E12, E4, E6",
+      "ref": "ADR à écrire : couche porteuse de la capacité vidéo"
+    }
+  ],
+  "epics": [
+    {
+      "id": "E1",
+      "nom": "Socle & couches",
+      "job": "Qui a le droit de porter quoi — plateforme, pack, monde, personnage.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Quatre couches matérialisées",
+          "d": "ADR-0017, appliquées dans le code et les dossiers"
+        },
+        {
+          "s": "fait",
+          "t": "Carte de capacités plateforme et pack",
+          "d": "ADR-0018 — même forme {graph, roles} des deux côtés"
+        },
+        {
+          "s": "fait",
+          "t": "Résolution des quatre axes",
+          "d": "PACKS/resolution.json, ADR-0012"
+        },
+        {
+          "s": "fait",
+          "t": "Héritage des catalogues monde → personnage",
+          "d": "ADR-0019, surcharge locale"
+        },
+        {
+          "s": "fait",
+          "t": "Type, style et monde figés à la création",
+          "d": "ADR-0006"
+        },
+        {
+          "s": "fait",
+          "t": "Aucun graphe porté par un monde ou un personnage",
+          "d": "invariant 10, tenu"
+        }
+      ]
+    },
+    {
+      "id": "E2",
+      "nom": "Identité de personnage",
+      "job": "Créer un personnage et garantir que c'est toujours lui.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Wizard de création"
+        },
+        {
+          "s": "fait",
+          "t": "Portrait de base : candidats, gel, import"
+        },
+        {
+          "s": "fait",
+          "t": "Verrou PuLID / Flux",
+          "d": "opérationnel sur Léna"
+        },
+        {
+          "s": "fait",
+          "t": "Verrou LoRA / SDXL",
+          "d": "mécanisme en place, pipeline à compléter (voir E5)"
+        },
+        {
+          "s": "fait",
+          "t": "Score d'identité, centroïde, backfill d'embeddings"
+        },
+        {
+          "s": "fait",
+          "t": "assert_no_face pour les mécanismes qui l'exigent",
+          "d": "invariant 6"
+        },
+        {
+          "s": "faire",
+          "t": "Centroïde évolutif",
+          "d": "apprendre des images validées au fil du temps — évolution, pas réécriture"
+        }
+      ]
+    },
+    {
+      "id": "E3",
+      "nom": "Banque créative",
+      "job": "Tout ce qu'on prépare avant de lancer une génération.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Composeur de scènes et catégories",
+          "d": "le plus gros écran du studio"
+        },
+        {
+          "s": "fait",
+          "t": "Banque de poses",
+          "d": "extraction DWPose, rendu, presets"
+        },
+        {
+          "s": "fait",
+          "t": "Banque de tons et éditeur d'expression"
+        },
+        {
+          "s": "fait",
+          "t": "Lieux de monde avec héritage live",
+          "d": "ADR-0015"
+        },
+        {
+          "s": "faire",
+          "t": "Gestionnaire de vêtements",
+          "d": "le catalogue est aujourd'hui en dur dans le front"
+        },
+        {
+          "s": "faire",
+          "t": "Créateur de lumière",
+          "d": "aujourd'hui le cadrage lumière passe par le prompt du lieu"
+        },
+        {
+          "s": "faire",
+          "t": "Importeur d'assets"
+        }
+      ]
+    },
+    {
+      "id": "E4",
+      "nom": "Moteur de production",
+      "job": "Transformer une scène en images, sans deuxième chemin d'exécution.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Cœur d'exécution unique, CLI et web",
+          "d": "invariant 2"
+        },
+        {
+          "s": "fait",
+          "t": "Assembleur de prompt verrouillé par un test à l'octet",
+          "d": "invariant 3"
+        },
+        {
+          "s": "fait",
+          "t": "ui_to_api seul chemin de lecture des graphes",
+          "d": "invariant 1"
+        },
+        {
+          "s": "fait",
+          "t": "Planifier, lancer, arrêter un lot"
+        },
+        {
+          "s": "fait",
+          "t": "Retour pendant la génération",
+          "d": "tick d'état toutes les 1,5 s"
+        },
+        {
+          "s": "fait",
+          "t": "Aperçu de prompt avant lancement"
+        },
+        {
+          "s": "fait",
+          "t": "Upscale en capacité de plateforme",
+          "d": "netteté +31 %, identité −0,004 à la mesure"
+        },
+        {
+          "s": "faire",
+          "t": "File d'attente côté serveur",
+          "d": "elle n'existe pas ; l'interface le compense — à décider"
+        }
+      ]
+    },
+    {
+      "id": "E5",
+      "nom": "Qualité de rendu",
+      "job": "Les graphes eux-mêmes : ce qui sort de ComfyUI avant tout contrôle.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Pipeline Léna complet",
+          "d": "refiner, FaceDetailer, upscale câblés"
+        },
+        {
+          "s": "fait",
+          "t": "Étages de détail candidats identifiés",
+          "d": "P4.1 — HLFrequencyDetailRestore, patron Skin Fix"
+        },
+        {
+          "s": "fait",
+          "t": "Manifeste ComfyUI des nœuds et modèles",
+          "d": "ADR-0022, jamais de dépendance implicite"
+        },
+        {
+          "s": "faire",
+          "t": "Inspecter les workflows de ComfyUI Studio",
+          "d": "emprunter l'étage qui marche, jamais le graphe : contrat de titres de nœuds, nœuds custom cachés, licence (ADR-0024)"
+        },
+        {
+          "s": "cours",
+          "t": "Sortir le banc de comparaison de pause",
+          "d": "IT-1 — écrit en J8.5, jamais utilisé"
+        },
+        {
+          "s": "faire",
+          "t": "Adopter ou rejeter un étage de détail",
+          "d": "IT-1 — décision chiffrée sur Léna"
+        },
+        {
+          "s": "faire",
+          "t": "Amener le pipeline Abyssiaelle au niveau de Léna",
+          "d": "IT-2 — brouillon de 13 nœuds aujourd'hui"
+        },
+        {
+          "s": "veille",
+          "t": "Graphe d'édition SDXL pour rpg-personnage",
+          "d": "absence assumée en clôture V1"
+        }
+      ]
+    },
+    {
+      "id": "E6",
+      "nom": "Contrôle automatique des défauts",
+      "job": "Distinguer un raté mécanique d'un choix créatif, et trier sans toi.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Mesures de réalisme et bandes par scène"
+        },
+        {
+          "s": "fait",
+          "t": "QC identité opérationnel, arbitrage laissé à l'utilisateur"
+        },
+        {
+          "s": "fait",
+          "t": "Détection des mains, version 1",
+          "d": "livrée mais informative : 33 % de faux positifs sur la banque déjà validée"
+        },
+        {
+          "s": "fait",
+          "t": "Juge pixel Florence-2 — NO-GO chiffré",
+          "d": "53 % de faux positifs, piste fermée le jour même"
+        },
+        {
+          "s": "fait",
+          "t": "Signal géométrique du squelette — fermé",
+          "d": "DWPose pose un squelette plausible sur une bouillie de pixels"
+        },
+        {
+          "s": "faire",
+          "t": "Constituer un corpus étiqueté à la main",
+          "d": "IT-3 — ce qui manquait pour calibrer honnêtement"
+        },
+        {
+          "s": "faire",
+          "t": "Plausibilité des proportions du corps",
+          "d": "IT-3 — signal probablement réel, contrairement aux mains"
+        },
+        {
+          "s": "faire",
+          "t": "Trancher le tri automatique",
+          "d": "IT-3 — ADR-0025 : franchir la barre ou amender le critère de sortie"
+        },
+        {
+          "s": "dette",
+          "t": "Seuil qc.threshold_high non recalibré",
+          "d": "valeur provisoire depuis J1, acceptable en l'état"
+        }
+      ]
+    },
+    {
+      "id": "E7",
+      "nom": "Post-production",
+      "job": "Rattraper ou finir une image après génération.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Éditeur photo optique"
+        },
+        {
+          "s": "fait",
+          "t": "Éditeur avancé : calques, courbes, histogramme, historique"
+        },
+        {
+          "s": "fait",
+          "t": "Retouche IA par graphe d'édition de pack",
+          "d": "ADR-0013, actif sur le pack influenceur"
+        },
+        {
+          "s": "fait",
+          "t": "Grain et redimensionnement d'export"
+        },
+        {
+          "s": "veille",
+          "t": "Ambition « niveau professionnel »",
+          "d": "ouverte sans hiérarchie ni fin ; attendra un vrai cadrage"
+        }
+      ]
+    },
+    {
+      "id": "E8",
+      "nom": "Revue, tri & export",
+      "job": "Du lot produit au fichier prêt à poster.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Revue par verdicts et galerie séparées"
+        },
+        {
+          "s": "fait",
+          "t": "Tri, rejet et annulation gardés par test",
+          "d": "les seuls endroits où une erreur coûte une image"
+        },
+        {
+          "s": "fait",
+          "t": "Journal de production"
+        },
+        {
+          "s": "fait",
+          "t": "Export aux formats et tailles de publication"
+        },
+        {
+          "s": "veille",
+          "t": "Publication par API",
+          "d": "hors périmètre assumé : tokens tiers, NSFW incompatible Meta, responsabilité"
+        }
+      ]
+    },
+    {
+      "id": "E9",
+      "nom": "Contenu adulte",
+      "job": "Citoyen de première classe, désactivé par défaut.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Armement par personnage, off par défaut",
+          "d": "ADR-0003"
+        },
+        {
+          "s": "fait",
+          "t": "Isolation vérifiée par test"
+        },
+        {
+          "s": "fait",
+          "t": "Recomposition des outils, aucun sous-système parallèle",
+          "d": "invariant 9"
+        },
+        {
+          "s": "veille",
+          "t": "Pas de cran d'édition pour le pack RPG",
+          "d": "dépend du graphe d'édition SDXL (E5)"
+        }
+      ]
+    },
+    {
+      "id": "E10",
+      "nom": "Exploitation & installation",
+      "job": "Que l'outil démarre chez quelqu'un qui n'est pas toi.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Provisioning ComfyUI par manifeste"
+        },
+        {
+          "s": "fait",
+          "t": "Contrôle du serveur Comfy depuis l'interface",
+          "d": "démarrer, arrêter, relancer, décharger, statistiques"
+        },
+        {
+          "s": "fait",
+          "t": "Chaîne d'outils portable",
+          "d": "tout reste dans le dépôt, rien sous %APPDATA%"
+        },
+        {
+          "s": "dette",
+          "t": "URLs de modèles incomplètes au manifeste",
+          "d": "une quinzaine d'entrées sans URL vérifiée"
+        },
+        {
+          "s": "faire",
+          "t": "Health-check au niveau plateforme",
+          "d": "aujourd'hui il ne couvre qu'un personnage"
+        },
+        {
+          "s": "faire",
+          "t": "Installation de bout en bout vérifiée par un tiers",
+          "d": "jamais testée hors de ta machine"
+        }
+      ]
+    },
+    {
+      "id": "E11",
+      "nom": "Mondes & packs distribuables",
+      "job": "Ce qui fera un jour un pack vendable.",
+      "veille": true,
+      "items": [
+        {
+          "s": "fait",
+          "t": "Contrat de pack écrit depuis le code réel",
+          "d": "trois écarts trouvés entre le contrat anticipé et le vrai"
+        },
+        {
+          "s": "fait",
+          "t": "Drapeaux de readiness par monde",
+          "d": "ADR-0023 — posés, jamais calculés"
+        },
+        {
+          "s": "faire",
+          "t": "Câbler les assets de monde dans le runner",
+          "d": "IT-5 — prérequis pour qu'un monde porte un style"
+        },
+        {
+          "s": "veille",
+          "t": "Éditeur de mondes et de packs",
+          "d": "attend une pratique concrète de création de monde"
+        },
+        {
+          "s": "veille",
+          "t": "Test commercial de l'idée pack",
+          "d": "à poster à ton audience quand un monde est réellement prêt"
+        }
+      ]
+    },
+    {
+      "id": "E12",
+      "nom": "Production vidéo",
+      "job": "La suite de l'image : une vidéo part d'une image validée, jamais d'une génération parallèle.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "Vidéo déclarée au registre de création",
+          "d": "depuis J4 — déclarée, jamais branchée"
+        },
+        {
+          "s": "fait",
+          "t": "Workflows LTX2 image → vidéo committés",
+          "d": "présents dans WORKFLOWS/nsfw/, jamais câblés au runner"
+        },
+        {
+          "s": "faire",
+          "t": "Décider de la couche qui porte la vidéo",
+          "d": "elle dépend de la famille de modèle : pack plutôt que plateforme, à trancher en ADR"
+        },
+        {
+          "s": "faire",
+          "t": "Brancher un graphe vidéo sur le cœur d'exécution unique",
+          "d": "IT-6 — même execute_jobs, l'image source vient de la banque validée"
+        },
+        {
+          "s": "faire",
+          "t": "Contrôle qualité d'une vidéo",
+          "d": "cohérence temporelle et dérive d'identité : aucune mesure existante ne s'y applique"
+        },
+        {
+          "s": "faire",
+          "t": "Export vidéo aux formats de publication",
+          "d": "réutilise le tri et le journal, pas un deuxième chemin de sortie"
+        },
+        {
+          "s": "veille",
+          "t": "Vidéo pour contenu adulte",
+          "d": "suit la vidéo générale, jamais un sous-système propre"
+        },
+        {
+          "s": "veille",
+          "t": "Musique et voix",
+          "d": "ACE-Step déclaré, pipeline entièrement différent — pas un prolongement de l'image"
+        }
+      ]
+    },
+    {
+      "id": "T1",
+      "nom": "Ingénierie",
+      "job": "Transverse : ce qui empêche le reste de pourrir.",
+      "items": [
+        {
+          "s": "fait",
+          "t": "39 tests Python et 11 fumigations navigateur"
+        },
+        {
+          "s": "fait",
+          "t": "Pas de commit sans test du module touché",
+          "d": "règle tenue jusqu'ici"
+        },
+        {
+          "s": "fait",
+          "t": "Serveur MCP de mise au point, lecture seule",
+          "d": "invariant 11 — jamais de génération"
+        },
+        {
+          "s": "cours",
+          "t": "Logs structurés plutôt que prints épars"
+        },
+        {
+          "s": "faire",
+          "t": "Éteindre les roadmaps concurrentes",
+          "d": "IT-0 — la roadmap de finition n'a jamais été close ni archivée"
+        },
+        {
+          "s": "faire",
+          "t": "Décider du sort de ce tableau de bord",
+          "d": "IT-0 — remplacer le fil conducteur, ou le générer comme lui"
+        }
+      ]
+    },
+    {
+      "id": "T2",
+      "nom": "Ouverture publique",
+      "job": "Transverse : ce qui rend le mot « open source » vrai.",
+      "items": [
+        {
+          "s": "faire",
+          "t": "Poser une licence",
+          "d": "IT-0 — le dépôt est public et sans licence : tous droits réservés par défaut, personne ne peut le forker"
+        },
+        {
+          "s": "fait",
+          "t": "Stratégie de licence des nœuds custom",
+          "d": "ADR-0024, GPL identifiée avant publication"
+        },
+        {
+          "s": "faire",
+          "t": "Aligner le README sur le statut réel",
+          "d": "IT-0 — il annonce encore un dépôt à rendre public"
+        }
+      ]
+    }
+  ],
+  "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
+  "decisions": [
+    {
+      "e": "tranche",
+      "t": "Une licence sera posée sur le dépôt",
+      "d": "Décidé le 07/09. Le dépôt est public depuis un moment sans licence : jusqu'à ce fichier, tous droits réservés par défaut. Choix et pose en IT-0."
+    },
+    {
+      "e": "tranche",
+      "t": "Une seule source d'état : ce tableau",
+      "d": "ROADMAP.md, BACKLOG.md, la roadmap de finition et le fil conducteur sont retirés. Le .data.json porte l'état, la page HTML n'est qu'une sortie de build."
+    },
+    {
+      "e": "tranche",
+      "t": "Le pourquoi ne descend pas dans le JSON",
+      "d": "PROJET.md, CLAUDE.md, DOCS/adr/, DOCS/cadrage/ et DOCS/retros/ restent seuls dépositaires du raisonnement. Le tableau porte des statuts et des liens, jamais des démonstrations."
+    },
+    {
+      "e": "tranche",
+      "t": "Amélioration des graphes et détection des défauts sont deux chantiers",
+      "d": "E5 explore les workflows tiers et mesure au banc ; E6 étiquette un corpus et calcule des faux positifs. Méthodes, risques et critères d'arrêt différents."
+    },
+    {
+      "e": "tranche",
+      "t": "La vidéo entre au découpage, après l'image",
+      "d": "Elle dépend entièrement de la production d'image : E12 existe, mais aucune de ses étapes ne s'ouvre avant IT-3. Le MCP reste hors découpage, sans date."
+    },
+    {
+      "e": "ouvert",
+      "t": "Aucune vérification juridique n'a eu lieu sur l'exposition GPL",
+      "d": "ADR-0024 laisse ce point ouvert. Impact Pack (GPL-3.0) est en production dans les deux graphes. À vérifier avant la première vente d'un pack, pas avant."
+    },
+    {
+      "e": "ouvert",
+      "t": "Deux dettes de périmètre restent en code",
+      "d": "Workflows LTX2 et serveur MCP committés hors périmètre. Les premiers sont désormais rattachés à E12 ; le second reste rangé en T1, sans itération."
+    }
+  ],
+  "horizon": {
+    "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
+    "items": [
+      {
+        "t": "Test commercial de l'idée pack",
+        "d": "poster l'idée de mondes vendables à l'audience existante et regarder la réaction — coût nul, information décisive avant tout éditeur de packs"
+      },
+      {
+        "t": "Univers « art pur »",
+        "d": "pack technique distinct, jamais commencé"
+      },
+      {
+        "t": "Assets 3D",
+        "d": "Trellis ou équivalent — nouveau domaine, pas un prolongement"
+      },
+      {
+        "t": "Écriture d'histoire type maître de jeu",
+        "d": "univers monde RPG complet : lore, carte, PNJ, persistance — une application à part entière"
+      },
+      {
+        "t": "Messagerie à personnage persistant",
+        "d": "peut envoyer des images produites par le pipeline ; c'est ce lien qui justifie qu'elle vive un jour dans le même produit"
+      },
+      {
+        "t": "Exposition MCP en lecture seule",
+        "d": "invariant 11 déjà écrit, serveur de mise au point déjà là ; l'exposition produit vient beaucoup plus tard"
+      },
+      {
+        "t": "Publication par API",
+        "d": "écartée en V1 : tokens tiers à maintenir, contenu adulte incompatible avec Meta, responsabilité qu'un projet solo ne porte pas"
+      },
+      {
+        "t": "Mise en scène de plusieurs personnages",
+        "d": "plusieurs verrous d'identité actifs dans une même génération"
+      }
+    ]
+  }
+};
+
+/* ============================================================================
+   RENDU
+   ========================================================================== */
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const col = s => D.statuts[s].color;
+
+document.getElementById('stamp').textContent =
+  `Établi le ${D.maj} — ${D.source}`;
+
+/* bande de verdict globale + legende */
+const all = D.epics.flatMap(e => e.items);
+const order = ['fait','cours','faire','dette','veille'];
+const counts = Object.fromEntries(order.map(k => [k, all.filter(i => i.s === k).length]));
+document.getElementById('global-bar').innerHTML = order
+  .filter(k => counts[k])
+  .map(k => `<span style="flex:${counts[k]};background:${col(k)}"></span>`).join('');
+document.getElementById('global-legend').innerHTML = order
+  .map(k => `<span><i class="dot" style="background:${col(k)}"></i><b>${counts[k]}</b> ${D.statuts[k].label}</span>`)
+  .join('') + `<span>${all.length} travaux répartis sur ${D.epics.length} pôles</span>`;
+
+/* iterations */
+document.getElementById('iterations').innerHTML = D.iterations.map(it => `
+  <article class="it" data-state="${it.state}">
+    <div class="it-id">${it.id}</div>
+    <div>
+      <h3>${esc(it.titre)}${it.state === 'now' ? '<span class="now-tag">à ouvrir</span>' : ''}</h3>
+      <p>${esc(it.quoi)}</p>
+      <div class="dod"><b>Fini quand</b> ${esc(it.dod)}</div>
+      <div class="touches">EPIC touchés : ${it.epics}${it.ref ? ' &nbsp;·&nbsp; ' + esc(it.ref) : ''}</div>
+    </div>
+  </article>`).join('');
+
+/* epics */
+document.getElementById('epics').innerHTML = D.epics.map((e, idx) => {
+  const bar = order.filter(k => e.items.some(i => i.s === k))
+    .map(k => `<span style="flex:${e.items.filter(i => i.s === k).length};background:${col(k)}"></span>`).join('');
+  const items = e.items.map(i => `
+    <div class="item" data-s="${i.s}">
+      <div class="tick" style="background:${col(i.s)}"></div>
+      <div class="lbl"><b>${esc(i.t)}</b>${i.d ? `<em>${esc(i.d)}</em>` : ''}</div>
+    </div>`).join('');
+  return `
+  <details class="epic" ${e.veille ? 'data-veille' : ''} ${idx < 6 ? 'open' : ''}>
+    <summary>
+      <span class="epic-id">${e.id}</span>
+      <span><span class="epic-name">${esc(e.nom)}</span><span class="epic-job">${esc(e.job)}</span></span>
+      <span class="epic-bar">${bar}</span>
+    </summary>
+    <div class="items">${items}<div class="empty" hidden>Rien à ce statut dans cet EPIC.</div></div>
+  </details>`;
+}).join('');
+
+/* note de section, comptee sur les donnees reelles */
+const nTrans = D.epics.filter(e => e.id.startsWith('T')).length;
+document.getElementById('epics-note').textContent =
+  `${D.epics.length - nTrans} pôles fonctionnels et ${nTrans} chantiers transverses, découpés par ce que ` +
+  `le produit fait — pas par l'arborescence du dépôt. La bande de droite lit l'état d'un pôle comme le studio lit un verdict QC.`;
+
+/* filtres */
+const fbox = document.getElementById('filters');
+fbox.innerHTML = `<button class="chip" data-f="tous" aria-pressed="true">tout</button>` +
+  order.map(k => `<button class="chip" data-f="${k}" aria-pressed="false">${D.statuts[k].label} · ${counts[k]}</button>`).join('');
+
+fbox.addEventListener('click', ev => {
+  const btn = ev.target.closest('.chip');
+  if (!btn) return;
+  const f = btn.dataset.f;
+  fbox.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === btn)));
+  document.querySelectorAll('.item').forEach(el => {
+    el.hidden = f !== 'tous' && el.dataset.s !== f;
+  });
+  document.querySelectorAll('.epic').forEach(ep => {
+    const visibles = [...ep.querySelectorAll('.item')].filter(i => !i.hidden).length;
+    ep.querySelector('.empty').hidden = visibles > 0;
+    if (f !== 'tous') ep.open = true;
+  });
+});
+
+/* decisions */
+document.getElementById('decisions').innerHTML = D.decisions.map(f => `
+  <div class="flag" data-e="${f.e}">
+    <h3><span class="mark">${f.e === 'tranche' ? 'tranché' : 'ouvert'}</span>${esc(f.t)}</h3>
+    <p>${esc(f.d)}</p>
+  </div>`).join('');
+
+/* horizon */
+document.getElementById('horizon-note').textContent = D.horizon.note;
+document.getElementById('horizon').innerHTML = '<div class="hz">' + D.horizon.items
+  .map(h => `<div><b>${esc(h.t)}</b><em>${esc(h.d)}</em></div>`).join('') + '</div>';
+
+document.getElementById('footer').innerHTML =
+  `Sources de vérité : PROJET.md (cadrage) · CLAUDE.md (invariants) · DOCS/adr/ (décisions) · DOCS/cadrage/ (chantiers) · DOCS/retros/ (fins de phase).<br>
+   Ce tableau porte l'état ; ces fichiers portent le raisonnement. La page est générée depuis
+   soulglade-tableau-de-bord.data.json — python AUTOMATION/tools/build_tableau_de_bord.py`;
+</script>
+</body>
+</html>

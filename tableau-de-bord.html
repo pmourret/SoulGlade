@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Soulglade — Tableau de bord applicatif</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* palette reprise des tokens du studio (AUTOMATION/web/ui/src/styles/tokens.css) */
+    --bg:#0b1015; --panel:#14191e; --panel2:#1b2127;
+    --line:#2a3138; --line2:#3b444d;
+    --txt:#dfe5ec; --dim:#9299a1; --dim2:#6a727b;
+    --acc:#90b0c4; --acc-d:#5d7d90; --acc-soft:rgba(144,176,196,.10);
+    --ok:#639564; --warn:#b5943f; --bad:#cc6660; --idle:#4a545d;
+    --f-disp:'Fraunces',Georgia,serif;
+    --f-body:'IBM Plex Sans',system-ui,sans-serif;
+    --f-mono:'IBM Plex Mono',ui-monospace,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--txt);font-family:var(--f-body);
+    line-height:1.55;-webkit-font-smoothing:antialiased;
+  }
+  .page{max-width:880px;margin:0 auto;padding:3rem 1.4rem 6rem}
+  a{color:var(--acc)}
+
+  /* ---- hero ---- */
+  .cap{font-family:var(--f-disp);font-size:2.1rem;font-weight:600;letter-spacing:-.015em;margin:0 0 .5rem}
+  .sub{color:var(--dim);max-width:62ch;margin:0 0 1.6rem}
+  .stamp{font-family:var(--f-mono);font-size:.75rem;color:var(--dim2);margin-bottom:2.2rem}
+
+  /* la bande de verdict globale — le meme langage que le QC du produit */
+  .verdict{display:flex;gap:2px;height:14px;border-radius:3px;overflow:hidden;margin-bottom:.6rem}
+  .verdict span{display:block}
+  .legend{display:flex;flex-wrap:wrap;gap:.15rem 1.1rem;font-family:var(--f-mono);font-size:.72rem;color:var(--dim);margin-bottom:2.6rem}
+  .legend b{font-weight:500;color:var(--txt)}
+  .dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:.4rem;vertical-align:1px}
+
+  h2.sec{font-family:var(--f-disp);font-size:1.35rem;font-weight:600;margin:0 0 .3rem}
+  .sec-note{color:var(--dim);font-size:.92rem;margin:0 0 1.4rem;max-width:64ch}
+  section{margin-bottom:3.4rem}
+
+  /* ---- regle du jeu ---- */
+  .rules{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:1.1rem 1.3rem}
+  .rules h3{font-size:.95rem;font-weight:600;margin:0 0 .6rem}
+  .rules ul{margin:0;padding-left:1.1rem;color:var(--dim);font-size:.92rem}
+  .rules li{margin-bottom:.25rem}
+  .rules li b{color:var(--txt);font-weight:500}
+
+  /* ---- iterations : une sequence, donc numerotee ---- */
+  .it{display:grid;grid-template-columns:4.2rem 1fr;gap:1rem;padding:1.1rem 0;border-top:1px solid var(--line)}
+  .it:last-child{border-bottom:1px solid var(--line)}
+  .it-id{font-family:var(--f-mono);font-size:.82rem;color:var(--acc);padding-top:.15rem}
+  .it[data-state="now"] .it-id{color:var(--warn)}
+  .it h3{font-family:var(--f-disp);font-size:1.08rem;font-weight:600;margin:0 0 .35rem}
+  .it p{margin:0 0 .5rem;color:var(--dim);font-size:.93rem}
+  .it .dod{font-size:.86rem;color:var(--txt);border-left:2px solid var(--acc-d);padding-left:.7rem}
+  .it .dod b{font-weight:500;color:var(--acc)}
+  .it .touches{font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);margin-top:.5rem}
+  .now-tag{font-family:var(--f-mono);font-size:.68rem;color:var(--warn);border:1px solid var(--warn);
+    border-radius:3px;padding:.05rem .35rem;margin-left:.5rem;vertical-align:2px}
+
+  /* ---- filtres ---- */
+  .filters{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem}
+  .chip{font-family:var(--f-mono);font-size:.74rem;color:var(--dim);background:transparent;
+    border:1px solid var(--line2);border-radius:999px;padding:.25rem .7rem;cursor:pointer}
+  .chip[aria-pressed="true"]{color:var(--bg);background:var(--acc);border-color:var(--acc)}
+  .chip:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+
+  /* ---- epics ---- */
+  .epic{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin-bottom:.7rem;overflow:hidden}
+  .epic[data-veille]{opacity:.72}
+  .epic summary{cursor:pointer;list-style:none;padding:.95rem 1.15rem;display:grid;
+    grid-template-columns:3.1rem 1fr auto;gap:.9rem;align-items:baseline}
+  .epic summary::-webkit-details-marker{display:none}
+  .epic summary:hover{background:var(--panel2)}
+  .epic-id{font-family:var(--f-mono);font-size:.8rem;color:var(--acc-d)}
+  .epic-name{font-family:var(--f-disp);font-size:1.05rem;font-weight:600}
+  .epic-job{display:block;font-family:var(--f-body);font-size:.87rem;font-weight:400;color:var(--dim);margin-top:.15rem}
+  .epic-bar{display:flex;gap:1.5px;width:88px;height:9px;border-radius:2px;overflow:hidden;align-self:center}
+  .epic-bar span{display:block;flex:1}
+  .items{padding:.2rem 1.15rem 1.1rem}
+  .item{display:grid;grid-template-columns:.55rem 1fr;gap:.75rem;padding:.42rem 0;border-top:1px solid var(--line);font-size:.91rem}
+  .item .tick{width:.4rem;height:.4rem;border-radius:1px;margin-top:.55rem}
+  .item .lbl b{font-weight:500}
+  .item .lbl em{font-style:normal;color:var(--dim);display:block;font-size:.85rem}
+  .item code{font-family:var(--f-mono);font-size:.78rem;color:var(--dim2)}
+  .item[hidden]{display:none}
+  .empty{color:var(--dim2);font-size:.88rem;padding:.6rem 0}
+
+  /* ---- ecarts ---- */
+  .flag{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;
+    background:var(--panel);padding:.85rem 1.1rem;margin-bottom:.6rem}
+  .flag[data-e="tranche"]{border-left-color:var(--ok)}
+  .flag h3{font-size:.95rem;margin:0 0 .25rem;font-weight:600}
+  .flag p{margin:0;color:var(--dim);font-size:.9rem}
+  .flag .mark{font-family:var(--f-mono);font-size:.7rem;color:var(--dim2);margin-right:.45rem}
+
+  .hz{display:grid;grid-template-columns:1fr;gap:0}
+  .hz div{padding:.55rem 0;border-top:1px solid var(--line);font-size:.91rem}
+  .hz div:last-child{border-bottom:1px solid var(--line)}
+  .hz b{font-weight:500}
+  .hz em{font-style:normal;color:var(--dim);display:block;font-size:.85rem}
+
+  footer{margin-top:3rem;padding-top:1.2rem;border-top:1px solid var(--line);
+    font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);line-height:1.7}
+
+  @media (max-width:620px){
+    .page{padding:2rem 1rem 4rem}
+    .cap{font-size:1.6rem}
+    .epic summary{grid-template-columns:2.6rem 1fr;gap:.6rem}
+    .epic-bar{grid-column:1/-1;width:100%;margin-top:.5rem}
+    .it{grid-template-columns:1fr;gap:.3rem}
+  }
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<h1 class="cap">Produire vraiment</h1>
+<p class="sub">Le cap des six prochains mois : que Léna et Abyssiaelle sortent du contenu
+sans retouche manuelle derrière chaque image. Tout le reste — packs vendables, éditeur de
+mondes, publication — attend ce résultat.</p>
+<div class="stamp" id="stamp"></div>
+
+<div class="verdict" id="global-bar"></div>
+<div class="legend" id="global-legend"></div>
+
+<section>
+  <h2 class="sec">La règle du jeu</h2>
+  <p class="sec-note">Itérations sans date, terminées par une définition de fini stricte.
+  Une itération se ferme quand ces six points sont vrais — pas quand le temps est écoulé.</p>
+  <div class="rules">
+    <h3>Définition de fini — commune à toute itération</h3>
+    <ul>
+      <li><b>Cadrage écrit d'abord</b> — <code>DOCS/cadrage/</code>, trois questions : à quoi ça sert, hors périmètre, critère de sortie.</li>
+      <li><b>Tests du module verts</b> — et un test qui aurait attrapé le bug si l'itération en corrige un.</li>
+      <li><b>Aucune erreur silencieuse</b> — toute panne remonte à l'interface, actionnable.</li>
+      <li><b>Décision chiffrée, jamais à l'œil</b> — une amélioration non mesurée n'est pas adoptée.</li>
+      <li><b>Audit UX vérifié en vrai</b> si un écran du parcours nominal est touché.</li>
+      <li><b>Rétro à la fermeture</b> — <code>DOCS/retros/</code>, deux questions, trente minutes.</li>
+    </ul>
+  </div>
+</section>
+
+<section>
+  <h2 class="sec">Itérations</h2>
+  <p class="sec-note">Séquence, pas calendrier. Chacune produit un résultat visible en usage réel ;
+  aucune ne se lance sans son cadrage.</p>
+  <div id="iterations"></div>
+</section>
+
+<section>
+  <h2 class="sec">EPIC</h2>
+  <p class="sec-note" id="epics-note"></p>
+  <div class="filters" id="filters"></div>
+  <div id="epics"></div>
+</section>
+
+<section>
+  <h2 class="sec">Décisions</h2>
+  <p class="sec-note">Ce qui a été tranché, et ce qui reste ouvert. Une décision tranchée qui touche
+  au cadrage se répercute dans PROJET.md ou dans un ADR — jamais seulement ici.</p>
+  <div id="decisions"></div>
+</section>
+
+<section>
+  <h2 class="sec">Horizon</h2>
+  <p class="sec-note" id="horizon-note"></p>
+  <div id="horizon"></div>
+</section>
+
+<footer id="footer"></footer>
+</div>
+
+<script>
+/* Données injectées au build depuis soulglade-tableau-de-bord.data.json.
+   Ce gabarit ne porte aucun contenu : un changement d'état va dans le JSON,
+   un changement de rendu vient ici. La page n'est jamais éditée à la main. */
+/* @@BOARD_DATA@@ */
+
+/* ============================================================================
+   RENDU
+   ========================================================================== */
+const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const col = s => D.statuts[s].color;
+
+document.getElementById('stamp').textContent =
+  `Établi le ${D.maj} — ${D.source}`;
+
+/* bande de verdict globale + legende */
+const all = D.epics.flatMap(e => e.items);
+const order = ['fait','cours','faire','dette','veille'];
+const counts = Object.fromEntries(order.map(k => [k, all.filter(i => i.s === k).length]));
+document.getElementById('global-bar').innerHTML = order
+  .filter(k => counts[k])
+  .map(k => `<span style="flex:${counts[k]};background:${col(k)}"></span>`).join('');
+document.getElementById('global-legend').innerHTML = order
+  .map(k => `<span><i class="dot" style="background:${col(k)}"></i><b>${counts[k]}</b> ${D.statuts[k].label}</span>`)
+  .join('') + `<span>${all.length} travaux répartis sur ${D.epics.length} pôles</span>`;
+
+/* iterations */
+document.getElementById('iterations').innerHTML = D.iterations.map(it => `
+  <article class="it" data-state="${it.state}">
+    <div class="it-id">${it.id}</div>
+    <div>
+      <h3>${esc(it.titre)}${it.state === 'now' ? '<span class="now-tag">à ouvrir</span>' : ''}</h3>
+      <p>${esc(it.quoi)}</p>
+      <div class="dod"><b>Fini quand</b> ${esc(it.dod)}</div>
+      <div class="touches">EPIC touchés : ${it.epics}${it.ref ? ' &nbsp;·&nbsp; ' + esc(it.ref) : ''}</div>
+    </div>
+  </article>`).join('');
+
+/* epics */
+document.getElementById('epics').innerHTML = D.epics.map((e, idx) => {
+  const bar = order.filter(k => e.items.some(i => i.s === k))
+    .map(k => `<span style="flex:${e.items.filter(i => i.s === k).length};background:${col(k)}"></span>`).join('');
+  const items = e.items.map(i => `
+    <div class="item" data-s="${i.s}">
+      <div class="tick" style="background:${col(i.s)}"></div>
+      <div class="lbl"><b>${esc(i.t)}</b>${i.d ? `<em>${esc(i.d)}</em>` : ''}</div>
+    </div>`).join('');
+  return `
+  <details class="epic" ${e.veille ? 'data-veille' : ''} ${idx < 6 ? 'open' : ''}>
+    <summary>
+      <span class="epic-id">${e.id}</span>
+      <span><span class="epic-name">${esc(e.nom)}</span><span class="epic-job">${esc(e.job)}</span></span>
+      <span class="epic-bar">${bar}</span>
+    </summary>
+    <div class="items">${items}<div class="empty" hidden>Rien à ce statut dans cet EPIC.</div></div>
+  </details>`;
+}).join('');
+
+/* note de section, comptee sur les donnees reelles */
+const nTrans = D.epics.filter(e => e.id.startsWith('T')).length;
+document.getElementById('epics-note').textContent =
+  `${D.epics.length - nTrans} pôles fonctionnels et ${nTrans} chantiers transverses, découpés par ce que ` +
+  `le produit fait — pas par l'arborescence du dépôt. La bande de droite lit l'état d'un pôle comme le studio lit un verdict QC.`;
+
+/* filtres */
+const fbox = document.getElementById('filters');
+fbox.innerHTML = `<button class="chip" data-f="tous" aria-pressed="true">tout</button>` +
+  order.map(k => `<button class="chip" data-f="${k}" aria-pressed="false">${D.statuts[k].label} · ${counts[k]}</button>`).join('');
+
+fbox.addEventListener('click', ev => {
+  const btn = ev.target.closest('.chip');
+  if (!btn) return;
+  const f = btn.dataset.f;
+  fbox.querySelectorAll('.chip').forEach(c => c.setAttribute('aria-pressed', String(c === btn)));
+  document.querySelectorAll('.item').forEach(el => {
+    el.hidden = f !== 'tous' && el.dataset.s !== f;
+  });
+  document.querySelectorAll('.epic').forEach(ep => {
+    const visibles = [...ep.querySelectorAll('.item')].filter(i => !i.hidden).length;
+    ep.querySelector('.empty').hidden = visibles > 0;
+    if (f !== 'tous') ep.open = true;
+  });
+});
+
+/* decisions */
+document.getElementById('decisions').innerHTML = D.decisions.map(f => `
+  <div class="flag" data-e="${f.e}">
+    <h3><span class="mark">${f.e === 'tranche' ? 'tranché' : 'ouvert'}</span>${esc(f.t)}</h3>
+    <p>${esc(f.d)}</p>
+  </div>`).join('');
+
+/* horizon */
+document.getElementById('horizon-note').textContent = D.horizon.note;
+document.getElementById('horizon').innerHTML = '<div class="hz">' + D.horizon.items
+  .map(h => `<div><b>${esc(h.t)}</b><em>${esc(h.d)}</em></div>`).join('') + '</div>';
+
+document.getElementById('footer').innerHTML =
+  `Sources de vérité : PROJET.md (cadrage) · CLAUDE.md (invariants) · DOCS/adr/ (décisions) · DOCS/cadrage/ (chantiers) · DOCS/retros/ (fins de phase).<br>
+   Ce tableau porte l'état ; ces fichiers portent le raisonnement. La page est générée depuis
+   soulglade-tableau-de-bord.data.json — python AUTOMATION/tools/build_tableau_de_bord.py`;
+</script>
+</body>
+</html>
