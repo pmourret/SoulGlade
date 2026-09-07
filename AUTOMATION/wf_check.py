@@ -149,13 +149,22 @@ def main():
     # normal d'un workflow dont tous les groupes sont en bypass dans le fichier :
     # il faut nommer ses groupes avec --groupes. Le signaler evite de croire a
     # tort qu'il est bon.
+    # Ce qui compte est le drapeau OUTPUT_NODE que ComfyUI declare lui-meme
+    # (/object_info), pas une liste de types en dur : un graphe peut sortir
+    # autre chose qu'une image. WORKFLOWS/platform/hands_judge_ui.json sort du
+    # TEXTE (SaveText|pysssss, OUTPUT_NODE) et etait refuse par la liste
+    # SaveImage/PreviewImage/SaveAnimatedWEBP qui precedait, alors que ComfyUI
+    # l'execute sans broncher. Repli sur cette liste pour un type absent
+    # d'object_info -- l'etape 2 a deja verifie qu'il n'y en a pas.
+    REPLI = ("SaveImage", "PreviewImage", "SaveAnimatedWEBP")
     sorties = [n for n in api.values()
-               if n["class_type"] in ("SaveImage", "PreviewImage", "SaveAnimatedWEBP")]
+               if (obj[n["class_type"]].get("output_node")
+                   if n["class_type"] in obj else n["class_type"] in REPLI)]
     echecs += not dire(bool(sorties), "au moins un noeud de sortie actif",
                        "" if sorties else
-                       "aucun SaveImage actif : ce graphe ne produirait rien. "
-                       "Ses groupes sont sans doute en bypass — les nommer "
-                       "avec --groupes.")
+                       "aucun noeud de sortie (OUTPUT_NODE) actif : ce graphe "
+                       "ne produirait rien. Ses groupes sont sans doute en "
+                       "bypass — les nommer avec --groupes.")
 
     # 4 ------------------------------------------------- liens orphelins
     orphelins = []
