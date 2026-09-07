@@ -33,7 +33,17 @@ possible sans intervention extérieure.
 
 Soulglade est un outil d'aide, pas une plateforme décisionnelle.
 L'utilisateur garde la main sur les choix créatifs, publicitaires et
-éthiques. La plateforme mesure et informe, elle n'arbitre pas à sa place.
+éthiques : la plateforme ne les arbitre jamais à sa place.
+
+**Amendé le 2026-09-07.** Ce principe ne couvre pas les défauts
+objectifs. Une main à six doigts, un bras deux fois trop long ne sont
+pas des choix créatifs — ce sont des ratés mécaniques, sans arbitrage
+possible, et faire inspecter ça à l'utilisateur à chaque génération vide
+l'outil de son intérêt. La plateforme les trie donc elle-même, dès
+qu'elle sait les reconnaître de façon démontrée fiable (ADR-0025). Ce
+qui lui reste est le jugement qui dépend vraiment de lui : l'identité —
+« est-ce bien elle ? » — n'a pas la même réponse sur un gros plan et sur
+un plan large.
 
 ## Monétisation
 
@@ -80,8 +90,11 @@ restent des personnages de vitrine, jamais livrés dans le produit.
 - Aucun crash silencieux ; toute erreur remontée à l'interface est
   actionnable
 - Retour temps réel pendant la génération
-- Détection des mains cassées et cohérence de l'identité mesurées,
-  affichées, laissées à l'arbitrage de l'utilisateur
+- Défauts objectifs (mains cassées, anatomie incohérente) mesurés ET
+  triés automatiquement — sous condition de fiabilité démontrée sur un
+  corpus étiqueté, jamais sur une mesure à l'aveugle (ADR-0025)
+- Cohérence de l'identité mesurée et affichée, arbitrage laissé à
+  l'utilisateur
 - Suite complète de tests de non-régression verte
 - Chaque écran du parcours nominal passe un audit UX/UI vérifié en vrai
 - Critères UI/UX détaillés à formaliser au moment du découpage en phases

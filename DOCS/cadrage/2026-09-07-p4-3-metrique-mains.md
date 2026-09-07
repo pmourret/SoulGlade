@@ -81,6 +81,18 @@ doigts croisés) — décision prise, pas différée par défaut :
 Une v2 géométrique reste ouverte, à instruire après un premier retour
 d'usage réel en Revue (P4.4), pas avant.
 
+> **Close le 2026-09-07, le jour même.** Le premier retour d'usage est
+> arrivé tout de suite : deux productions aux mains fondues scorées 1.0.
+> La sonde qui a suivi
+> (`DOCS/recherche/2026-09-07-signal-geometrique-mains.md`, 15 images,
+> trois indicateurs) montre qu'**aucun** critère géométrique calculable
+> depuis les keypoints ne sépare les mains cassées des mains propres —
+> DWPose pose un squelette valide sur une bouillie de pixels, et
+> l'information manquante n'est pas dans les keypoints. Le volet v2
+> géométrique est donc abandonné, pas reporté : ce qu'il faudrait est un
+> juge qui regarde les pixels (piste Florence-2, déjà provisionné), pas
+> un indicateur de plus sur le squelette.
+
 ## 3. Verdict et seuil
 
 Score continu 0..1 (ou `None`), même patron que `identite_centroide` :
@@ -102,8 +114,12 @@ précédent direct dans le repo : `bench.margin` (une clé par genre sous
 un bloc partagé). Valeurs de départ posées comme non mesurées
 (`"measured": false`, même discipline que le reste du repo — Abyssiaelle
 `identity`/`bench`), pas un chiffre inventé présenté comme calibré.
-Verdict affiché, arbitrage laissé à l'utilisateur (`PROJET.md` : « la
-plateforme mesure et informe, elle n'arbitre pas »).
+Verdict affiché. **Amendé le 2026-09-07 (ADR-0025)** : une main cassée
+est un défaut objectif, destiné à être trié par la plateforme et non
+soumis à l'utilisateur. Ce verdict a donc vocation à devenir bloquant —
+mais seulement quand la mesure aura démontré sa fiabilité sur corpus,
+ce que la v1 ne fait pas (voir la limite ci-dessous). En attendant, il
+s'affiche sans rien bloquer.
 
 ## Limite vérifiée empiriquement (pas théorique)
 
@@ -128,8 +144,10 @@ en écrivant la métrique ci-dessus :
 Conséquence assumée, pas corrigée par un second seuil inventé (aucun
 corpus pour le calibrer honnêtement, même raison qu'au §2) : le verdict
 `CASSE` signifie « quelque chose ici mérite un coup d'œil dans la
-Revue », pas « main anatomiquement fausse, certifiée ». Cohérent avec
-`PROJET.md` (mesure et informe, n'arbitre pas) — mais l'affichage
+Revue », pas « main anatomiquement fausse, certifiée ». C'est
+précisément ce qui interdit d'en faire un verdict bloquant en l'état
+(ADR-0025 : une mesure ne trie qu'une fois sa fiabilité démontrée, et
+celle-ci ne l'est pas) — l'affichage
 (étape 5 du chantier) ne doit pas sur-vendre ce que la mesure garantit
 réellement.
 

@@ -45,6 +45,19 @@ pixel. Le verdict CASSE dit donc « quelque chose ici merite un coup
 d'oeil », pas « main anatomiquement fausse, certifie » — coherent avec
 PROJET.md (mesure et informe, n'arbitre pas), mais a ne pas sur-vendre
 dans l'affichage Revue (etape 5).
+
+PORTEE REELLE DE CETTE LIMITE, MESUREE LE 2026-09-07 : plus large
+qu'estime ci-dessus. Deux productions aux mains carrement fondues dans
+la cuisse et le drap ont ete scorees 1.0 (21/21 points, pleine
+confiance). La sonde qui a suivi — 15 images, trois indicateurs
+geometriques, DOCS/recherche/2026-09-07-signal-geometrique-mains.md —
+conclut qu'AUCUN critere calculable depuis les keypoints ne separe les
+mains cassees des mains propres : l'information n'est pas dans le
+squelette. Ne pas re-tenter un indicateur geometrique par-dessus ce
+module ; ce qu'il faudrait est un juge qui regarde les pixels du crop
+(DWPose localise tres bien, il ne juge pas). Ce module reste utile pour
+ce qu'il mesure vraiment — DWPose n'a pas trouve de main la ou le corps
+en annonce une — soit un cas plus rare que le defaut ci-dessus.
 """
 import sys
 import uuid
