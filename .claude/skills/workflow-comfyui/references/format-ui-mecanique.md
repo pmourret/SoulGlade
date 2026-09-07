@@ -182,3 +182,30 @@ voit **rien** de ces trois-là, tous silencieux jusqu'à bien plus tard :
 
 Après une édition à la main, relire ces trois points **avant** de faire
 confiance à un `wf_check.py` vert.
+
+## Format : deux formats JSON coexistent
+
+- **Format UI** (`Save`) : `nodes`, `links`, positions, widgets. Éditable
+  dans l'interface ComfyUI.
+- **Format API** (`Save (API Format)`) : dict plat indexé par node ID, avec
+  `class_type` et `inputs`. C'est celui utilisable en appel programmatique.
+
+Toujours vérifier le format d'un fichier avant de le modifier. Ne jamais
+convertir de l'un vers l'autre sans que ce soit demandé explicitement.
+Convention de nommage : suffixe `_ui.json` / `_api.json`.
+
+## Activer/désactiver une partie du graphe sans dupliquer le fichier
+
+Pattern à réutiliser plutôt que de créer un workflow variante : un groupe de
+nœuds optionnel reste câblé dans le graphe (bypass par défaut), et
+l'orchestration décide de l'activer **par job**, pas pour tout le batch, via
+un mécanisme de `node_modes` appliqué à la conversion UI→API. Un seul
+fichier de workflow porte alors plusieurs comportements possibles, pilotés
+depuis la config/les données du job plutôt que par un choix de fichier.
+
+Trois usages réels de ce `node_modes` : la **pose ControlNet par job** (une
+scène l'impose ou non), le **LoRA de personnage** (activé si `config.json` /
+`identity` / `lora` est renseigné), et le **portrait de base** du wizard
+(`base_portrait=True`) qui bypasse tout le groupe du verrou d'identité pour
+produire un premier visage — il n'y a alors aucune référence à verrouiller
+(`WorkflowRunner`, `AUTOMATION/base_portrait.py`).

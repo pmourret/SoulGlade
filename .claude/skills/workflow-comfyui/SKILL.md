@@ -27,22 +27,12 @@ modèle — graphe de production, `edit_workflow`). Un monde ou un personnage
 ne portent jamais de graphe, seulement les données qu'un graphe de l'une de
 ces deux couches consomme.
 
-## Format : deux formats JSON coexistent
-
-- **Format UI** (`Save`) : `nodes`, `links`, positions, widgets. Éditable
-  dans l'interface ComfyUI.
-- **Format API** (`Save (API Format)`) : dict plat indexé par node ID, avec
-  `class_type` et `inputs`. C'est celui utilisable en appel programmatique.
-
-Toujours vérifier le format d'un fichier avant de le modifier. Ne jamais
-convertir de l'un vers l'autre sans que ce soit demandé explicitement.
-Convention de nommage : suffixe `_ui.json` / `_api.json`.
-
 ## Règles d'édition de graphe
 
 1. **IDs de nœuds : chaînes en format API, entiers en format UI.**
    Erreur fréquente sur ce genre de repo : appliquer la règle API en UI ou
-   l'inverse. Vérifier le format (§ ci-dessus) avant de faire quoi que ce
+   l'inverse. Vérifier le format (`references/format-ui-mecanique.md`)
+   avant de faire quoi que ce
    soit avec un ID. Ne jamais les renuméroter — les liens y font référence.
 2. **Liens** : en format API, un input lié s'écrit `["node_id", slot]`. Un
    input littéral est une valeur directe. Le format UI est plus dense —
@@ -91,76 +81,6 @@ si un contrôle d'intégrité des liens en pur Python (hors ligne) existe
 dans le repo, le préférer pour un hook local ; sinon c'est une limite
 actuelle de l'outillage, pas un choix.
 
-## Garde-fou identité — annoncer le chiffre avant d'appliquer
-
-La cohérence du visage prime sur le rendu. Certaines modifications de
-graphe ont un coût d'identité **mesuré**, et ce coût est souvent
-contre-intuitif : le réglage qui « rendrait la peau plus texturée » est
-justement celui qui fait tomber l'identité sous le seuil de rejet.
-
-Quand une demande touche un de ces réglages, le protocole est en trois
-temps : **annoncer le chiffre mesuré, proposer l'alternative, attendre
-l'accord** — pas appliquer d'abord et commenter ensuite. La table des
-coûts par réglage et le détail du protocole sont dans
-`references/protocole-identite.md` : le consulter dès qu'une édition
-approche le verrou d'identité, l'ordre des étages, ou un LoRA/ControlNet
-qui injecte dans les mêmes couches.
-
-Ce protocole ne vaut que pour les réglages listés là-bas. Sur tout le
-reste du graphe, éditer normalement.
-
-## Activer/désactiver une partie du graphe sans dupliquer le fichier
-
-Pattern à réutiliser plutôt que de créer un workflow variante : un groupe de
-nœuds optionnel reste câblé dans le graphe (bypass par défaut), et
-l'orchestration décide de l'activer **par job**, pas pour tout le batch, via
-un mécanisme de `node_modes` appliqué à la conversion UI→API. Un seul
-fichier de workflow porte alors plusieurs comportements possibles, pilotés
-depuis la config/les données du job plutôt que par un choix de fichier.
-
-Trois usages réels de ce `node_modes` : la **pose ControlNet par job** (une
-scène l'impose ou non), le **LoRA de personnage** (activé si `config.json` /
-`identity` / `lora` est renseigné), et le **portrait de base** du wizard
-(`base_portrait=True`) qui bypasse tout le groupe du verrou d'identité pour
-produire un premier visage — il n'y a alors aucune référence à verrouiller
-(`WorkflowRunner`, `AUTOMATION/base_portrait.py`).
-
-## Appels API répétés : le cache d'exécution de ComfyUI
-
-ComfyUI met en cache l'exécution d'un nœud par ses inputs résolus — soumettre
-**deux fois le même graphe** (même image d'entrée, mêmes valeurs de widget)
-ne le fait pas tourner deux fois : il renvoie une référence au fichier de
-sortie de la première exécution. Piège pour tout code qui soumet un graphe
-plus d'une fois avec potentiellement les mêmes entrées (un aperçu interactif
-rejoué à l'identique, un bouton « régénérer » sans rien changer) **et**
-supprime le fichier de sortie après l'avoir lu une fois : le deuxième appel
-identique reçoit le nom d'un fichier déjà supprimé, `FileNotFoundError`.
-
-Incident réel (2026-09-03, `expression.py`/`apercu`) : cliquer deux fois
-« Rendre l'aperçu » sans changer un seul paramètre échouait à coup sûr
-(4/4 reproduit) ; varier ne serait-ce qu'une valeur d'un appel à l'autre
-faisait repasser au vert (4/4). Corrigé en donnant à l'image d'entrée
-temporaire un nom **unique par appel** (`uuid`) plutôt qu'un nom dérivé de
-la source : LoadImage redevient « neuf » aux yeux du cache, ce qui force
-tout le graphe en aval à se ré-exécuter au lieu de renvoyer une référence
-périmée.
-
-À vérifier dès qu'un appel programmatique peut être rejoué avec des entrées
-identiques : soit le nom d'entrée est rendu unique par appel (le correctif
-ci-dessus), soit le fichier de sortie n'est jamais supprimé après lecture
-(acceptable si l'appelant est un aperçu jetable, à condition d'assumer
-l'accumulation de scratch).
-
-## Données sensibles qui transitent par un workflow
-
-Si un workflow reçoit en entrée une vraie photo d'un tiers (ex. extraction
-de pose depuis une photo de référence) : la photo ne doit jamais persister
-au-delà du traitement. Elle transite par le dossier d'input de ComfyUI le
-temps du job, et repart dans un bloc `finally` — succès ou échec. Ce n'est
-pas une option, c'est la même règle que le principe fondateur de la
-plateforme (personnages fictifs, jamais de personne réelle) appliquée aux
-données de passage.
-
 ## Format de réponse attendu sur ce genre de tâche
 
 Expliquer le pourquoi d'un changement de graphe, pas seulement le quoi.
@@ -173,6 +93,9 @@ comme définitivement acquis.
 
 ## Pour aller plus loin
 
+- `references/orchestration-et-donnees.md` — cache d'exécution de
+  ComfyUI (un même graphe soumis deux fois ne se ré-exécute pas) et
+  sort des données sensibles qui transitent par un workflow
 - `references/pieges-noeuds-custom.md` — pièges connus par nœud custom,
   à consulter avant de toucher à PuLID, IPAdapter, ControlNet aux, ou
   `comfyui_essentials`

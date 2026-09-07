@@ -139,3 +139,21 @@ image : la dérive lente ne se lit pas sur une seule sortie. Un A/B à seed
 fixe avant/après est le seul moyen de dire si le coût réel correspond au
 coût annoncé — et si ce n'est pas le cas, c'est cette table qu'il faut
 corriger, pas la mesure qu'il faut ignorer (`CLAUDE.md` §11).
+
+## Garde-fou identité — annoncer le chiffre avant d'appliquer
+
+La cohérence du visage prime sur le rendu. Certaines modifications de
+graphe ont un coût d'identité **mesuré**, et ce coût est souvent
+contre-intuitif : le réglage qui « rendrait la peau plus texturée » est
+justement celui qui fait tomber l'identité sous le seuil de rejet.
+
+Quand une demande touche un de ces réglages, le protocole est en trois
+temps : **annoncer le chiffre mesuré, proposer l'alternative, attendre
+l'accord** — pas appliquer d'abord et commenter ensuite. La table des
+coûts par réglage et le détail du protocole sont dans
+`references/protocole-identite.md` : le consulter dès qu'une édition
+approche le verrou d'identité, l'ordre des étages, ou un LoRA/ControlNet
+qui injecte dans les mêmes couches.
+
+Ce protocole ne vaut que pour les réglages listés là-bas. Sur tout le
+reste du graphe, éditer normalement.
