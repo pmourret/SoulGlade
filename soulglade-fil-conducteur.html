@@ -166,9 +166,9 @@
    [x] / [ ] de la ligne équivalente dans ROADMAP.md.
    ============================================================ */
 const ROADMAP_DATA = {
-  updated: "2026-09-05",
+  updated: "2026-09-07",
 
-  compass: "<strong>J8</strong> a été cadré par écrit avant le code — bouclé en une journée. <strong>Studio IA</strong> a été ouvert sans critère de sortie — il tourne encore. Le cadrage ne ralentit pas ; son absence coûte cher.",
+  compass: "<strong>La qualité de sortie d'abord</strong> — pour Léna. P4.1 et P4.3 livrés, mais P4.3 reste informative : mesurée sur la banque déjà validée, elle aurait rejeté 33 % d'images correctes (ADR-0025), et le juge pixel censé la fiabiliser a été testé le 07/09 puis fermé (NO-GO, 53 % de faux positifs). P4.5 ouvert le jour même sur un angle mort différent (proportions du corps). Reste P4.2, P4.4, P4.5. Abyssiaelle attend son propre chantier après.",
 
   phase1: {
     title: "Phase 1 — V1 Fondations",
@@ -182,7 +182,7 @@ const ROADMAP_DATA = {
       "J8.1–J8.5 — quatre couches, capacités, héritage monde→personnage, plateforme, banc",
       "J9 — provisioning ComfyUI par manifeste"
     ],
-    note: "<strong style=\"color:var(--text)\">Mais</strong> : \"V1 Fondations\" ≠ \"V1\" au sens de <span class=\"ref\" style=\"display:inline;margin:0;\">PROJET.md</span>. Deux critères de sortie restent ouverts — objet de la phase 2.",
+    note: "Jalons techniques clos — les critères produit restants ont été traités en phase 2.",
     ref: "DOCS/retros/2026-09-05-phase-1-v1-fondations.md"
   },
 
@@ -190,28 +190,77 @@ const ROADMAP_DATA = {
     title: "Phase 2 — Clôture V1",
     status: "done",
     tagLabel: "terminée",
-    summary: "Fermer V1 au sens produit, pas au sens jalons techniques. Périmètre volontairement étroit — réaction directe à la dérive Studio IA. Les quatre étapes closes le 05/09/2026.",
+    summary: "V1 fermée au sens produit le 05/09/2026. Tests verts, parcours nominal audité en vrai, décision Abyssiaelle/SDXL actée.",
     ref: "DOCS/cadrage/2026-09-05-phase-2-cloture-v1.md",
     steps: [
       { code: "P2.1", title: "Suite de tests verte pour de vrai", done: true,
-        desc: "Fait le 05/09 : le vrai bug était une confusion \"ComfyUI joignable\" / \"cv2 dispo dans cet interpréteur\" (ADR-0008), pas une dépendance manquante. Au passage, un vrai bug de production trouvé et corrigé (le bouton Mesurer n'écrivait jamais en base). 37 tests, tout vert." },
+        desc: "Vrai bug trouvé : le bouton Mesurer n'écrivait jamais en base. 37 tests, tout vert." },
       { code: "P2.2", title: "Définir le parcours nominal", done: true,
-        desc: "Fait le 05/09, depuis l'inventaire réel (App.tsx/routes.ts), pas une supposition : Personnages, Wizard, Application, Produire, Revue, Galerie. Mondes en sort (le wizard fournit déjà un monde par type), Application y entre (seul chemin pour démarrer ComfyUI)." },
+        desc: "6 écrans retenus depuis l'inventaire réel. Mondes sort, Application entre." },
       { code: "P2.3", title: "Audit UX/UI du parcours nominal", done: true,
-        desc: "Fait le 05/09, vérifié en vrai (fumigations + dashboard réel connecté à ComfyUI). Un Majeur trouvé et corrigé : la porte d'entrée avait l'air en panne sans personnage chargé, pile à l'aha moment. Rien d'autre trouvé sur les six écrans." },
+        desc: "Un Majeur trouvé et corrigé : la porte d'entrée avait l'air en panne sans personnage chargé." },
       { code: "P2.4", title: "Décision écrite Abyssiaelle / SDXL", done: true,
-        desc: "Tranché le 05/09 : absence assumée, non bloquante. Abyssiaelle peut être armée NSFW, le cran d'édition n'apparaît juste pas (raison déjà à l'écran depuis J7). Le graphe SDXL manquant part en BACKLOG.md." }
+        desc: "Absence assumée, non bloquante. Graphe SDXL manquant en BACKLOG.md." }
+    ]
+  },
+
+  phase3: {
+    title: "Phase 3 — Contrat de pack",
+    status: "done",
+    tagLabel: "cadre posé",
+    summary: "Le schéma normatif d'un monde vendable est écrit et appliqué. La suite (câblage runner, world/pack builder) attend qu'un premier monde soit prêt à vendre — donc attend la qualité de sortie.",
+    ref: "DOCS/cadrage/2026-09-06-contrat-de-pack.md",
+    steps: [
+      { code: "C1", title: "Diagnostic — contrat réel vs anticipé", done: true,
+        desc: "Trois écarts trouvés : le checkpoint vit dans le pack (pas le monde), le LoRA n'est pas le seul mécanisme de style, et les assets monde ne sont pas consommés par le runner (câblage explicitement hors périmètre)." },
+      { code: "C2", title: "Schéma readiness appliqué", done: true,
+        desc: "ADR-0023 : trois flags par monde (places, tones, style). Appliqué : slow-life a places+tones à true, terres-sauvages tout à false. worlds.py enrichi, diagnostic à jour." },
+      { code: "C3", title: "Câbler les assets monde dans le runner", done: false,
+        desc: "En attente. Prérequis pour readiness.style: true. Attend qu'un monde soit prêt à porter un style — donc attend la qualité de sortie." },
+      { code: "C4", title: "World/pack builder", done: false,
+        desc: "En attente. Outillage pour poser readiness, valider, scaffolder. Reprendra une fois qu'on aura une pratique concrète de création de monde." }
+    ]
+  },
+
+  phase4: {
+    title: "Phase 4 — Qualité de sortie",
+    status: "active",
+    tagLabel: "en cours",
+    summary: "Amener le rendu au niveau où Pierre produit vraiment du contenu sans retoucher chaque image. Deux axes qui se recouvrent : workflows généralistes, et détection des mains cassées — critère V1 jamais livré. Amendé le 07/09 (ADR-0025) : un défaut objectif (main cassée, anatomie fausse) n'est plus un arbitrage utilisateur, la plateforme le trie elle-même — mais seulement une fois sa fiabilité démontrée sur corpus, ce qu'aucune mesure ne fait encore.",
+    ref: "DOCS/cadrage/2026-09-06-phase-4-qualite-workflows-mains.md",
+    steps: [
+      { code: "P4.1", title: "Recherche ciblée détail visage/mains", done: true,
+        desc: "Livré 2026-09-06 (DOCS/recherche/2026-09-06-workflows-detail-visage-mains.md). Deux candidats retenus (HLFrequencyDetailRestore, patron Skin Fix), un écarté. Trois décisions actées en revue : Abyssiaelle hors périmètre, DWPose remplace MediaPipe, ADR-0024 sur licence GPL." },
+      { code: "P4.2", title: "Sortir le banc de comparaison de pause", done: false,
+        desc: "Le banc J8.5 n'a jamais servi. Nécessaire ici pour valider chiffré (pas à l'œil) l'apport d'un étage candidat sur Léna ET Abyssiaelle." },
+      { code: "P4.3", title: "Détection des mains cassées", done: true,
+        desc: "Livré 2026-09-07. Capacité de plateforme \"hands\" (DWPose), score = taux de détection min des deux mains, gating par poignet, seuil par personnage. Métrique cadrée par écrit (DOCS/cadrage/2026-09-07-p4-3-metrique-mains.md) — corrige au passage une hypothèse fausse de P4.1 : la confiance DWPose n'est pas graduée. Reste informative : mesurée sur les 48 images déjà validées OK de Léna, elle en aurait rejeté 16 à tort (33 %) tout en laissant passer les deux cas réels qui ont motivé le chantier. Volet géométrique v2 fermé le jour même (DOCS/recherche/2026-09-07-signal-geometrique-mains.md) : le squelette DWPose ne porte pas l'information manquante. Le juge pixel qui devait prendre le relais (Florence-2 sur un crop de main, WORKFLOWS/platform/hands_judge_ui.json) a été mesuré le 07/09 et ferme la piste à son tour — NO-GO : sur 42 crops de 27 images étiquetées, aucune règle ne sépare, la meilleure produit 53 % de faux positifs et rate quand même une main cassée sur quatre (DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md). État réel : SoulGlade ne sait pas encore reconnaître une main cassée." },
+      { code: "P4.4", title: "Adopter ou rejeter une amélioration", done: false,
+        desc: "Prendre le candidat le plus prometteur (HLFrequencyDetailRestore probablement), l'implémenter, banc sur Léna, décision chiffrée. Abyssiaelle vérifiée dans un chantier séparé, une fois son pipeline au niveau." },
+      { code: "P4.5", title: "Plausibilité des proportions du corps", done: false,
+        desc: "Ajouté 2026-09-07 : deux images au torse anormalement allongé ne sont vues par aucune mesure existante. Contrairement aux mains, le signal semble réel dans le squelette DWPose (asymétrie des bras 0.32 contre 0.14 max sur 13 contrôles). Première étape : corpus étiqueté à la main, ce qui manquait à P4.3." }
+    ]
+  },
+
+  phases_prevues: {
+    title: "Phases prévues",
+    tagLabel: "après phase 4",
+    summary: "Cadrage à faire au démarrage de chacune (Règle 3). Séquence décidée le 6/09, pas les détails.",
+    items: [
+      { title: "Amener le pipeline Abyssiaelle au niveau Léna", desc: "Sorti du périmètre phase 4 le 06/09 : le brouillon J6 SDXL (13 nœuds, aucun refiner/FaceDetailer/upscale) doit d'abord recevoir la base avant qu'une comparaison d'étages ait un sens. Chantier à cadrer." },
+      { title: "Phase 5 — Contrôle d'identité évolutif", desc: "Faire évoluer le centroïde pour qu'il apprenne des images validées au fil du temps. Le mécanisme de base existe (centroïde, rescorer, backfill) — c'est une évolution, pas une réécriture." },
+      { title: "Phase 6 — Outils de scène", desc: "Créateur de lumière, importeur d'assets, gestionnaire de vêtements. Confort de création réel, mais aujourd'hui les places portent le cadrage lumière dans le prompt et le sélecteur de tenue est fonctionnel en texte libre." }
     ]
   },
 
   paused: {
     title: "En pause fonctionnelle",
     tagLabel: "visible, pas actif",
-    summary: "Code committé et navigable, motivation préservée — mais plus de développement actif tant que la phase 2 n'a pas statué.",
+    summary: "Code committé et navigable, motivation préservée. Reprendra avec un cadrage propre.",
     items: [
-      { title: "Studio IA — éditeur photo avancé", desc: "Ambition \"niveau professionnel\" par écran, ouverte le 01/09 sans hiérarchie ni date de fin. Hors périmètre de la clôture V1." },
-      { title: "Banc de comparaison de variantes (J8.5)", desc: "Outil de power-user pour valider un réglage ou mesurer les seuils d'un nouveau monde. Pas requis pour publier une première image." },
-      { title: "J9 — URLs modèle incomplètes", desc: "Une quinzaine d'entrées du manifeste ComfyUI sans URL vérifiée. Non bloquant, à compléter au fil de l'eau." },
+      { title: "Studio IA — éditeur photo avancé", desc: "Ambition \"niveau professionnel\" par écran, ouverte le 01/09 sans hiérarchie ni date de fin. Attendra un vrai cadrage." },
+      { title: "Banc de comparaison de variantes (J8.5)", desc: "Sort de pause dans P4.2 — il devient nécessaire pour valider les gains de workflow chiffrés." },
+      { title: "J9 — URLs modèle incomplètes", desc: "Une quinzaine d'entrées du manifeste ComfyUI sans URL vérifiée. Non bloquant." },
       { title: "qc.threshold_high non recalibré", desc: "Valeur provisoire (0.74) depuis J1, acceptable en l'état." }
     ]
   },
@@ -219,13 +268,12 @@ const ROADMAP_DATA = {
   backlog: {
     title: "Backlog",
     tagLabel: "hors phase courante",
-    summary: "Rien ici n'entre en roadmap avant que la V1 soit vivante ET qu'un signal existe. Noté pour ne pas être perdu, pas pour être fait.",
+    summary: "Noté pour ne pas être perdu, pas pour être fait maintenant.",
     items: [
-      { title: "Contrat de création de pack", desc: "Inspecter les workflows existants pour rendre automatisables la validation et le scaffolding d'un monde. Sert la monétisation, pas le parcours nominal." },
-      { title: "Inspiration ComfyUI Studio", desc: "Regarder ce qu'un outil tiers fait mieux (l'étage, jamais le graphe) pour le panel d'outils. Recherche déjà commencée : DOCS/recherche/2026-09-05-comfyui-studio-v362.md" },
-      { title: "Test commercial de l'idée pack", desc: "Poster à l'audience Léna/Abyssiaelle l'idée de mondes/packs et observer la réaction. Devrait précéder tout arbitrage sur la vision long terme." },
-      { title: "Vision long terme", desc: "Vidéo, univers \"art pur\", musique/voix, assets 3D, écriture type maître de jeu, messagerie type SillyTavern. Le personnage reste le fil conducteur — aucun arbitrage avant signal V1." },
-      { title: "Catalogue illustré / importeur d'assets", desc: "Le parcours nominal fonctionne en texte libre aujourd'hui. Pas bloquant." }
+      { title: "Test commercial de l'idée pack", desc: "Poster à l'audience Léna/Abyssiaelle l'idée de mondes/packs et observer la réaction. À faire une fois qu'un monde est réellement prêt à vendre." },
+      { title: "Vision long terme", desc: "Vidéo, univers \"art pur\", musique/voix, assets 3D, écriture type maître de jeu, messagerie type SillyTavern. Aucun arbitrage avant signal V1." },
+      { title: "Catalogue illustré / importeur d'assets", desc: "Repris dans la phase 6 (outils de scène)." },
+      { title: "Graphe d'édition SDXL (rpg-personnage)", desc: "Absence d'outil NSFW pour Abyssiaelle assumée en V1 (P2.4). À traiter quand un deuxième pack SDXL en aura besoin." }
     ]
   },
 
@@ -319,6 +367,9 @@ function render(){
   const thread = document.getElementById('thread');
   thread.appendChild(el(renderPhase1(ROADMAP_DATA.phase1)));
   thread.appendChild(el(renderPhase2(ROADMAP_DATA.phase2)));
+  thread.appendChild(el(renderPhase2(ROADMAP_DATA.phase3)));
+  thread.appendChild(el(renderPhase2(ROADMAP_DATA.phase4)));
+  thread.appendChild(el(renderFlatSection(ROADMAP_DATA.phases_prevues, 'paused')));
   thread.appendChild(el(renderFlatSection(ROADMAP_DATA.paused, 'paused')));
   thread.appendChild(el(renderFlatSection(ROADMAP_DATA.backlog, 'backlog')));
 
