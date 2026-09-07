@@ -52,6 +52,19 @@ un plan large.
 - La base plateforme reste open source, gratuite, sans dégradation
   fonctionnelle
 
+**Licence, arrêtée le 2026-09-07 (ADR-0026).** La base est publiée sous
+AGPL-3.0 : un tiers qui la déploie en service en ligne doit publier ses
+modifications. Un pack de monde est un jeu de données, jamais un graphe
+(invariant 10) — il n'est pas une œuvre dérivée du programme, et sa
+vente reste possible.
+
+Condition qui tient ce modèle : Pierre détient l'intégralité des droits
+sur le code, ce qui l'autorise à concéder le même code sous d'autres
+termes — notamment un éditeur de packs vendu sous licence commerciale.
+**Aucune contribution externe n'est fusionnée sans cession de droits
+écrite.** Une seule intégration sans ce cadre suffit à faire perdre la
+propriété exclusive, donc la double licence, donc le modèle.
+
 ## NSFW
 
 Citoyen de première classe du produit. Activable par personnage, désactivé

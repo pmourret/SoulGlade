@@ -83,9 +83,19 @@ défaut**, à activer explicitement dans le paramétrage.
 
 ## Contribuer
 
-Projet solo pour le moment. Le dépôt a vocation à devenir public une fois
-la base validée — voir la Mission et `DOCS/adr/0005-separation-donnees-code.md`.
+Projet solo. Le dépôt est public ; les données de personnage restent
+hors du dépôt versionné (`DOCS/adr/0005-separation-donnees-code.md`).
+
+Les correctifs et suggestions sont les bienvenus en issue. En revanche
+aucune contribution de code n'est fusionnée tant qu'un accord de
+cession de droits n'existe pas — le modèle économique du projet repose
+sur une propriété exclusive du code (`DOCS/adr/0026-licence-agpl-3.md`).
 
 ## Licence
 
-À définir avant le passage en public.
+GNU Affero General Public License v3.0 — voir [`LICENSE`](LICENSE).
+
+Un tiers qui héberge SoulGlade en service accessible sur un réseau doit
+en publier le code source, modifications comprises (section 13 de
+l'AGPL). Les packs de monde, qui sont des données et non du code, ne
+sont pas couverts par ce copyleft.
