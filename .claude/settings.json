@@ -79,7 +79,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/filter-verbose-output.sh"
+            "command": "python \"$CLAUDE_PROJECT_DIR/.claude/hooks/filter-verbose-output.py\""
           }
         ]
       }
