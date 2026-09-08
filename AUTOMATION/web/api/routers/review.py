@@ -105,6 +105,7 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
             "nettete": m.get("nettete"), "texture": m.get("texture_visage"),
             "fond": m.get("bruit_fond"), "mains": m.get("mains"),
             "flag": m.get("flag"), "anatomie": m.get("anatomie"),
+            "mains_juge": m.get("mains_juge"),
         })
     entries = list(store.values())
     refs = [e for e in entries if e.get("role") == "reference"]
@@ -128,25 +129,30 @@ async def set_flag(payload: FlagRequest, character_id: RequiredCharacterId):
     recorded every judgement, for every character, under one specific
     character_id, because that was the only default `enregistrer_image` had.
 
-    TWO AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`. It is
-    the same gesture on the same image, and neither sorts — a second route
-    would have duplicated the name guard and the 400 for nothing. They are NOT
-    the same field: an image can be convincing as a photograph AND have one arm
-    too long, and `mesures.bande` calibrates realism on `flag == "ok"`.
+    SEVERAL AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`:
+    `realisme` (historical, `flag`) plus every corpus label of
+    `mesures.ETIQUETTES` — `anatomie` (body proportions) and `mains`. It is the
+    same gesture on the same image, and none of them sorts: a route per axis
+    would have duplicated the name guard and the 400 for nothing.
 
-    `anatomie` deliberately does not write to the database: the `jugement`
-    table is single-column, and this label is a calibration instrument read
-    once by P4.5.2 from `mesures.json` (see `mesures.poser_anatomie`).
+    They are NOT the same field. An image can be convincing as a photograph AND
+    have one arm too long AND have a clean pair of hands; `mesures.bande`
+    calibrates realism on `flag == "ok"`, and `mains` already names the DWPose
+    score. Sharing a field would corrupt several readings at once, silently.
+
+    The corpus labels deliberately do not write to the database: the `jugement`
+    table is single-column, and they are calibration instruments read from
+    `mesures.json` (see `mesures.poser_etiquette`).
     """
     name = payload.name
     if not ss.SAFE_NAME.match(name):
         ss.bad_request("nom de fichier invalide")
     flag = payload.flag
-    if payload.axe == "anatomie":
-        if flag not in (None,) + mes.ANATOMIE:
+    if payload.axe in mes.ETIQUETTES:
+        if flag not in (None,) + mes.ETIQUETTES[payload.axe][1]:
             return JSONResponse({"ok": False, "erreur": "étiquette inconnue"},
                                 status_code=400)
-        mes.poser_anatomie(name, flag)
+        mes.poser_etiquette(name, payload.axe, flag)
         return {"ok": True, "flag": flag}
     if payload.axe != "realisme":
         return JSONResponse({"ok": False, "erreur": "axe inconnu"}, status_code=400)

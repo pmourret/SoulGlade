@@ -158,21 +158,35 @@ const volsDeDonnees = [];
   dire((await page.getAttribute('[data-f="ok"]', 'aria-pressed')) === 'false',
        'et le second clic le retire : rien de laisse sur une image reelle');
 
-  console.log('\n[4quater] etiquette des proportions (P4.5.1) : plein cadre, clavier, revert');
-  dire(await vu('[data-tanat]'), "l'axe proportions est present en plein cadre");
-  dire((await page.getAttribute('[data-anat="ko"]', 'aria-pressed')) === 'false',
+  console.log('\n[4quater] etiquettes de corpus (P4.5.1) : plein cadre, clavier, revert');
+  dire(await vu('[data-tlabel="anatomie"]'), "l'axe proportions est present en plein cadre");
+  dire(await vu('[data-tlabel="mains"]'), "l'axe mains aussi");
+  dire((await page.getAttribute('[data-label="anatomie:ko"]', 'aria-pressed')) === 'false',
        'relache au depart');
   await page.keyboard.press('f');
-  await page.waitForTimeout(300);
-  dire((await page.getAttribute('[data-anat="ko"]', 'aria-pressed')) === 'true',
+  await page.keyboard.press('m');
+  await page.waitForTimeout(400);
+  dire((await page.getAttribute('[data-label="anatomie:ko"]', 'aria-pressed')) === 'true',
        'la touche F etiquette les proportions comme fausses');
+  dire((await page.getAttribute('[data-label="mains:ko"]', 'aria-pressed')) === 'true',
+       'la touche M etiquette les mains comme mauvaises');
   dire((await page.getAttribute('[data-f="ok"]', 'aria-pressed')) === 'false',
-       "et n'ecrit PAS dans le jugement de realisme (deux axes, deux champs)");
+       "et aucune n'ecrit dans le jugement de realisme (trois axes, trois champs)");
+  const brut = await page.evaluate(async () => {
+    const d = await (await fetch('/api/gallery?bucket=OK&space=sfw&character=lena')).json();
+    return d.items.find(i => i.anatomie) || {};
+  });
+  dire(brut.anatomie === 'ko' && brut.mains_juge === 'ko',
+       `le serveur les rend sur deux champs distincts (${brut.anatomie} / ${brut.mains_juge})`);
+  dire(typeof brut.mains !== 'string',
+       "et `mains` reste le score DWPose, jamais l'etiquette humaine");
   // Meme REVERT que [4bis] : image reelle, rien ne doit rester.
   await page.keyboard.press('f');
-  await page.waitForTimeout(300);
-  dire((await page.getAttribute('[data-anat="ko"]', 'aria-pressed')) === 'false',
-       'et un second F la retire');
+  await page.keyboard.press('m');
+  await page.waitForTimeout(400);
+  dire((await page.getAttribute('[data-label="anatomie:ko"]', 'aria-pressed')) === 'false'
+       && (await page.getAttribute('[data-label="mains:ko"]', 'aria-pressed')) === 'false',
+       'et un second appui les retire toutes les deux');
 
   console.log('\n[4ter] filmstrip (design-pass ecran 5, §A) : role, clic, et UN SEUL pas au clavier');
   dire((await page.getAttribute('#filmstrip', 'role')) === 'listbox', '#filmstrip est un role=listbox');

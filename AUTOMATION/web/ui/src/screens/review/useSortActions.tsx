@@ -23,6 +23,16 @@ import { useToast } from '../../chrome/ToastContext'
 import { useSystemState } from '../../state/SystemStateContext'
 import type { GalleryItem, Space } from './useTriage'
 
+/* The judgement axes and the field each lands in. `mains_juge` and not
+   `mains`: that name already carries the DWPose score, and a human label
+   wearing it would read as a measurement everywhere in the Review. */
+export type JudgementAxis = 'realisme' | 'anatomie' | 'mains'
+const FIELD_OF: Record<JudgementAxis, 'flag' | 'anatomie' | 'mains_juge'> = {
+  realisme: 'flag',
+  anatomie: 'anatomie',
+  mains: 'mains_juge',
+}
+
 /* The folder a sorting action lands in. Sorting into the folder one is already
    looking at is a no-op: we move on rather than write it. */
 const SORT_TARGET: Record<string, string> = {
@@ -72,14 +82,14 @@ export function useSortActions({
   const [measuring, setMeasuring] = useState(false)
   const [measureLeft, setMeasureLeft] = useState<number | null>(null)
 
-  /* The two judgement axes share this one function, as they share the route:
+  /* Every judgement axis shares this one function, as they share the route:
      same gesture, same toggle-to-clear, same optimistic patch — only the field
-     they land in differs (`flag` = realism, `anatomie` = P4.5.1 proportions).
+     they land in differs (`flag` = realism, plus the P4.5.1 corpus labels).
      They are never the same field: an image can be convincing as a photograph
-     AND have one arm too long. */
+     AND have one arm too long AND have a clean pair of hands. */
   const setFlag = useCallback(
-    async (item: GalleryItem, flag: string, axe: 'realisme' | 'anatomie' = 'realisme') => {
-      const field = axe === 'anatomie' ? 'anatomie' : 'flag'
+    async (item: GalleryItem, flag: string, axe: JudgementAxis = 'realisme') => {
+      const field = FIELD_OF[axe]
       const next = item[field] === flag ? null : flag // clicking again removes it
       const response = await api.post<ActionLike>('/api/flag', { name: item.name, flag: next, axe })
       const failure = errorOf(response)

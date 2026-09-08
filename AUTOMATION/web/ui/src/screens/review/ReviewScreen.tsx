@@ -499,7 +499,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
                 onMagnify={() => openLightbox(api.image(current))}
                 onAct={(action) => act(action)}
                 onFlag={(flag) => setFlag(current, flag)}
-                onAnatomy={(value) => setFlag(current, value, 'anatomie')}
+                onLabel={(axis, value) => setFlag(current, value, axis.axe)}
                 onEdit={() => setEditFor(current)}
                 onDelete={() => deleteForever()}
               />

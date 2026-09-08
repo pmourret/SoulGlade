@@ -41,6 +41,18 @@ points : exactement ce qu'un squelette porte.
   double une deuxième fois le coût ComfyUI par génération.
 - **Les mains.** Traitées par P4.3, et leur volet géométrique est clos
   (voir la recherche citée). Aucun recouvrement.
+
+  **Amendé le 2026-09-08 — la MESURE reste hors périmètre, l'ÉTIQUETTE
+  non.** Le corpus de P4.5.1 porte les deux axes. Raison : les deux
+  fermetures de P4.3 ont été prononcées contre le *tri de Pierre*, jamais
+  contre une étiquette « mains ». Les 33 % de faux positifs d'ADR-0025
+  comparent `mains` v1 aux 48 images classées `OK` ; la sonde géométrique
+  a jugé 2 images mauvaises contre 13 témoins ; la sonde Florence-2, 4
+  crops mauvais issus de ces deux mêmes images contre 38 témoins
+  étiquetés `ok` **par déduction du dossier de tri**. Aucune de ces
+  figures ne dit combien de mains ratées dorment dans le dossier `OK`.
+  Le travail coûteux est le regard sur ~100 images, pas le champ : faire
+  deux passes séparées serait payer deux fois pour la même heure.
 - **Un modèle anthropométrique complet** (canons de proportions, ratios
   tête/corps par morphologie). Le personnage est fictif et stylisé ; la
   cible n'est pas « conforme à un canon », c'est « cohérent avec
@@ -101,14 +113,31 @@ DWPose n'y trouve pas de squelette exploitable, et l'indicateur affiche
 une séparation qui ne mesure rien — exactement le piège des 33 % de faux
 positifs de la mesure `mains`.
 
-Étiquetage dans la Revue, en plein cadre uniquement (`p` / `f` / `n`) :
+**Deux axes dans la même passe (2026-09-08)** : `anatomie`
+(proportions) et `mains` — champ `mains_juge`, jamais `mains`, qui porte
+déjà le score DWPose. Même vocabulaire à trois valeurs. L'axe mains sert
+d'abord à chiffrer honnêtement ce qu'ADR-0025 a écarté à l'estime, et
+c'est aussi le corpus que la note Florence-2 déclare manquant pour sa
+porte n° 3 (un classifieur entraîné sur des crops).
+
+Étiquette **par image**, pas par main : « au moins une main cassée » est
+la granularité dont le runner a besoin, puisque c'est une image qu'il
+écarte. Un classifieur sur crops demanderait une étiquette par main — ce
+sera une repasse, à décider à ce moment-là.
+
+Étiquetage dans la Revue, en plein cadre uniquement (`p` / `f` / `n`
+pour les proportions, `b` / `m` / `h` pour les mains) :
 un axe de plus sur `/api/flag`, qui porte déjà un jugement humain non
 bloquant qui ne déplace aucun fichier. Pas de vignette — une proportion
 ne se juge pas sur une image de 200 px. Pas d'écriture en base pour cet
 axe tant qu'une seconde lecture ne la demande pas.
 
-**Test** : au moins une trentaine d'images étiquetées, dont une dizaine
-de « fausses » — sous ce volume, aucun seuil n'est défendable. Étiqueter
+**Test** : au moins une trentaine d'images étiquetées sur chaque axe,
+dont une dizaine de « fausses » — sous ce volume, aucun seuil n'est
+défendable. Si l'axe mains ne réunit pas ses dix, c'est un résultat lui
+aussi : il dit que le défaut est plus rare que les deux images du 07/09
+ne le laissaient croire, et il fonde le renoncement écrit qu'IT-3
+prévoit bien mieux que l'estime actuelle. Étiqueter
 **avant** qu'un score `proportions` existe : un étiquetage fait en voyant
 le score n'est plus une référence indépendante. Passer aussi les
 `REJET` et les deux personnages — si les `ko` ne venaient que du dossier

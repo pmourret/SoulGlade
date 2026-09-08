@@ -41,10 +41,12 @@ class GalleryItem(BaseModel):
     # sous-scores realisme calibres sur corpus/jugements.
     mains: Optional[float] = None
     flag: Optional[str] = None
-    # P4.5.1 : etiquette manuelle des proportions du corps ("ok" | "ko" | "na"),
-    # jugement humain comme `flag` et non un score -- elle ne trie rien et
-    # n'entre dans aucune bande. Corpus de calibration, pas surface produit.
+    # P4.5.1 : etiquettes manuelles de corpus ("ok" | "ko" | "na"), jugements
+    # humains comme `flag` et non des scores -- elles ne trient rien et n'entrent
+    # dans aucune bande. Corpus de calibration, pas surface produit.
+    # `mains_juge` et non `mains` : ce nom-la porte deja le score DWPose.
     anatomie: Optional[str] = None
+    mains_juge: Optional[str] = None
 
 
 class ReferenceCount(BaseModel):
@@ -132,7 +134,8 @@ class FlagRequest(BaseModel):
     Two axes on the same route, told apart by `axe`, because they are the same
     gesture on the same image and neither sorts:
       - `realisme` (default, unchanged): `flag` is "ok", "ia", or null to clear;
-      - `anatomie` (P4.5.1): `flag` is "ok", "ko", "na", or null to clear.
+      - `anatomie` and `mains` (P4.5.1 corpus labels): `flag` is "ok", "ko",
+        "na", or null to clear.
 
     `axe` is optional and defaults to the historical behaviour: a client that
     does not know about the second axis keeps working unchanged.

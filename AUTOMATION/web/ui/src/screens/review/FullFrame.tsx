@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { ScoreBars, calibration } from './ScoreBars'
 import { FlagButtons } from './FlagButtons'
-import { AnatomyButtons } from './AnatomyButtons'
+import { CorpusLabels, type LabelAxis } from './CorpusLabels'
 import { Filmstrip } from './Filmstrip'
 import { GalleryActions, ReviewActions } from './ReviewActions'
 import { scoreClass, type GalleryItem, type Trade } from './useTriage'
@@ -45,7 +45,7 @@ export function FullFrame(props: {
   onMagnify: () => void
   onAct: (action: string) => void
   onFlag: (flag: string) => void
-  onAnatomy: (value: string) => void
+  onLabel: (axis: LabelAxis, value: string) => void
   onEdit: () => void
   onDelete: () => void
 }) {
@@ -285,23 +285,10 @@ export function FullFrame(props: {
           </div>
         </div>
 
-        {/* P4.5.1 — corpus étiqueté des proportions. Sa propre boîte, sous le
-            réalisme et jamais mêlé à lui : c'est un autre axe, pas un
-            sous-score, et il n'entre dans aucune bande de calibration. */}
-        <div className="meta">
-          <dt className="mb-[9px]">proportions du corps</dt>
-          <div className="flex gap-[3px]" data-tanat>
-            <AnatomyButtons item={item} onLabel={props.onAnatomy} />
-          </div>
-          {/* Pas de glyphe repete ici, contrairement a la legende du realisme
-              juste au-dessus : a trois entrees la ligne debordait et laissait
-              la touche N orpheline sur un second rang. Les glyphes sont deja
-              sur les boutons, a 7 px. */}
-          <div className="tiny mt-[7px]">
-            correctes <span className="kbd">P</span> · fausses{' '}
-            <span className="kbd">F</span> · non jugeables <span className="kbd">N</span>
-          </div>
-        </div>
+        {/* P4.5.1 — corpus étiqueté (proportions, mains). Leurs propres boîtes,
+            sous le réalisme et jamais mêlées à lui : ce sont d'autres axes, pas
+            des sous-scores, et ils n'entrent dans aucune bande de calibration. */}
+        <CorpusLabels item={item} onLabel={props.onLabel} />
 
         {/* `[&_.btn]` and not a utility on each button: it is the ROW that says
             its buttons are centred, exactly as the sheet did. */}

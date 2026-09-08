@@ -41,7 +41,25 @@ REFERENCES = OFM / "INPUTS" / "REALISME"   # corpus de reference du realisme
 
 _VERROU = threading.Lock()          # le batch ecrit pendant que le web lit
 FLAGS = ("ok", "ia")
-ANATOMIE = ("ok", "ko", "na")       # etiquette de corpus P4.5.1, jamais un score
+
+# Etiquettes humaines de corpus (P4.5.1), par axe : {axe: (champ, vocabulaire)}.
+# Ce sont des JUGEMENTS, jamais des scores — rien ici n'est mesure, rien ici ne
+# trie. Elles servent a repondre a la question qu'ADR-0025 pose avant qu'une
+# mesure ait le droit d'ecarter une image seule : combien de faux positifs, et
+# combien de faux negatifs, sur des images qu'un humain a vraiment regardees.
+#
+# LE CHAMP DE L'AXE « mains » N'EST PAS `mains`. Ce nom porte deja le taux de
+# detection DWPose (un float, mesure automatique, affiche comme un score dans la
+# Revue). Y ranger un jugement humain ferait passer l'un pour l'autre partout.
+#
+# Meme vocabulaire pour les deux axes, et le "na" (non jugeable) est structurel
+# dans les deux : sans lui les portraits et les cadrages serres tombent en "ok"
+# alors qu'il n'y a rien a juger, et l'indicateur qu'on calibrera dessus
+# afficherait une separation qui ne mesure rien.
+ETIQUETTES = {
+    "anatomie": ("anatomie", ("ok", "ko", "na")),
+    "mains": ("mains_juge", ("ok", "ko", "na")),
+}
 
 
 def charger():
@@ -149,38 +167,40 @@ def poser_flag(nom, flag, character_id):
         return e
 
 
-def poser_anatomie(nom, valeur):
-    """Etiquette manuelle des proportions du corps (P4.5.1), ou None pour retirer.
+def poser_etiquette(nom, axe, valeur):
+    """Etiquette manuelle de corpus sur un `axe` de `ETIQUETTES`, None pour retirer.
 
-    Deuxieme axe de jugement humain, a cote de `flag` — et deliberement PAS le
-    meme champ : une image peut etre convaincante comme photo ET avoir un bras
-    trop long, et `bande()` etalonne le realisme sur `flag == "ok"`. Les melanger
-    fausserait les deux.
+    Deuxieme famille de jugement humain, a cote de `flag` — et deliberement PAS
+    le meme champ : une image peut etre convaincante comme photo ET avoir un
+    bras trop long, et `bande()` etalonne le realisme sur `flag == "ok"`. Les
+    melanger fausserait les deux d'un coup, sans qu'aucun ecran le montre.
 
-    Trois valeurs (`ANATOMIE`) : "ok" corps visible et coherent, "ko" defaut
-    mecanique, "na" non jugeable (portrait serre, corps hors champ). Le "na" est
-    structurel : sans lui les portraits tomberaient en "ok" alors que DWPose n'y
-    trouve pas de squelette exploitable, et l'indicateur de P4.5.2 afficherait
-    une separation qui ne mesure rien.
+    ponytail: etiquette PAR IMAGE, pas par main. « au moins une main cassee »
+    est la granularite dont le runner a besoin, puisque c'est une IMAGE qu'il
+    ecarte. Un classifieur entraine sur des crops (porte 3 de
+    DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md) demanderait une
+    etiquette par main : re-passer le corpus a ce moment-la, pas maintenant.
 
     Pas d'ecriture en base, contrairement a `poser_flag` : la table `jugement`
-    est mono-colonne, et cette etiquette est un instrument de calibration lu une
-    fois par P4.5.2 depuis ce store. Migrer le jour ou une seconde lecture la
-    demande.
+    est mono-colonne, et ces etiquettes sont un instrument de calibration lu
+    depuis ce store. Migrer le jour ou une seconde lecture le demande.
     """
-    if valeur is not None and valeur not in ANATOMIE:
-        raise ValueError(f"etiquette anatomie inconnue : {valeur}")
+    if axe not in ETIQUETTES:
+        raise ValueError(f"axe d'etiquette inconnu : {axe}")
+    champ, vocabulaire = ETIQUETTES[axe]
+    if valeur is not None and valeur not in vocabulaire:
+        raise ValueError(f"etiquette {axe} inconnue : {valeur}")
     with _VERROU:
         d = charger()
         e = d.setdefault(nom, {})
         if valeur is None:
-            e.pop("anatomie", None)
-            e.pop("anatomie_le", None)
+            e.pop(champ, None)
+            e.pop(champ + "_le", None)
             if not e:
                 d.pop(nom, None)
         else:
-            e["anatomie"] = valeur
-            e["anatomie_le"] = datetime.now().isoformat(timespec="seconds")
+            e[champ] = valeur
+            e[champ + "_le"] = datetime.now().isoformat(timespec="seconds")
         _ecrire(d)
         return e
 

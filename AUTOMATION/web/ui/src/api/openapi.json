@@ -2621,7 +2621,7 @@
     "/api/flag": {
       "post": {
         "summary": "Jugement humain (réalisme ou anatomie)",
-        "description": "Human judgement on one image. Independent of sorting: it moves nothing.\n\nTook no character parameter at all until 2026-09-01 — the DB write this\ntriggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently\nrecorded every judgement, for every character, under one specific\ncharacter_id, because that was the only default `enregistrer_image` had.\n\nTWO AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`. It is\nthe same gesture on the same image, and neither sorts — a second route\nwould have duplicated the name guard and the 400 for nothing. They are NOT\nthe same field: an image can be convincing as a photograph AND have one arm\ntoo long, and `mesures.bande` calibrates realism on `flag == \"ok\"`.\n\n`anatomie` deliberately does not write to the database: the `jugement`\ntable is single-column, and this label is a calibration instrument read\nonce by P4.5.2 from `mesures.json` (see `mesures.poser_anatomie`).",
+        "description": "Human judgement on one image. Independent of sorting: it moves nothing.\n\nTook no character parameter at all until 2026-09-01 — the DB write this\ntriggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently\nrecorded every judgement, for every character, under one specific\ncharacter_id, because that was the only default `enregistrer_image` had.\n\nSEVERAL AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`:\n`realisme` (historical, `flag`) plus every corpus label of\n`mesures.ETIQUETTES` — `anatomie` (body proportions) and `mains`. It is the\nsame gesture on the same image, and none of them sorts: a route per axis\nwould have duplicated the name guard and the 400 for nothing.\n\nThey are NOT the same field. An image can be convincing as a photograph AND\nhave one arm too long AND have a clean pair of hands; `mesures.bande`\ncalibrates realism on `flag == \"ok\"`, and `mains` already names the DWPose\nscore. Sharing a field would corrupt several readings at once, silently.\n\nThe corpus labels deliberately do not write to the database: the `jugement`\ntable is single-column, and they are calibration instruments read from\n`mesures.json` (see `mesures.poser_etiquette`).",
         "operationId": "set_flag_api_flag_post",
         "parameters": [
           {
@@ -5008,7 +5008,7 @@
         "additionalProperties": true,
         "type": "object",
         "title": "FlagRequest",
-        "description": "A human judgement on one image. Independent of sorting: it moves nothing.\n\nTwo axes on the same route, told apart by `axe`, because they are the same\ngesture on the same image and neither sorts:\n  - `realisme` (default, unchanged): `flag` is \"ok\", \"ia\", or null to clear;\n  - `anatomie` (P4.5.1): `flag` is \"ok\", \"ko\", \"na\", or null to clear.\n\n`axe` is optional and defaults to the historical behaviour: a client that\ndoes not know about the second axis keeps working unchanged."
+        "description": "A human judgement on one image. Independent of sorting: it moves nothing.\n\nTwo axes on the same route, told apart by `axe`, because they are the same\ngesture on the same image and neither sorts:\n  - `realisme` (default, unchanged): `flag` is \"ok\", \"ia\", or null to clear;\n  - `anatomie` and `mains` (P4.5.1 corpus labels): `flag` is \"ok\", \"ko\",\n    \"na\", or null to clear.\n\n`axe` is optional and defaults to the historical behaviour: a client that\ndoes not know about the second axis keeps working unchanged."
       },
       "FlagResponse": {
         "properties": {
@@ -5170,6 +5170,17 @@
               }
             ],
             "title": "Anatomie"
+          },
+          "mains_juge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains Juge"
           }
         },
         "additionalProperties": true,

@@ -10,7 +10,19 @@
    with nothing on screen to say it happened. */
 import { useEffect } from 'react'
 
+import { LABEL_AXES } from './CorpusLabels'
+import type { JudgementAxis } from './useSortActions'
 import type { GalleryItem, Trade, View } from './useTriage'
+
+/* Corpus-label shortcuts, derived from the axes themselves so a key can never
+   drift from the letter its own button advertises: { p: ['anatomie', 'ok'], … }.
+   Six letters, all outside the sorting set (v r x a d u) and the realism pair
+   (c i) — a labelling pass and a sorting pass share the same keyboard. */
+const LABEL_KEYS: Record<string, [JudgementAxis, string]> = Object.fromEntries(
+  LABEL_AXES.flatMap((axis) =>
+    axis.choices.map((choice) => [choice.key.toLowerCase(), [axis.axe, choice.value]]),
+  ),
+)
 
 /* A text field being typed into, never a checkbox. `<input>` alone used to
    be the whole test — found live (design-pass screen-5, §D): a selection
@@ -46,7 +58,7 @@ export function useReviewKeys({
   setView: (view: View) => void
   step: (delta: number) => void
   act: (action: string, index?: number) => Promise<void> | void
-  setFlag: (item: GalleryItem, flag: string, axe?: 'realisme' | 'anatomie') => Promise<void> | void
+  setFlag: (item: GalleryItem, flag: string, axe?: JudgementAxis) => Promise<void> | void
   undo: () => Promise<void> | void
   current: GalleryItem | undefined
   lightboxSrc: string | null
@@ -97,12 +109,13 @@ export function useReviewKeys({
       else if (key === 'd') void act('decliner')
       else if (key === 'c') current && void setFlag(current, 'ok')
       else if (key === 'i') current && void setFlag(current, 'ia')
-      /* P4.5.1 labelling, the keyboard half of `AnatomyButtons` — the corpus is
+      /* P4.5.1 labelling, the keyboard half of `CorpusLabels` — the corpus is
          ~100 images and nobody builds it with a mouse. Full frame ONLY, like
-         the buttons: proportions cannot be judged on a thumbnail, and a corpus
-         labelled from the grid would be a corpus labelled blind. */
-      else if ('pfn'.includes(key) && view === 'revue' && current)
-        void setFlag(current, { p: 'ok', f: 'ko', n: 'na' }[key]!, 'anatomie')
+         the buttons: neither a proportion nor a hand can be judged on a
+         thumbnail, and a corpus labelled from the grid would be a corpus
+         labelled blind. */
+      else if (LABEL_KEYS[key] && view === 'revue' && current)
+        void setFlag(current, LABEL_KEYS[key][1], LABEL_KEYS[key][0])
       else if (key === 'u') void undo()
     }
     document.addEventListener('keydown', onKeyDown)
