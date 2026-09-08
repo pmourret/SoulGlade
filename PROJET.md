@@ -11,6 +11,34 @@ Soulglade est un outil open source de création de contenu par IA, destiné
 à d'autres créateurs. Il orchestre ComfyUI plutôt que de le remplacer :
 Soulglade compose et pilote, ComfyUI exécute les graphes.
 
+## Le cœur
+
+**Amendé le 2026-09-08.** Le cœur de la plateforme n'est pas de pouvoir
+créer des univers, des packs ou des workflows — ce sont des moyens, et
+pour certains un modèle économique. Sa puissance tient à deux choses :
+
+- **elle est agnostique.** Aucun personnage, aucun pack, aucune famille
+  de modèle n'a de traitement particulier. C'est ce qui fait qu'un outil
+  écrit une fois sert tout le monde, et c'est déjà la loi du dépôt
+  (invariants 2, 7, 9, 10) ;
+- **son centre est le créateur de scène.** C'est là que l'utilisateur
+  décide de ce qu'il fabrique. Tout le reste — packs, graphes, verrou
+  d'identité, mesures — existe pour que cette décision aboutisse à une
+  image.
+
+C'est ce que « studio IA » veut dire ici : **créer, corriger, modifier,
+et rester libre de ses choix, sans avoir à porter la complexité
+technique.** Les trois verbes comptent autant que la liberté — un outil
+qui produit sans laisser reprendre n'est pas un studio.
+
+Conséquence directe, et c'est un test à appliquer : chaque fois que la
+plateforme tranche à la place de l'utilisateur sur un choix qui n'a pas
+de bonne réponse objective, elle mord sur son propre cœur. Le flou de
+fond, tranché le 08/09, en est le premier cas nommé — mesuré comme un
+défaut, il s'est révélé être un choix, et il devient un réglage de scène
+plutôt qu'une règle
+(`DOCS/cadrage/2026-09-08-flou-de-fond-choix-de-scene.md`).
+
 ## Pour qui
 
 Cible V1 : créateur qui connaît déjà l'IA générative (a manipulé un
