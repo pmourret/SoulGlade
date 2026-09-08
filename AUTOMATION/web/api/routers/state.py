@@ -95,7 +95,11 @@ async def get_system_state(character_id: RequiredCharacterId):
     └─────────────────────────────────────────────────────────────────────────┘
     """
     cid = character_id
-    alive = await ss.comfy_alive()
+    # wait=False : cette route est POLLEE toutes les 1,5 s par le studio. Elle
+    # ne doit jamais payer le timeout de la sonde ComfyUI (1,5 s quand il est
+    # eteint) — voir comfy_alive(). Les routes qui GARDENT une action gardent
+    # le defaut bloquant.
+    alive = await ss.comfy_alive(wait=False)
 
     def count(space):
         return {b: len(list(ss.bucket_dir(b, space, cid).glob("*.png")))

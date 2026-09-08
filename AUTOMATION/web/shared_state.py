@@ -438,6 +438,8 @@ def _faire_vignette(source, cible):
 
 
 COMFY_PROBE = {"ok": False, "at": 0.0}
+_COMFY_REFRESH = None       # tache de fond en cours, gardee pour qu'elle ne soit
+                            # pas ramassee par le GC avant d'avoir repondu
 
 
 def _probe_comfy(url):
@@ -448,7 +450,14 @@ def _probe_comfy(url):
         return False
 
 
-async def comfy_alive():
+async def _rafraichir_comfy():
+    ok = await asyncio.get_running_loop().run_in_executor(
+        None, _probe_comfy, env_config.comfy_url())
+    COMFY_PROBE.update(ok=ok, at=time.monotonic())
+    return ok
+
+
+async def comfy_alive(wait=True):
     """Sonde ComfyUI SANS bloquer la boucle d'evenements.
 
     urllib.urlopen est bloquant : l'appeler directement dans un handler async gele
@@ -470,10 +479,29 @@ async def comfy_alive():
     1,5 s — le tableau de bord n'avait plus une seule requete au repos des que
     ComfyUI etait eteint. Apres correction : 1,5 s de temps en temps, ~1 ms le
     reste du temps.
+
+    `wait=False` SUPPRIME CE « DE TEMPS EN TEMPS » (08/09/2026). La sonde coute
+    1,5 s quand ComfyUI est eteint et le cache ne dure que 1 s : il expire donc
+    TOUJOURS avant d'avoir resservi, et une requete sur dix repayait le timeout
+    entier. Mesure : /api/state a 18 ms, puis 1529 ms, puis 18 ms — reproduit a
+    l'identique sans une seule vignette en parallele, ce que le test E5 de
+    test_serveur_http.py prenait pour un gel de la boucle du a la generation de
+    vignettes.
+
+    Un appelant qui SONDE (/api/state, interroge toutes les 1,5 s par le studio)
+    passe donc `wait=False` : il recoit la derniere valeur connue tout de suite
+    et la sonde repart en tache de fond. Un appelant qui GARDE UNE ACTION
+    (expression, edition d'image) reste sur le defaut bloquant — refuser une
+    generation sur une valeur perimee serait pire que l'attendre.
+
+    Le tout premier appel attend, meme avec `wait=False` : sans valeur connue,
+    repondre « hors ligne » ferait clignoter le bandeau au chargement.
     """
+    global _COMFY_REFRESH
     if time.monotonic() - COMFY_PROBE["at"] < 1.0:
         return COMFY_PROBE["ok"]
-    ok = await asyncio.get_running_loop().run_in_executor(
-        None, _probe_comfy, env_config.comfy_url())
-    COMFY_PROBE.update(ok=ok, at=time.monotonic())
-    return ok
+    if wait or not COMFY_PROBE["at"]:
+        return await _rafraichir_comfy()
+    if _COMFY_REFRESH is None or _COMFY_REFRESH.done():
+        _COMFY_REFRESH = asyncio.ensure_future(_rafraichir_comfy())
+    return COMFY_PROBE["ok"]
