@@ -341,9 +341,14 @@
           "d": "DWPose pose un squelette plausible sur une bouillie de pixels"
         },
         {
-          "s": "faire",
+          "s": "cours",
           "t": "Constituer un corpus étiqueté à la main",
-          "d": "IT-3 — ce qui manquait pour calibrer honnêtement"
+          "d": "IT-3 — l'instrument est livré (Revue, plein cadre, deux axes : proportions et mains) ; les images restent à étiqueter"
+        },
+        {
+          "s": "faire",
+          "t": "Chiffrer les mains contre le corpus, pas contre le tri",
+          "d": "IT-3 — les 33 %, la sonde géométrique et le NO-GO Florence-2 comparaient tous une mesure au tri de Pierre, jamais à une étiquette"
         },
         {
           "s": "faire",
@@ -661,6 +666,11 @@
       "e": "ouvert",
       "t": "Deux dettes de périmètre restent en code",
       "d": "Workflows LTX2 et serveur MCP committés hors périmètre. Les premiers sont désormais rattachés à E12 ; le second reste rangé en T1, sans itération."
+    },
+    {
+      "e": "tranche",
+      "t": "Le corpus s'étiquette dans la Revue, sur deux axes",
+      "d": "Décidé le 08/09. Second champ de mesures.json plutôt qu'un fichier de corpus séparé, et l'axe mains dans la même passe que les proportions — le coût est le regard sur ~100 images, pas le champ. Voir cadrage P4.5, § P4.5.1."
     }
   ],
   "horizon": {
