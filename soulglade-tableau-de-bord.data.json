@@ -213,9 +213,9 @@
           "t": "Importeur d'assets"
         },
         {
-          "s": "faire",
+          "s": "veille",
           "t": "Le flou de fond, réglable par scène",
-          "d": "auto / net / flou — la seule dimension du rendu qui se décidait sans l'utilisateur. Cadrage du 08/09."
+          "d": "auto / net / flou — la seule dimension du rendu qui se décidait sans l'utilisateur. Cadrage du 08/09. RETIRE le 09/09 par son propre critere de sortie : « net » et « flou » ne se separent pas sur fond_net (0.552 contre 0.561, cinq seeds apparies), et un texte plus fort en tete de prompt ne change rien. Le levier n'est pas le prompt."
         }
       ]
     },
@@ -712,6 +712,10 @@
       "d": "Décidé le 08/09 face aux 75 % de mains ratées. Ouverture d'une phase de R&D à deux fronts, le rendu avant la détection, et un juge généraliste plutôt qu'une mesure de plus. Voir le cadrage du 08/09."
     },
     {
+      "e": "tranche",
+      "t": "Le flou de fond ne repond pas au prompt — reglage retire",
+      "d": "Decide le 09/09 par le critere de sortie du cadrage du 08/09, ecrit avant la premiere ligne de code. Livre la veille, mesure le lendemain : « net » 0.552 contre « flou » 0.561 sur cinq seeds apparies de ruelle_ville, quand la meme scene varie de 0.35 a 0.82 d'un seed a l'autre. Un second essai (texte plus fort, en tete de prompt) donne 0.552 et un fond toujours flou a l'oeil. Le code est reverte : un selecteur qui ne fait rien est un mensonge d'interface. Le flou reste un choix creatif sans prise pour l'utilisateur — le levier est ailleurs que le prompt."
+    }, {
       "e": "tranche",
       "t": "Le flou de fond est un choix, pas un défaut",
       "d": "Décidé le 08/09. 71 % de la variance du flou vient de la scène, pas du pipeline — mais un créateur peut le vouloir. La plateforme ne l'arbitre donc pas : le flou devient un réglage de scène à trois valeurs (auto/net/flou). Deux corrections faites dans la journée ont été annulées pour ça. Nouvelle mesure fond_net, instrument du flou et jamais un juge (à scène fixée elle ne sépare le jugement qu'à 0.58). Voir le cadrage du 08/09."

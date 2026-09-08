@@ -105,3 +105,27 @@ Et la **couche porteuse** : ce fragment est-il une affaire de plateforme
 (vocabulaire photographique, vrai pour tout pack) ou de pack (une famille
 de modèle peut demander une autre formulation) ? À trancher au moment de
 l'écrire, ADR-0017 en main.
+
+## Clôture — le critère 3 refuse le réglage (2026-09-09)
+
+Le réglage a été écrit, livré, puis **retiré le lendemain** par sa propre
+règle de sortie. `net` et `flou` ne se séparent pas sur `fond_net` : 0.552
+contre 0.561 sur cinq seeds appariés de `ruelle_ville`, quand la même
+scène varie de 0.35 à 0.82 d'un seed à l'autre. Un second essai — texte
+plus explicite (`everything in sharp focus…, f/11`) placé en tête de
+prompt, pour écarter l'hypothèse du fragment noyé — donne 0.552, et un
+fond toujours défocalisé à l'œil. Mesures complètes :
+`DOCS/recherche/2026-09-09-fond-le-prompt-n-est-pas-le-levier.md`.
+
+Ce que ça coûte et ce que ça vaut : une journée de travail jetée par un
+critère écrit avant la première ligne de code, ce qui est exactement son
+office. Sans lui, le studio aurait gardé un sélecteur à trois valeurs qui
+ne fait rien — et l'utilisateur aurait cru tenir le fond.
+
+Ce qui reste vrai et n'est pas retiré : le flou de fond est un choix
+créatif, la plateforme n'a pas à le trancher, et l'utilisateur n'a
+toujours aucune prise dessus. Ce qui est démenti, c'est l'hypothèse
+implicite du périmètre ci-dessus — que cette prise puisse être un
+fragment de prompt. Le levier est ailleurs (image de fond importée et
+conservée, conditionnement structurel, réglage de pipeline) : autre
+cadrage, autre phase.
