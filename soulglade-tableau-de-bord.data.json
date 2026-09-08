@@ -725,6 +725,9 @@
     "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
     "items": [
       {
+          "t": "Fond importé, repris entièrement",
+          "d": "(9 septembre 2026) Idée de Pierre le jour où la mesure a montré que le flou de fond ne répond pas au prompt (0.552 contre 0.561, DOCS/recherche/2026-09-09). Si le fond vient d'un fichier et n'est jamais régénéré, sa netteté est celle du fichier — la plateforme cesse d'arbitrer. Point dur déplacé sur le raccord : lumière, ombres, perspective, échelle, bord de détourage, et le piège de la passe img2img finale qui remettrait le modèle sur le fond. Aucune brique : les capacités plateforme sont upscale/bench/hands, aucun graphe de compositing ni de relighting. Premier client sérieux de l'importeur d'assets (E3). Hors parcours nominal : un nouvel utilisateur tape une scène, il n'importe pas un fond."
+        }, {
         "t": "Test commercial de l'idée pack",
         "d": "poster l'idée de mondes vendables à l'audience existante et regarder la réaction — coût nul, information décisive avant tout éditeur de packs"
       },
