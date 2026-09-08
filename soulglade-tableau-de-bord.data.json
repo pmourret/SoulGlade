@@ -64,7 +64,7 @@
       "id": "IT-4",
       "state": "next",
       "titre": "Produire une semaine sans être ralenti",
-      "quoi": "Contenu à remplir depuis ton usage réel, pas depuis le code — ce qui te coûte du temps une fois que le rendu est bon. Candidats repérés : garde-robe en dur dans le front, absence de file d'attente serveur, créateur de lumière manquant.",
+      "quoi": "Contenu à remplir depuis ton usage réel, pas depuis le code — ce qui te coûte du temps une fois que le rendu est bon. Bloquant identifié le 08/09 : le rendu de peau et de fond (E5). Autres candidats repérés : garde-robe en dur dans le front, absence de file d'attente serveur, créateur de lumière manquant.",
       "dod": "Une semaine de production réelle sans contournement manuel noté, et chaque friction relevée est soit corrigée, soit versée au backlog avec sa raison.",
       "epics": "E3, E4",
       "ref": "cadrage à écrire depuis l'usage réel"
@@ -309,6 +309,11 @@
           "s": "faire",
           "t": "Combler la texture de visage du pack SDXL",
           "d": "IT-2 — 3,29 contre ~4,9 côté Léna. Le seul étage qui la comblait (refiner) coûte l'identité : c'est le sujet du candidat #2 de la phase 4, régénération locale masquée"
+        },
+        {
+          "s": "faire",
+          "t": "Rendu de peau et de fond",
+          "d": "peau trop lisse, impression de studio photo — bloquant avant IT-4, constaté sur la passe d'étiquetage du 08/09"
         }
       ]
     },
@@ -328,7 +333,7 @@
         {
           "s": "fait",
           "t": "Détection des mains, version 1",
-          "d": "livrée mais informative : 33 % de faux positifs sur la banque déjà validée"
+          "d": "informative ; les 33 % de faux positifs étaient mesurés contre le tri, le corpus dit 70 % de faux négatifs"
         },
         {
           "s": "fait",
@@ -341,24 +346,29 @@
           "d": "DWPose pose un squelette plausible sur une bouillie de pixels"
         },
         {
-          "s": "cours",
+          "s": "fait",
           "t": "Constituer un corpus étiqueté à la main",
-          "d": "IT-3 — l'instrument est livré (Revue, plein cadre, deux axes : proportions et mains) ; les images restent à étiqueter"
+          "d": "IT-3 — 102 images, deux axes : proportions 91 ok / 1 ko / 10 na, mains 13 ok / 40 ko / 49 na"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Chiffrer les mains contre le corpus, pas contre le tri",
-          "d": "IT-3 — les 33 %, la sonde géométrique et le NO-GO Florence-2 comparaient tous une mesure au tri de Pierre, jamais à une étiquette"
+          "d": "IT-3 — 15 % de faux positifs et 70 % de faux négatifs, pas les 33 % de faux positifs supposés : 28 des 40 mains cassées scorent 1.00"
         },
         {
           "s": "faire",
           "t": "Plausibilité des proportions du corps",
-          "d": "IT-3 — signal probablement réel, contrairement aux mains"
+          "d": "R&D — 1 cas sur 92 jugeables : rien à calibrer, il faut trouver un signal plutôt que régler un seuil"
+        },
+        {
+          "s": "faire",
+          "t": "Les mesures de réalisme ne voient pas ce que l'œil voit",
+          "d": "41 images convaincantes contre 51 « ça se voit », et texture_visage identique au corpus de référence (4.60 contre 4.66)"
         },
         {
           "s": "faire",
           "t": "Trancher le tri automatique",
-          "d": "IT-3 — ADR-0025 : franchir la barre ou amender le critère de sortie"
+          "d": "IT-3 — ADR-0025 : aucune mesure ne franchit la barre à ce jour, ni mains (70 % de faux négatifs) ni proportions (rien à calibrer)"
         },
         {
           "s": "dette",
@@ -671,6 +681,11 @@
       "e": "tranche",
       "t": "Le corpus s'étiquette dans la Revue, sur deux axes",
       "d": "Décidé le 08/09. Second champ de mesures.json plutôt qu'un fichier de corpus séparé, et l'axe mains dans la même passe que les proportions — le coût est le regard sur ~100 images, pas le champ. Voir cadrage P4.5, § P4.5.1."
+    },
+    {
+      "e": "tranche",
+      "t": "Les proportions passent en R&D, pas en renoncement",
+      "d": "Décidé le 08/09 face au corpus (1 cas sur 92 jugeables). Un seuil n'est pas calibrable sur un positif : la piste quitte la voie « mesurer et seuiller » pour la recherche d'un signal. Le critère de sortie V1 n'est pas amendé."
     }
   ],
   "horizon": {
