@@ -329,9 +329,9 @@
           "d": "IT-2 — 3,29 contre ~4,9 côté Léna. Le seul étage qui la comblait (refiner) coûte l'identité : c'est le sujet du candidat #2 de la phase 4, régénération locale masquée"
         },
         {
-          "s": "faire",
+          "s": "cours",
           "t": "Rendu : fond, puis peau",
-          "d": "IT-3b — le fond d'abord (image de référence, retirer le flou de focus du créateur de scène), la peau ensuite ; « trop net » n'est pas la netteté moyenne mais son uniformité"
+          "d": "IT-3b — le fond est fermé le 09/09 par un renoncement écrit : il ne répond pas au prompt. La peau l'est le même jour : sur deux mécanismes indépendants (identity_weight, refiner_denoise), texture et identité sont le même curseur. Seul gain sans contrepartie, sharpen 0.30 → 0.55 sur Léna, jugé à l'œil. Restent les mains."
         }
       ]
     },
