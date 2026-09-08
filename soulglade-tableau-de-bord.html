@@ -236,12 +236,21 @@ const D = {
     },
     {
       "id": "IT-3",
-      "state": "now",
+      "state": "done",
       "titre": "La machine reconnaît un raté — ou on arrête d'y croire",
-      "quoi": "Deux pistes fermées (signal géométrique, juge pixel), une mesure à 33 % de faux positifs, et aucun corpus étiqueté pour arbitrer. Cette itération se termine par un tri qui marche ou par un renoncement écrit.",
+      "quoi": "Deux pistes fermées (signal géométrique, juge pixel), une mesure à 33 % de faux positifs, et aucun corpus étiqueté pour arbitrer. Cette itération se termine par un tri qui marche ou par un renoncement écrit. — Close le 08/09 par une troisième branche que la DoD n'avait pas prévue : le corpus existe, et il dit qu'aucune mesure ne franchit la barre ET que le problème n'est plus celui qu'on croyait (75 % de mains ratées, proportions inexistantes).",
       "dod": "Un corpus étiqueté à la main existe, les proportions du corps sont mesurées dessus, et ADR-0025 tranche : le tri automatique passe dans le runner, ou le critère de sortie est amendé.",
       "epics": "E6",
-      "ref": "DOCS/adr/0025-tri-automatique-defauts-objectifs.md"
+      "ref": "DOCS/recherche/2026-09-08-corpus-etiquete-resultats.md — ADR-0025 amendé le 08/09"
+    },
+    {
+      "id": "IT-3b",
+      "state": "now",
+      "titre": "Le rendu d'abord, le juge ensuite",
+      "quoi": "À 75 % de mains ratées, trier ne protège plus rien : un filtre qui écarte trois quarts de la production est un arrêt de production. Le sujet se déplace de reconnaître le raté vers ne plus le produire. Phase de R&D à deux fronts : le rendu dans l'ordre fond → peau → mains, puis un juge généraliste agnostique rattaché à la plateforme, pour les proportions et les mains.",
+      "dod": "Le fond et la peau ont un avant/après jugé au banc, pas à l'impression ; un candidat détecteur est chiffré sur le corpus du 08/09 et comparé aux 30 % de rappel de hands v1 — ou refermé par écrit ; et son coût par image est mesuré, pas estimé.",
+      "epics": "E5, E6",
+      "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md"
     },
     {
       "id": "IT-4",
@@ -495,8 +504,8 @@ const D = {
         },
         {
           "s": "faire",
-          "t": "Rendu de peau et de fond",
-          "d": "peau trop lisse, impression de studio photo — bloquant avant IT-4, constaté sur la passe d'étiquetage du 08/09"
+          "t": "Rendu : fond, puis peau",
+          "d": "IT-3b — le fond d'abord (image de référence, retirer le flou de focus du créateur de scène), la peau ensuite ; « trop net » n'est pas la netteté moyenne mais son uniformité"
         }
       ]
     },
@@ -547,6 +556,11 @@ const D = {
           "s": "faire",
           "t": "Les mesures de réalisme ne voient pas ce que l'œil voit",
           "d": "41 images convaincantes contre 51 « ça se voit », et texture_visage identique au corpus de référence (4.60 contre 4.66)"
+        },
+        {
+          "s": "faire",
+          "t": "Un juge généraliste, agnostique, rattaché à la plateforme",
+          "d": "IT-3b — candidats classés : HADM (poids publiés), ViT-HD (disponibilité à vérifier), ArtifactLens (102 étiquettes suffiraient, code non publié)"
         },
         {
           "s": "faire",
@@ -869,6 +883,11 @@ const D = {
       "e": "tranche",
       "t": "Les proportions passent en R&D, pas en renoncement",
       "d": "Décidé le 08/09 face au corpus (1 cas sur 92 jugeables). Un seuil n'est pas calibrable sur un positif : la piste quitte la voie « mesurer et seuiller » pour la recherche d'un signal. Le critère de sortie V1 n'est pas amendé."
+    },
+    {
+      "e": "tranche",
+      "t": "Le problème passe de trier à ne plus produire",
+      "d": "Décidé le 08/09 face aux 75 % de mains ratées. Ouverture d'une phase de R&D à deux fronts, le rendu avant la détection, et un juge généraliste plutôt qu'une mesure de plus. Voir le cadrage du 08/09."
     }
   ],
   "horizon": {
