@@ -62,6 +62,28 @@ demandé ici : jeter le bon travail, garder les ratés. Un tri automatique
 faux est strictement pire que pas de tri automatique — l'utilisateur
 perd la confiance ET les images.
 
+> **Amendé le 2026-09-08 — le chiffre ci-dessus est faux, la décision
+> tient.** Ce « 33 % de faux positifs » comparait la mesure au **tri de
+> l'utilisateur**, pas à un jugement porté sur les mains : c'est
+> exactement le raccourci que la condition d'entrée de cet ADR interdit,
+> commis dans l'argument qui la motive.
+>
+> Le corpus étiqueté qu'elle réclamait existe depuis le 08/09
+> (`DOCS/recherche/2026-09-08-corpus-etiquete-resultats.md`, 102 images,
+> deux axes). Il dit que **75 % des mains jugeables de la banque sont
+> ratées** (40 sur 53), dans un ensemble très majoritairement classé
+> `OK` : une bonne part des 16 images « rejetées à tort » étaient
+> rejetées à raison.
+>
+> `hands` v1 chiffrée contre ce corpus donne **15 % de faux positifs et
+> 70 % de faux négatifs** — 28 des 40 mains cassées scorent 1.00, et les
+> deux distributions sont superposées. La décision de cet ADR ne bouge
+> pas : `hands` reste informative et ne trie pas. Sa raison change. Ce
+> n'est pas une mesure qui jette du bon travail, c'est une mesure qui ne
+> voit presque rien — et la conséquence pratique diffère : ni un seuil
+> plus permissif, ni un seuil plus sévère ne sauvent un indicateur dont
+> les deux classes se superposent.
+
 Conséquence immédiate : **aucune mesure ne trie aujourd'hui**. Le
 comportement du runner ne change pas dans ce commit. `hands` reste
 informative jusqu'à ce qu'un juge fiable existe (piste Florence-2 :
@@ -74,6 +96,9 @@ DWPose localise, un modèle qui regarde les pixels juge) ; `proportions`
   33 % de faux positifs sur le corpus validé, 0 % de détection sur les
   deux cas réels. Ce n'est pas un réglage de seuil à affiner, c'est une
   mesure qui regarde la mauvaise chose (le squelette, pas les pixels).
+  *(Chiffres corrigés le 08/09 : 15 % de faux positifs, 70 % de faux
+  négatifs. La conclusion — mauvaise chose regardée — est confirmée, et
+  plus sévèrement.)*
 - **Un seuil très permissif** (ne rejeter que `score = 0`) — écarté :
   les deux images cassées scorent 1.0. Un tel filet n'attrape rien de ce
   qu'on veut attraper, tout en donnant l'illusion d'une protection —
@@ -98,6 +123,14 @@ P4.3 gagne un objectif qu'il n'avait pas : rendre `hands` assez fiable
 pour trier, ce qui veut dire un second étage qui juge les pixels du crop
 plutôt qu'un indicateur de plus sur les keypoints. P4.5 hérite de la
 même barre dès son cadrage.
+
+**Amendé le 2026-09-08.** Le corpus a inversé les deux priorités que ce
+paragraphe supposait. Les proportions (P4.5) ne sont pas un défaut réel
+de la production — 1 cas sur 92 images jugeables — et quittent la voie
+« mesurer et seuiller » pour la R&D : un seuil ne se calibre pas sur un
+positif. Les mains (P4.3) sont le défaut n° 1, mesuré et non supposé, et
+aucun des trois outils essayés ne les voit. La barre posée par cet ADR
+reste la même pour les deux ; c'est le travail qui change de cible.
 
 Deux points volontairement non tranchés ici, qui appartiennent à
 l'implémentation du premier tri automatique : le bucket de destination
