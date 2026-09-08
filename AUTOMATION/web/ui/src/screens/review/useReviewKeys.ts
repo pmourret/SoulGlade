@@ -46,7 +46,7 @@ export function useReviewKeys({
   setView: (view: View) => void
   step: (delta: number) => void
   act: (action: string, index?: number) => Promise<void> | void
-  setFlag: (item: GalleryItem, flag: string) => Promise<void> | void
+  setFlag: (item: GalleryItem, flag: string, axe?: 'realisme' | 'anatomie') => Promise<void> | void
   undo: () => Promise<void> | void
   current: GalleryItem | undefined
   lightboxSrc: string | null
@@ -97,6 +97,12 @@ export function useReviewKeys({
       else if (key === 'd') void act('decliner')
       else if (key === 'c') current && void setFlag(current, 'ok')
       else if (key === 'i') current && void setFlag(current, 'ia')
+      /* P4.5.1 labelling, the keyboard half of `AnatomyButtons` — the corpus is
+         ~100 images and nobody builds it with a mouse. Full frame ONLY, like
+         the buttons: proportions cannot be judged on a thumbnail, and a corpus
+         labelled from the grid would be a corpus labelled blind. */
+      else if ('pfn'.includes(key) && view === 'revue' && current)
+        void setFlag(current, { p: 'ok', f: 'ko', n: 'na' }[key]!, 'anatomie')
       else if (key === 'u') void undo()
     }
     document.addEventListener('keydown', onKeyDown)

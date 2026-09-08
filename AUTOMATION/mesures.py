@@ -41,6 +41,7 @@ REFERENCES = OFM / "INPUTS" / "REALISME"   # corpus de reference du realisme
 
 _VERROU = threading.Lock()          # le batch ecrit pendant que le web lit
 FLAGS = ("ok", "ia")
+ANATOMIE = ("ok", "ko", "na")       # etiquette de corpus P4.5.1, jamais un score
 
 
 def charger():
@@ -144,6 +145,42 @@ def poser_flag(nom, flag, character_id):
         else:
             e["flag"] = flag
             e["juge_le"] = datetime.now().isoformat(timespec="seconds")
+        _ecrire(d)
+        return e
+
+
+def poser_anatomie(nom, valeur):
+    """Etiquette manuelle des proportions du corps (P4.5.1), ou None pour retirer.
+
+    Deuxieme axe de jugement humain, a cote de `flag` — et deliberement PAS le
+    meme champ : une image peut etre convaincante comme photo ET avoir un bras
+    trop long, et `bande()` etalonne le realisme sur `flag == "ok"`. Les melanger
+    fausserait les deux.
+
+    Trois valeurs (`ANATOMIE`) : "ok" corps visible et coherent, "ko" defaut
+    mecanique, "na" non jugeable (portrait serre, corps hors champ). Le "na" est
+    structurel : sans lui les portraits tomberaient en "ok" alors que DWPose n'y
+    trouve pas de squelette exploitable, et l'indicateur de P4.5.2 afficherait
+    une separation qui ne mesure rien.
+
+    Pas d'ecriture en base, contrairement a `poser_flag` : la table `jugement`
+    est mono-colonne, et cette etiquette est un instrument de calibration lu une
+    fois par P4.5.2 depuis ce store. Migrer le jour ou une seconde lecture la
+    demande.
+    """
+    if valeur is not None and valeur not in ANATOMIE:
+        raise ValueError(f"etiquette anatomie inconnue : {valeur}")
+    with _VERROU:
+        d = charger()
+        e = d.setdefault(nom, {})
+        if valeur is None:
+            e.pop("anatomie", None)
+            e.pop("anatomie_le", None)
+            if not e:
+                d.pop(nom, None)
+        else:
+            e["anatomie"] = valeur
+            e["anatomie_le"] = datetime.now().isoformat(timespec="seconds")
         _ecrire(d)
         return e
 

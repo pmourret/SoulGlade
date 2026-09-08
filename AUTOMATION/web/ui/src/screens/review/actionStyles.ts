@@ -20,3 +20,11 @@ export const TACT_FLAG: Record<string, string> = {
   ok: 'border-ok bg-ok text-bg',
   ia: 'border-bad bg-bad text-bg',
 }
+/* P4.5.1 label. Same three-state chain as TACT_FLAG, one ground per value:
+   `na` stays neutral on purpose — « non jugeable » is an answer, not a
+   verdict, and colouring it like the other two would read as one. */
+export const TACT_ANATOMY: Record<string, string> = {
+  ok: 'border-ok bg-ok text-bg',
+  ko: 'border-bad bg-bad text-bg',
+  na: 'border-line2 bg-panel2 text-txt',
+}

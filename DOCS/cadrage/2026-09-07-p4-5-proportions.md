@@ -82,12 +82,38 @@ est la seule référence disponible — même discipline que les bandes de
 convaincant, jamais sur une constante écrite dans le code.
 
 **Livrable** : une liste étiquetée, stockée là où le reste des jugements
-vit déjà (`flag` de `mesures.json` est un jugement de réalisme, pas de
-proportions — trancher à ce moment-là entre un second champ et un
-fichier de corpus séparé).
+vit déjà.
+
+**Tranché le 2026-09-08** — second champ, pas fichier séparé. L'étiquette
+est un champ `anatomie` de `mesures.json`, à côté de `flag` (qui reste le
+jugement de réalisme, inchangé) : le store est déjà indexé par nom de
+fichier, déjà suivi quand le tri renomme (`mesures.renommer`), déjà
+préservé quand l'éditeur écrase les pixels (`demesurer` efface les
+mesures, garde les jugements). Un fichier de corpus séparé aurait dû
+réimplémenter les trois, et aurait divergé au premier tri. P4.5.2 joint
+étiquette et squelette par un `dict` sur le même nom.
+
+Trois valeurs, pas deux : `ok` (corps visible, proportions cohérentes),
+`ko` (corps visible, défaut mécanique), `na` (non jugeable — portrait
+serré, corps hors champ, membre coupé par le cadre). Le `na` est
+structurel, pas du confort : sans lui les portraits tombent en `ok`,
+DWPose n'y trouve pas de squelette exploitable, et l'indicateur affiche
+une séparation qui ne mesure rien — exactement le piège des 33 % de faux
+positifs de la mesure `mains`.
+
+Étiquetage dans la Revue, en plein cadre uniquement (`p` / `f` / `n`) :
+un axe de plus sur `/api/flag`, qui porte déjà un jugement humain non
+bloquant qui ne déplace aucun fichier. Pas de vignette — une proportion
+ne se juge pas sur une image de 200 px. Pas d'écriture en base pour cet
+axe tant qu'une seconde lecture ne la demande pas.
 
 **Test** : au moins une trentaine d'images étiquetées, dont une dizaine
-de « fausses » — sous ce volume, aucun seuil n'est défendable.
+de « fausses » — sous ce volume, aucun seuil n'est défendable. Étiqueter
+**avant** qu'un score `proportions` existe : un étiquetage fait en voyant
+le score n'est plus une référence indépendante. Passer aussi les
+`REJET` et les deux personnages — si les `ko` ne venaient que du dossier
+REJET, l'indicateur apprendrait le tri de Pierre, pas l'anatomie ; s'ils
+ne venaient que de Léna, il apprendrait sa morphologie.
 
 ### P4.5.2 — Choisir les indicateurs sur ce corpus
 

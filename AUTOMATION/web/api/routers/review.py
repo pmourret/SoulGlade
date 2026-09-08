@@ -6,7 +6,7 @@ Port of `routes/tri.py` — same 7 URLs, same JSON bodies, same status codes.
     /api/action      the human sort: valider / revoir / rejeter / archiver
     /api/undo        undoes the last sort OF THIS CHARACTER
     /api/delete      definitive removal, outside UNDO
-    /api/flag        human judgement on realism
+    /api/flag        human judgement: realism, or body proportions (P4.5.1)
     /api/mesurer     catches up missing measurements, in batches
     /api/edit/save   saves a browser-side retouch
 
@@ -104,7 +104,7 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
             "prompt": row.get("prompt", ""),
             "nettete": m.get("nettete"), "texture": m.get("texture_visage"),
             "fond": m.get("bruit_fond"), "mains": m.get("mains"),
-            "flag": m.get("flag"),
+            "flag": m.get("flag"), "anatomie": m.get("anatomie"),
         })
     entries = list(store.values())
     refs = [e for e in entries if e.get("role") == "reference"]
@@ -119,20 +119,38 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
 
 
 @router.post("/api/flag", response_model=FlagResponse,
-             summary="Jugement humain de réalisme")
+             summary="Jugement humain (réalisme ou anatomie)")
 async def set_flag(payload: FlagRequest, character_id: RequiredCharacterId):
-    """Human judgement on realism. Independent of sorting: it moves nothing.
+    """Human judgement on one image. Independent of sorting: it moves nothing.
 
     Took no character parameter at all until 2026-09-01 — the DB write this
     triggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently
     recorded every judgement, for every character, under one specific
     character_id, because that was the only default `enregistrer_image` had.
+
+    TWO AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`. It is
+    the same gesture on the same image, and neither sorts — a second route
+    would have duplicated the name guard and the 400 for nothing. They are NOT
+    the same field: an image can be convincing as a photograph AND have one arm
+    too long, and `mesures.bande` calibrates realism on `flag == "ok"`.
+
+    `anatomie` deliberately does not write to the database: the `jugement`
+    table is single-column, and this label is a calibration instrument read
+    once by P4.5.2 from `mesures.json` (see `mesures.poser_anatomie`).
     """
     name = payload.name
     if not ss.SAFE_NAME.match(name):
         ss.bad_request("nom de fichier invalide")
     flag = payload.flag
-    if flag not in (None, "ok", "ia"):
+    if payload.axe == "anatomie":
+        if flag not in (None,) + mes.ANATOMIE:
+            return JSONResponse({"ok": False, "erreur": "étiquette inconnue"},
+                                status_code=400)
+        mes.poser_anatomie(name, flag)
+        return {"ok": True, "flag": flag}
+    if payload.axe != "realisme":
+        return JSONResponse({"ok": False, "erreur": "axe inconnu"}, status_code=400)
+    if flag not in (None,) + mes.FLAGS:
         return JSONResponse({"ok": False, "erreur": "flag inconnu"}, status_code=400)
     mes.poser_flag(name, flag, character_id)
     return {"ok": True, "flag": flag}

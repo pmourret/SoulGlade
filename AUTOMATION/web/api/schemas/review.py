@@ -41,6 +41,10 @@ class GalleryItem(BaseModel):
     # sous-scores realisme calibres sur corpus/jugements.
     mains: Optional[float] = None
     flag: Optional[str] = None
+    # P4.5.1 : etiquette manuelle des proportions du corps ("ok" | "ko" | "na"),
+    # jugement humain comme `flag` et non un score -- elle ne trie rien et
+    # n'entre dans aucune bande. Corpus de calibration, pas surface produit.
+    anatomie: Optional[str] = None
 
 
 class ReferenceCount(BaseModel):
@@ -123,12 +127,21 @@ class DeleteRequest(BaseModel):
 
 # ------------------------------------------------------------------ /api/flag
 class FlagRequest(BaseModel):
-    """Human judgement on realism. Independent of sorting: it moves nothing.
-    `flag` is "ok", "ia", or null to clear it."""
+    """A human judgement on one image. Independent of sorting: it moves nothing.
+
+    Two axes on the same route, told apart by `axe`, because they are the same
+    gesture on the same image and neither sorts:
+      - `realisme` (default, unchanged): `flag` is "ok", "ia", or null to clear;
+      - `anatomie` (P4.5.1): `flag` is "ok", "ko", "na", or null to clear.
+
+    `axe` is optional and defaults to the historical behaviour: a client that
+    does not know about the second axis keeps working unchanged.
+    """
     model_config = ConfigDict(extra="allow")
 
     name: str = ""
     flag: Optional[str] = None
+    axe: str = "realisme"
 
 
 class FlagResponse(BaseModel):

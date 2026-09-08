@@ -2620,8 +2620,8 @@
     },
     "/api/flag": {
       "post": {
-        "summary": "Jugement humain de réalisme",
-        "description": "Human judgement on realism. Independent of sorting: it moves nothing.\n\nTook no character parameter at all until 2026-09-01 — the DB write this\ntriggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently\nrecorded every judgement, for every character, under one specific\ncharacter_id, because that was the only default `enregistrer_image` had.",
+        "summary": "Jugement humain (réalisme ou anatomie)",
+        "description": "Human judgement on one image. Independent of sorting: it moves nothing.\n\nTook no character parameter at all until 2026-09-01 — the DB write this\ntriggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently\nrecorded every judgement, for every character, under one specific\ncharacter_id, because that was the only default `enregistrer_image` had.\n\nTWO AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`. It is\nthe same gesture on the same image, and neither sorts — a second route\nwould have duplicated the name guard and the 400 for nothing. They are NOT\nthe same field: an image can be convincing as a photograph AND have one arm\ntoo long, and `mesures.bande` calibrates realism on `flag == \"ok\"`.\n\n`anatomie` deliberately does not write to the database: the `jugement`\ntable is single-column, and this label is a calibration instrument read\nonce by P4.5.2 from `mesures.json` (see `mesures.poser_anatomie`).",
         "operationId": "set_flag_api_flag_post",
         "parameters": [
           {
@@ -4998,12 +4998,17 @@
               }
             ],
             "title": "Flag"
+          },
+          "axe": {
+            "type": "string",
+            "title": "Axe",
+            "default": "realisme"
           }
         },
         "additionalProperties": true,
         "type": "object",
         "title": "FlagRequest",
-        "description": "Human judgement on realism. Independent of sorting: it moves nothing.\n`flag` is \"ok\", \"ia\", or null to clear it."
+        "description": "A human judgement on one image. Independent of sorting: it moves nothing.\n\nTwo axes on the same route, told apart by `axe`, because they are the same\ngesture on the same image and neither sorts:\n  - `realisme` (default, unchanged): `flag` is \"ok\", \"ia\", or null to clear;\n  - `anatomie` (P4.5.1): `flag` is \"ok\", \"ko\", \"na\", or null to clear.\n\n`axe` is optional and defaults to the historical behaviour: a client that\ndoes not know about the second axis keeps working unchanged."
       },
       "FlagResponse": {
         "properties": {
@@ -5154,6 +5159,17 @@
               }
             ],
             "title": "Flag"
+          },
+          "anatomie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anatomie"
           }
         },
         "additionalProperties": true,

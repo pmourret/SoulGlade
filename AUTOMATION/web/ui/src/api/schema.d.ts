@@ -1162,13 +1162,23 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Jugement humain de réalisme
-         * @description Human judgement on realism. Independent of sorting: it moves nothing.
+         * Jugement humain (réalisme ou anatomie)
+         * @description Human judgement on one image. Independent of sorting: it moves nothing.
          *
          *     Took no character parameter at all until 2026-09-01 — the DB write this
          *     triggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently
          *     recorded every judgement, for every character, under one specific
          *     character_id, because that was the only default `enregistrer_image` had.
+         *
+         *     TWO AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`. It is
+         *     the same gesture on the same image, and neither sorts — a second route
+         *     would have duplicated the name guard and the 400 for nothing. They are NOT
+         *     the same field: an image can be convincing as a photograph AND have one arm
+         *     too long, and `mesures.bande` calibrates realism on `flag == "ok"`.
+         *
+         *     `anatomie` deliberately does not write to the database: the `jugement`
+         *     table is single-column, and this label is a calibration instrument read
+         *     once by P4.5.2 from `mesures.json` (see `mesures.poser_anatomie`).
          */
         post: operations["set_flag_api_flag_post"];
         delete?: never;
@@ -2204,8 +2214,15 @@ export interface components {
         };
         /**
          * FlagRequest
-         * @description Human judgement on realism. Independent of sorting: it moves nothing.
-         *     `flag` is "ok", "ia", or null to clear it.
+         * @description A human judgement on one image. Independent of sorting: it moves nothing.
+         *
+         *     Two axes on the same route, told apart by `axe`, because they are the same
+         *     gesture on the same image and neither sorts:
+         *       - `realisme` (default, unchanged): `flag` is "ok", "ia", or null to clear;
+         *       - `anatomie` (P4.5.1): `flag` is "ok", "ko", "na", or null to clear.
+         *
+         *     `axe` is optional and defaults to the historical behaviour: a client that
+         *     does not know about the second axis keeps working unchanged.
          */
         FlagRequest: {
             /**
@@ -2215,6 +2232,11 @@ export interface components {
             name: string;
             /** Flag */
             flag?: string | null;
+            /**
+             * Axe
+             * @default realisme
+             */
+            axe: string;
         } & {
             [key: string]: unknown;
         };
@@ -2280,6 +2302,8 @@ export interface components {
             mains?: number | null;
             /** Flag */
             flag?: string | null;
+            /** Anatomie */
+            anatomie?: string | null;
         } & {
             [key: string]: unknown;
         };

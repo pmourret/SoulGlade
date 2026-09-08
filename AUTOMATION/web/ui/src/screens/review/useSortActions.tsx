@@ -72,16 +72,22 @@ export function useSortActions({
   const [measuring, setMeasuring] = useState(false)
   const [measureLeft, setMeasureLeft] = useState<number | null>(null)
 
+  /* The two judgement axes share this one function, as they share the route:
+     same gesture, same toggle-to-clear, same optimistic patch — only the field
+     they land in differs (`flag` = realism, `anatomie` = P4.5.1 proportions).
+     They are never the same field: an image can be convincing as a photograph
+     AND have one arm too long. */
   const setFlag = useCallback(
-    async (item: GalleryItem, flag: string) => {
-      const next = item.flag === flag ? null : flag // clicking again removes it
-      const response = await api.post<ActionLike>('/api/flag', { name: item.name, flag: next })
+    async (item: GalleryItem, flag: string, axe: 'realisme' | 'anatomie' = 'realisme') => {
+      const field = axe === 'anatomie' ? 'anatomie' : 'flag'
+      const next = item[field] === flag ? null : flag // clicking again removes it
+      const response = await api.post<ActionLike>('/api/flag', { name: item.name, flag: next, axe })
       const failure = errorOf(response)
       if (failure) {
         toast(failure || 'jugement impossible')
         return
       }
-      setItems((list) => list.map((i) => (i.name === item.name ? { ...i, flag: next } : i)))
+      setItems((list) => list.map((i) => (i.name === item.name ? { ...i, [field]: next } : i)))
     },
     [api, toast, setItems],
   )
