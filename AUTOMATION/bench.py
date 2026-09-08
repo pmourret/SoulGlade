@@ -47,6 +47,21 @@ CFG_AXES = {
     "facedetailer": ("preset", "facedetailer"),
     "upscale_2k": ("preset", "upscale_2k"),
     "grain_export": ("preset", "grain_export"),
+    # Reglages CONTINUS, ouverts le 09/09. Jusque-la le banc ne savait
+    # qu'allumer et eteindre un etage : les deux etages rejetes en IT-2
+    # l'ont ete sur le reglage LIVRE, jamais sur l'etage lui-meme (dette
+    # E5 du tableau de bord). Un etage rejete a 0.4 de denoise peut tres
+    # bien tenir a 0.25 — c'est une autre question, et le banc ne savait
+    # pas la poser.
+    # `identity_start_at` / `identity_end_at` sont lus par les DEUX
+    # mecanismes d'identite (identity/pulid_flux.py et identity/
+    # lora_sdxl.py) : l'axe reste agnostique du mecanisme, comme tout ce
+    # module (invariant 7).
+    "refiner_denoise": ("preset", "refiner_denoise"),
+    "sharpen": ("preset", "sharpen"),
+    "grain_strength": ("preset", "grain_strength"),
+    "identity_start_at": ("identity", "start_at"),
+    "identity_end_at": ("identity", "end_at"),
 }
 JOB_AXES = {
     "sampler": "sampler_name",

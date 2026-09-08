@@ -199,6 +199,33 @@ try:
             f"meme donnee, marge configuree tres large -> stable "
             f"({verdict2['global']['steps=30']!r}) — la marge vient de cfg, pas d'une constante")
 
+    # ------------------------------- [2bis] les axes CONTINUS, ouverts le 09/09
+    print("\n[2bis] un reglage continu est un axe comme un autre")
+    base_cfg = {"identity": {"weight": 0.85, "start_at": 0.1, "end_at": 1.0},
+                "preset": {"refiner_denoise": 0.4, "sharpen": 0.3,
+                           "grain_strength": 0.0}}
+    for axe, valeur, section, cle in (
+            ("identity_end_at", 0.8, "identity", "end_at"),
+            ("identity_start_at", 0.3, "identity", "start_at"),
+            ("refiner_denoise", 0.25, "preset", "refiner_denoise"),
+            ("sharpen", 0.6, "preset", "sharpen"),
+            ("grain_strength", 0.2, "preset", "grain_strength")):
+        v = bench.build_variant_cfg(base_cfg, axe, valeur)
+        verifie(v[section][cle] == valeur,
+                f"{axe} atterrit dans cfg[{section!r}][{cle!r}] = {v[section][cle]}")
+    # la reference n'est jamais touchee : le banc compare deux copies
+    verifie(base_cfg["identity"]["end_at"] == 1.0
+            and base_cfg["preset"]["refiner_denoise"] == 0.4,
+            "la cfg de reference n'est pas modifiee en place")
+    # et un axe hors liste blanche reste refuse — la liste s'ouvre, elle ne
+    # devient pas une surcharge libre de cfg
+    leve = False
+    try:
+        bench.build_variant_cfg(base_cfg, "base_gelee", "autre.png")
+    except bench.UnknownAxisError:
+        leve = True
+    verifie(leve, "un champ hors liste blanche reste refuse (jamais une surcharge libre)")
+
     # ------------------------------------- [3bis] un ecart plus petit que le bruit
     # Le test qui aurait attrape le 09/09 : jusqu'a cette date, le verdict ne
     # comparait le delta qu'a la marge. Avec la marge par defaut (0.05) et une

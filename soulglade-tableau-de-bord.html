@@ -352,6 +352,11 @@ const D = {
         },
         {
           "s": "faire",
+          "t": "LoRA d'identité par personnage",
+          "d": "(9 septembre 2026) Le verrou par adaptateur échange l'identité contre la texture de peau : c'est le même curseur, mesuré au banc le 09/09 (identity_weight 0.85 → 0.65 : -0.092 d'identité à 6.2 sigma, 5 images OK sur 5 puis 0 sur 5). Le lissage plastique de PuLID-Flux est un défaut connu de la brique. Le métier remplace l'adaptateur par un LoRA dès qu'un personnage passe en production (92-98 % de consistance contre 80-88 %), et le dépôt l'a déjà mesuré lui-même sur Abyssiaelle au J6. MÉCANISME COMMUN, jamais un traitement Léna : tout personnage doit pouvoir porter le sien, quel que soit son pack. Le graphe de Léna a déjà le nœud qui attend (« LoRA realisme (bypass) / futur LoRA Lena »), et ses 78 images triées OK dépassent les 15-30 demandées. L'entraînement reste hors plateforme (kohya_ss)."
+        },
+        {
+          "s": "faire",
           "t": "Centroïde évolutif",
           "d": "apprendre des images validées au fil du temps — évolution, pas réécriture"
         }
@@ -498,9 +503,9 @@ const D = {
           "d": "absence assumée en clôture V1"
         },
         {
-          "s": "dette",
+          "s": "fait",
           "t": "Le banc ne fait varier que des interrupteurs d'étage",
-          "d": "IT-2 — les deux étages rejetés ont leur vraie question dans un réglage continu (refiner_denoise, guide_size du FaceDetailer) que bench.CFG_AXES ne sait pas balayer : ce sont des rejets du réglage livré, pas de l'étage"
+          "d": "IT-2 — les deux étages rejetés avaient leur vraie question dans un réglage continu que bench.CFG_AXES ne savait pas balayer. Levé le 09/09 : refiner_denoise, sharpen, grain_strength, identity_start_at et identity_end_at sont des axes. Reste hors de portée ce qui n'est pas dans config.json (guide_size du FaceDetailer est un réglage de nœud, il demanderait un rôle)."
         },
         {
           "s": "faire",
