@@ -146,6 +146,23 @@ def filters_from(payload):
 
 
 
+def preset_overrides(payload):
+    """The panel's `preset` overrides, MINUS the keys it could not fill.
+
+    The settings panel serializes an empty numeric field as `NaN`
+    (`Number.parseFloat("")`), and JSON turns that into `null`. A field is empty
+    whenever config.json carries no measured value for it — Abyssiaelle has
+    neither `sharpen` nor `grain_strength`, so both arrived as `null`.
+
+    Merged as-is, such a key does not override the measured value: it ERASES it,
+    and the runner then hands `float(None)` to ComfyUI. An unfilled field means
+    « leave config.json alone », so it must not reach the configuration at all.
+    """
+    return {k: v for k, v in payload.preset.items() if v is not None}
+
+
+
+
 @router.post("/api/plan", response_model=PlanResponse,
              response_model_exclude_unset=True,
              summary="Plan à blanc du lancement")
@@ -407,7 +424,7 @@ async def run_batch(payload: RunPayload, character_id: RequiredCharacterId):
                 {"ok": False, "erreur": "aucune image source valide — coche au "
                                         "moins une image déjà validée"}, status_code=400)
         configuration = ss.cfg(cid)
-        configuration["preset"].update(payload.preset)
+        configuration["preset"].update(preset_overrides(payload))
         apply_nsfw_overrides(configuration, payload)
         level = int(payload.intensity or 0)
         configuration["_intensity"] = level
@@ -426,7 +443,7 @@ async def run_batch(payload: RunPayload, character_id: RequiredCharacterId):
                             status_code=400)
 
     configuration = ss.cfg(cid)
-    configuration["preset"].update(payload.preset)
+    configuration["preset"].update(preset_overrides(payload))
     apply_nsfw_overrides(configuration, payload)
     # the instruction travels with the batch configuration: run_batch_blocking
     # reads it back to wire the chaining
