@@ -690,28 +690,6 @@ function LightPanel({
         />
       </label>
 
-      {/* Fond net ou flou (08/09). Il vit ici et pas dans Général pour deux
-          raisons : c'est une decision de PRISE DE VUE, voisine de la lumiere,
-          et l'onglet Général est celui qui fixe la hauteur du panneau — une
-          ligne de plus l'y faisait deborder de son conteneur (fumigation
-          test_bank [5]). Jamais verrouille par `worldLinked` : c'est une cle
-          d'overlay, un reglage du personnage, pas le cadre du lieu. */}
-      <label className="f mt-[14px]">
-        <span>
-          fond
-          <InfoHint text="Fond net ou flou : c'est un choix, pas un défaut. « Auto » laisse le modèle décider, comme avant le 08/09 — les deux autres écrivent la profondeur de champ dans le prompt à la génération." />
-        </span>
-        <select
-          data-f="background_focus"
-          value={draft.backgroundFocus}
-          onChange={(e) => onPatch({ backgroundFocus: e.target.value })}
-        >
-          <option value="auto">auto — le modèle décide</option>
-          <option value="sharp">net</option>
-          <option value="blurred">flou</option>
-        </select>
-      </label>
-
       <EmptyCatalog
         label="Travailler depuis un template de lumière"
         hint="Catalogue de templates de lumière réutilisables — pas encore alimenté dans cette version. En attendant, décris la lumière directement ci-dessus."

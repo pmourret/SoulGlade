@@ -89,16 +89,6 @@ verifie(any("ni texte ni liste" in p
             for p in bank.validate_scene_bank(avec("wardrobe", {"0": 42}))),
         "tenue qui n'est ni texte ni liste : refusee")
 
-# fond net / flou (08/09) : un axe a trois valeurs, absent = auto. Le refus
-# porte sur la VALEUR, jamais sur l'absence — aucune banque n'est migree.
-verifie(bank.validate_scene_bank(avec("background_focus", "blurred")) == [],
-        "fond « blurred » : accepte")
-verifie(bank.validate_scene_bank(avec("background_focus", "auto")) == [],
-        "fond « auto » : accepte")
-verifie(any("fond inconnu" in p
-            for p in bank.validate_scene_bank(avec("background_focus", "flou"))),
-        "fond hors des trois valeurs : refuse")
-
 doublon = copy.deepcopy(BANQUE)
 doublon["scenes"][1]["id"] = doublon["scenes"][0]["id"]
 verifie(any("double" in p for p in bank.validate_scene_bank(doublon)),
