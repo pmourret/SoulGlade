@@ -13,6 +13,18 @@ TROIS MESURES
                  dans CLAUDE.md, et ce lissage est ce qui fait « rendu IA ». La
                  mediane plutot que la moyenne pour que les aretes (yeux, narines,
                  limite des cheveux) ne gonflent pas le resultat.
+- fond_net       part du cadre qui n'est PAS franchement plus molle que le reste.
+                 Haut = nettete uniforme d'un bord a l'autre ; bas = des zones
+                 visiblement floues (fond defocalise, flou de bouge).
+                 CE N'EST PAS UNE MESURE DE REALISME, malgre sa place dans ce
+                 module : contre le corpus etiquete du 08/09 elle separe « ca se
+                 voit que c'est genere » a AUC 0.64, mais 71 % de sa variance est
+                 expliquee par la SCENE, et a scene fixee la separation tombe a
+                 0.58 — presque le hasard. Elle mesure le flou, pas la credibilite.
+                 Ce qu'elle mesure, elle le mesure bien : d'une image a l'autre
+                 d'une meme scene elle bouge tres peu (0.96-0.97, 0.89-0.93). C'est
+                 donc l'instrument de l'avant/apres du fond (IT-3b, front 1), pas
+                 un juge. Voir DOCS/recherche/2026-09-08-fond-nettete-non-uniforme.md.
 - bruit_fond     ecart-type robuste (MAD) du residu haute frequence hors visage.
                  Une photo a un plancher de bruit capteur ; une generation trop
                  propre n'en a pas. Repere deja utilise a la main lors du reglage
@@ -32,6 +44,8 @@ import numpy as np
 
 TAILLE_IMAGE = 1024        # grand cote, pour la nettete et le bruit de fond
 TAILLE_VISAGE = 256        # hauteur du crop de visage, pour la texture de peau
+TAILLE_TUILE = 64          # cote d'une tuile de `fond_net`, sur l'image normalisee
+MOLLESSE = 0.20            # une tuile sous 20 % du p90 du cadre est « molle »
 
 
 def _cv2():
@@ -119,6 +133,35 @@ def bruit_fond(img, bbox):
     return _mad(residu[masque])
 
 
+def fond_net(img):
+    """Part des tuiles dont la nettete n'est PAS effondree face au reste du cadre.
+
+    Le seuil est RELATIF au p90 de l'image elle-meme, jamais une valeur absolue :
+    le corpus a montre que la nettete absolue ne separe rien (les images jugees
+    « ca se voit » sont meme un peu PLUS nettes en mediane). Ce qui separe, c'est
+    la presence de zones franchement molles a cote de zones nettes.
+
+    Sens : HAUT = mieux, comme les trois autres genres — `bench.verdict_bench`
+    lit tous les genres avec la meme regle « delta positif = amelioree ».
+
+    `MOLLESSE` et `TAILLE_TUILE` definissent la mesure (au meme titre que le 7x7
+    de `_ecart_type_local`) ; ce ne sont pas des seuils de tri, qui eux vivent
+    dans `config.json` (invariant 4).
+    """
+    cv2 = _cv2()
+    lap = cv2.Laplacian(_gris(_normalise(img)), cv2.CV_32F)
+    h, w = lap.shape
+    ny, nx = h // TAILLE_TUILE, w // TAILLE_TUILE
+    if ny < 2 or nx < 2:                    # image trop petite pour un decoupage
+        return None
+    tuiles = lap[:ny * TAILLE_TUILE, :nx * TAILLE_TUILE]
+    tuiles = tuiles.reshape(ny, TAILLE_TUILE, nx, TAILLE_TUILE).var(axis=(1, 3))
+    p90 = float(np.percentile(tuiles, 90))
+    if p90 <= 0:                            # image uniformement plate
+        return 0.0
+    return float((tuiles >= MOLLESSE * p90).mean())
+
+
 def mesure(path, bbox=None):
     """Les trois mesures pour une image. bbox facultatif (sinon pas de texture)."""
     cv2 = _cv2()
@@ -130,11 +173,39 @@ def mesure(path, bbox=None):
         "texture_visage": (lambda v: round(v, 3) if v is not None else None)(
             texture_visage(img, bbox)),
         "bruit_fond": round(bruit_fond(img, bbox), 3),
+        "fond_net": (lambda v: round(v, 3) if v is not None else None)(fond_net(img)),
     }
+
+
+def _autotest():
+    """Verif minimale de `fond_net` sur des images synthetiques — la seule des
+    quatre mesures dont le sens (haut = mieux) porte un verdict de banc, donc
+    la seule qui casserait silencieusement une comparaison si elle s'inversait.
+    Lancer : python qc_realisme.py  (sans argument), avec le python de ComfyUI."""
+    rng = np.random.default_rng(0)
+    bruit = rng.integers(0, 255, (1024, 1024, 3), dtype=np.uint8)
+
+    net_partout = fond_net(bruit)
+    assert net_partout > 0.95, f"bruit uniforme : attendu ~1.0, obtenu {net_partout}"
+
+    moitie = bruit.copy()
+    moitie[512:, :] = 128                       # moitie basse parfaitement plate
+    demi = fond_net(moitie)
+    assert 0.45 < demi < 0.55, f"moitie molle : attendu ~0.5, obtenu {demi}"
+
+    assert fond_net(np.full((1024, 1024, 3), 128, np.uint8)) == 0.0, "image plate"
+    # `_normalise` ramene toujours le grand cote a 1024 : seule une image
+    # extremement allongee retombe sous deux tuiles de haut.
+    assert fond_net(np.zeros((30, 4000, 3), np.uint8)) is None, "bandeau trop plat"
+    assert demi < net_partout, "sens inverse : le banc lirait une degradation comme un gain"
+    print(f"autotest ok — uniforme {net_partout:.3f} > moitie molle {demi:.3f}")
 
 
 if __name__ == "__main__":
     import sys
     from pathlib import Path
-    for f in sorted(Path(sys.argv[1]).glob("*.png")):
-        print(f"{f.name[:48]:50} {mesure(f)}")
+    if len(sys.argv) < 2:
+        _autotest()
+    else:
+        for f in sorted(Path(sys.argv[1]).glob("*.png")):
+            print(f"{f.name[:48]:50} {mesure(f)}")
