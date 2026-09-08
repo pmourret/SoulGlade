@@ -701,6 +701,10 @@
       {
         "t": "Le style est un cran, pas un spectre",
         "d": "(8 septembre 2026) « réaliste » est une seule valeur par pack : (rpg-personnage, réaliste) rend juggernautXL et rien d'autre, choisi à la création avant la première image. L'axe style confond intention esthétique et réalisation technique, et rien ne repose measured:false quand un amont change. Cadrage : DOCS/cadrage/2026-09-08-style-intention-vs-realisation.md"
+      },
+      {
+        "t": "Le code repasse en anglais",
+        "d": "(8 septembre 2026) CLAUDE.md demande l'anglais pour les noms, commentaires, erreurs et docstrings, mais des fichiers entiers restent en français (shared_state.py entre autres) — et une correction ponctuelle s'y aligne plutôt que d'y mélanger deux langues, ce qui creuse l'écart. Passe de recensement puis de traduction, sur le CODE seul : les docs du repo et les skills restent en français."
       }
     ]
   }
