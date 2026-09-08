@@ -173,7 +173,8 @@ try:
         "preset": {}, "formats": {}, "export_sizes": {},
         "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
         "export": {"enabled": False},
-        "bench": {"min_seeds": 5, "margin": {"identite": 0.02, "nettete": 3}},
+        "bench": {"min_seeds": 5, "min_sigma": 2,
+                  "margin": {"identite": 0.02, "nettete": 3}},
     }), encoding="utf-8")
 
     verdict = bench.verdict_bench(CID, RUN_ID + "-verdict")
@@ -190,12 +191,83 @@ try:
         "preset": {}, "formats": {}, "export_sizes": {},
         "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
         "export": {"enabled": False},
-        "bench": {"min_seeds": 5, "margin": {"identite": 10.0, "nettete": 100.0}},
+        "bench": {"min_seeds": 5, "min_sigma": 2,
+                  "margin": {"identite": 10.0, "nettete": 100.0}},
     }), encoding="utf-8")
     verdict2 = bench.verdict_bench(CID, RUN_ID + "-verdict")
     verifie(verdict2["global"]["steps=30"] == "stable",
             f"meme donnee, marge configuree tres large -> stable "
             f"({verdict2['global']['steps=30']!r}) — la marge vient de cfg, pas d'une constante")
+
+    # ------------------------------------- [3bis] un ecart plus petit que le bruit
+    # Le test qui aurait attrape le 09/09 : jusqu'a cette date, le verdict ne
+    # comparait le delta qu'a la marge. Avec la marge par defaut (0.05) et une
+    # mesure qui bouge de plusieurs unites d'une image a l'autre, toute
+    # variante recevait « amelioree » ou « degradee » sur du bruit — c'est
+    # arrive deux fois sur abyssiaelle-facedetailer du 07/09.
+    print("\n[3bis] un ecart noye dans le bruit ne devient jamais un verdict")
+    with base.ouvrir() as cx:
+        base.bench_creer_run(cx, RUN_ID + "-bruit", CID, "steps", "probe_scene",
+                             [1, 2, 3, 4, 5])
+        r = base.bench_enregistrer_variante(cx, RUN_ID + "-bruit", "reference",
+                                            "b-ref2", {}, est_reference=True)
+        c = base.bench_enregistrer_variante(cx, RUN_ID + "-bruit", "steps=30",
+                                            "b-c2", {"axis": "steps", "value": 30})
+        # +4 de moyenne, soit plus que la marge (3) — mais chaque echantillon
+        # s'etale de 30 a 75, donc l'ecart ne veut rien dire
+        for seed, ref_net, cand_net in zip((1, 2, 3, 4, 5),
+                                           (30, 60, 45, 75, 40),
+                                           (34, 64, 49, 79, 44)):
+            base.bench_enregistrer_score(cx, r, seed, "nettete", ref_net)
+            base.bench_enregistrer_score(cx, c, seed, "nettete", cand_net)
+        cx.commit()
+
+    config_path.write_text(json.dumps({
+        "comfy_url": "http://127.0.0.1:8188", "base_gelee": "x.png",
+        "preset": {}, "formats": {}, "export_sizes": {},
+        "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
+        "export": {"enabled": False},
+        "bench": {"min_seeds": 5, "min_sigma": 2,
+                  "margin": {"identite": 0.02, "nettete": 3}},
+    }), encoding="utf-8")
+    v3 = bench.verdict_bench(CID, RUN_ID + "-bruit")
+    genre = v3["variantes"]["steps=30"]["genres"]["nettete"]
+    verifie(abs(genre["delta"]) > 3,
+            f"l'ecart depasse bien la marge de 3 ({genre['delta']:+.1f}) — "
+            f"sans le filtre, ce serait un verdict tranche")
+    verifie(genre["verdict"] == "stable",
+            f"mais il est noye dans le bruit du run -> {genre['verdict']!r}")
+    verifie(v3["global"]["steps=30"] == "stable",
+            f"et le verdict global ne se contamine pas ({v3['global']['steps=30']!r})")
+
+    # min_sigma vient de cfg, jamais d'une constante : a 0, l'ancien
+    # comportement revient a l'identique
+    config_path.write_text(json.dumps({
+        "comfy_url": "http://127.0.0.1:8188", "base_gelee": "x.png",
+        "preset": {}, "formats": {}, "export_sizes": {},
+        "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
+        "export": {"enabled": False},
+        "bench": {"min_seeds": 5, "min_sigma": 0,
+                  "margin": {"identite": 0.02, "nettete": 3}},
+    }), encoding="utf-8")
+    v4 = bench.verdict_bench(CID, RUN_ID + "-bruit")
+    verifie(v4["variantes"]["steps=30"]["genres"]["nettete"]["verdict"] != "stable",
+            "min_sigma=0 redonne l'ancien comportement — le filtre est un reglage")
+
+    # section incomplete : refus explicite, jamais un repli en dur
+    config_path.write_text(json.dumps({
+        "comfy_url": "http://127.0.0.1:8188", "base_gelee": "x.png",
+        "preset": {}, "formats": {}, "export_sizes": {},
+        "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
+        "export": {"enabled": False},
+        "bench": {"min_seeds": 5, "margin": {"identite": 0.02}},
+    }), encoding="utf-8")
+    leve = False
+    try:
+        bench.verdict_bench(CID, RUN_ID + "-bruit")
+    except bench.BenchConfigMissingError:
+        leve = True
+    verifie(leve, "cfg['bench'] sans min_sigma : refus explicite (invariant 4)")
 
     config_path.unlink()
     (OFM / "CHARACTERS" / CID).rmdir()

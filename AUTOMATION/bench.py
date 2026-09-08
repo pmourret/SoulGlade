@@ -121,15 +121,18 @@ def validate_variant_cfg(reference_cfg, variant_cfg, axis, is_reference=False):
 
 
 # ---------------------------------------------------------- orchestration
+REQUIRED_BENCH_KEYS = ("min_seeds", "margin", "min_sigma")
+
+
 def _bench_config(cfg):
-    """cfg["bench"] : min_seeds, margin (par genre). Jamais un repli — un
-    personnage sans cette section ne peut pas encore lancer de banc
+    """cfg["bench"] : min_seeds, margin (par genre), min_sigma. Jamais un
+    repli — un personnage sans cette section ne peut pas encore lancer de banc
     (invariant 4 : migrer d'abord, voir migrate_bench_config.py)."""
     section = cfg.get("bench")
-    if not section or "min_seeds" not in section or "margin" not in section:
+    if not section or any(k not in section for k in REQUIRED_BENCH_KEYS):
         raise BenchConfigMissingError(
-            "cfg['bench'] (min_seeds/margin) absente ou incomplete — aucun "
-            "repli en dur (invariant 4). Lancer "
+            f"cfg['bench'] ({'/'.join(REQUIRED_BENCH_KEYS)}) absente ou "
+            "incomplete — aucun repli en dur (invariant 4). Lancer "
             "AUTOMATION/tests/migrate_bench_config.py pour ce personnage.")
     return section
 
@@ -217,6 +220,18 @@ def run_bench(character_id, scene, seeds, axis, values, checker=None,
 
 
 # --------------------------------------------------------------- verdict
+def _erreur_type(s, ref):
+    """Erreur-type de la DIFFERENCE des deux moyennes comparees.
+
+    `_stats` rend un ecart-type de POPULATION (divise par n) : la correction
+    de Bessel se fait donc ici, `std**2 / (n - 1)`, pour ne pas sous-estimer
+    le bruit de 12 % a cinq seeds. `min_seeds` garantit n >= 2 en amont ; le
+    max() couvre un min_seeds a 1, ou l'appelant assume de n'avoir rien a
+    comparer."""
+    return ((s["std"] ** 2 / max(s["n"] - 1, 1)
+             + ref["std"] ** 2 / max(ref["n"] - 1, 1)) ** 0.5)
+
+
 def _stats(valeurs):
     n = len(valeurs)
     mean = sum(valeurs) / n
@@ -236,6 +251,7 @@ def verdict_bench(character_id, bench_id):
     cfg = lb.load_config(character_id)
     reglage = _bench_config(cfg)
     min_seeds, margin = reglage["min_seeds"], reglage["margin"]
+    min_sigma = reglage["min_sigma"]
 
     with base.ouvrir() as cx:
         rows = base.bench_scores(cx, bench_id)
@@ -264,8 +280,22 @@ def verdict_bench(character_id, bench_id):
             else:
                 m = margin.get(genre, margin.get("_defaut", 0))
                 delta = s["mean"] - ref_s["mean"]
+                # DEUX conditions, pas une. La marge dit si l'ecart merite
+                # qu'on s'y interesse ; elle ne dit RIEN de sa credibilite —
+                # et c'est la qu'un banc ment. Mesure du 09/09 : la marge par
+                # defaut vaut 0.05 pour tout genre autre que l'identite, quand
+                # `nettete` bouge de 18 d'une image a l'autre a reglages
+                # identiques. Deux verdicts « degradee » avaient ainsi ete
+                # rendus sur du bruit (abyssiaelle-facedetailer du 07/09 :
+                # -1.33 de nettete pour un ecart-type de 14.3, -0.088 de
+                # texture_visage pour 0.357), et ils contaminaient le verdict
+                # global d'une variante en realite stable.
+                # Le bruit vient du RUN lui-meme, jamais d'une constante : le
+                # banc porte deja les deux echantillons qu'il compare.
                 verdict = ("amelioree" if delta > m else
                           "degradee" if delta < -m else "stable")
+                if verdict != "stable" and abs(delta) < min_sigma * _erreur_type(s, ref_s):
+                    verdict = "stable"
             par_genre[genre] = {**s, "delta": s["mean"] - ref_s["mean"], "verdict": verdict}
         variantes[label] = {"est_reference": v["est_reference"], "genres": par_genre}
 

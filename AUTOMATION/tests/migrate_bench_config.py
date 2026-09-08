@@ -21,6 +21,7 @@ AUTOMATION = HERE.parent
 OFM = AUTOMATION.parent
 sys.path.insert(0, str(AUTOMATION))
 
+import bench     # noqa: E402
 import universe  # noqa: E402
 
 CHARACTERS = OFM / "CHARACTERS"
@@ -29,7 +30,13 @@ CHARACTERS = OFM / "CHARACTERS"
 def migrate_one(path, dry_run):
     cfg = json.loads(path.read_text(encoding="utf-8"))
     cid = path.parent.name
-    if "bench" in cfg:
+    # Une section DEJA la mais INCOMPLETE compte comme absente : le banc la
+    # refuse pareil (bench.REQUIRED_BENCH_KEYS). C'est ce qui est arrive le
+    # 09/09 avec `min_sigma`, ajoute au gabarit apres que les deux personnages
+    # existants avaient deja leur section.
+    manquantes = [k for k in bench.REQUIRED_BENCH_KEYS
+                  if k not in (cfg.get("bench") or {})]
+    if "bench" in cfg and not manquantes:
         print(f"  {cid} : deja a jour")
         return 0
 
@@ -46,11 +53,20 @@ def migrate_one(path, dry_run):
               f"dans character_defaults.json — ignore")
         return 1
 
-    cfg["bench"] = dict(gabarit)
+    # Completer, jamais ecraser : une marge deja recalibree a la main pour
+    # ce personnage ne doit pas repartir a la valeur du gabarit.
+    section = dict(cfg.get("bench") or {})
+    ajoutees = {k: v for k, v in gabarit.items() if k not in section}
+    section.update(ajoutees)
+    cfg["bench"] = section
+    quoi = ", ".join(f"{k}={v}" for k, v in ajoutees.items()) or "(rien)"
     if dry_run:
-        print(f"  {cid} : + bench (min_seeds={cfg['bench'].get('min_seeds')}) "
-              f"(dry-run, rien ecrit)")
+        print(f"  {cid} : + {quoi} (dry-run, rien ecrit)")
         return 0
+    path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+    print(f"  {cid} : + {quoi}")
+    return 0
     path.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"  {cid} : + bench (min_seeds={cfg['bench'].get('min_seeds')})")
     return 0
