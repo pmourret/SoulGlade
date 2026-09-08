@@ -1,5 +1,5 @@
 {
-  "maj": "7 septembre 2026",
+  "maj": "8 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -697,6 +697,10 @@
       {
         "t": "Mise en scène de plusieurs personnages",
         "d": "plusieurs verrous d'identité actifs dans une même génération"
+      },
+      {
+        "t": "Le style est un cran, pas un spectre",
+        "d": "(8 septembre 2026) « réaliste » est une seule valeur par pack : (rpg-personnage, réaliste) rend juggernautXL et rien d'autre, choisi à la création avant la première image. L'axe style confond intention esthétique et réalisation technique, et rien ne repose measured:false quand un amont change. Cadrage : DOCS/cadrage/2026-09-08-style-intention-vs-realisation.md"
       }
     ]
   }
