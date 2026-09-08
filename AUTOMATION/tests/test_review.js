@@ -264,8 +264,15 @@ const volsDeDonnees = [];
   dire(await vu('#bucketSel'), 'son selecteur de dossier est la');
   dire(!(await vu('#bucketSel [data-b="OK"]')),
        "sans « Validées » : elles ont leur destination, la Galerie");
+  // Elle ouvrait sur A_REVOIR en dur : sur un arbre ou rien n'y a ete trie,
+  // c'est « Tout est trie » avec les rejetees a un clic invisible. Elle ouvre
+  // desormais sur le premier dossier QUI A quelque chose.
   const ouvert = await page.$eval('#bucketSel button.on', e => e.dataset.b);
-  dire(ouvert === 'A_REVOIR', `elle ouvre sur la file a juger (${ouvert})`);
+  const plein = ['A_REVOIR', 'REJET', 'SANS_VISAGE', 'ARCHIVE'].find(b => depart[b] > 0);
+  dire(ouvert === (plein || 'A_REVOIR'),
+       `elle ouvre sur le premier dossier non vide (${ouvert}, attendu ${plein || 'A_REVOIR'})`);
+  dire(!plein || depart[ouvert] > 0,
+       `jamais sur un dossier vide quand un autre a des images (${JSON.stringify(depart)})`);
   dire(await vu('#btnUndo'), "l'annulation y est proposee");
 
   console.log('\n[6bis] a11y (design-pass ecran 5) : quatre groupes en roving radiogroup');

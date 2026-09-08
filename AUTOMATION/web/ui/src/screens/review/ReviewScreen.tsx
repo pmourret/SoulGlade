@@ -76,7 +76,8 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   const { src: lightboxSrc, open: openLightbox } = useLightbox()
 
   /* Galerie always reads the kept ones; Revue opens on the queue to judge and
-     lets one walk the other folders. */
+     lets one walk the other folders. `A_REVOIR` here is only the value held
+     until the counts arrive — see the landing effect below. */
   const [bucket, setBucket] = useState(trade === 'galerie' ? 'OK' : 'A_REVOIR')
   /* Always SFW on entry. Only a gesture that NAMES the NSFW space enters it, and
      a chrome tab is not one (J7). The end-of-batch link from Produire is that
@@ -179,6 +180,30 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   }, [state?.batch_id, state?.running, reload])
 
   const buckets = state ? (space === 'nsfw' ? state.nsfw_counts : state.counts) : null
+
+  /* LANDING FOLDER OF THE REVUE. It used to be `A_REVOIR`, full stop. On a tree
+     where nothing was ever sorted into it — the normal case once a batch has
+     been judged — the menu opened on « Tout est trié » with 21 rejected images
+     one unlabelled click away, and the screen looked empty of everything.
+
+     So we land on the first folder that HAS something, in the order of the
+     selector. Two guards make it a landing and not a moving floor:
+       - ONLY on arrival (and on changing space, which is arriving in another
+         tree). `landing` is spent on the first counts that come back;
+       - NEVER afterwards. The counts change at every sort, and a folder that
+         re-picked itself under the hand sorting it would move the image the
+         next keypress was aimed at.
+     Before the counts arrive `buckets` is null and the state above stands. */
+  const landing = useRef(trade !== 'galerie')
+  useEffect(() => {
+    landing.current = trade !== 'galerie'
+  }, [trade, space])
+  useEffect(() => {
+    if (!landing.current || !buckets) return
+    landing.current = false
+    const first = REVIEW_BUCKETS.find((entry) => ((buckets as Record<string, number>)[entry.key] ?? 0) > 0)
+    if (first) setBucket(first.key)
+  }, [buckets])
 
   /* Four roving radiogroups (a11y audit, design-pass screen-5) — same
      gabarit as produce/IntensityBar.tsx: arrows move AND pick immediately,
