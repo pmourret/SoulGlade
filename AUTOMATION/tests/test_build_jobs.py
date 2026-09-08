@@ -10,7 +10,10 @@ et sert d'oracle : si les deux divergent d'un seul caractere, le test tombe.
 C'est ce qui garantit que la CLI existante et tout batch lance sans les nouveaux
 parametres produisent le meme resultat qu'avant.
 """
+import copy
+import json
 import sys
+import tempfile
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -349,13 +352,57 @@ def test_composeur():
             "aucune alerte sur une scene propre")
 
 
+def test_fond():
+    print("\n[8] fond net / flou — l'axe de scene du 08/09")
+    data = lb.load_json(SCENES_AVANT)
+    prefix, anchor, texture = data["prefix"], data["anchor"], data["texture"]
+    direction = (data.get("direction") or "").strip()
+    scene = data["scenes"][0]
+    tmpdir = Path(tempfile.mkdtemp(prefix="fond_"))
+
+    def job_avec(valeur):
+        """Le job de la premiere scene, cette banque portant `valeur` comme fond.
+        `None` = champ absent, l'etat des banques ecrites avant le 08/09."""
+        d = copy.deepcopy(data)
+        if valeur is not None:
+            d["scenes"][0]["background_focus"] = valeur
+        chemin = tmpdir / f"scenes-{valeur}.json"
+        chemin.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
+        return lb.build_jobs(chemin, filtres(scene=[scene["id"]], no_variants=True),
+                             character_id="lena", creative=CREATIVE)[0]
+
+    def attendu(fond):
+        return ", ".join(x for x in [f"{prefix} {anchor}", scene["prompt"], fond,
+                                     texture, direction] if x)
+
+    # a l'octet pres, les trois etats : `auto` et l'absence n'injectent RIEN,
+    # c'est ce qui laisse les 17 scenes existantes intactes sans migration.
+    verifie(job_avec(None)["prompt"] == attendu(""), "champ absent : prompt inchange")
+    verifie(job_avec("auto")["prompt"] == attendu(""), "auto : prompt inchange")
+    verifie(job_avec("sharp")["prompt"] == attendu("deep depth of field, sharp background"),
+            "net : fragment injecte apres la scene")
+    verifie(job_avec("blurred")["prompt"] == attendu("shallow depth of field, blurred background"),
+            "flou : fragment injecte apres la scene")
+
+    frag = {f["source"]: f["texte"] for f in job_avec("blurred")["fragments"]}
+    verifie(frag.get("fond") == "shallow depth of field, blurred background",
+            "le fragment est etiquete « fond » dans l'apercu")
+    verifie("fond" not in {f["source"] for f in job_avec("auto")["fragments"]},
+            "aucun fragment « fond » sur auto")
+
+    # une valeur inconnue ne casse pas la production : elle vaut auto ici, et
+    # c'est /api/scenes qui la refuse a l'enregistrement (services/bank.py)
+    verifie(job_avec("nawak")["prompt"] == attendu(""),
+            "valeur inconnue : traitee comme auto, jamais une exception")
+
+
 def main():
     print("=" * 72)
     print("build_jobs — tests")
     print("=" * 72)
     for t in (test_compatibilite, test_no_variants, test_filtrage_intensite,
               test_assemblage_nouveau, test_wardrobe, test_garde_fou_visage,
-              test_amendements_fragment, test_composeur):
+              test_amendements_fragment, test_composeur, test_fond):
         t()
     print("\n" + "=" * 72)
     if ECHECS:

@@ -54,6 +54,11 @@ export type Scene = {
   tones?: string[]
   tags?: string[]
   pose?: string
+  /* Sharp or blurred background, a scene AXIS and never prompt text: left to
+     the model it decides on its own, and 71 % of that decision comes from the
+     scene (DOCS/cadrage/2026-09-08-flou-de-fond-choix-de-scene.md). Absent
+     means 'auto' — where every bank written before 08/09 sits. */
+  background_focus?: 'auto' | 'sharp' | 'blurred'
   world?: string
   origin?: string
   /* Id of the WORLDS/<world>.json place this scene inherits its frame from
@@ -111,6 +116,7 @@ export type SceneDraft = {
   wardrobe: string
   variants: string
   pose: string
+  backgroundFocus: string
 }
 
 /* Mirror of build_jobs' own fragment join (runner/prompt.py: `", ".join(t for
@@ -242,6 +248,7 @@ export function draftOf(scene: Scene): SceneDraft {
     wardrobe: wardrobeToText(scene.wardrobe),
     variants: (scene.variants ?? []).join('\n'),
     pose: scene.pose ?? '',
+    backgroundFocus: scene.background_focus ?? 'auto',
   }
 }
 
@@ -286,6 +293,9 @@ export function draftsToScenes(drafts: SceneDraft[]): Scene[] {
     put('intensity', Number.isInteger(lo) ? Math.max(0, lo) : null)
     // imposed skeleton (ControlNet): a filename from INPUTS/POSE/, or nothing
     put('pose', draft.pose)
+    // written even at 'auto': what the author chose is worth reading back in
+    // the file, and 'auto' is exactly what an untouched scene already means
+    put('background_focus', draft.backgroundFocus)
     delete scene.category
     return scene
   })

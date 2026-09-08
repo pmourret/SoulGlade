@@ -105,3 +105,26 @@ Et la **couche porteuse** : ce fragment est-il une affaire de plateforme
 (vocabulaire photographique, vrai pour tout pack) ou de pack (une famille
 de modèle peut demander une autre formulation) ? À trancher au moment de
 l'écrire, ADR-0017 en main.
+
+## Ce qui a été tranché à l'écriture (08/09)
+
+- **Couche porteuse : la plateforme.** Le fragment vit dans
+  `AUTOMATION/runner/prompt.py` (`BACKGROUND_FOCUS_PROMPT`), l'unique
+  assembleur de prompt. « Profondeur de champ » est du vocabulaire
+  photographique, vrai pour toute famille de modèle ; aucune n'a demandé
+  une autre formulation. Si une le demande, c'est au pack de la porter.
+- **Nom du champ : `background_focus`**, valeurs `auto` / `sharp` /
+  `blurred` — code en anglais (CLAUDE.md), libellés d'interface en
+  français (auto / net / flou).
+- **Où dans l'écran : l'onglet Lumière**, pas Général. C'est une
+  décision de prise de vue, voisine de la lumière — et l'onglet Général
+  fixe la hauteur du panneau, une ligne de plus l'y faisait déborder de
+  son conteneur (fumigation `test_bank` [5], mesuré : 843 + 49 px pour
+  860 px de conteneur).
+- **Clé d'overlay** (`worlds.SCENE_OVERLAY_KEYS`) : une scène liée à un
+  lieu garde son fond à travers la fusion live d'ADR-0015 — c'est un
+  réglage du personnage, jamais le cadre du lieu.
+
+Reste ouvert : le **critère de sortie 3**. Il demande des images, pas du
+code — `net` et `flou` doivent se séparer sur `fond_net` à seeds égales,
+sinon le réglage est retiré plutôt que livré.

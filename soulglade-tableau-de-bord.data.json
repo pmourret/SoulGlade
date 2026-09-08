@@ -213,9 +213,9 @@
           "t": "Importeur d'assets"
         },
         {
-          "s": "faire",
+          "s": "cours",
           "t": "Le flou de fond, réglable par scène",
-          "d": "auto / net / flou — la seule dimension du rendu qui se décidait sans l'utilisateur. Cadrage du 08/09."
+          "d": "auto / net / flou — la seule dimension du rendu qui se décidait sans l'utilisateur. Cadrage du 08/09. Livré le 08/09 : axe de scène (auto par défaut), fragment de prompt, garde serveur, éditeur, aller-retour vérifié en vrai. Reste le critère 3 du cadrage — si net et flou ne se séparent pas sur fond_net à seeds égales, le réglage est retiré plutôt que livré."
         }
       ]
     },

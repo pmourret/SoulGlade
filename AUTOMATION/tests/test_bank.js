@@ -265,7 +265,7 @@ const SCENES = BASE + '/bank/scenes?character=lena';
   // formulaire plat qui les montrait tous a la fois
   const parOnglet = {
     general: ['id', 'intention', 'format', 'count', 'guidance', 'band_lo', 'tones', 'tags'],
-    light: ['prompt_light', 'variants'],
+    light: ['prompt_light', 'variants', 'background_focus'],
     clothing: ['wardrobe_0', 'wardrobe_1', 'wardrobe_2', 'wardrobe_3'],
     pose: ['prompt_pose', 'pose'],
     recap: ['prompt_base', 'prompt_light_recap', 'prompt_pose_recap', 'wardrobe_recap'],

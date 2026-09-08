@@ -396,6 +396,26 @@ def tone_affinity(scene, tone):
     return 1 if tone in scene["tones"] else 0
 
 
+# ------------------------------------------------------------------ axes de scene
+# Fond net ou flou : un CHOIX de scene, pas un defaut a corriger. La mesure du
+# 08/09 a montre que 71 % de la variance du flou est decidee par la scene, et
+# Pierre a tranche que ce flou est creatif — la plateforme ne le supprime pas,
+# elle le rend choisissable (DOCS/cadrage/2026-09-08-flou-de-fond-choix-de-scene.md).
+#
+# COUCHE PLATEFORME (ADR-0017), tranche ici : « profondeur de champ » est du
+# vocabulaire photographique, vrai pour toute famille de modele. Si une famille
+# en demande un jour une autre formulation, c'est au pack de la porter ; aucune
+# ne l'a demande le jour ou l'axe a ete ecrit.
+#
+# `auto` — ou l'absence de champ, l'etat des 17 scenes existantes — n'injecte
+# RIEN : le modele decide, exactement comme avant le 08/09. C'est ce qui laisse
+# les banques deja ecrites identiques a l'octet pres.
+BACKGROUND_FOCUS_PROMPT = {
+    "sharp": "deep depth of field, sharp background",
+    "blurred": "shallow depth of field, blurred background",
+}
+
+
 # ------------------------------------------------------------------- plan batch
 def build_jobs(scenes_file, args, character_id, creative=None):
     """Construit la liste des jobs.
@@ -451,6 +471,9 @@ def build_jobs(scenes_file, args, character_id, creative=None):
         # pas scenes.json. N'a de sens qu'avec une seule scene retenue — c'est a
         # l'appelant de ne le passer que dans ce cas.
         texte_scene = getattr(args, "scene_override", None) or scene["prompt"]
+        # Axe de scene (pas un amendement de lancement) : il vit dans
+        # scenes.json et vaut `auto` quand il n'y est pas.
+        fond = BACKGROUND_FOCUS_PROMPT.get(scene.get("background_focus"), "")
         # Quatre amendements COURTS, meme regle, meme portee (screen-3-produire
         # §B4) : lumiere/expression/pose/vetements pour CE lancement seulement,
         # jamais ecrits dans scenes.json. Absents par defaut (getattr replie
@@ -479,6 +502,7 @@ def build_jobs(scenes_file, args, character_id, creative=None):
                 # ecrit la scene — et deux fragments peuvent se contredire sans
                 # que rien ne le signale (mesure du 26/08/2026).
                 controles = [*corps,
+                             ("fond", fond),
                              ("lumière", amend_lumiere),
                              ("expression", amend_expression),
                              ("pose", amend_pose),

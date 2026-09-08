@@ -23,6 +23,9 @@ HARD RULES
   light, background.
 - THE PROMPT CONTAINS NO CLOTHING. Clothing goes in the separate wardrobe fields.
   Never write "wearing" in the prompt.
+- THE PROMPT NEVER MENTIONS DEPTH OF FIELD. No "blurred background", "bokeh",
+  "shallow depth of field", "sharp background". That is the separate
+  background_focus field: "auto" (you have no opinion), "sharp" or "blurred".
 - Never mention hair, skin, complexion or makeup — not even "wet hair" or "tanned
   skin". Another system owns them. "wind moving through the hair" is also banned:
   describe the wind, not the hair.
@@ -44,8 +47,8 @@ HARD RULES
 
 EXAMPLE — exactly the shape and the level of detail expected:
 [
-{"id":"cuisine_matin","intention":"lifestyle","format":"4:5","tags":["interieur","matin","debout"],"tones":["doux","joueur"],"prompt":"standing in a sunlit kitchen holding a mug, medium shot, facing the camera, soft window light from the left, wooden shelves and plants in the background","wardrobe_0":"a plain cream linen shirt and jeans","wardrobe_1":"an oversized cream linen shirt over bare legs","variants":["overcast grey morning, flat diffuse light"]},
-{"id":"balcon_soir","intention":"lifestyle","format":"9:16","tags":["exterieur","soir","debout"],"tones":["melancolique","intime"],"prompt":"leaning on a balcony railing at dusk, half body, looking out at the street, mixed street lighting and blue evening sky","wardrobe_0":"a thin dark sweater and jeans","wardrobe_1":"a thin dark sweater over bare legs","variants":["summer evening, warm low light"]}
+{"id":"cuisine_matin","intention":"lifestyle","format":"4:5","tags":["interieur","matin","debout"],"tones":["doux","joueur"],"prompt":"standing in a sunlit kitchen holding a mug, medium shot, facing the camera, soft window light from the left, wooden shelves and plants in the background","background_focus":"auto","wardrobe_0":"a plain cream linen shirt and jeans","wardrobe_1":"an oversized cream linen shirt over bare legs","variants":["overcast grey morning, flat diffuse light"]},
+{"id":"balcon_soir","intention":"lifestyle","format":"9:16","tags":["exterieur","soir","debout"],"tones":["melancolique","intime"],"prompt":"leaning on a balcony railing at dusk, half body, looking out at the street, mixed street lighting and blue evening sky","background_focus":"blurred","wardrobe_0":"a thin dark sweater and jeans","wardrobe_1":"a thin dark sweater over bare legs","variants":["summer evening, warm low light"]}
 ]
 
 OUTPUT
@@ -155,6 +158,26 @@ def alertes(scene):
     return trouve
 
 
+# Vocabulaire de profondeur de champ. Il a desormais son champ
+# (`background_focus`, axe de scene) : le laisser AUSSI dans le texte libre,
+# ce sont deux sources qui peuvent se contredire sans que rien ne le signale —
+# le defaut deja mesure le 26/08 sur les fragments de prompt. Meme traitement
+# que « wearing » : la regle dans SYSTEM, le filet ici.
+FOND_FLOU = re.compile(r"shallow depth of field|bokeh|blurred background|"
+                       r"background (?:is )?(?:blurred|out of focus)|"
+                       r"(?:out of focus|defocused|blurry) background", re.I)
+FOND_NET = re.compile(r"deep depth of field|sharp background|"
+                      r"background (?:is )?(?:sharp|in focus)|"
+                      r"(?:sharp|crisp) background|everything in focus", re.I)
+
+
+def _sans_fragment(texte, rx):
+    """Retire les fragments (separes par des virgules) qui portent ce
+    vocabulaire — la virgule separe, comme partout dans un prompt."""
+    gardes = [f.strip() for f in texte.split(",") if not rx.search(f)]
+    return ", ".join(f for f in gardes if f)
+
+
 def clean(scene, creative=None):
     """Normalise une proposition du modele vers le schema de scenes.json.
 
@@ -183,6 +206,14 @@ def clean(scene, creative=None):
     prompt = " ".join(str(scene.get("prompt") or "").split())
     prompt = re.sub(r",?\s*wearing\b[^,]*", "", prompt, flags=re.I).strip(" ,")
 
+    # le fond est un AXE, jamais du texte : ce que le modele en a ecrit dans le
+    # prompt est retire et traduit dans le champ, sans rien perdre de son choix
+    fond = scene.get("background_focus")
+    if fond not in ("auto", "sharp", "blurred"):
+        fond = ("blurred" if FOND_FLOU.search(prompt)
+                else "sharp" if FOND_NET.search(prompt) else "auto")
+    prompt = _sans_fragment(_sans_fragment(prompt, FOND_FLOU), FOND_NET)
+
     wardrobe = {}
     for niveau in ("0", "1", "2"):
         v = str(scene.get(f"wardrobe_{niveau}") or "").strip()
@@ -206,6 +237,7 @@ def clean(scene, creative=None):
     return {"id": sid or "scene", "intention": intention,
             "format": fmt, "count": int(scene.get("count") or 1),
             "tags": tags, "tones": tones, "intensity": 0,
+            "background_focus": fond,
             "prompt": prompt, "wardrobe": wardrobe, "variants": variants[:2]}
 
 

@@ -260,9 +260,11 @@ CHARACTER_ONLY_SCENE_KEYS = ("wardrobe", "pose", "format", "count", "variants")
 
 # Cles d'overlay qu'une scene de personnage peut porter EN PLUS des cinq
 # ci-dessus, quand elle est liee a un lieu du catalogue (ADR-0015). Toutes
-# restent des reglages de personnage (tons/tags/intensite/guidance) : jamais
+# restent des reglages de personnage (tons/tags/intensite/guidance, et le fond
+# net ou flou depuis le 08/09) : jamais
 # le cadre (label/intention/prompt), qui vient toujours du lieu.
-SCENE_OVERLAY_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("tones", "tags", "intensity", "guidance")
+SCENE_OVERLAY_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("tones", "tags", "intensity",
+                                                  "guidance", "background_focus")
 
 
 def places(wid):

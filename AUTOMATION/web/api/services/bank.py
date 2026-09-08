@@ -39,6 +39,12 @@ WATCHED_KEYS = ("intention", "intensity", "tags", "tones", "wardrobe", "pose")
 # starter set is unreadable in Réglages.
 KNOWN_ORIGINS = ("world", "manual", "compose")
 
+# Fond net ou flou : un axe de scene a trois valeurs, `auto` par defaut — c'est
+# un CHOIX creatif, pas un defaut a corriger, donc la plateforme ne tranche pas
+# a la place de l'auteur (DOCS/cadrage/2026-09-08-flou-de-fond-choix-de-scene.md).
+# Le champ absent vaut `auto` : aucune banque existante n'a besoin de migration.
+KNOWN_BACKGROUND_FOCUS = ("auto", "sharp", "blurred")
+
 
 def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
     """Returns the list of a scene bank's problems. Empty list = good.
@@ -108,6 +114,10 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
         # pose (26/08/2026): a file name that does not exist in INPUTS/POSE/
         # would fail at execution time, very far from the screen where the scene
         # was saved — same reasoning as prefix/texture.
+        focus = s.get("background_focus")
+        if focus is not None and focus not in KNOWN_BACKGROUND_FOCUS:
+            problems.append(f"{where} : fond inconnu « {focus} » — attendu : "
+                            f"{', '.join(KNOWN_BACKGROUND_FOCUS)}")
         pose = s.get("pose")
         if pose is not None:
             if not isinstance(pose, str) or not pose.strip():
