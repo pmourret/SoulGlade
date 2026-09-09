@@ -174,6 +174,12 @@ mondes, publication — attend ce résultat.</p>
   <div id="horizon"></div>
 </section>
 
+<section>
+  <h2 class="sec">Pistes écartées</h2>
+  <p class="sec-note" id="ecartees-note"></p>
+  <div id="ecartees"></div>
+</section>
+
 <footer id="footer"></footer>
 </div>
 
@@ -245,12 +251,12 @@ const D = {
     },
     {
       "id": "IT-3b",
-      "state": "now",
+      "state": "done",
       "titre": "Le rendu d'abord, le juge ensuite",
-      "quoi": "À 75 % de mains ratées, trier ne protège plus rien : un filtre qui écarte trois quarts de la production est un arrêt de production. Le sujet se déplace de reconnaître le raté vers ne plus le produire. Phase de R&D à deux fronts : le rendu dans l'ordre fond → peau → mains, puis un juge généraliste agnostique rattaché à la plateforme, pour les proportions et les mains.",
-      "dod": "Le fond et la peau ont un avant/après jugé au banc, pas à l'impression ; un candidat détecteur est chiffré sur le corpus du 08/09 et comparé aux 30 % de rappel de hands v1 — ou refermé par écrit ; et son coût par image est mesuré, pas estimé.",
+      "quoi": "À 75 % de mains ratées, trier ne protège plus rien : un filtre qui écarte trois quarts de la production est un arrêt de production. Le sujet se déplace de reconnaître le raté vers ne plus le produire. Phase de R&D à deux fronts : le rendu dans l'ordre fond → peau → mains, puis un juge généraliste agnostique rattaché à la plateforme, pour les proportions et les mains. — Close le 09/09. Le front 1 est allé au bout dans son ordre : le fond refermé par un renoncement écrit (il ne répond pas au prompt), la peau sur un constat d'architecture (identité et texture sont le même curseur ; seul gain sans contrepartie, sharpen 0.30 → 0.55), et les mains sur le premier levier de la phase qui déplace vraiment un taux : 96,4 % de mains ratées → 36,4 % sur 30 seeds appariés, 22 seeds meilleurs et AUCUN pire, sans rien coûter aux cinq autres genres du banc. Le front 2 est SORTI de la phase le même jour, vers IT-7 : sa prémisse — « à 75 %, trier ne protège plus rien » — est tombée avec le front 1.",
+      "dod": "Le fond, la peau et les mains ont un avant/après jugé au banc, pas à l'impression. — Amendée le 09/09 : les deux conditions sur le juge (un candidat détecteur chiffré sur le corpus, son coût par image mesuré) sont parties avec le front 2 dans la DoD d'IT-7, mot pour mot. Le critère de sortie V1 sur le tri automatique reste debout et non amendé.",
       "epics": "E5, E6",
-      "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md"
+      "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md (amendé deux fois le 09/09) — DOCS/recherche/2026-09-09-mains-l-etage-qui-divise-le-taux-par-trois.md"
     },
     {
       "id": "IT-4",
@@ -278,6 +284,15 @@ const D = {
       "dod": "Une vidéo produite depuis une image déjà validée par le tri, avec le même cœur d'exécution, le même journal et le même export. La dérive d'identité sur la séquence est mesurée, même grossièrement.",
       "epics": "E12, E4, E6",
       "ref": "ADR à écrire : couche porteuse de la capacité vidéo"
+    },
+    {
+      "id": "IT-7",
+      "state": "next",
+      "titre": "La machine reconnaît un raté, ou on l'écrit noir sur blanc",
+      "quoi": "Le front 2 d'IT-3b, sorti de sa phase le 09/09 et non abandonné. Un passage unique par lequel chaque image produite dit ce qui ne va pas — agnostique, rattaché à la plateforme, proportions ET mains dans le même passage. Sa prémisse d'urgence est tombée (les mains sont passées de 75 % à 36 % de ratées), pas sa raison d'être : le critère de sortie V1 demande des défauts objectifs mesurés ET triés automatiquement, et rien ne sait encore le faire. Trois candidats déjà classés, dans cet ordre d'examen : HADM (poids publiés, cible juste), ViT-HD (meilleur sur le papier, disponibilité à vérifier), ArtifactLens (à notre volume d'étiquettes, mais code non publié).",
+      "dod": "Un candidat détecteur est chiffré sur le corpus du 08/09 — faux positifs et faux négatifs comptés sur les 53 mains jugeables, comparés aux 30 % de rappel de `hands` v1 — ou refermé par écrit, comme la piste géométrique et Florence-2. Et son coût par image est mesuré, pas estimé : souvenir de Florence-2, 9,5 s par crop et ~19 s par image, un juge trop lent ne rentre pas dans la boucle de production quelle que soit sa justesse.",
+      "epics": "E6",
+      "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md (front 2) — DOCS/recherche/2026-09-08-etat-de-l-art-detection-defauts.md — ADR-0025"
     }
   ],
   "epics": [
@@ -315,6 +330,11 @@ const D = {
           "s": "fait",
           "t": "Aucun graphe porté par un monde ou un personnage",
           "d": "invariant 10, tenu"
+        },
+        {
+          "s": "faire",
+          "t": "Le graphe de production porte le nom du pack, pas celui de Léna",
+          "d": "(9 septembre 2026) `lena_master_prod_ui.json` EST le graphe du pack instagram-influenceur, mais il en porte le nom d'un personnage — et deux fuites réelles avec, toutes deux dans des groupes bypassés : le préfixe de « SORTIE edition Qwen » (OFM/PROD/LENA/EDIT/) et le filigrane DrawText+ qui écrit « Lena », qu'aucun code n'injecte. Le reste de ce qui la nomme est soit injecté à l'exécution (base gelée par identity.apply, préfixe de sortie par comfy.py), soit décoratif (titres, notes). Donc PAS un template recopié par personnage — ADR-0012 a écarté « un fichier de graphe par personnage » explicitement, et HANDDETAILER vient de le démontrer : une édition de graphe au lieu de N, et tout personnage créé avant serait resté sans l'étage. Renommer, neutraliser, boucher les deux fuites, suivre le pointeur dans universe.json, config.json de Léna, tests de rôles et skills. Plus d'une étape : cadrage écrit avant le code (règle 3)."
         }
       ]
     },
@@ -513,9 +533,9 @@ const D = {
           "d": "IT-2 — 3,29 contre ~4,9 côté Léna. Le seul étage qui la comblait (refiner) coûte l'identité : c'est le sujet du candidat #2 de la phase 4, régénération locale masquée"
         },
         {
-          "s": "cours",
+          "s": "fait",
           "t": "Rendu : fond, peau, puis mains",
-          "d": "IT-3b — le fond est fermé le 09/09 par un renoncement écrit : il ne répond pas au prompt. La peau le même jour : sur deux mécanismes indépendants, texture et identité sont le même curseur ; seul gain sans contrepartie, sharpen 0.30 → 0.55 sur Léna. Les mains, elles, ont trouvé leur levier : l'étage HANDDETAILER fait passer le taux de mains ratées de 96,4 % à 36,4 % sur cuisine_matin (30 seeds appariés, 8,7 σ, 22 seeds meilleurs et AUCUN pire), sans rien coûter aux cinq autres genres du banc — mais +34,4 s par image. Adoption en attente : temps contre qualité est un arbitrage de production, pas une réponse objective. Reste le denoise, jamais mesuré."
+          "d": "IT-3b, clos le 09/09 dans l'ordre décidé. Le fond : renoncement écrit, il ne répond pas au prompt. La peau : identité et texture sont le même curseur sur deux mécanismes indépendants — seul gain sans contrepartie, sharpen 0.30 → 0.55 sur Léna, jugé à l'œil parce que texture_visage ne sépare pas. Les mains : l'étage HANDDETAILER fait passer le taux de mains ratées de 96,4 % à 36,4 % sur cuisine_matin (30 seeds appariés, 8,7 σ, 22 seeds meilleurs et AUCUN pire), sans rien coûter aux cinq autres genres du banc, pour +34,4 s par image. Adoption tranchée en interrupteur de génération plutôt qu'en réglage de personnage, éteint par défaut : temps contre qualité n'a pas de bonne réponse objective, la plateforme ne choisit pas à la place de l'utilisateur (PROJET.md). Graphe validé visuellement dans ComfyUI par Pierre le 09/09 (invariant 1). Reste non mesuré : le denoise de l'étage, 0.5 est une valeur posée à la main — l'axe de banc existe, la question est écrite dans la note."
         }
       ]
     },
@@ -558,9 +578,9 @@ const D = {
           "d": "IT-3 — 15 % de faux positifs et 70 % de faux négatifs, pas les 33 % de faux positifs supposés : 28 des 40 mains cassées scorent 1.00"
         },
         {
-          "s": "faire",
+          "s": "dette",
           "t": "Plausibilité des proportions du corps",
-          "d": "R&D — 1 cas sur 92 jugeables : rien à calibrer, il faut trouver un signal plutôt que régler un seuil"
+          "d": "dette assumée, non bloquante pour la V1 — 1 cas sur 92 jugeables (corpus du 08/09) : la voie « mesurer et seuiller » est fermée, un seuil ne se calibre pas sur un positif. Reste à faire : chercher un signal, hors phase courante."
         },
         {
           "s": "faire",
@@ -958,6 +978,31 @@ const D = {
         "d": "(8 septembre 2026) CLAUDE.md demande l'anglais pour les noms, commentaires, erreurs et docstrings, mais des fichiers entiers restent en français (shared_state.py entre autres) — et une correction ponctuelle s'y aligne plutôt que d'y mélanger deux langues, ce qui creuse l'écart. Passe de recensement puis de traduction, sur le CODE seul : les docs du repo et les skills restent en français."
       }
     ]
+  },
+  "ecartees": {
+    "note": "Pistes explorées puis refermées par écrit. À lire avant de rouvrir un sujet : chaque entrée dit la date, la raison de l'abandon, et ce que coûterait sa mise en œuvre en l'état.",
+    "items": [
+      {
+        "t": "Juge de mains sur le squelette DWPose (v2 géométrique)",
+        "d": "(7 septembre 2026) L'information n'est pas dans les keypoints : les 2 images aux mains cassées scorées 1.0, et aucun des trois indicateurs géométriques (hors-cadre, ratio main/avant-bras, asymétrie des bras) ne sort du lot des 13 contrôles. En l'état, brancher la mesure `mains` v1 au tri rejetterait 16 des 48 images validées OK (33 %) en gardant les deux réellement cassées — l'inverse du but, et la condition d'entrée d'ADR-0025 n'est pas remplie. DOCS/recherche/2026-09-07-signal-geometrique-mains.md"
+      },
+      {
+        "t": "Juge pixel des mains par Florence-2",
+        "d": "(7 septembre 2026) NO-GO chiffré : sur 42 crops de main issus de 27 images étiquetées, aucune règle simple lue sur la sortie ne sépare les mains cassées des mains propres, et le mode grounding échoue plus nettement encore. En l'état : un tri à 53 % de faux positifs, plus 9,5 s par crop (~19 s par image) sur chaque production. Reprendre demande un VLM à VQA ouverte (Qwen2-VL, InternVL) — nouveau custom node, nouveau poids, entrée de manifeste — ou un classifieur dédié sur un corpus de crops qui n'existe pas. Le graphe de mesure WORKFLOWS/platform/hands_judge_ui.json est conservé. DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md"
+      },
+      {
+        "t": "Piloter le flou de fond par le prompt (background_focus)",
+        "d": "(9 septembre 2026) Sur 5 seeds appariés et la chaîne de production réelle, l'écart net − flou vaut −0.009 sur `fond_net`, du mauvais côté ; le seed fait varier la mesure de 0.35 à 0.82 sur la même scène quand les quatre formulations ne la déplacent que de ±0.03. Le fragment atteint bien le modèle (images distinctes à seed égal), il ne déplace jamais la mise au point. Livrable retiré par revert. En l'état : un réglage exposé à l'utilisateur qui ne fait rien. Reprendre demande un autre levier — fond importé et conservé, conditionnement structurel, ou réglage de pipeline — aucun n'est cadré. DOCS/recherche/2026-09-09-fond-le-prompt-n-est-pas-le-levier.md"
+      },
+      {
+        "t": "texture_visage comme arbitre de la peau",
+        "d": "(9 septembre 2026) Bruit intra-scène de 0.335 pour des écarts de réglage de 0.25 à 0.76 : trancher un écart de +0.35 à deux erreurs-types demanderait 23 seeds par variante, soit ~78 minutes de GPU pour confirmer ce que deux images montrent d'un coup d'œil. Et sur `sharpen` la mesure est juge et partie — elle est la médiane de l'écart-type local, qu'un filtre d'accentuation augmente par définition. En l'état : un banc à 78 min par comparaison, moins fiable que l'œil. Pour la peau on juge à l'œil et on l'écrit ; l'identité reste chiffrée (bruit 0.008). DOCS/recherche/2026-09-09-peau-le-troc-identite-texture.md"
+      },
+      {
+        "t": "ComfyUI-IsNiceParts / NiceHand",
+        "d": "(8 septembre 2026) Écarté à la revue d'état de l'art sans être testé : même approche squelette que notre mesure `mains` v1, déjà fermée le 07/09, et aucun chiffre publié. En l'état : un custom node à provisionner, une entrée de manifeste et une vérification de licence pour retrouver le mur déjà mesuré. DOCS/recherche/2026-09-08-etat-de-l-art-detection-defauts.md"
+      }
+    ]
   }
 };
 
@@ -1049,6 +1094,11 @@ document.getElementById('decisions').innerHTML = D.decisions.map(f => `
 /* horizon */
 document.getElementById('horizon-note').textContent = D.horizon.note;
 document.getElementById('horizon').innerHTML = '<div class="hz">' + D.horizon.items
+  .map(h => `<div><b>${esc(h.t)}</b><em>${esc(h.d)}</em></div>`).join('') + '</div>';
+
+/* pistes écartées */
+document.getElementById('ecartees-note').textContent = D.ecartees.note;
+document.getElementById('ecartees').innerHTML = '<div class="hz">' + D.ecartees.items
   .map(h => `<div><b>${esc(h.t)}</b><em>${esc(h.d)}</em></div>`).join('') + '</div>';
 
 document.getElementById('footer').innerHTML =

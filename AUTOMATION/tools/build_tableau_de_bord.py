@@ -46,6 +46,13 @@ def check(data):
                 errors.append(f"{it['id']} : renvoie vers l'EPIC inconnu '{ref}'")
     if sum(1 for it in data["iterations"] if it.get("state") == "now") > 1:
         errors.append("plus d'une itération ouverte -- une seule à la fois")
+    for key in ("horizon", "ecartees"):
+        section = data.get(key, {})
+        if not section.get("note"):
+            errors.append(f"{key} : note manquante")
+        for entry in section.get("items", []):
+            if not entry.get("t") or not entry.get("d"):
+                errors.append(f"{key} : entrée sans titre ou sans description")
     return errors
 
 

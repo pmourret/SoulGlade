@@ -174,6 +174,12 @@ mondes, publication — attend ce résultat.</p>
   <div id="horizon"></div>
 </section>
 
+<section>
+  <h2 class="sec">Pistes écartées</h2>
+  <p class="sec-note" id="ecartees-note"></p>
+  <div id="ecartees"></div>
+</section>
+
 <footer id="footer"></footer>
 </div>
 
@@ -271,6 +277,11 @@ document.getElementById('decisions').innerHTML = D.decisions.map(f => `
 /* horizon */
 document.getElementById('horizon-note').textContent = D.horizon.note;
 document.getElementById('horizon').innerHTML = '<div class="hz">' + D.horizon.items
+  .map(h => `<div><b>${esc(h.t)}</b><em>${esc(h.d)}</em></div>`).join('') + '</div>';
+
+/* pistes écartées */
+document.getElementById('ecartees-note').textContent = D.ecartees.note;
+document.getElementById('ecartees').innerHTML = '<div class="hz">' + D.ecartees.items
   .map(h => `<div><b>${esc(h.t)}</b><em>${esc(h.d)}</em></div>`).join('') + '</div>';
 
 document.getElementById('footer').innerHTML =
