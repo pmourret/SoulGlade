@@ -373,75 +373,92 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
         result = {"verdict": "ERREUR", "score": None, "fichier": "", "export": "",
                   "duree": 0.0, "error": None}
 
-        pid, err = runner.queue(runner.api_for(job, batch_id))
-        if err:
-            result["error"] = f"refuse par ComfyUI : {err}"
-        else:
-            images, err, secs = runner.wait(pid)
-            result["duree"] = secs
-            if err or not images:
-                result["error"] = err or "aucune image produite"
+        try:
+            pid, err = runner.queue(runner.api_for(job, batch_id))
+            if err:
+                result["error"] = f"refuse par ComfyUI : {err}"
             else:
-                for im in images:
-                    src = COMFY_OUTPUT / im.get("subfolder", "") / im["filename"]
-                    # 1. le QC juge le visage NEUTRE : c'est lui qui decide du
-                    #    verdict, et c'est le seul score comparable a la bande
-                    if checker:
-                        m = checker.mesure(src)     # score ET cadre du visage
-                        score, bbox = m["score"], m["bbox"]
-                        verdict = checker.verdict(score)
-                    else:
-                        m = None
-                        score, bbox, verdict = None, None, "OK"
-                    # 2. expression puis grain : cosmetiques, apres le verdict.
-                    #    L'expression d'abord : le noeud recompose une zone de
-                    #    visage et effacerait le grain qu'on y aurait mis.
-                    params_expr, apres = appliquer_expression(
-                        src, job, cfg, checker=checker, avant=score,
-                        character_id=character_id)
-                    appliquer_grain(src, cfg, seed=job["seed"])
-                    # 3. le cadre du visage a pu bouger : on le reprend
-                    if checker and params_expr:
-                        m2 = checker.mesure(src)
-                        if m2["bbox"] is not None:
-                            bbox = m2["bbox"]
-                    reel = mesurer_realisme(src, bbox)
-                    mains = mesurer_mains(src, cfg)
-                    if mains:
-                        reel = {**(reel or {}), **mains}
-                    dest, export = sort_and_export(src, job, verdict, score, cfg,
-                                                   batch_id, character_id=character_id,
-                                                   sink=sink)
-                    if sink:
-                        sink.record(job, verdict, score, reel, dest)
-                    elif reel or score is not None:
-                        ranger_mesures(dest.name, score, reel,
-                                       embedding=(m or {}).get("embedding"),
-                                       apres_expression=apres,
-                                       expression=params_expr,
-                                       character_id=character_id)
-                    if params_expr:
-                        import expression as _ex
-                        log(f"   expression ({job.get('tone') or '—'}) : "
-                            f"{_ex.resume(params_expr)}"
-                            + (f" · identite {score:.3f} -> {apres:.3f}"
-                               if apres is not None and score is not None else ""))
-                    if after:
-                        try:
-                            after(job, verdict, dest)
-                        except Exception as e:
-                            log(f"   enchainement impossible : {type(e).__name__} — {e}")
-                    result.update(verdict=verdict, score=score, fichier=dest.name,
-                                  export=Path(export).name if export else "")
-                    stats[verdict] = stats.get(verdict, 0) + 1
-                    rows.append([datetime.now().isoformat(timespec="seconds"),
-                                 batch_id, character_id,
-                                 job["scene"], job["category"],
-                                 job.get("intensity", 0), job.get("tone", ""),
-                                 job["variant"], job["format"], job["seed"],
-                                 f"{score:.3f}" if score else "", verdict,
-                                 dest.name, result["export"], f"{secs:.0f}",
-                                 job["prompt"]])
+                images, err, secs = runner.wait(pid)
+                result["duree"] = secs
+                if err or not images:
+                    result["error"] = err or "aucune image produite"
+                else:
+                    for im in images:
+                        src = COMFY_OUTPUT / im.get("subfolder", "") / im["filename"]
+                        # 1. le QC juge le visage NEUTRE : c'est lui qui decide du
+                        #    verdict, et c'est le seul score comparable a la bande
+                        if checker:
+                            m = checker.mesure(src)     # score ET cadre du visage
+                            score, bbox = m["score"], m["bbox"]
+                            verdict = checker.verdict(score)
+                        else:
+                            m = None
+                            score, bbox, verdict = None, None, "OK"
+                        # 2. expression puis grain : cosmetiques, apres le verdict.
+                        #    L'expression d'abord : le noeud recompose une zone de
+                        #    visage et effacerait le grain qu'on y aurait mis.
+                        params_expr, apres = appliquer_expression(
+                            src, job, cfg, checker=checker, avant=score,
+                            character_id=character_id)
+                        appliquer_grain(src, cfg, seed=job["seed"])
+                        # 3. le cadre du visage a pu bouger : on le reprend
+                        if checker and params_expr:
+                            m2 = checker.mesure(src)
+                            if m2["bbox"] is not None:
+                                bbox = m2["bbox"]
+                        reel = mesurer_realisme(src, bbox)
+                        mains = mesurer_mains(src, cfg)
+                        if mains:
+                            reel = {**(reel or {}), **mains}
+                        dest, export = sort_and_export(src, job, verdict, score, cfg,
+                                                       batch_id, character_id=character_id,
+                                                       sink=sink)
+                        if sink:
+                            sink.record(job, verdict, score, reel, dest)
+                        elif reel or score is not None:
+                            ranger_mesures(dest.name, score, reel,
+                                           embedding=(m or {}).get("embedding"),
+                                           apres_expression=apres,
+                                           expression=params_expr,
+                                           character_id=character_id)
+                        if params_expr:
+                            import expression as _ex
+                            log(f"   expression ({job.get('tone') or '—'}) : "
+                                f"{_ex.resume(params_expr)}"
+                                + (f" · identite {score:.3f} -> {apres:.3f}"
+                                   if apres is not None and score is not None else ""))
+                        if after:
+                            try:
+                                after(job, verdict, dest)
+                            except Exception as e:
+                                log(f"   enchainement impossible : {type(e).__name__} — {e}")
+                        result.update(verdict=verdict, score=score, fichier=dest.name,
+                                      export=Path(export).name if export else "")
+                        stats[verdict] = stats.get(verdict, 0) + 1
+                        rows.append([datetime.now().isoformat(timespec="seconds"),
+                                     batch_id, character_id,
+                                     job["scene"], job["category"],
+                                     job.get("intensity", 0), job.get("tone", ""),
+                                     job["variant"], job["format"], job["seed"],
+                                     f"{score:.3f}" if score else "", verdict,
+                                     dest.name, result["export"], f"{secs:.0f}",
+                                     job["prompt"]])
+        except Exception as e:
+            # Un job qui leve ne doit JAMAIS emporter les suivants. Avant le
+            # 09/09, seules les erreurs de ComfyUI (queue/wait) devenaient un
+            # verdict ERREUR ; tout le reste du corps — api_for et la
+            # resolution de ses roles, le QC, l'expression, le grain, les
+            # mesures, le rangement, l'export — remontait tel quel. Un lot de
+            # 40 images mourait alors a la 12e, et emportait aussi son journal
+            # (append_log n'est appele qu'APRES la boucle). Ici le lot
+            # continue, l'image perdue est comptee ERREUR par le test qui suit,
+            # et sa cause part au journal d'ecran au lieu d'etre avalee.
+            # Un job rend une image dans ce pipeline : le cas « la 2e image
+            # d'un meme job leve apres que la 1re a reussi » garde le verdict
+            # de la 1re et ne compte pas la perdue — approximation deja
+            # presente, pas creee ici.
+            result["error"] = f"{type(e).__name__} — {e}"
+            log(f"   job perdu : {result['error']}")
         if result["verdict"] == "ERREUR":
             stats["ERREUR"] += 1
         on_event("done", index=i, total=len(jobs), job=job, result=result)
