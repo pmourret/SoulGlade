@@ -32,7 +32,8 @@ défauts objectifs « mesurés ET triés automatiquement, sous condition de
 fiabilité démontrée ». Il reste vrai et non amendé. Cette phase cherche
 l'instrument qui permettrait un jour de le tenir.
 
-Deux fronts, dans cet ordre décidé le 08/09 :
+Deux fronts, dans cet ordre décidé le 08/09 — **le second est sorti de
+la phase le 09/09**, voir l'encadré de sa section :
 
 ### Front 1 — le rendu (E5), dans l'ordre fond → peau → mains
 
@@ -64,6 +65,23 @@ Ce que le graphe sort avant tout contrôle. L'ordre est celui de Pierre.
   dit pas si on est passé sous la barre.
 
 ### Front 2 — le juge généraliste (E6)
+
+> **SORTI DE CETTE PHASE le 2026-09-09**, à sa clôture, et transformé en
+> itération à lui. La raison est la prémisse de la phase, pas un manque de
+> temps : elle s'est ouverte sur « à 75 % de mains ratées, trier ne protège
+> plus rien — un filtre qui écarte trois quarts de la production est un
+> arrêt de production ». Le front 1 a fait tomber cette prémisse. À 36 %,
+> et seulement quand l'utilisateur le demande, un filtre redevient tenable ;
+> le juge cesse d'être l'urgence qui justifiait de le traiter dans la même
+> phase que le rendu.
+>
+> Ce qui NE change pas : le critère de sortie V1 — « défauts objectifs
+> mesurés ET triés automatiquement, sous condition de fiabilité démontrée »
+> — reste debout et non amendé. Le juge revient, plus tard, avec sa propre
+> DoD. Tout ce qui suit dans cette section reste valable et sert de point de
+> départ à cette itération : les trois contraintes, les trois candidats,
+> l'ordre d'examen.
+
 
 Un passage unique par lequel chaque image produite passe pour dire ce qui
 ne va pas. Contraintes posées par Pierre, non négociables :
@@ -125,13 +143,21 @@ Trois conditions :
    un score du banc quand un score sépare (identité), un taux compté à
    l'œil quand aucun ne sépare (les mains, cf. ci-dessus ; la peau a
    tranché pareil le 09/09).
-2. **Un candidat détecteur est chiffré sur le corpus du 08/09** — faux
-   positifs et faux négatifs comptés sur les 53 mains jugeables, comparés
-   aux 30 % de rappel de `hands` v1. Un candidat qui ne fait pas mieux
-   est refermé par écrit, comme la piste géométrique et Florence-2.
-3. **Le coût par image est mesuré**, pas estimé. Souvenir de Florence-2 :
-   9,5 s par crop, ~19 s par image — un juge trop lent ne rentre pas dans
-   la boucle de production, quelle que soit sa justesse.
+2. ~~**Un candidat détecteur est chiffré sur le corpus du 08/09**~~ —
+   **retiré le 2026-09-09**, en même temps que le front 2 et pour la même
+   raison (voir l'encadré plus haut). Le texte de la condition part avec
+   lui, mot pour mot, dans la DoD de l'itération du juge : faux positifs
+   et faux négatifs comptés sur les 53 mains jugeables, comparés aux 30 %
+   de rappel de `hands` v1, et un candidat qui ne fait pas mieux refermé
+   par écrit — comme la piste géométrique et Florence-2.
+3. ~~**Le coût par image est mesuré**~~ — **retiré le 2026-09-09**, il
+   portait sur le juge. Il part avec lui, avec son souvenir de Florence-2
+   (9,5 s par crop, ~19 s par image : un juge trop lent ne rentre pas dans
+   la boucle de production, quelle que soit sa justesse).
+
+   À ne pas confondre avec le coût mesuré le 09/09 : les +34,4 s par image
+   de l'étage `HANDDETAILER` sont ceux du RENDU, front 1. Ils ne soldent
+   pas cette condition-ci.
 
 ## Ce que cette phase ne tranchera pas
 
