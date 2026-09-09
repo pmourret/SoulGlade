@@ -515,7 +515,7 @@ const D = {
         {
           "s": "cours",
           "t": "Rendu : fond, peau, puis mains",
-          "d": "IT-3b — le fond est fermé le 09/09 par un renoncement écrit : il ne répond pas au prompt. La peau l'est le même jour : sur deux mécanismes indépendants (identity_weight, refiner_denoise), texture et identité sont le même curseur. Seul gain sans contrepartie, sharpen 0.30 → 0.55 sur Léna, jugé à l'œil. Les mains sont la troisieme et derniere etape : l'etage HANDDETAILER (Impact Pack, hand_yolov8s) est cable dans le graphe Flux le 09/09, bypasse par defaut, avec deux axes de banc — l'etage et son denoise, parce que juger un etage sur le seul reglage livre est la faute d'IT-2. Le jugement se fait sur une planche de crops decoupes par DWPose (AUTOMATION/tools/planche_mains.py) : il localise tres bien meme s'il ne sait pas juger. Reste a mesurer."
+          "d": "IT-3b — le fond est fermé le 09/09 par un renoncement écrit : il ne répond pas au prompt. La peau le même jour : sur deux mécanismes indépendants, texture et identité sont le même curseur ; seul gain sans contrepartie, sharpen 0.30 → 0.55 sur Léna. Les mains, elles, ont trouvé leur levier : l'étage HANDDETAILER fait passer le taux de mains ratées de 96,4 % à 36,4 % sur cuisine_matin (30 seeds appariés, 8,7 σ, 22 seeds meilleurs et AUCUN pire), sans rien coûter aux cinq autres genres du banc — mais +34,4 s par image. Adoption en attente : temps contre qualité est un arbitrage de production, pas une réponse objective. Reste le denoise, jamais mesuré."
         }
       ]
     },
