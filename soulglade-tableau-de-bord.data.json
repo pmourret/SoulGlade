@@ -184,12 +184,12 @@
         {
           "s": "faire",
           "t": "LoRA d'identité par personnage",
-          "d": "(9 septembre 2026) Le verrou par adaptateur échange l'identité contre la texture de peau : c'est le même curseur, mesuré au banc le 09/09 (identity_weight 0.85 → 0.65 : -0.092 d'identité à 6.2 sigma, 5 images OK sur 5 puis 0 sur 5). Le lissage plastique de PuLID-Flux est un défaut connu de la brique. Le métier remplace l'adaptateur par un LoRA dès qu'un personnage passe en production (92-98 % de consistance contre 80-88 %), et le dépôt l'a déjà mesuré lui-même sur Abyssiaelle au J6. MÉCANISME COMMUN, jamais un traitement Léna : tout personnage doit pouvoir porter le sien, quel que soit son pack. Le graphe de Léna a déjà le nœud qui attend (« LoRA realisme (bypass) / futur LoRA Lena »), et ses 78 images triées OK dépassent les 15-30 demandées. L'entraînement reste hors plateforme (kohya_ss). CADRÉ le 09/09 (DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md), et le cadrage renverse la charge de travail : le mécanisme de CONSOMMATION existe déjà et tourne — rôle `character_lora` de identity/lora_sdxl.py, débypass générique dans runner/comfy.py qui ne connaît ni famille de modèle ni personnage, Abyssiaelle en production dessus depuis J6. Le manque côté Léna est dans identity/pulid_flux.py, qui n'expose pas le rôle ; le graphe, lui, porte déjà le nœud (mais deux LoraLoaderModelOnly sans titre distinctif : find_node refuse l'ambiguïté, il faut un titre attendu, donc une édition de graphe validée dans ComfyUI). L'entraînement RESTE hors plateforme : kohya_ss n'expose aucune API headless (sd-scripts = CLI + TOML), et son intégration est rangée en étage 2 (ADR de couche, seulement si le banc donne un chiffre) puis étage 3 (horizon) — jamais dans cette itération."
+          "d": "PROCHAIN CHANTIER (décidé le 09/09, avec le centroïde évolutif). (9 septembre 2026) Le verrou par adaptateur échange l'identité contre la texture de peau : c'est le même curseur, mesuré au banc le 09/09 (identity_weight 0.85 → 0.65 : -0.092 d'identité à 6.2 sigma, 5 images OK sur 5 puis 0 sur 5). Le lissage plastique de PuLID-Flux est un défaut connu de la brique. Le métier remplace l'adaptateur par un LoRA dès qu'un personnage passe en production (92-98 % de consistance contre 80-88 %), et le dépôt l'a déjà mesuré lui-même sur Abyssiaelle au J6. MÉCANISME COMMUN, jamais un traitement Léna : tout personnage doit pouvoir porter le sien, quel que soit son pack. Le graphe de Léna a déjà le nœud qui attend (« LoRA realisme (bypass) / futur LoRA Lena »), et ses 78 images triées OK dépassent les 15-30 demandées. L'entraînement reste hors plateforme (kohya_ss). CADRÉ le 09/09 (DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md), et le cadrage renverse la charge de travail : le mécanisme de CONSOMMATION existe déjà et tourne — rôle `character_lora` de identity/lora_sdxl.py, débypass générique dans runner/comfy.py qui ne connaît ni famille de modèle ni personnage, Abyssiaelle en production dessus depuis J6. Le manque côté Léna est dans identity/pulid_flux.py, qui n'expose pas le rôle ; le graphe, lui, porte déjà le nœud (mais deux LoraLoaderModelOnly sans titre distinctif : find_node refuse l'ambiguïté, il faut un titre attendu, donc une édition de graphe validée dans ComfyUI). L'entraînement RESTE hors plateforme : kohya_ss n'expose aucune API headless (sd-scripts = CLI + TOML), et son intégration est rangée en étage 2 (ADR de couche, seulement si le banc donne un chiffre) puis étage 3 (horizon) — jamais dans cette itération."
         },
         {
           "s": "faire",
           "t": "Centroïde évolutif",
-          "d": "apprendre des images validées au fil du temps — évolution, pas réécriture"
+          "d": "PROCHAIN CHANTIER (décidé le 09/09, avec le LoRA d'identité). Apprendre des images validées au fil du temps — évolution, pas réécriture."
         }
       ]
     },
@@ -519,9 +519,9 @@
           "d": "tout reste dans le dépôt, rien sous %APPDATA%"
         },
         {
-          "s": "dette",
+          "s": "fait",
           "t": "URLs de modèles incomplètes au manifeste",
-          "d": "une quinzaine d'entrées sans URL vérifiée"
+          "d": "09/09 — 17 entrées sur 27 étaient muettes. Règle totale posée : chaque modèle porte une url (téléchargeable) OU une provenance (comment un humain l'obtient), sans exception, verrouillée par test. 8 URLs vérifiées et recoupées à la taille du fichier installé. Cadrage : DOCS/cadrage/2026-09-09-manifeste-obtention-des-modeles.md"
         },
         {
           "s": "faire",
@@ -676,6 +676,16 @@
   ],
   "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
   "decisions": [
+    {
+      "e": "tranche",
+      "t": "Un artefact personnel de personnage n'entre jamais au manifeste",
+      "d": "Décidé le 09/09 en corrigeant le manifeste. Le LoRA d'identité d'Abyssiaelle en sort, et celui de Léna n'y entrera pas quand il existera : c'est une donnée de personnage (ADR-0005), le manifeste décrit ce qu'une installation doit porter, pas ce qu'un personnage apporte avec lui. Invariant 12 amendé. Le LoRA de réalisme de Léna, lui, reste déclaré — il vient de CivitAI RED, section adulte non indexée, d'où une provenance en texte plutôt qu'une URL."
+    },
+    {
+      "e": "tranche",
+      "t": "Le prochain chantier est l'identité, sur ses deux points",
+      "d": "Décidé le 09/09 : centroïde évolutif et LoRA d'identité par personnage (E2, cadré dans DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md). C'est la sortie du manifeste des artefacts personnels qui le désigne : le mécanisme par personnage est ce qui rend leur absence normale chez un tiers."
+    },
     {
       "e": "tranche",
       "t": "Une licence sera posée sur le dépôt",

@@ -98,6 +98,13 @@ repo et skills en **français**.
 12. Un custom node ou un modèle qu'un workflow committé introduit se déclare
     dans `AUTOMATION/comfyui_manifest.json` dans le même commit — jamais une
     dépendance implicite qui ne se découvre qu'en production (ADR-0022).
+    **Amendé le 2026-09-09** — deux précisions qui ne se devinaient pas :
+    chaque entrée porte une `url` (téléchargeable) **ou** une `provenance`
+    (comment un humain l'obtient) ; et un **artefact personnel de personnage**
+    (LoRA d'identité entraîné sur ses images, portrait de base) ne se déclare
+    **jamais** ici — c'est une donnée de personnage (ADR-0005), le manifeste
+    décrit ce qu'une installation doit porter, pas ce qu'un personnage apporte
+    avec lui.
 
 ## Données
 

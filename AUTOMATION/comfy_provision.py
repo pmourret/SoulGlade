@@ -204,8 +204,20 @@ def ensure_custom_nodes(manifest, root, log=_say):
 
 
 # ---------------------------------------------------------------------- modeles
+def obtention(entry):
+    """Comment ce fichier s'obtient, en une ligne destinee a un humain.
+
+    Un nom de fichier n'est pas une instruction : le tiers qui installe
+    recevait jusqu'au 09/09/2026 une liste de noms et aucun endroit ou aller
+    (E10, DOCS/cadrage/2026-09-09-manifeste-obtention-des-modeles.md). Le
+    manifeste garantit desormais une url OU une provenance sur chaque entree,
+    donc cette fonction a toujours quelque chose a dire.
+    """
+    return entry.get("url") or entry.get("provenance") or "provenance non renseignee"
+
+
 def ensure_models(manifest, root, log=_say):
-    downloaded, skipped_no_url = [], []
+    downloaded, a_la_main = [], []
     for entry in manifest["models"]:
         filename, dest, url = entry["filename"], entry.get("dest"), entry.get("url")
         if not dest:
@@ -214,16 +226,19 @@ def ensure_models(manifest, root, log=_say):
         if target.exists():
             continue
         if not url:
-            skipped_no_url.append(filename)
+            a_la_main.append(entry)
             continue
         log(f"telechargement modele {filename} -> models/{dest}/...")
         target.parent.mkdir(parents=True, exist_ok=True)
         _download(url, target)
         downloaded.append(filename)
 
-    if skipped_no_url:
-        log(f"{len(skipped_no_url)} modele(s) manquant(s) sans URL dans le manifeste "
-            f"(a completer AUTOMATION/comfyui_manifest.json) : {', '.join(skipped_no_url)}")
+    if a_la_main:
+        log(f"{len(a_la_main)} modele(s) que le manifeste ne sait pas telecharger "
+            f"-- a poser a la main dans models/ :")
+        for entry in a_la_main:
+            log(f"  {entry['filename']} -> models/{entry['dest']}/")
+            log(f"      {obtention(entry)}")
     return downloaded
 
 
@@ -273,10 +288,18 @@ def _main(argv):
             return 1
         missing_nodes = [e["id"] for e in manifest["custom_nodes"]
                           if not (root / "custom_nodes" / e["id"]).exists()]
-        missing_models = [e["filename"] for e in manifest["models"]
+        missing_models = [e for e in manifest["models"]
                            if e.get("dest") and not (root / "models" / e["dest"] / e["filename"]).exists()]
         print(f"custom nodes manquants : {missing_nodes or 'aucun'}")
-        print(f"modeles manquants      : {missing_models or 'aucun'}")
+        if not missing_models:
+            print("modeles manquants      : aucun")
+            return 0
+        # Un nom par ligne, avec ou aller le chercher : c'est ce rapport que
+        # lit quelqu'un qui installe pour la premiere fois.
+        print(f"modeles manquants      : {len(missing_models)}")
+        for e in missing_models:
+            print(f"  {e['filename']} -> models/{e['dest']}/")
+            print(f"      {obtention(e)}")
         return 0
     ensure_all()
     return 0

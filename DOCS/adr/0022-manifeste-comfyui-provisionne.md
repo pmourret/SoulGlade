@@ -106,3 +106,38 @@ d'URL de téléchargement vérifiée (checkpoints/LoRA communautaires, sources
 CivitAI probables) — marquées `"url": null` avec une note, provisioning les
 signale comme manquantes sans les fabriquer ni deviner une URL. À compléter
 au fil de l'eau, pas un blocage pour ce chantier.
+
+**Cette limite est levée le 2026-09-09 (E10)**, et pas en la complétant « au
+fil de l'eau » : en changeant la question. « Trouver l'URL » n'a pas de fin
+atteignable — CivitAI n'expose pas d'URL directe stable et un LoRA entraîné
+localement n'en aura jamais — donc la dette ne pouvait que rester ouverte.
+Le manifeste répond désormais à **comment ce fichier s'obtient** : chaque
+entrée porte une `url` (la machine télécharge) OU une `provenance` (texte
+destiné à un humain : page CivitAI et compte requis, artefact local non
+distribuable, repack introuvable). Règle totale, sans exception, verrouillée
+par `AUTOMATION/tests/test_comfy_provision.py` — un `url: null` seul ne se
+distinguait pas d'un oubli, et c'est ainsi que 17 entrées sur 27 ont fini
+muettes. Huit URLs ont été vérifiées à cette occasion et recoupées à la
+taille du fichier réellement installé ; ce recoupement a évité une erreur
+(`controlnet-canny-sdxl-1.0` est la variante fp16 de 2,5 Go, pas celle de
+5 Go). `ensure_models` et `--check` rendent maintenant `nom -> où aller`
+plutôt qu'une liste de noms nus. Voir
+`DOCS/cadrage/2026-09-09-manifeste-obtention-des-modeles.md`.
+
+Le même jour, un arbitrage a complété le contrat sur les deux entrées qui
+résistaient. Le LoRA de réalisme de Léna vient de **CivitAI RED**, la
+section adulte du site : compte requis, contenu non indexé — ce qui
+explique quatre recherches infructueuses, et pourquoi une `provenance` en
+texte vaut mieux qu'une URL introuvable. Il reste déclaré, c'est une
+dépendance d'installation comme une autre.
+
+Le LoRA d'identité d'Abyssiaelle, lui, **sort du manifeste**, et cette
+sortie devient une règle : un artefact **personnel** de personnage (LoRA
+entraîné sur ses images, portrait de base) ne se déclare jamais ici. C'est
+une donnée de personnage (ADR-0005, hors dépôt) ; le manifeste décrit ce
+qu'une **installation** doit porter, pas ce qu'un **personnage** apporte
+avec lui. Invariant 12 de `CLAUDE.md` amendé en conséquence. Le graphe qui
+charge un tel LoRA doit tolérer son absence — ce que le débypass générique
+de `runner/comfy.py` fait déjà quand aucun `identity.lora.name` n'est
+renseigné. La suite est en E2 (LoRA d'identité par personnage, centroïde
+évolutif), pas dans le manifeste.

@@ -62,8 +62,41 @@ for entry in manifest["custom_nodes"]:
         verifie((cp.PATCHES_DIR / patch_name).exists(),
                 f"{entry['id']} : patch declare present sur disque ({patch_name})")
 
-for m in manifest["models"]:
-    verifie("filename" in m, "chaque entree modele porte un filename")
+# REGLE TOTALE (E10, 09/09/2026) : une entree dit TOUJOURS comment le fichier
+# s'obtient -- `url` si la machine sait le telecharger, `provenance` si c'est un
+# humain qui va le chercher (page CivitAI, artefact local non distribuable,
+# repack introuvable). Sans exception, experimental compris.
+#
+# C'est ce test qui empeche la dette de se reformer entree par entree : un
+# `url: null` seul ne se distingue pas d'un oubli, et c'est exactement comme ca
+# que 17 entrees sur 27 ont fini sans rien. Ajouter un modele au manifeste sans
+# repondre a la question fait echouer ce fichier.
+#
+# Une ligne par REGLE et non par entree : la regle qui tombe nomme ses coupables.
+modeles = manifest["models"]
+sans_nom = [i for i, m in enumerate(modeles) if not m.get("filename")]
+verifie(not sans_nom, f"chaque entree modele porte un filename (fautives : {sans_nom})")
+
+muettes = [m.get("filename") for m in modeles
+           if not m.get("url") and not m.get("provenance")]
+verifie(not muettes,
+        f"chaque modele dit comment il s'obtient, url ou provenance ({len(modeles)} "
+        f"entrees ; muettes : {muettes})")
+
+pas_https = [m.get("filename") for m in modeles
+             if m.get("url") and not str(m["url"]).startswith("https://")]
+verifie(not pas_https, f"toute url declaree est en https ({pas_https})")
+
+deux_voies = [m.get("filename") for m in modeles if m.get("url") and m.get("provenance")]
+verifie(not deux_voies,
+        f"url et provenance ne cohabitent jamais -- une seule voie ({deux_voies})")
+
+verifie(cp.obtention({"url": "https://x/y"}) == "https://x/y",
+        "obtention() rend l'url quand il y en a une")
+verifie(cp.obtention({"provenance": "page CivitAI"}) == "page CivitAI",
+        "obtention() se rabat sur la provenance")
+verifie("non renseignee" in cp.obtention({"filename": "vide.safetensors"}),
+        "obtention() le dit plutot que de rendre du vide")
 
 
 # ------------------------------------------------- 2. ensure_core() : absent
