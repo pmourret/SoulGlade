@@ -45,6 +45,7 @@ CFG_AXES = {
     "guidance": ("preset", "guidance"),
     "refiner": ("preset", "refiner"),
     "facedetailer": ("preset", "facedetailer"),
+    "handdetailer": ("preset", "handdetailer"),
     "upscale_2k": ("preset", "upscale_2k"),
     "grain_export": ("preset", "grain_export"),
     # Reglages CONTINUS, ouverts le 09/09. Jusque-la le banc ne savait
@@ -58,6 +59,7 @@ CFG_AXES = {
     # lora_sdxl.py) : l'axe reste agnostique du mecanisme, comme tout ce
     # module (invariant 7).
     "refiner_denoise": ("preset", "refiner_denoise"),
+    "handdetailer_denoise": ("preset", "handdetailer_denoise"),
     "sharpen": ("preset", "sharpen"),
     "grain_strength": ("preset", "grain_strength"),
     "identity_start_at": ("identity", "start_at"),

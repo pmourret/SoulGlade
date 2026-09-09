@@ -166,6 +166,23 @@ def mesure(path, comfy_url, threshold_ok=1.0, threshold_watch=0.7, timeout=180):
 
 
 def _mesure(path, comfy_url, threshold_ok, threshold_watch, timeout):
+    people = extraire(path, comfy_url, timeout)
+    if not people:
+        return {"score": None, "verdict": SANS_MAIN, "mains_evaluees": 0}
+    r = metrique(people[0])
+    r["verdict"] = verdict(r["score"], threshold_ok, threshold_watch)
+    return r
+
+
+def extraire(path, comfy_url, timeout=180):
+    """people[] bruts de DWPose pour l'image `path`. Leve en cas d'echec —
+    c'est `mesure()` qui tient la discipline defensive, pas ce niveau.
+
+    Sorti de `_mesure` le 09/09 (IT-3b) : la planche de crops de mains a
+    besoin des points-cles eux-memes, pas du score qu'on en tire. Une
+    seule extraction, deux lectures — plutot qu'un second module qui
+    reparlerait a ComfyUI pour le meme graphe.
+    """
     path = Path(path)
     COMFY_INPUT.mkdir(parents=True, exist_ok=True)
     tmp_name = f"_QC_MAINS_{uuid.uuid4().hex[:12]}{path.suffix.lower() or '.png'}"
@@ -198,11 +215,66 @@ def _mesure(path, comfy_url, threshold_ok, threshold_watch, timeout):
         for f in fichiers:
             f.unlink(missing_ok=True)
 
-        people = frame.get("people") or []
-        if not people:
-            return {"score": None, "verdict": SANS_MAIN, "mains_evaluees": 0}
-        r = metrique(people[0])
-        r["verdict"] = verdict(r["score"], threshold_ok, threshold_watch)
-        return r
+        return frame.get("people") or []
     finally:
         tmp_path.unlink(missing_ok=True)
+
+
+# ------------------------------------------------- localiser, sans juger
+# Ouvert le 09/09 (IT-3b, front 1). Ce module a deja tout ce qu'il faut pour
+# DECOUPER une main : les index de poignet, la disposition OpenPose-18, les 21
+# points. Ce qu'il ne sait pas faire, et ne saura pas (voir l'en-tete : la sonde
+# du 07/09 a ferme la piste geometrique), c'est DIRE si la main est ratee. La
+# planche de crops separe donc les deux : DWPose localise, l'oeil juge.
+IDX_COUDE_DROIT = 3
+IDX_COUDE_GAUCHE = 6
+COTES = {"droite": (IDX_POIGNET_DROIT, IDX_COUDE_DROIT, "hand_right_keypoints_2d"),
+         "gauche": (IDX_POIGNET_GAUCHE, IDX_COUDE_GAUCHE, "hand_left_keypoints_2d")}
+
+
+def boite_main(people_entry, cote, marge=0.35):
+    """Boite carree (x0, y0, x1, y1, complete) autour d'une main, en pixels
+    image. `complete` dit si DWPose a vraiment trouve une main (au moins la
+    moitie de ses 21 points) ou seulement quelques points epars. `None` si le
+    poignet lui-meme n'est pas detecte — la main est alors hors champ, meme
+    regle que `metrique()`.
+
+    L'AVANT-BRAS DONNE L'ECHELLE, dans les deux cas. Corrige le 09/09 apres
+    un essai sur 8 images reelles : la moitie des tuiles etaient des zooms
+    extremes sur de la peau. DWPose rend regulierement 1 ou 2 points de main
+    a pleine confiance, leur boite fait quelques pixels, et agrandie a la
+    taille d'une tuile elle ne montre plus rien. Le segment coude-poignet est
+    la seule echelle corporelle fiable dans le cadre : une main tient
+    largement dans 1.4 fois sa longueur.
+
+    Le repli compte autant que le cas nominal : une main que DWPose ne trouve
+    pas est justement celle qu'il ne faut pas laisser sortir de l'echantillon
+    en silence. Elle est alors cadree par extrapolation — la main prolonge
+    l'avant-bras au-dela du poignet, elle n'est pas centree dessus.
+    """
+    i_poignet, i_coude, cle_main = COTES[cote]
+    corps = people_entry.get("pose_keypoints_2d")
+    if not _detecte(corps, i_poignet):
+        return None
+    px, py, _ = _point(corps, i_poignet)
+    coude = _point(corps, i_coude)
+    if coude and coude[2] > 0:
+        dx, dy = px - coude[0], py - coude[1]
+        avant_bras = (dx * dx + dy * dy) ** 0.5
+    else:
+        dx = dy = avant_bras = 0.0
+
+    main = people_entry.get(cle_main)
+    pts = [_point(main, i) for i in range(N_POINTS_MAIN)] if main else []
+    pts = [p for p in pts if p and p[2] > 0]
+    complete = len(pts) >= N_POINTS_MAIN // 2
+    if complete:
+        xs, ys = [p[0] for p in pts], [p[1] for p in pts]
+        cx, cy = (min(xs) + max(xs)) / 2, (min(ys) + max(ys)) / 2
+        cote_px = max(max(xs) - min(xs), max(ys) - min(ys)) * (1 + 2 * marge)
+    else:
+        cx, cy = px + 0.45 * dx, py + 0.45 * dy
+        cote_px = 0.0
+    cote_px = max(cote_px, 1.4 * avant_bras, 48)
+    d = cote_px / 2
+    return (cx - d, cy - d, cx + d, cy + d, complete)

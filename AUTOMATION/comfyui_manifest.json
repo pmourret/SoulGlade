@@ -134,6 +134,7 @@
     {"filename": "Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors", "dest": "loras", "url": "https://huggingface.co/lightx2v/Qwen-Image-Edit-2511-Lightning/resolve/main/Qwen-Image-Edit-2511-Lightning-4steps-V1.0-bf16.safetensors", "packs": ["platform"]},
     {"filename": "Qwen-Rapid-AIO-NSFW-v23.safetensors", "dest": "diffusion_models", "url": null, "packs": ["nsfw"], "note": "URL a renseigner."},
     {"filename": "face_yolov8m.pt", "dest": "ultralytics/bbox", "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/face_yolov8m.pt", "packs": ["platform"]},
+    {"filename": "hand_yolov8s.pt", "dest": "ultralytics/bbox", "url": "https://huggingface.co/Bingsu/adetailer/resolve/main/hand_yolov8s.pt", "packs": ["platform"], "note": "Detecteur du groupe 14 HANDDETAILER (IT-3b, 09/09). Meme depot et meme role que face_yolov8m : un bbox pour un Detailer Impact, mains au lieu du visage."},
     {"filename": "4x_NMKD-Siax_200k.pth", "dest": "upscale_models", "url": null, "packs": ["platform"], "note": "URL a renseigner (upscaler communautaire, source exacte non verifiee)."},
     {"filename": "Florence-2-Flux-Large", "dest": "LLM", "url": "https://huggingface.co/gokaygokay/Florence-2-Flux-Large", "packs": ["platform"], "note": "Dossier HuggingFace complet (snapshot_download), pas un fichier unique -- voir DownloadAndLoadFlorence2Model dans comfyui-florence2/nodes.py. Charge par WORKFLOWS/platform/hands_judge_ui.json."},
 

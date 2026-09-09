@@ -102,6 +102,26 @@ for pack_id in ("instagram-influenceur", "rpg-personnage"):
     chevauche = [(a, b) for a in titres for b in titres if a != b and a in b]
     verifie(not chevauche, f"aucun titre de groupe fragment d'un autre {chevauche or ''}")
 
+    # HANDDETAILER (groupe 14, IT-3b) est OPTIONNEL par graphe : il n'entre pas
+    # dans GROUPES, un pack a le droit de ne pas l'avoir et le runner s'adapte
+    # (invariant 7). Mais quand il est la, le groupe et le noeud doivent aller
+    # ensemble — le groupe seul ne detaille rien, et le noeud hors du groupe
+    # n'est jamais active, dans les deux cas sans le moindre message. C'est
+    # l'appartenance GEOMETRIQUE qui les lie : un noeud deplace de quelques
+    # pixels sort du groupe.
+    ids = ui_to_api.nodes_in_group(ui, "HANDDETAILER")
+    if ids:
+        try:
+            n = ui_to_api.find_node(ui, "FaceDetailer", "HandDetailer")
+            verifie(n["id"] in ids,
+                    f"role 'handdetailer' -> #{n['id']} et il est DANS le groupe 14")
+        except LookupError as e:
+            verifie(False, f"groupe HANDDETAILER present mais le noeud pilote "
+                           f"est introuvable ou ambigu : {e}")
+        verifie(len(ids) == 2,
+                f"groupe HANDDETAILER : le detecteur et le detailer, rien d'autre "
+                f"({len(ids)} noeuds)")
+
 print("\n" + "=" * 70)
 print("tout est vert" if not KO else f"{KO} ECHEC(S)")
 print("=" * 70)

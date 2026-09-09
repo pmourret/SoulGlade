@@ -1,6 +1,6 @@
 {
-  "last_node_id": 58,
-  "last_link_id": 71,
+  "last_node_id": 60,
+  "last_link_id": 79,
   "nodes": [
     {
       "id": 1,
@@ -291,7 +291,8 @@
           "links": [
             8,
             9,
-            37
+            37,
+            76
           ]
         },
         {
@@ -300,7 +301,8 @@
           "links": [
             21,
             38,
-            67
+            67,
+            77
           ]
         }
       ],
@@ -413,7 +415,8 @@
           "links": [
             11,
             16,
-            36
+            36,
+            75
           ]
         }
       ],
@@ -520,7 +523,8 @@
           "links": [
             18,
             40,
-            69
+            69,
+            79
           ]
         }
       ],
@@ -562,7 +566,8 @@
           "links": [
             17,
             39,
-            68
+            68,
+            78
           ]
         }
       ],
@@ -1334,7 +1339,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            43
+            73
           ]
         },
         {
@@ -1453,7 +1458,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 43
+          "link": 74
         }
       ],
       "outputs": [
@@ -2446,6 +2451,188 @@
         "Node name for S&R": "PreviewImage"
       },
       "widgets_values": []
+    },
+    {
+      "id": 59,
+      "type": "UltralyticsDetectorProvider",
+      "pos": [
+        3260.0,
+        1140.0
+      ],
+      "size": [
+        340,
+        80
+      ],
+      "flags": {},
+      "order": 58,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "BBOX_DETECTOR",
+          "type": "BBOX_DETECTOR",
+          "links": [
+            72
+          ]
+        },
+        {
+          "name": "SEGM_DETECTOR",
+          "type": "SEGM_DETECTOR",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UltralyticsDetectorProvider"
+      },
+      "widgets_values": [
+        "bbox/hand_yolov8s.pt"
+      ],
+      "title": "Detecteur de mains (hand_yolov8s)"
+    },
+    {
+      "id": 60,
+      "type": "FaceDetailer",
+      "pos": [
+        3260.0,
+        1280.0
+      ],
+      "size": [
+        360,
+        700
+      ],
+      "flags": {},
+      "order": 59,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 73
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 75
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 76
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 77
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 78
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 79
+        },
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 72
+        },
+        {
+          "name": "sam_model_opt",
+          "type": "SAM_MODEL",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "segm_detector_opt",
+          "type": "SEGM_DETECTOR",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "detailer_hook",
+          "type": "DETAILER_HOOK",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "scheduler_func_opt",
+          "type": "SCHEDULER_FUNC",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            74
+          ]
+        },
+        {
+          "name": "cropped_refined",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "cropped_enhanced_alpha",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "detailer_pipe",
+          "type": "DETAILER_PIPE",
+          "links": null
+        },
+        {
+          "name": "cnet_images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FaceDetailer"
+      },
+      "widgets_values": [
+        512,
+        true,
+        1024,
+        723451234567890,
+        "randomize",
+        20,
+        1.0,
+        "euler",
+        "simple",
+        0.5,
+        8,
+        true,
+        true,
+        0.5,
+        10,
+        3.0,
+        "center-1",
+        0,
+        0.93,
+        0,
+        0.7,
+        "False",
+        10,
+        "",
+        1,
+        false,
+        20,
+        false,
+        false
+      ],
+      "title": "HandDetailer mains - modele PATCHE PuLID (bypass)"
     }
   ],
   "links": [
@@ -2770,14 +2957,6 @@
       "UPSCALE_MODEL"
     ],
     [
-      43,
-      32,
-      0,
-      34,
-      1,
-      "IMAGE"
-    ],
-    [
       44,
       34,
       0,
@@ -3000,6 +3179,70 @@
       18,
       2,
       "CONDITIONING"
+    ],
+    [
+      72,
+      59,
+      0,
+      60,
+      6,
+      "BBOX_DETECTOR"
+    ],
+    [
+      73,
+      32,
+      0,
+      60,
+      0,
+      "IMAGE"
+    ],
+    [
+      75,
+      12,
+      0,
+      60,
+      1,
+      "MODEL"
+    ],
+    [
+      76,
+      10,
+      1,
+      60,
+      2,
+      "CLIP"
+    ],
+    [
+      77,
+      10,
+      2,
+      60,
+      3,
+      "VAE"
+    ],
+    [
+      78,
+      16,
+      0,
+      60,
+      4,
+      "CONDITIONING"
+    ],
+    [
+      79,
+      15,
+      0,
+      60,
+      5,
+      "CONDITIONING"
+    ],
+    [
+      74,
+      60,
+      0,
+      34,
+      1,
+      "IMAGE"
     ]
   ],
   "groups": [
@@ -3157,6 +3400,18 @@
         650.0
       ],
       "color": "#8a3f3f",
+      "flags": {}
+    },
+    {
+      "id": 14,
+      "title": "14 - HANDDETAILER (bypass)",
+      "bounding": [
+        3220.0,
+        1030.0,
+        520.0,
+        1100.0
+      ],
+      "color": "#b58b2a",
       "flags": {}
     }
   ],

@@ -107,6 +107,53 @@ verifie(r["score"] is None, "aucun poignet detecte -> score None")
 verifie(qm.verdict(r["score"], 1.0, 0.7) == qm.SANS_MAIN,
         "verdict SANS_MAIN, jamais CASSE")
 
+# ------------------------ [1bis] boite_main() : localiser sans juger (IT-3b)
+# La planche de crops du 09/09 depend entierement de cette geometrie. Le cas
+# qui compte le plus est le SECOND : une main que DWPose ne trouve pas est
+# precisement celle qu'il ne faut pas laisser disparaitre de l'echantillon —
+# c'est la meme faute que le banc corrigeait le matin meme sur le genre
+# « mains » a n=3.
+print()
+print("[1bis] boite_main() : une boite meme quand DWPose ne voit pas la main")
+corps = _corps_avec_poignets(droit=True, gauche=False)
+corps[qm.IDX_COUDE_DROIT * 3:qm.IDX_COUDE_DROIT * 3 + 3] = [100.0, 100.0, 1.0]
+corps[qm.IDX_POIGNET_DROIT * 3:qm.IDX_POIGNET_DROIT * 3 + 3] = [100.0, 200.0, 1.0]
+AVANT_BRAS = 100.0                     # coude (100,100) -> poignet (100,200)
+
+# main vue : 21 points sur un carre de 60 px, sous le poignet
+main = []
+for i in range(qm.N_POINTS_MAIN):
+    main += [100.0 + (i % 2) * 60.0, 220.0 + (i // 2) * 3.0, 1.0]
+vue = qm.boite_main({"pose_keypoints_2d": corps, "hand_right_keypoints_2d": main},
+                    "droite")
+verifie(vue is not None and vue[4] is True, f"main vue -> boite complete ({vue})")
+verifie(vue[0] <= 100 and vue[2] >= 160, "la boite couvre tous les points detectes")
+verifie(abs((vue[2] - vue[0]) - (vue[3] - vue[1])) < 1e-9, "boite carree")
+
+# LE cas qui a fait corriger cette fonction le 09/09 : DWPose rend deux points
+# a pleine confiance et rien d'autre. Leur boite fait 6 px ; agrandie a la
+# taille d'une tuile elle ne montre plus qu'un grain de peau. Sur 8 images
+# reelles, la moitie des tuiles etaient dans ce cas.
+epars = qm.boite_main({"pose_keypoints_2d": corps,
+                       "hand_right_keypoints_2d": [100.0, 220.0, 1.0,
+                                                   106.0, 226.0, 1.0]
+                                                  + [0.0, 0.0, 0.0] * 19}, "droite")
+verifie(epars[4] is False, "deux points epars : DWPose n'a pas trouve de main")
+verifie(epars[2] - epars[0] >= 1.4 * AVANT_BRAS,
+        f"la boite garde l'echelle de l'avant-bras ({epars[2] - epars[0]:.0f} px), "
+        "jamais un zoom sur six pixels")
+
+sans = qm.boite_main({"pose_keypoints_2d": corps}, "droite")
+verifie(sans is not None and sans[4] is False,
+        f"aucun point de main mais poignet detecte -> boite quand meme ({sans})")
+verifie(sans[2] - sans[0] >= 1.4 * AVANT_BRAS, "taille prise sur l'avant-bras")
+verifie((sans[1] + sans[3]) / 2 > 200.0,
+        "cadree AU-DELA du poignet : la main prolonge l'avant-bras, "
+        "elle n'est pas centree dessus")
+
+verifie(qm.boite_main({"pose_keypoints_2d": corps}, "gauche") is None,
+        "poignet non detecte -> None, la main est hors champ (meme regle que metrique)")
+
 # --------------------------------------- [2] aller-retour REEL, 3 images Lena
 print("\n[2] mesure() sur 3 images reelles de la banque Lena, via ComfyUI")
 print("    (verifie EMPIRIQUEMENT, pas suppose — voir la limite documentee")

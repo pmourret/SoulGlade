@@ -109,6 +109,14 @@ class WorkflowRunner:
             groups.append("UPSCALE IMAGE 2K")
         if p.get("facedetailer"):
             groups.append("FACEDETAILER")
+        if p.get("handdetailer"):
+            # Groupe 14, ouvert le 09/09 (IT-3b, front 1). Meme mecanique que
+            # FACEDETAILER — un detecteur bbox et un Detailer — avec le
+            # detecteur `hand_yolov8s` au lieu du visage. Un graphe qui n'a
+            # pas ce groupe ne l'active pas et ne s'en apercoit pas : la
+            # capacite est portee par le graphe du pack, jamais par ce code
+            # (invariant 7).
+            groups.append("HANDDETAILER")
         if p.get("grain_export"):
             groups.append("GRAIN + EXPORT")
         self.active_groups = groups
@@ -132,6 +140,10 @@ class WorkflowRunner:
         for key, (typ, title) in {
             "switch": ("Switch any [Crystools]", None),
             "refiner": ("KSampler", "img2img denoise"),
+            # Cherche par FRAGMENT DE TITRE : le graphe porte deux FaceDetailer
+            # depuis le 09/09 (visage et mains), une recherche par type seul
+            # serait ambigue et find_node leverait.
+            "handdetailer": ("FaceDetailer", "HandDetailer"),
             "export_scale": ("ImageScale", "Taille de publication"),
             "grain_node": ("ImageAddNoise", None),
             "sharpen": ("ImageCASharpening+", None),
@@ -264,6 +276,14 @@ class WorkflowRunner:
         if ref:
             ref["inputs"]["denoise"] = p.get("refiner_denoise", 0.40)
             ref["inputs"]["seed"] = job["seed"] + 7
+        hd = node("handdetailer")
+        if hd is not None and p.get("handdetailer_denoise") is not None:
+            # Aucun repli en dur (invariant 4) : sans reglage dans la config,
+            # c'est la valeur du graphe qui vaut. 0.18 est le reglage du
+            # VISAGE, choisi pour ne pas perdre l'identite PuLID ; une main
+            # n'a pas d'identite a preserver, et personne n'a encore mesure ce
+            # qu'il lui faut — c'est ce que l'axe de banc va poser.
+            hd["inputs"]["denoise"] = float(p["handdetailer_denoise"])
         gr = node("grain_node")
         if gr is not None:
             # `ImageAddNoise` ajoute du bruit RGB : autant de chrominance que de
