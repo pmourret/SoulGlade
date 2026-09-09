@@ -258,6 +258,15 @@ def bench_creer_run(cx, run_id, character_id, axis, scene, seeds):
          datetime.now().isoformat(timespec="seconds"), json.dumps(list(seeds))))
 
 
+def bench_run_seeds(cx, bench_run_id):
+    """Les seeds enregistrees a la creation d'un banc, ou None si ce banc
+    n'existe pas. Sert a la reprise : c'est le run qui fait foi, jamais
+    l'appelant (voir bench.run_bench)."""
+    r = cx.execute("SELECT seeds_json FROM bench_run WHERE id = ?",
+                   (bench_run_id,)).fetchone()
+    return json.loads(r["seeds_json"]) if r else None
+
+
 def bench_enregistrer_variante(cx, bench_run_id, label, batch_id, override,
                                est_reference=False):
     """Insere ou met a jour une variante par (bench_run_id, label). Retourne

@@ -154,16 +154,59 @@ def _bench_config(cfg):
     return section
 
 
+def seeds_deja_mesures(bench_id):
+    """{label: {seeds ayant au moins un score}} pour un banc. Un seed present
+    ici a produit son image et ses mesures — `_record` ecrit tous ses genres
+    dans la meme transaction."""
+    deja = {}
+    with base.ouvrir() as cx:
+        for r in base.bench_scores(cx, bench_id):
+            deja.setdefault(r["label"], set()).add(r["seed"])
+    return deja
+
+
+def seeds_du_run(bench_id):
+    """Les seeds enregistrees a la creation du banc, ou None si le banc
+    n'existe pas."""
+    with base.ouvrir() as cx:
+        return base.bench_run_seeds(cx, bench_id)
+
+
 def run_bench(character_id, scene, seeds, axis, values, checker=None,
-              on_event=None, should_stop=None):
+              on_event=None, should_stop=None, bench_id=None):
     """Lance un banc : compare `values` (candidats pour `axis`) a la valeur
     ACTUELLE du personnage sur cet axe (la reference, ajoutee automatiquement
     — jamais declaree par l'appelant). `seeds` : liste explicite, rejouee a
     L'IDENTIQUE pour chaque variante (§3 du chantier) — jamais generee ici.
 
+    REPRISE. `bench_id` fourni = on reprend ce banc : les seeds deja mesurees
+    sont sautees, variante par variante, et rien n'est regenere. Ouvert le
+    09/09 apres une mise en veille du poste a 18 images sur 60 — un banc de
+    plus d'une heure est expose, et redemarrer de zero est le seul mauvais
+    choix disponible ce jour-la. Les deux ecritures de base etaient deja
+    idempotentes (`bench_creer_run` DO NOTHING, `bench_enregistrer_variante`
+    upsert par (run, label)) : il ne manquait que de ne pas refaire le
+    travail fait.
+
+    Les seeds d'une reprise viennent du RUN, jamais de l'appelant : deux
+    listes differentes dans un meme banc casseraient l'appariement par seed
+    dont depend `verdict_bench` (corrige le matin meme).
+
     Rend bench_id : cle a passer a `verdict_bench()`.
     """
     _check_axis(axis)
+    deja = {}
+    if bench_id:
+        seeds_run = seeds_du_run(bench_id)
+        if seeds_run is None:
+            raise ValueError(f"banc inconnu : {bench_id!r} — rien a reprendre")
+        if seeds and list(seeds) != list(seeds_run):
+            raise ValueError(
+                f"reprise de {bench_id!r} : les seeds fournies ne sont pas celles "
+                "du banc. Ne rien passer, ou passer exactement les memes — deux "
+                "jeux de seeds dans un banc rendent ses variantes incomparables.")
+        seeds = seeds_run
+        deja = seeds_deja_mesures(bench_id)
     if not seeds:
         raise ValueError("seeds ne peut pas etre vide — un banc sans seed ne mesure rien")
     reference_cfg = lb.load_config(character_id)
@@ -171,7 +214,7 @@ def run_bench(character_id, scene, seeds, axis, values, checker=None,
     creative = lb.load_creative(character_id)
     scenes_path = lb.scenes_path(character_id)
 
-    bench_id = f"{character_id}-{axis}-{datetime.now():%Y%m%d_%H%M%S}"
+    bench_id = bench_id or f"{character_id}-{axis}-{datetime.now():%Y%m%d_%H%M%S}"
     with base.ouvrir() as cx:
         base.bench_creer_run(cx, bench_id, character_id, axis, scene, seeds)
         cx.commit()
@@ -185,6 +228,14 @@ def run_bench(character_id, scene, seeds, axis, values, checker=None,
     plan += [{"label": f"{axis}={v}", "value": v, "is_reference": False} for v in values]
 
     for variante in plan:
+        a_produire = [s for s in seeds if s not in deja.get(variante["label"], ())]
+        if not a_produire:
+            lb.log(f"   {variante['label']} : {len(seeds)} seeds deja mesurees, rien a faire")
+            continue
+        if len(a_produire) < len(seeds):
+            lb.log(f"   {variante['label']} : reprise, "
+                   f"{len(seeds) - len(a_produire)} seeds deja mesurees sur {len(seeds)}")
+
         variant_cfg = build_variant_cfg(reference_cfg, axis, variante["value"])
         validate_variant_cfg(reference_cfg, variant_cfg, axis,
                              is_reference=variante["is_reference"])
@@ -208,7 +259,7 @@ def run_bench(character_id, scene, seeds, axis, values, checker=None,
         modele = args_template[0]
 
         jobs = []
-        for seed in seeds:
+        for seed in a_produire:
             job = dict(modele)
             job["seed"] = seed
             job["overrides"] = {**job.get("overrides", {}), **overrides}

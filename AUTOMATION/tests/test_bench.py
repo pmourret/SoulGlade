@@ -366,6 +366,44 @@ try:
             f"delta sur le seul seed commun ({mains_flat['delta']:.3f}), "
             "jamais 0.333 contre 1.0 sur des seeds differents")
 
+    # ---------------------------------- [3quater] reprendre un banc interrompu
+    # Ouvert le 09/09 : le poste s'est mis en veille a 18 images sur 60. Les
+    # deux ecritures de base etaient deja idempotentes, il manquait juste de ne
+    # pas refaire ce qui est fait. Teste ici sur les scores SYNTHETIQUES de [3]
+    # — aucune generation, aucun ComfyUI.
+    print()
+    print("[3quater] reprise : ce qui est deja mesure n'est pas regenere")
+    with base.ouvrir() as cx:
+        verifie(base.bench_run_seeds(cx, RUN_ID + "-verdict") == [1, 2, 3, 4, 5],
+                "les seeds du banc viennent du run, pas de l'appelant")
+        verifie(base.bench_run_seeds(cx, "banc-qui-n-existe-pas") is None,
+                "banc inconnu -> None, jamais une liste vide qui passerait pour "
+                "« rien a reprendre »")
+
+    deja = bench.seeds_deja_mesures(RUN_ID + "-verdict")
+    verifie(deja.get("steps=10") == {1, 2, 3},
+            f"seeds deja mesurees, par variante : {deja.get('steps=10')}")
+    seeds_run = [1, 2, 3, 4, 5]
+    verifie([s for s in seeds_run if s not in deja["steps=10"]] == [4, 5],
+            "il reste 4 et 5 a produire sur la variante interrompue")
+    verifie([s for s in seeds_run if s not in deja["reference"]] == [],
+            "une variante complete n'est pas relancee du tout")
+
+    # Le garde-fou qui compte : deux jeux de seeds dans un meme banc rendraient
+    # ses variantes incomparables — exactement ce que l'appariement de [3ter]
+    # protege. Refus AVANT toute generation.
+    for seeds_faux, attendu in (([9, 9, 9], "seeds differentes"),
+                                (None, "banc inconnu")):
+        leve = False
+        try:
+            bench.run_bench(CID, "probe_scene", seeds_faux, "steps", [30],
+                            bench_id=(RUN_ID + "-verdict" if seeds_faux else "inexistant"))
+        except ValueError:
+            leve = True
+        except Exception:
+            pass                      # une autre erreur = le garde-fou n'a pas joue
+        verifie(leve, f"reprise refusee : {attendu}")
+
     config_path.unlink()
     (OFM / "CHARACTERS" / CID).rmdir()
     with base.ouvrir() as cx:
