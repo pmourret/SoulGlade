@@ -198,3 +198,117 @@ l'autre** :
 
 Dans les deux cas, la question de l'atelier intégré reste **non tranchée
 et c'est voulu** : ce cadrage ne l'autorise pas, il la range.
+
+## Suite : la phase de recherche du même jour
+
+Pierre a ouvert une phase de recherche sur les deux points d'E2 avant
+d'attaquer l'étage 1. Verdict :
+`DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md`.
+
+Ce qu'elle change à ce cadrage :
+
+- **L'étage 1 est inchangé.** Parité Flux/SDXL sur `character_lora`,
+  entraînement hors plateforme, banc.
+- **Les étages 2 et 3 ont un candidat nommé** au lieu d'une question
+  ouverte : ComfyUI-FluxTrainer (kijai, Apache-2.0) emballe les scripts
+  kohya en nœuds ComfyUI et tourne dans le **même** environnement
+  Python. Ça annule le coût n° 1 des cinq listés ici (un second
+  environnement de plusieurs Go) et retourne le n° 2 (l'entraînement
+  devient un job dans la file ComfyUI, pas un second consommateur de GPU
+  concurrent). L'entraîneur maison est écarté par écrit.
+- **Le centroïde évolutif n'est plus « sans rapport »** — cette section
+  hors périmètre est caduque. C'est le gabarit d'enrôlement contre
+  lequel le banc de l'étage 1 mesurera : le régler avant, c'est régler
+  le thermomètre avant de prendre la température.
+- **Un bug rendait toute mesure faussable** : le QC d'identité était
+  partagé entre personnages. Corrigé le 09/09, avant toute suite.
+
+## Le mécanisme d'identité, fixé le 2026-09-09
+
+Validé par Pierre après la phase de recherche
+(`DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md`). Ce schéma est
+le contrat ; les étages du cadrage disent seulement dans quel ordre on le
+construit. Rendu visuel de Pierre :
+`DOCS/recherche/AUTO_LEARNING_MECANISM_V2.png`.
+
+```mermaid
+flowchart TD
+
+  W["Création du personnage — wizard"] --> MES["universe.json / identity_measure<br/>résout la mesure du pack"]
+  MES --> R["Portrait de base"]
+  R --> ENR{"Enrôlement : la mesure<br/>sait-elle lire ce portrait ?"}
+  ENR -->|non| STOP["REFUS À LA CRÉATION<br/>pas six semaines plus tard"]
+  ENR -->|oui| GEL["GEL — deux choses, définitivement :<br/>l'ANCRE et le MODÈLE de mesure.<br/>Le GABARIT n'est pas gelé : il est versionné."]
+
+  GEL --> S["Génération d'une image dans une scène"]
+  S --> M["Mesure par le checker DU personnage :<br/>son ancre, ses seuils.<br/>Score ET embedding écrits ensemble,<br/>taggés du modèle de mesure."]
+  M --> PROV["Provenance : OBSERVED,<br/>ou DERIVED si un LoRA du personnage était actif"]
+  PROV --> V{"Revue humaine — le flag juge le RÉALISME"}
+  V -->|ia| S
+  V -->|ok| P{"Portillon d'identité<br/>contre le GABARIT v_n s'il existe et qu'il est sain,<br/>contre l'ANCRE sinon — amorçage"}
+
+  P -->|sous le seuil| PUB["PUBLIABLE,<br/>hors file d'entraînement"]
+  PUB --> S
+  P -->|au-dessus| F["File d'entraînement — candidats OBSERVED"]
+
+  F --> C["Jeu de référence v_n+1<br/>UN SEUL modèle d'embedding, jamais deux"]
+  C --> H1{"Santé = cos ancre-centroïde / cos ancre-membres"}
+  H1 -->|"sous 0.98 : dérive commune"| AL["ALARME DÉRIVE<br/>aucune proposition d'entraînement"]
+  AL --> S
+  H1 -->|"au-dessus"| GAB["GABARIT v_n+1 actif<br/>l'ANCRE reste son juge, jamais remplacée"]
+
+  IMP["Cohorte d'imposteurs<br/>embeddings synthétiques livrés avec la plateforme"] --> H2
+  GAB --> H2{"Séparation personnage / étranger"}
+  H2 -->|"les bandes se recouvrent"| INST["ALARME INSTRUMENT<br/>ni portillon ni banc ne valent ici.<br/>Aucun seuil ne se rattrape à la main."]
+  INST --> S
+  H2 -->|"marge nette"| N{"Assez ET assez varié ?<br/>N membres, cohésion pas trop haute"}
+
+  GAB -.->|"devient la référence du portillon"| P
+
+  N -->|non| S
+  N -->|oui| PROP["PROPOSITION d'entraînement<br/>nombre, diversité, distribution, outliers, paramètres.<br/>Pierre décide, jamais la plateforme."]
+  PROP --> T["Entraînement — un job dans la file ComfyUI<br/>ANCRE et candidats d'origine RÉINJECTÉS<br/>jamais des sorties DERIVED seules"]
+  T --> L["LoRA v_k du personnage"]
+  L --> B{"Banc — LoRA contre le verrou en place<br/>un chiffre ET l'œil"}
+  B -->|refusé| DOC["REFUS DOCUMENTÉ dans l'historique du personnage<br/>raison, données, paramètres"]
+  DOC --> S
+  B -->|adopté| CFG["config.json / identity / lora"]
+  CFG --> S
+```
+
+### Les onze règles que porte ce schéma
+
+1. **L'ancre et le modèle de mesure sont gelés ensemble, définitivement.** Le
+   modèle parce que deux embeddings de familles différentes ne se comparent
+   pas ; l'ancre parce qu'elle est la vérité historique du personnage.
+2. **Le gabarit n'est pas gelé, il est versionné.** C'est contre lui qu'on
+   score, et il doit vivre dans l'espace de conditions de la production. Une
+   photographie unique et figée est un gabarit hors distribution.
+3. **L'ancre reste le juge du gabarit**, par un rapport et jamais par une
+   valeur absolue (`santé = cos(ancre, centroïde) / cos(ancre, membres)`,
+   correction du 24/08). Elle ne décide plus des admissions, elle décide de
+   qui décide.
+4. **Amorçage explicite.** Au premier jour il n'y a pas de gabarit : le
+   portillon score contre l'ancre, et bascule dès qu'un jeu passe la santé.
+5. **La mesure passe par le checker DU personnage** — son ancre, ses seuils —
+   et le score et l'embedding s'écrivent ensemble. Les deux moitiés de la même
+   vérité ne se séparent jamais (bug du 09/09).
+6. **La provenance est une propriété de la donnée**, pas une convention :
+   `REFERENCE`, `OBSERVED`, `DERIVED`. Une image `DERIVED` ne devient jamais
+   l'ancre ; elle peut servir de gabarit, sous surveillance de l'ancre.
+7. **Deux portillons en série, parce qu'ils ne filtrent pas la même chose.**
+   Le flag humain juge le réalisme (« convaincante comme photographie »), le
+   portillon juge l'identité. Mesuré le 09/09 : 15 images sur 74 passent les
+   deux.
+8. **Publiable et entraînable sont deux décisions.** Une image sous le seuil
+   d'identité reste exportable ; elle n'entre pas dans la file.
+9. **Un jeu de référence ne mélange jamais deux modèles d'embedding**, comme
+   il ne mélange jamais deux personnages. La colonne `embedding.modele` existe
+   déjà ; rien ne filtre encore dessus.
+10. **L'instrument doit pouvoir se déclarer non discriminant.** Si les bandes
+    personnage et étranger se recouvrent, ni le portillon ni le banc ne valent,
+    et aucun seuil par personnage ne rattrape ça à la main. Ça exige une classe
+    négative que le dépôt n'a pas — d'où la cohorte d'imposteurs, à trancher
+    par ADR.
+11. **La plateforme propose, Pierre décide** (`PROJET.md`), et un refus est
+    documenté dans l'historique du personnage — pas un échec silencieux.

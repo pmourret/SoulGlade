@@ -222,9 +222,10 @@ def mesurer(path, checker=None, bbox=None, identite=None, character_id=None):
     """
     import qc_realisme
     path = Path(path)
+    embedding = None
     if bbox is None and checker is not None:
         m = checker.mesure(path)
-        bbox, identite = m["bbox"], m["score"]
+        bbox, identite, embedding = m["bbox"], m["score"], m["embedding"]
     r = qc_realisme.mesure(path, bbox)
     if r is None:
         return None
@@ -238,6 +239,13 @@ def mesurer(path, checker=None, bbox=None, identite=None, character_id=None):
                 base.enregistrer_score(cx, iid, "identite", identite, quand)
                 for genre, v in r.items():
                     base.enregistrer_score(cx, iid, genre, v, quand)
+                # Le score ET l'embedding, jamais l'un sans l'autre : ce chemin
+                # n'ecrivait que le score, donc une re-mesure pouvait eloigner le
+                # score de son propre embedding sans que rien ne le detecte. Or
+                # c'est ce desaccord qui a revele le bug de checker_partage le
+                # 09/09 -- il ne doit pas etre le seul temoin, il doit etre
+                # impossible. `enregistrer_embedding` ignore un vecteur None.
+                base.enregistrer_embedding(cx, iid, embedding)
                 cx.commit()
         except Exception:
             pass                    # la base ne doit jamais bloquer une mesure

@@ -66,7 +66,7 @@ def nsfw_chaining_hook(configuration, use_qc, batch_id, character):
         if state["runner"] is None:               # built only once
             state["runner"] = nsfw_batch.NsfwRunner(configuration, character)
         result, row = nsfw_batch.editer(
-            dest, instruction, configuration, ss.CHECKER if use_qc else None,
+            dest, instruction, configuration, ss.checker_partage(configuration) if use_qc else None,
             runner=state["runner"], batch_id=batch_id, character_id=character)
         if row:
             state["rows"].append(row)
@@ -110,7 +110,7 @@ def run_batch_blocking(jobs, configuration, batch_id, use_qc, character):
                 del ss.STATE["recent"][:-24]
 
     rows, stats = lb.execute_jobs(jobs, configuration,
-                                  ss.CHECKER if use_qc else None, batch_id,
+                                  ss.checker_partage(configuration) if use_qc else None, batch_id,
                                   character_id=character, on_event=on_event,
                                   should_stop=lambda: ss.STATE["stop"],
                                   after=nsfw_chaining_hook(configuration, use_qc,
@@ -171,7 +171,7 @@ def edit_batch_blocking(sources, instruction, configuration, use_qc, character):
                 del ss.STATE["recent"][:-24]
 
     return nsfw_batch.run(sources, instruction, configuration,
-                          ss.CHECKER if use_qc else None, on_event,
+                          ss.checker_partage(configuration) if use_qc else None, on_event,
                           should_stop=lambda: ss.STATE["stop"],
                           character_id=character)[1]
 

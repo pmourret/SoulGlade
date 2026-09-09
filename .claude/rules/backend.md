@@ -31,6 +31,17 @@ cache sont des globales de process (`web/shared_state.py`). Le lanceur
 passe l'objet application à `uvicorn.run`, ce qui rend `--workers > 1`
 techniquement indisponible : un seul GPU, un seul batch.
 
+**Mais le QC d'identité est en cache PAR PERSONNAGE**, et ça ne se
+devine pas (09/09/2026). Il porte la base gelée *et* les seuils de son
+personnage : un cache global unique mesurait tout le monde contre le
+premier chargé — une image de Léna scorée 0,232 contre l'ancre
+d'Abyssiaelle, soit la bande d'un visage étranger, et rangée en REJET.
+`ss.checker_partage(configuration)` est le **seul** point d'accès : ne
+jamais relire la globale `ss.CHECKER`, un contrôle d'ancre qui se
+contourne ne sert à rien (`test_checker_par_personnage.py` verrouille
+les deux). Même famille que le mélange de données entre personnages, et
+la même parade : un test qui l'aurait détecté.
+
 ## Frontière des modules
 
 AUTOMATION/ : un module = une responsabilité. Ne jamais y mettre de

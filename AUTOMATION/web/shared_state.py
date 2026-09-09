@@ -98,6 +98,9 @@ UNDO = []                  # dernieres actions de tri, pour le bouton annuler
 # etats concurrents ne servaient qu'a faire diverger les deux affichages.
 # Retire le 26/08/2026 avec l'onglet NSFW parallele (P3).
 CHECKER = None
+# Personnage auquel appartient CHECKER : sa base gelee, qui est l'ancre contre
+# laquelle il score. Voir checker_partage.
+CHECKER_ANCRE = None
 # run_batch_blocking et /api/mesurer tournent tous deux dans un thread
 # d'executeur : sans verrou, cliquer « Mesurer » pendant une production pouvait
 # charger InsightFace une seconde fois (~1 Go) et concurrencer le batch en cours.
@@ -105,12 +108,29 @@ VERROU_CHECKER = threading.Lock()
 
 
 def checker_partage(configuration):
-    """Rend le QC d'identite, en le chargeant au plus une fois."""
-    global CHECKER
+    """Rend le QC d'identite du personnage, en le rechargeant quand il change.
+
+    LE CACHE EST PAR PERSONNAGE, ET CA NE SE DEVINE PAS. Ce cache n'a longtemps
+    tenu qu'un seul checker, construit au premier appel du processus : son
+    argument etait ensuite ignore, et tout personnage suivant etait mesure
+    contre la base gelee ET les seuils du premier charge. Bug reel, trouve le
+    2026-09-09 en phase de recherche : le 08/09 a 08:52 Abyssiaelle produit
+    (CHECKER sur ABY_MAIN_REF.jpg, seuils 0.50/0.35), a 08:56 une image de Lena
+    est mesuree contre CETTE ancre -- 0.232, soit la bande d'un visage
+    ETRANGER -- et classee REJET. Son embedding, lui, ne depend d'aucune ancre
+    et disait 0.784 : c'est ce desaccord qui a rendu la panne visible.
+
+    L'ancre est la cle, pas character_id : c'est elle que make_checker lit, et
+    deux personnages ne partagent jamais la meme.
+    """
+    global CHECKER, CHECKER_ANCRE
     with VERROU_CHECKER:
-        if CHECKER is None:
-            push_log("chargement du QC d'identite (InsightFace)…")
+        ancre = configuration["base_gelee"]
+        if CHECKER is None or CHECKER_ANCRE != ancre:
+            quoi = "chargement" if CHECKER is None else f"rechargement ({ancre})"
+            push_log(f"{quoi} du QC d'identité (InsightFace)…")
             CHECKER = lb.make_checker(configuration)
+            CHECKER_ANCRE = ancre
         return CHECKER
 
 
