@@ -48,7 +48,20 @@ Ce que le graphe sort avant tout contrôle. L'ordre est celui de Pierre.
   déclare identique à celle de vraies photos. Une mesure aveugle à ce que
   l'œil voit ne guidera pas le travail : il faudra soit un indicateur qui
   sépare, soit accepter de juger à l'œil et le dire.
-- **Les mains en dernier**, côté rendu.
+- **Les mains en dernier**, côté rendu. **Protocole arrêté le
+  2026-09-09**, contraint par ce que le corpus a mesuré la veille :
+  `mains` (taux de détection DWPose) est chiffré à 25 % de rappel, il ne
+  peut donc pas rendre le verdict — et 49 images sur 102 n'ont aucune
+  main jugeable, donc une scène où les mains sont petites gaspille la
+  moitié du banc. D'où : une scène où les mains sont grandes et
+  occupées, ~30 images par variante (c'est ce qu'il faut pour
+  distinguer 75 % de 50 % à deux erreurs-types sur un taux), et un
+  jugement à l'œil sur une **planche de crops de mains** découpés par
+  DWPose — qui localise très bien même quand il ne juge pas
+  (`qc_mains.py`). Le résultat est un **taux de mains ratées par
+  variante**, pas une préférence entre deux images : sur un défaut qui
+  touche trois images sur quatre, savoir laquelle est la moins pire ne
+  dit pas si on est passé sous la barre.
 
 ### Front 2 — le juge généraliste (E6)
 
@@ -74,6 +87,22 @@ non publié — réimplémentation).
 - **Corriger automatiquement.** HandRefiner et consorts sont des
   correcteurs ; ils viendront après un détecteur fiable, jamais avant.
   Une régénération automatique déborde (même règle qu'en P4.3 et P4.5).
+
+  **Amendé le 2026-09-09, avant la première ligne de code de l'étape
+  mains.** Ce que ce point exclut, c'est une correction *déclenchée par
+  une mesure* : détecter un raté, puis relancer ou réparer tout seul.
+  C'est là qu'un détecteur non fiable ferait des dégâts, et c'est le
+  même raisonnement qu'ADR-0025. Un étage de rendu inconditionnel, qui
+  s'applique à toutes les images sans rien juger, n'en fait pas partie
+  — `FACEDETAILER` est déjà dans le graphe à ce titre, et personne ne
+  l'a jamais appelé un correcteur. **Un `HANDDETAILER` (Impact Pack,
+  détecteur `hand_yolov8s`) est donc dans le périmètre du front 1**, au
+  même titre et par le même mécanisme : un drapeau de preset, un groupe
+  de graphe, un axe de banc.
+
+  La frontière, pour qu'elle serve la prochaine fois : **inconditionnel
+  = rendu, conditionné à une mesure = correcteur.** Le second reste
+  hors périmètre tant qu'aucun détecteur n'est chiffré.
 - **Brancher un tri.** ADR-0025 tient : rien ne devient bloquant sans
   faux positifs ET faux négatifs comptés sur le corpus. Cette phase peut
   produire un détecteur ; elle ne le branche pas.
@@ -89,9 +118,13 @@ non publié — réimplémentation).
 Une phase de R&D ne promet pas un résultat, elle promet un verdict écrit.
 Trois conditions :
 
-1. **Le fond et la peau ont un avant/après jugé par Pierre**, mesuré au
-   banc de comparaison (celui d'IT-1, déjà en service) — adopté ou rejeté
-   par un chiffre, jamais par une impression.
+1. **Le fond, la peau et les mains ont un avant/après jugé par Pierre**,
+   mesuré au banc de comparaison (celui d'IT-1, déjà en service) —
+   adopté ou rejeté par un chiffre, jamais par une impression. Le
+   chiffre n'est pas le même partout, et c'est l'instrument qui décide :
+   un score du banc quand un score sépare (identité), un taux compté à
+   l'œil quand aucun ne sépare (les mains, cf. ci-dessus ; la peau a
+   tranché pareil le 09/09).
 2. **Un candidat détecteur est chiffré sur le corpus du 08/09** — faux
    positifs et faux négatifs comptés sur les 53 mains jugeables, comparés
    aux 30 % de rappel de `hands` v1. Un candidat qui ne fait pas mieux
