@@ -1,5 +1,5 @@
 {
-  "maj": "8 septembre 2026",
+  "maj": "9 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -171,7 +171,8 @@
           "s": "faire",
           "t": "LoRA d'identité par personnage",
           "d": "(9 septembre 2026) Le verrou par adaptateur échange l'identité contre la texture de peau : c'est le même curseur, mesuré au banc le 09/09 (identity_weight 0.85 → 0.65 : -0.092 d'identité à 6.2 sigma, 5 images OK sur 5 puis 0 sur 5). Le lissage plastique de PuLID-Flux est un défaut connu de la brique. Le métier remplace l'adaptateur par un LoRA dès qu'un personnage passe en production (92-98 % de consistance contre 80-88 %), et le dépôt l'a déjà mesuré lui-même sur Abyssiaelle au J6. MÉCANISME COMMUN, jamais un traitement Léna : tout personnage doit pouvoir porter le sien, quel que soit son pack. Le graphe de Léna a déjà le nœud qui attend (« LoRA realisme (bypass) / futur LoRA Lena »), et ses 78 images triées OK dépassent les 15-30 demandées. L'entraînement reste hors plateforme (kohya_ss)."
-        }, {
+        },
+        {
           "s": "faire",
           "t": "Centroïde évolutif",
           "d": "apprendre des images validées au fil du temps — évolution, pas réécriture"
@@ -304,9 +305,9 @@
           "d": "IT-1 — HLFrequencyDetailRestore rejeté : netteté −96 pts au banc, cadrage phase 4 § P4.4"
         },
         {
-          "s": "dette",
+          "s": "fait",
           "t": "Verdict global du banc masqué par une métrique sous-échantillonnée",
-          "d": "IT-1 — « mains » à n=3 a tiré le global à « insuffisant » alors que trois genres tranchaient à n=5"
+          "d": "IT-1 — « mains » à n=3 tirait le global à « insuffisant » alors que trois genres tranchaient à n=5. Payée le 09/09, avant le premier banc sur les mains : un genre indécidable sort du verdict global et y est nommé au lieu de le confisquer, et chaque genre n'est comparé que sur les seeds mesurés des DEUX côtés — « mains » ne s'écrit que quand DWPose trouve un poignet, son échantillon se choisit donc lui-même."
         },
         {
           "s": "fait",
@@ -719,7 +720,8 @@
       "e": "tranche",
       "t": "Le flou de fond ne repond pas au prompt — reglage retire",
       "d": "Decide le 09/09 par le critere de sortie du cadrage du 08/09, ecrit avant la premiere ligne de code. Livre la veille, mesure le lendemain : « net » 0.552 contre « flou » 0.561 sur cinq seeds apparies de ruelle_ville, quand la meme scene varie de 0.35 a 0.82 d'un seed a l'autre. Un second essai (texte plus fort, en tete de prompt) donne 0.552 et un fond toujours flou a l'oeil. Le code est reverte : un selecteur qui ne fait rien est un mensonge d'interface. Le flou reste un choix creatif sans prise pour l'utilisateur — le levier est ailleurs que le prompt."
-    }, {
+    },
+    {
       "e": "tranche",
       "t": "Le flou de fond est un choix, pas un défaut",
       "d": "Décidé le 08/09. 71 % de la variance du flou vient de la scène, pas du pipeline — mais un créateur peut le vouloir. La plateforme ne l'arbitre donc pas : le flou devient un réglage de scène à trois valeurs (auto/net/flou). Deux corrections faites dans la journée ont été annulées pour ça. Nouvelle mesure fond_net, instrument du flou et jamais un juge (à scène fixée elle ne sépare le jugement qu'à 0.58). Voir le cadrage du 08/09."
@@ -729,9 +731,10 @@
     "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
     "items": [
       {
-          "t": "Fond importé, repris entièrement",
-          "d": "(9 septembre 2026) Idée de Pierre le jour où la mesure a montré que le flou de fond ne répond pas au prompt (0.552 contre 0.561, DOCS/recherche/2026-09-09). Si le fond vient d'un fichier et n'est jamais régénéré, sa netteté est celle du fichier — la plateforme cesse d'arbitrer. Point dur déplacé sur le raccord : lumière, ombres, perspective, échelle, bord de détourage, et le piège de la passe img2img finale qui remettrait le modèle sur le fond. Aucune brique : les capacités plateforme sont upscale/bench/hands, aucun graphe de compositing ni de relighting. Premier client sérieux de l'importeur d'assets (E3). Hors parcours nominal : un nouvel utilisateur tape une scène, il n'importe pas un fond."
-        }, {
+        "t": "Fond importé, repris entièrement",
+        "d": "(9 septembre 2026) Idée de Pierre le jour où la mesure a montré que le flou de fond ne répond pas au prompt (0.552 contre 0.561, DOCS/recherche/2026-09-09). Si le fond vient d'un fichier et n'est jamais régénéré, sa netteté est celle du fichier — la plateforme cesse d'arbitrer. Point dur déplacé sur le raccord : lumière, ombres, perspective, échelle, bord de détourage, et le piège de la passe img2img finale qui remettrait le modèle sur le fond. Aucune brique : les capacités plateforme sont upscale/bench/hands, aucun graphe de compositing ni de relighting. Premier client sérieux de l'importeur d'assets (E3). Hors parcours nominal : un nouvel utilisateur tape une scène, il n'importe pas un fond."
+      },
+      {
         "t": "Test commercial de l'idée pack",
         "d": "poster l'idée de mondes vendables à l'audience existante et regarder la réaction — coût nul, information décisive avant tout éditeur de packs"
       },

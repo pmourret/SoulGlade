@@ -296,6 +296,76 @@ try:
         leve = True
     verifie(leve, "cfg['bench'] sans min_sigma : refus explicite (invariant 4)")
 
+    # ------------------------------ [3ter] un genre absent de certaines images
+    # Dette E5 ouverte en IT-1 : « mains » n'est ecrit que quand DWPose trouve
+    # un poignet, donc ce genre arrive a n=3 quand les autres sont a n=5. Deux
+    # facons de mentir a partir de la, toutes deux verifiees ici : tirer le
+    # verdict global a « insuffisant » alors que trois genres tranchent, et
+    # comparer la moyenne de la variante a celle de la reference sur des seeds
+    # qui ne sont pas les memes.
+    print()
+    print("[3ter] un genre sous-echantillonne : "
+          "ni verdict global perdu, ni moyennes croisees")
+    with base.ouvrir() as cx:
+        base.bench_creer_run(cx, RUN_ID + "-mains", CID, "steps", "probe_scene",
+                             [1, 2, 3, 4, 5])
+        m_ref = base.bench_enregistrer_variante(cx, RUN_ID + "-mains", "reference",
+                                                "b-ref3", {}, est_reference=True)
+        m_up = base.bench_enregistrer_variante(cx, RUN_ID + "-mains", "steps=30",
+                                               "b-up3", {"axis": "steps", "value": 30})
+        m_flat = base.bench_enregistrer_variante(cx, RUN_ID + "-mains", "steps=10",
+                                                 "b-flat3", {"axis": "steps", "value": 10})
+        for seed, ref_i, up_i in zip((1, 2, 3, 4, 5),
+                                     (0.70, 0.71, 0.69, 0.70, 0.71),
+                                     (0.76, 0.77, 0.75, 0.76, 0.77)):
+            base.bench_enregistrer_score(cx, m_ref, seed, "identite", ref_i)
+            base.bench_enregistrer_score(cx, m_up, seed, "identite", up_i)
+            base.bench_enregistrer_score(cx, m_flat, seed, "identite", ref_i)
+        # mains : 3 seeds sur 5 des deux cotes pour steps=30 (main visible),
+        # et pour steps=10 des seeds DECALES — seul le 3 est commun.
+        for seed in (1, 2, 3):
+            base.bench_enregistrer_score(cx, m_ref, seed, "mains", 1.0)
+            base.bench_enregistrer_score(cx, m_up, seed, "mains", 1.0)
+        for seed, val in ((3, 1.0), (4, 0.0), (5, 0.0)):
+            base.bench_enregistrer_score(cx, m_flat, seed, "mains", val)
+        cx.commit()
+
+    reglage = {"min_seeds": 5, "min_sigma": 2,
+               "margin": {"identite": 0.02, "mains": 0.05}}
+    config_path.write_text(json.dumps({
+        "comfy_url": "http://127.0.0.1:8188", "base_gelee": "x.png",
+        "preset": {}, "formats": {}, "export_sizes": {},
+        "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
+        "export": {"enabled": False}, "bench": reglage,
+    }), encoding="utf-8")
+    v5 = bench.verdict_bench(CID, RUN_ID + "-mains")
+    g_up = v5["global"]["steps=30"]
+    verifie(g_up.startswith("meilleure sur tous les axes suivis"),
+            f"identite tranche a n=5, mains est a n=3 -> le global tranche quand meme ({g_up!r})")
+    verifie("mains" in g_up,
+            f"le genre ecarte est nomme dans le global, jamais tu ({g_up!r})")
+    verifie(v5["variantes"]["steps=30"]["genres"]["mains"]["verdict"] == "insuffisant",
+            "le genre lui-meme reste 'insuffisant' — c'est LUI qui est illisible")
+
+    # appariement : steps=10 n'a qu'un seed en commun avec la reference sur
+    # `mains`. Sans appariement on comparerait 0.333 (seeds 3,4,5) a 1.0
+    # (seeds 1,2,3) et on rendrait « degradee » sur deux images que la
+    # reference n'a jamais produites.
+    reglage["min_seeds"] = 1
+    config_path.write_text(json.dumps({
+        "comfy_url": "http://127.0.0.1:8188", "base_gelee": "x.png",
+        "preset": {}, "formats": {}, "export_sizes": {},
+        "qc": {"threshold_ok": 0.5, "threshold_watch": 0.3},
+        "export": {"enabled": False}, "bench": reglage,
+    }), encoding="utf-8")
+    v6 = bench.verdict_bench(CID, RUN_ID + "-mains")
+    mains_flat = v6["variantes"]["steps=10"]["genres"]["mains"]
+    verifie(mains_flat["n"] == 1,
+            f"mains n'est compare que sur les seeds communs (n={mains_flat['n']}, attendu 1)")
+    verifie(abs(mains_flat["delta"]) < 1e-9 and mains_flat["verdict"] == "stable",
+            f"delta sur le seul seed commun ({mains_flat['delta']:.3f}), "
+            "jamais 0.333 contre 1.0 sur des seeds differents")
+
     config_path.unlink()
     (OFM / "CHARACTERS" / CID).rmdir()
     with base.ouvrir() as cx:
@@ -376,8 +446,8 @@ try:
 finally:
     import shutil
     with base.ouvrir() as cx:
-        cx.execute("DELETE FROM bench_run WHERE id = ?", (RUN_ID,))
-        cx.execute("DELETE FROM bench_run WHERE id = ?", (RUN_ID + "-verdict",))
+        for suffixe in ("", "-verdict", "-bruit", "-mains"):
+            cx.execute("DELETE FROM bench_run WHERE id = ?", (RUN_ID + suffixe,))
         cx.commit()
     shutil.rmtree(OFM / "CHARACTERS" / CID, ignore_errors=True)
 

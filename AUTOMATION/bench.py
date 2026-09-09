@@ -249,6 +249,8 @@ def _erreur_type(s, ref):
 
 def _stats(valeurs):
     n = len(valeurs)
+    if not n:
+        return {"mean": 0.0, "std": 0.0, "min": None, "max": None, "n": 0}
     mean = sum(valeurs) / n
     var = sum((v - mean) ** 2 for v in valeurs) / n if n > 1 else 0.0
     return {"mean": mean, "std": var ** 0.5, "min": min(valeurs), "max": max(valeurs), "n": n}
@@ -262,6 +264,13 @@ def verdict_bench(character_id, bench_id):
 
     AUCUN SEUIL EN DUR : min_seeds/margin viennent de cfg["bench"]
     (invariant 4) — absente, leve BenchConfigMissingError plutot que deviner.
+
+    UN GENRE, UN VERDICT. Chaque genre est compare sur les seeds que la
+    variante et la reference ont TOUTES DEUX mesures, et un genre qui n'en
+    a pas assez sort du verdict global au lieu de le tirer a
+    « insuffisant » — il y est alors nomme entre parentheses. Voir les deux
+    commentaires du corps : c'est ce que le banc doit a `mains`, seul genre
+    qui manque a l'appel sur certaines images.
     """
     cfg = lb.load_config(character_id)
     reglage = _bench_config(cfg)
@@ -275,22 +284,33 @@ def verdict_bench(character_id, bench_id):
     for r in rows:
         v = par_variante.setdefault(r["label"], {"est_reference": bool(r["est_reference"]),
                                                   "genres": {}})
-        v["genres"].setdefault(r["genre"], []).append(r["valeur"])
+        v["genres"].setdefault(r["genre"], {})[r["seed"]] = r["valeur"]
 
     reference = next((v for v in par_variante.values() if v["est_reference"]), None)
-    stats_reference = ({g: _stats(vals) for g, vals in reference["genres"].items()}
-                       if reference else {})
+    genres_reference = reference["genres"] if reference else {}
 
     variantes = {}
     for label, v in par_variante.items():
-        stats = {g: _stats(vals) for g, vals in v["genres"].items()}
         par_genre = {}
-        for genre, s in stats.items():
-            ref_s = stats_reference.get(genre)
-            if v["est_reference"] or ref_s is None:
-                par_genre[genre] = {**s, "delta": 0.0, "verdict": "reference"}
+        for genre, valeurs in v["genres"].items():
+            ref_valeurs = genres_reference.get(genre)
+            if v["est_reference"] or ref_valeurs is None:
+                par_genre[genre] = {**_stats(list(valeurs.values())),
+                                    "delta": 0.0, "verdict": "reference"}
                 continue
-            if s["n"] < min_seeds or ref_s["n"] < min_seeds:
+            # APPARIEMENT PAR SEED. Un genre n'est compare que sur les seeds
+            # que la variante ET la reference ont mesures. Sans effet sur un
+            # genre toujours ecrit (identite, nettete... : l'intersection est
+            # le tout), decisif sur `mains` : ce genre n'est ecrit que quand
+            # DWPose trouve un poignet (runner/sortie.py:mesurer_mains rend
+            # None sinon), donc son echantillon se choisit lui-meme et n'est
+            # pas le meme des deux cotes. Comparer une moyenne sur 3 seeds a
+            # une moyenne sur 5 autres, ce n'est plus le banc — c'est deux
+            # scenes differentes.
+            communs = sorted(set(valeurs) & set(ref_valeurs))
+            s = _stats([valeurs[k] for k in communs])
+            ref_s = _stats([ref_valeurs[k] for k in communs])
+            if s["n"] < min_seeds:
                 verdict = "insuffisant"
             else:
                 m = margin.get(genre, margin.get("_defaut", 0))
@@ -318,8 +338,17 @@ def verdict_bench(character_id, bench_id):
     for label, v in variantes.items():
         if v["est_reference"]:
             continue
-        verdicts = {g["verdict"] for g in v["genres"].values()}
-        if "insuffisant" in verdicts:
+        # UN genre sous-echantillonne ne rend pas la variante illisible : il
+        # rend CE genre illisible. Dette E5 ouverte en IT-1 — « mains » a n=3
+        # tirait le global a « insuffisant » quand trois genres tranchaient a
+        # n=5, et le banc taisait ce qu'il savait. Les genres indecidables
+        # sortent du calcul et sont nommes dans le verdict : les taire dirait
+        # « meilleure sur tous les axes suivis » d'une variante dont les mains
+        # n'ont pas ete jugees, soit l'erreur inverse.
+        ignores = sorted(g for g, d in v["genres"].items()
+                         if d["verdict"] == "insuffisant")
+        verdicts = {d["verdict"] for d in v["genres"].values()} - {"insuffisant"}
+        if not verdicts:
             global_verdict[label] = "insuffisant"
         elif verdicts <= {"amelioree", "stable"} and "amelioree" in verdicts:
             global_verdict[label] = "meilleure sur tous les axes suivis"
@@ -329,5 +358,8 @@ def verdict_bench(character_id, bench_id):
             global_verdict[label] = "stable"
         else:
             global_verdict[label] = "mixte"
+        if ignores and global_verdict[label] != "insuffisant":
+            global_verdict[label] += (f" (hors {', '.join(ignores)} : "
+                                      f"moins de {min_seeds} seeds apparies)")
 
     return {"variantes": variantes, "global": global_verdict}
