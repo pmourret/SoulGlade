@@ -128,6 +128,20 @@ export const SECTIONS: SettingSection[] = [
         quoi: "Re-rend le visage en grand puis le recolle. C'est ce qui sauve les yeux et la bouche sur les plans larges, où le visage ne fait que quelques dizaines de pixels.",
       },
       {
+        id: 'handdetailer', cle: 'handdetailer', dest: 'preset', type: 'bool',
+        label: 'Reprise des mains',
+        quoi: "Re-rend chaque main en grand puis la recolle, comme la reprise du visage. Mesuré le 09/09 sur 30 seeds appariés : 96 % de mains ratées sans, 36 % avec, et aucune seed dégradée.",
+        cout: "Environ 35 secondes de plus par image, la moitié du temps de production. Rien d'autre ne bouge — identité, netteté et texture sont inchangées.",
+      },
+      {
+        id: 'hdenoise', cle: 'handdetailer_denoise', dest: 'preset', type: 'curseur',
+        min: 0.1, max: 0.8, pas: 0.05,
+        label: 'Ampleur de la reprise des mains', bas: 'retouche discrète', haut: 'redessine la main',
+        quoi: "Jusqu'où la reprise a le droit de redessiner la main.",
+        cout: "Jamais mesuré : 0.5 est une valeur de départ posée à la main, pas un réglage trouvé.",
+        lieA: 'handdetailer',
+      },
+      {
         id: 'upscale', cle: 'upscale_2k', dest: 'preset', type: 'bool',
         label: 'Passage en 2K',
         quoi: "Agrandit puis redescend en 2K. Mesuré : +31 % de netteté, 4 secondes de plus, et quasiment rien de perdu sur l'identité. Il y a peu de raisons de le couper.",
@@ -231,12 +245,18 @@ SECTIONS.forEach((section) => section.items.forEach((item) => (BY_ID[item.id] = 
    exactly what the preset changes, and can retouch it right after. */
 export const PRESETS: Record<string, Record<string, number | boolean>> = {
   realisme: {}, // the measured values
-  rapide: { refiner: false },
+  /* `handdetailer` est coupé par les deux presets rapides : c'est le réglage le
+     plus cher du panneau (+35 s, la moitié du temps de production), et un
+     preset nommé « Rapide » qui le laisserait allumé mentirait sur son nom. */
+  rapide: { refiner: false, handdetailer: false },
   /* guidance 3.0 and not 3.5: the panel's own explanation says « au-delà de 3,
      ça se voit », and a preset that contradicts the text displayed next to it
      cannot be explained. Raising the guidance speeds nothing up anyway — the
      number of passes is what costs — it only holds the scene here. */
-  brut: { refiner: false, facedetailer: false, grain_export: false, guidance: 3.0 },
+  brut: {
+    refiner: false, facedetailer: false, handdetailer: false, grain_export: false,
+    guidance: 3.0,
+  },
 }
 
 export const fmtVal = (item: Setting, value: number | string): string =>
