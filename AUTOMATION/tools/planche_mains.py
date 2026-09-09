@@ -36,6 +36,7 @@ sys.path.insert(0, str(AUTOMATION))
 
 from PIL import Image, ImageDraw, ImageFont   # noqa: E402
 
+import base                                   # noqa: E402
 import env_config                             # noqa: E402
 import qc_mains                               # noqa: E402
 
@@ -59,6 +60,41 @@ def variantes(racine):
     if not sous:
         return {racine.name: sorted(racine.glob("*.png"))}
     return {d.name: sorted(d.rglob("*.png")) for d in sous}
+
+
+def variantes_du_banc(racine):
+    """Idem, mais la liste vient de la BASE : une image par (variante, seed),
+    dans l'ordre des seeds, et rien d'autre.
+
+    Pourquoi ce mode existe (09/09) : le poste s'est mis en veille pendant le
+    banc mains, le processus a repris tout seul au reveil et a tourne en
+    parallele de la reprise lancee a la main. Resultat sur le disque, 58
+    images pour 30 seeds — mais la base, elle, etait juste : `bench_score` est
+    unique par (variante, seed, genre), et elle cite un seul fichier par seed.
+    Balayer le dossier aurait compte deux fois la moitie d'une variante et
+    fausse le taux ; la base sait ce qui appartient au banc.
+
+    Effet de bord utile : les deux planches sortent dans le meme ordre de
+    seeds, donc la tuile n de l'une et la tuile n de l'autre sont la meme
+    image a un reglage pres.
+    """
+    with base.ouvrir() as cx:
+        lignes = base.bench_fichiers(cx, racine.name)
+    if not lignes:
+        raise SystemExit(
+            f"aucune image en base pour le banc {racine.name!r}. Sans --banc, "
+            "les images sont prises dans le dossier.")
+    par_variante, introuvables = {}, []
+    for r in lignes:
+        trouve = next((p for p in (racine / r["label"]).rglob(r["fichier"])), None)
+        if trouve is None:
+            introuvables.append(f"{r['label']}/{r['fichier']}")
+            continue
+        par_variante.setdefault(r["label"], []).append(trouve)
+    if introuvables:
+        print(f"  !! {len(introuvables)} images citees en base et absentes du "
+              f"disque : {introuvables[:3]}")
+    return par_variante
 
 
 def crops(images, url):
@@ -142,6 +178,9 @@ def main():
     ap.add_argument("dossier", help="dossier de banc, ou dossier d'images")
     ap.add_argument("--url", default=None, help="ComfyUI (defaut : .env)")
     ap.add_argument("--out", default=None, help="ou ecrire (defaut : le dossier)")
+    ap.add_argument("--banc", action="store_true",
+                    help="prendre la liste des images dans la base plutot que "
+                         "dans le dossier — le nom du dossier est le bench_id")
     ap.add_argument("--tuile", type=int, default=320)
     ap.add_argument("--colonnes", type=int, default=6)
     ap.add_argument("--ko", default=None,
@@ -167,7 +206,8 @@ def main():
 
     url = args.url or env_config.comfy_url()
     index, numero = {"dossier": str(racine), "mains": []}, 0
-    for nom, images in variantes(racine).items():
+    sources = variantes_du_banc(racine) if args.banc else variantes(racine)
+    for nom, images in sources.items():
         print(f"\n[{nom}] {len(images)} images")
         tuiles = []
         for img, cote, crop, complete in crops(images, url):

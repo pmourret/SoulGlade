@@ -258,6 +258,19 @@ def bench_creer_run(cx, run_id, character_id, axis, scene, seeds):
          datetime.now().isoformat(timespec="seconds"), json.dumps(list(seeds))))
 
 
+def bench_fichiers(cx, bench_run_id):
+    """(label, seed, fichier) des images d'un banc, une par (variante, seed).
+    C'est la base qui dit ce qui APPARTIENT au banc, pas le contenu du dossier :
+    une reprise, ou deux processus lances sur le meme banc, y laissent des
+    images de plus qui ne sont citees par aucun score."""
+    return cx.execute(
+        "SELECT DISTINCT v.label, s.seed, s.fichier "
+        "FROM bench_variant v JOIN bench_score s ON s.variant_id = v.id "
+        "WHERE v.bench_run_id = ? AND s.fichier IS NOT NULL "
+        "ORDER BY v.est_reference DESC, v.label, s.seed",
+        (bench_run_id,)).fetchall()
+
+
 def bench_run_seeds(cx, bench_run_id):
     """Les seeds enregistrees a la creation d'un banc, ou None si ce banc
     n'existe pas. Sert a la reprise : c'est le run qui fait foi, jamais
