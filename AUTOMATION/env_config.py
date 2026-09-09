@@ -103,6 +103,17 @@ def comfy_url():
     return _get("COMFY_URL", requis=False) or "http://127.0.0.1:8188"
 
 
+def log_level():
+    """Verbosity of the log file and of the console (AUTOMATION/logs.py).
+
+    Optional, `INFO` by default. Machine setting rather than character setting:
+    it says how loud THIS install is, not how an image is produced. Set it to
+    `DEBUG` to reproduce a problem, put it back afterwards — DEBUG also carries
+    what the libraries around us have to say (urllib, PIL).
+    """
+    return (_get("SOULGLADE_LOG_LEVEL", requis=False) or "INFO").upper()
+
+
 def _diagnostic():
     """Resout et affiche la config machine, sans rien supposer de plus."""
     print("=" * 72)

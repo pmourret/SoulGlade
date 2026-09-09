@@ -2,13 +2,33 @@
 (CLAUDE.md §8.2) : appelee par la CLI et par la web UI, jamais dupliquee.
 """
 import csv
+import logging
 import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Callable, NamedTuple
 
+import logs
+
 from . import OFM, COMFY, COMFY_OUTPUT, load_json, log
 from .comfy import WorkflowRunner
+
+LOG = logging.getLogger("runner")
+
+
+def _best_effort(quoi, e):
+    """Un etage OPTIONNEL a echoue : le lot continue, le journal le dit.
+
+    La quatrieme famille de la classification (AUTOMATION/logs.py) : ni un
+    refus, ni un bug — un choix de conception. L'export, le grain, les mesures,
+    l'ecriture en base sont tous montes pour ne jamais faire echouer un batch,
+    et l'image est deja produite quand ils echouent. Donc WARNING (pas INFO :
+    quelque chose n'a pas eu lieu) et jamais de pile.
+
+    Neuf sites l'appellent, tous avec le meme texte a un mot pres avant le
+    09/09/2026 — et tous a INFO, indistinguables d'une ligne de progression.
+    """
+    LOG.warning(f"   {quoi} : {type(e).__name__} — {e}")
 
 
 class Sink(NamedTuple):
@@ -87,7 +107,7 @@ def sort_and_export(src, job, verdict, score, cfg, batch_id, character_id, sink=
                 im = im.resize((ew, eh), Image.LANCZOS)
             im.save(export_path, quality=cfg["export"]["quality"], subsampling=0)
         except Exception as e:                       # export non bloquant
-            log(f"   export impossible : {e}")
+            _best_effort("export impossible", e)
             export_path = ""
     return dest, export_path
 
@@ -129,7 +149,7 @@ def ecrire_en_base(rows, character_id):
                                            float(d["score_identite"]), d["date"])
             cx.commit()
     except Exception as e:
-        log(f"   base : ecriture impossible — {type(e).__name__} : {e}")
+        _best_effort("base : ecriture impossible", e)
 
 
 # Colonnes du journal NSFW (PROD/<CID>/_NSFW/journal_nsfw.csv). Pas de colonne
@@ -176,7 +196,7 @@ def ecrire_nsfw_en_base(rows, character_id):
                                            float(d["score_identite"]), d["date"])
             cx.commit()
     except Exception as e:
-        log(f"   base : ecriture NSFW impossible — {type(e).__name__} : {e}")
+        _best_effort("base : ecriture NSFW impossible", e)
 
 
 def append_log(rows, character_id):
@@ -206,7 +226,7 @@ def appliquer_grain(path, cfg, seed=None):
         import grain
         return grain.appliquer(path, seed=seed)
     except Exception as e:
-        log(f"   grain impossible : {type(e).__name__} — {e}")
+        _best_effort("grain impossible", e)
         return None
 
 
@@ -237,7 +257,7 @@ def mesurer_realisme(path, bbox):
         import qc_realisme
         return qc_realisme.mesure(path, bbox)
     except Exception as e:
-        log(f"   mesure de realisme impossible : {type(e).__name__} — {e}")
+        _best_effort("mesure de realisme impossible", e)
         return None
 
 
@@ -266,7 +286,7 @@ def mesurer_mains(path, cfg):
                             threshold_watch=seuils.get("threshold_watch", 0.7))
         return {"mains": r["score"]} if r["score"] is not None else None
     except Exception as e:
-        log(f"   mesure des mains impossible : {type(e).__name__} — {e}")
+        _best_effort("mesure des mains impossible", e)
         return None
 
 
@@ -298,7 +318,7 @@ def appliquer_expression(path, job, cfg, character_id, checker=None, avant=None)
             mesurer=lambda p: checker.mesure(p)["score"],
             avant=avant, budget=budget, journal=lambda m: log("   " + m))
     except Exception as e:
-        log(f"   expression impossible : {type(e).__name__} — {e}")
+        _best_effort("expression impossible", e)
     return {}, avant
 
 
@@ -311,7 +331,7 @@ def ranger_mesures(nom, identite, reel, character_id, embedding=None,
                     identite_apres_expression=apres_expression,
                     expression=expression or None, **(reel or {}))
     except Exception as e:
-        log(f"   enregistrement des mesures impossible : {type(e).__name__} — {e}")
+        _best_effort("enregistrement des mesures impossible", e)
     try:
         import base
         with base.ouvrir() as cx:
@@ -327,7 +347,7 @@ def ranger_mesures(nom, identite, reel, character_id, embedding=None,
             base.enregistrer_embedding(cx, iid, embedding)
             cx.commit()
     except Exception as e:
-        log(f"   base : mesures non enregistrees — {type(e).__name__} : {e}")
+        _best_effort("base : mesures non enregistrees", e)
 
 
 def make_checker(cfg):
@@ -431,7 +451,7 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
                             try:
                                 after(job, verdict, dest)
                             except Exception as e:
-                                log(f"   enchainement impossible : {type(e).__name__} — {e}")
+                                _best_effort("enchainement impossible", e)
                         result.update(verdict=verdict, score=score, fichier=dest.name,
                                       export=Path(export).name if export else "")
                         stats[verdict] = stats.get(verdict, 0) + 1
@@ -458,7 +478,13 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
             # de la 1re et ne compte pas la perdue — approximation deja
             # presente, pas creee ici.
             result["error"] = f"{type(e).__name__} — {e}"
-            log(f"   job perdu : {result['error']}")
+            # Classification (AUTOMATION/logs.py) : un job perdu est un BUG
+            # jusqu'a preuve du contraire, donc la pile complete part au
+            # fichier — c'est la seule chose qui expliquera, jeudi, l'image
+            # manquante de mardi. Le texte a l'ecran, lui, ne bouge pas :
+            # `result["error"]` reste `Type — message`, ce que le front affiche
+            # et ce que le journal CSV enregistre.
+            logs.report(LOG, e, f"   job perdu ({job['scene']})")
         if result["verdict"] == "ERREUR":
             stats["ERREUR"] += 1
         on_event("done", index=i, total=len(jobs), job=job, result=result)

@@ -25,6 +25,11 @@
 *.db-wal
 *.db-shm
 
+# Journal d'execution (AUTOMATION/logs.py) : rotation sur place, jamais
+# commite — c'est une trace de ce poste, et elle peut porter des noms de
+# fichiers de personnage.
+/LOGS/
+
 # Configuration machine (chemin d'installation ComfyUI) — propre à ce poste,
 # jamais commitée (ADR-0008). Le modèle documenté reste .env.example.
 /.env

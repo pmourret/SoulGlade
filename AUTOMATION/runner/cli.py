@@ -8,6 +8,7 @@ import argparse
 from datetime import datetime
 
 import env_config
+import logs
 
 from . import load_json, log, OFM
 from .prompt import build_jobs, config_path, scenes_path
@@ -32,6 +33,11 @@ def main():
     ap.add_argument("--no-qc", action="store_true", help="pas de score d'identite")
     ap.add_argument("--dry-run", action="store_true", help="affiche le plan, ne lance rien")
     args = ap.parse_args()
+
+    # Le point d'entree installe le journal ; `log()` n'ecrit nulle part sans
+    # lui (AUTOMATION/logs.py). Ici la console garde exactement le format
+    # qu'elle avait, et le fichier prend le meme lot en plus verbeux.
+    logs.setup()
 
     character_id = args.character
     config_file = args.config or str(config_path(character_id))

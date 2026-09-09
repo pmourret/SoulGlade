@@ -14,6 +14,7 @@ Regles de conduite :
     docstring.
 """
 import json
+import logging
 import subprocess
 import sys
 import time
@@ -177,8 +178,19 @@ def start(url=DEFAULT_URL):
     return subprocess.Popen(cmd, **kwargs)
 
 
+_LOG = logging.getLogger("comfy")
+
+
 def _say(msg):
-    print(msg, flush=True)          # flush : sinon rien ne s'affiche pendant l'attente
+    """Sortie par defaut des fonctions de ce module, injectable par `log=`.
+
+    Un journal depuis le 09/09/2026, plus un print : ces lignes racontent un
+    demarrage qui peut prendre une minute et echouer — exactement ce qu'on veut
+    pouvoir relire apres coup. Le handler console affiche toujours au fil de
+    l'eau (il vide son tampon a chaque enregistrement, comme le `flush=True`
+    d'avant), donc l'attente reste lisible en direct.
+    """
+    _LOG.info(msg)
 
 
 def ensure(url=DEFAULT_URL, timeout=240, log=_say):
@@ -265,6 +277,9 @@ def stop(timeout=30):
 
 if __name__ == "__main__":
     import argparse
+
+    import logs
+    logs.setup()                     # sinon `_say` n'ecrit nulle part (logs.py)
     ap = argparse.ArgumentParser(description="Demarre ComfyUI s'il ne tourne pas deja")
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--timeout", type=int, default=240)

@@ -18,8 +18,8 @@ Ce fichier reexporte l'API complete : `import runner as lb` puis
 exactement comme avant que ce module devienne un paquet.
 """
 import json
+import logging
 import sys
-from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent      # AUTOMATION/runner/
@@ -39,8 +39,24 @@ def load_json(path):
         return json.load(f)
 
 
+LOG = logging.getLogger("runner")
+
+
 def log(msg):
-    print(f"[{datetime.now():%H:%M:%S}] {msg}", flush=True)
+    """The runner's single voice — 39 call sites, unchanged signature.
+
+    A `print` until 09/09/2026. Now a log record, so the same 39 messages also
+    reach LOGS/soulglade.log with their date and level. The console still shows
+    `[14:32:07] message`, byte for byte what it printed before: the format
+    lives in the console handler of `logs.setup()`.
+
+    Nothing here calls `setup()`: an entry point does (runner/cli.py for the
+    CLI, web/app.py for the studio). Without it these messages are dropped,
+    exactly as the standard library drops any record on an unconfigured logger
+    — never a LOGS/ directory created just because a test imported this
+    package.
+    """
+    LOG.info(msg)
 
 
 from .prompt import *   # noqa: E402,F401,F403

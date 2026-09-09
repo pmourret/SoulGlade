@@ -24,12 +24,16 @@ The level-3 chaining hook is here too: it is not a rule (it decides nothing) but
 a stage of the run, handed to `execute_jobs` as `after=`.
 """
 import asyncio
+import logging
 from datetime import datetime
 
+import logs
 import nsfw_batch
 import runner as lb
 import shared_state as ss
 from .creative import is_edit_tier
+
+LOG = logging.getLogger("batch")
 
 
 def nsfw_chaining_hook(configuration, use_qc, batch_id, character):
@@ -127,7 +131,13 @@ def _launch(work):
             ss.STATE["stats"] = stats
             ss.push_log("termine — " + " | ".join(f"{k} {v}" for k, v in stats.items() if v))
         except Exception as e:                       # surface the error on screen
-            ss.push_log(f"ERREUR : {type(e).__name__} — {e}")
+            # Le lot entier est tombe — pas une image (execute_jobs encaisse
+            # celle-la). C'est le dernier filet avant le silence : la pile part
+            # au fichier via `logs.report`, le message reste identique a
+            # l'ecran et dans `last_error`, que le chrome affiche meme apres
+            # avoir quitte l'ecran Creer.
+            logs.report(LOG, e, "lot interrompu")
+            ss.push_log(f"ERREUR : {type(e).__name__} — {e}", journal=False)
             ss.STATE["last_error"] = {
                 "at": datetime.now().strftime("%H:%M:%S"),
                 "msg": f"{type(e).__name__} — {e}"}

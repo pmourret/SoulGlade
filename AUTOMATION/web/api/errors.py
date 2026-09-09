@@ -15,6 +15,11 @@ Mapping, one to one with the aiohttp middleware:
       TypeError              -> 400 « requête invalide : ... »
     anything else            -> 500 {ok: false, erreur: "<Type> : <msg>"}
 
+Les statuts n'ont pas bougé le 09/09/2026 quand le journal est arrivé : ce que
+`logs.report` décide, c'est le NIVEAU et la PILE, jamais le code de retour. Un
+refus part en WARNING sans pile, un bug en ERROR avec la sienne — et l'écran
+reçoit dans les deux cas le même corps qu'avant.
+
 One deliberate difference, noted in the migration report: an HTTPException
 raised WITHOUT the studio's body — Starlette's own 404 on an unrouted path, for
 instance — used to come out as plain text under aiohttp. It is wrapped into
@@ -22,13 +27,17 @@ instance — used to come out as plain text under aiohttp. It is wrapped into
 holds on those too. Nothing in the frontend read those bodies.
 """
 import json
+import logging
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+import logs
 import shared_state as ss
+
+LOG = logging.getLogger("api")
 
 
 def error_body(message):
@@ -58,6 +67,12 @@ async def _http_exception(request: Request, exc: StarletteHTTPException):
     # carries the studio's shape — hand it over untouched.
     body = detail if isinstance(detail, dict) and "ok" in detail \
         else error_body(detail if isinstance(detail, str) else "erreur")
+    # Le chemin de refus le PLUS emprunte du serveur — `ss.bad_request()` passe
+    # par ici — et il n'ecrivait nulle part avant le 09/09/2026 : un ecran
+    # disait « non », et il ne restait rien pour savoir a quelle requete. Un
+    # refus est un WARNING sans pile (famille 1, AUTOMATION/logs.py) ; l'ecran,
+    # lui, recoit exactement le meme corps qu'avant.
+    LOG.warning(f"{request.url.path} : {exc.status_code} — {body.get('erreur')}")
     return JSONResponse(body, status_code=exc.status_code,
                         headers=getattr(exc, "headers", None))
 
@@ -75,8 +90,14 @@ async def _validation_error(request: Request, exc: RequestValidationError):
     errors = exc.errors()
     if any(e.get("type") == "json_invalid" for e in errors):
         return JSONResponse(error_body("corps JSON invalide"), status_code=400)
-    ss.push_log(f"{request.url.path} : corps refusé — {_readable(errors)}")
-    return JSONResponse(error_body(f"requête invalide : {_readable(errors)}"),
+    # Un corps refusé n'est pas un incident : WARNING sans pile, comme tout
+    # refus (famille 1 de la classification, AUTOMATION/logs.py). Pas de
+    # `logs.report` ici — il n'y a pas d'exception métier à classer, seulement
+    # une liste de champs invalides que Pydantic a déjà nommés.
+    raison = _readable(errors)
+    LOG.warning(f"{request.url.path} : corps refusé — {raison}")
+    ss.push_log(f"{request.url.path} : corps refusé — {raison}", journal=False)
+    return JSONResponse(error_body(f"requête invalide : {raison}"),
                         status_code=400)
 
 
@@ -88,7 +109,12 @@ async def _bad_value(request: Request, exc: Exception):
     FaceInPromptError... The schemas cover the shape of a payload, not what the
     business layer does with it.
     """
-    ss.push_log(f"{request.url.path} : {type(exc).__name__} — {exc}")
+    # 400 dans les trois cas, comme avant — mais pas le même journal. Une
+    # `ValueError` est un refus (WARNING, pas de pile) ; un `KeyError` ou un
+    # `TypeError` ont beau se répondre en 400, ils ont la forme d'un bug et
+    # `logs.report` leur donne leur pile. C'est exactement ce qui manquait :
+    # `KeyError — 'preset'` sur un écran, et rien nulle part pour dire d'où.
+    ss.push_log(logs.report(LOG, exc, request.url.path), journal=False)
     return JSONResponse(error_body(f"requête invalide : {exc}"), status_code=400)
 
 
@@ -97,7 +123,15 @@ async def _json_decode_error(request: Request, exc: json.JSONDecodeError):
 
 
 async def _unhandled(request: Request, exc: Exception):
-    ss.push_log(f"{request.url.path} : {type(exc).__name__} — {exc}")
+    """Le fourre-tout : par construction, ce qui arrive ici est imprévu.
+
+    Avant le 09/09/2026 il n'en restait qu'une ligne dans l'anneau d'écran, et
+    la pile partait sur la console d'uvicorn — perdue à la fermeture de la
+    fenêtre. `logs.report` la range dans LOGS/soulglade.log, sauf pour un
+    `RuntimeError` ou une `OSError`, qui sont un problème d'environnement
+    (ComfyUI éteint, disque plein) et dont la pile n'apprend rien.
+    """
+    ss.push_log(logs.report(LOG, exc, request.url.path), journal=False)
     return JSONResponse(error_body(f"{type(exc).__name__} : {exc}"),
                         status_code=500)
 

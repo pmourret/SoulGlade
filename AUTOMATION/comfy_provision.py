@@ -18,6 +18,7 @@ while ComfyUI is already running (a custom node change only takes effect on
 the next restart anyway, so there is nothing to gain from checking sooner).
 """
 import json
+import logging
 import subprocess
 import sys
 import urllib.error
@@ -40,8 +41,12 @@ class ProvisionError(RuntimeError):
     """A step could not complete and provisioning must stop here."""
 
 
+_LOG = logging.getLogger("provision")
+
+
 def _say(msg):
-    print(msg, flush=True)
+    """Sortie par defaut des fonctions de ce module, injectable par `log=`."""
+    _LOG.info(msg)
 
 
 def load_manifest(path=MANIFEST_PATH):
@@ -256,6 +261,8 @@ def ensure_all(log=_say, root=None, manifest=None):
 
 
 def _main(argv):
+    import logs
+    logs.setup()                     # sinon `_say` n'ecrit nulle part (logs.py)
     manifest = load_manifest()
     root = env_config.comfyui_root()
     if "--check" in argv:

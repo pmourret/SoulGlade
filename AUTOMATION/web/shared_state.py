@@ -24,6 +24,7 @@ fonctions de ce module refusent elles-memes (voir `character`, `space_id`,
 """
 import asyncio
 import json
+import logging
 import re
 import sys
 import threading
@@ -113,9 +114,29 @@ def checker_partage(configuration):
         return CHECKER
 
 
-def push_log(msg):
+LOG = logging.getLogger("studio")
+
+
+def push_log(msg, journal=True):
+    """Le journal de l'UTILISATEUR : anneau de 200 lignes, affiche a l'ecran.
+
+    Depuis le 09/09/2026 le meme message part aussi dans LOGS/soulglade.log
+    (AUTOMATION/logs.py) : l'anneau raconte le lot en cours, le fichier garde
+    ce qui s'est passe hier. Les 64 appels existants n'ont pas bouge.
+
+    L'anneau reste la source de l'ecran : lui seul est horodate a la seconde et
+    borne a 200 lignes, ce que /api/state renvoie tel quel au front.
+
+    `journal=False` : ecrire a l'ecran SANS reecrire au fichier. Un seul cas,
+    et il ne se devine pas — celui qui vient de passer par `logs.report()` (les
+    handlers d'api/errors.py, le superviseur de lot). Le fichier a deja la
+    ligne, avec son niveau et sa pile ; la repeter en INFO ne ferait que
+    dedoubler chaque erreur dans le journal.
+    """
     STATE["log"].append(f"{datetime.now():%H:%M:%S} · {msg}")
     del STATE["log"][:-200]
+    if journal:
+        LOG.info(msg)
 
 
 # ------------------------------------------------------------------ ressources

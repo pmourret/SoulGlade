@@ -41,6 +41,7 @@ preview), qui ne connait pas fastapi. Sens unique : routers -> services ->
 runner. Voir api/services/__init__.py.
 """
 import argparse
+import logging
 import os
 import socket
 import sys
@@ -56,9 +57,12 @@ sys.path.insert(0, str(AUTOMATION))
 
 import comfy_server  # noqa: E402
 import env_config  # noqa: E402
+import logs  # noqa: E402
 import shared_state as ss  # noqa: E402
 from api import security  # noqa: E402
 from api.main import app  # noqa: E402
+
+LOG = logging.getLogger("app")
 
 
 def _port_libre(port, host="127.0.0.1"):
@@ -87,8 +91,8 @@ def reclaim_port(port):
     try:
         import psutil
     except ImportError:
-        print("!! port occupe et psutil absent : demarrage tel quel "
-              "(uvicorn dira si le port est pris).", flush=True)
+        LOG.warning("!! port occupe et psutil absent : demarrage tel quel "
+                    "(uvicorn dira si le port est pris).")
         return
 
     moi = os.getpid()
@@ -106,8 +110,8 @@ def reclaim_port(port):
             continue
         if not ecoute:
             continue
-        print(f"tableau de bord fantome sur le port {port} (PID {p.info['pid']}) "
-              f"-> arret, on repart propre.", flush=True)
+        LOG.warning(f"tableau de bord fantome sur le port {port} "
+                    f"(PID {p.info['pid']}) -> arret, on repart propre.")
         p.terminate()
         try:
             p.wait(timeout=8)
@@ -116,17 +120,17 @@ def reclaim_port(port):
             p.wait(timeout=3)
         break
     else:
-        print(f"!! port {port} occupe, mais par aucun tableau de bord "
-              f"identifiable (service tiers ou socket orphelin) : on n'y touche "
-              f"pas, uvicorn rendra son message.", flush=True)
+        LOG.warning(f"!! port {port} occupe, mais par aucun tableau de bord "
+                    f"identifiable (service tiers ou socket orphelin) : on n'y "
+                    f"touche pas, uvicorn rendra son message.")
         return
 
     for _ in range(24):                  # laisser le socket se liberer (Windows)
         if _port_libre(port):
             return
         time.sleep(0.25)
-    print(f"!! le port {port} est toujours occupe apres l'arret du fantome.",
-          flush=True)
+    LOG.warning(f"!! le port {port} est toujours occupe apres l'arret du "
+                f"fantome.")
 
 
 def main():
@@ -139,6 +143,11 @@ def main():
                     help="ne pas ouvrir le navigateur")
     args = ap.parse_args()
 
+    # Le journal AVANT tout le reste : reclaim_port tue un process et le
+    # demarrage de ComfyUI peut echouer — deux choses qu'on veut pouvoir
+    # relire demain, pas seulement voir passer dans une console fermee depuis.
+    logs.setup()
+
     # Repartir sur du propre : un tableau de bord fantome sur le meme port
     # (run precedent mal ferme) est tue avant tout le reste. Ne touche jamais
     # ComfyUI ni un process tiers.
@@ -150,18 +159,19 @@ def main():
         try:
             comfy_server.ensure(env_config.comfy_url())
         except Exception as e:
-            print(f"!! ComfyUI n'a pas pu demarrer : {e}")
-            print("   Le tableau de bord s'ouvre quand meme (production indisponible).")
-            print("   Relancer ComfyUI a la main, l'ecran se debloque tout seul.")
+            logs.report(LOG, e, "ComfyUI n'a pas pu demarrer")
+            LOG.warning("   Le tableau de bord s'ouvre quand meme (production "
+                        "indisponible). Relancer ComfyUI a la main, l'ecran se "
+                        "debloque tout seul.")
 
     retirees = ss.purger_vignettes()
     if retirees:
-        print(f"{retirees} vignette(s) orpheline(s) retiree(s)", flush=True)
+        LOG.info(f"{retirees} vignette(s) orpheline(s) retiree(s)")
 
     if args.host != "127.0.0.1":
         security.open_to_network()  # leve les gardes Host/Origin : choix explicite
-        print("!! expose sur le reseau local, sans authentification. "
-              "A n'utiliser que sur un reseau de confiance.", flush=True)
+        LOG.warning("!! expose sur le reseau local, sans authentification. "
+                    "A n'utiliser que sur un reseau de confiance.")
     url = f"http://{'127.0.0.1' if args.host == '0.0.0.0' else args.host}:{args.port}"
     print(f"Tableau de bord  ->  {url}", flush=True)
     print(f"Documentation d'API  ->  {url}/docs", flush=True)
@@ -175,8 +185,13 @@ def main():
         # aussi silencieuse qu'avec l'ancien `run_app(..., print=None)` : le journal
         # utile est celui du studio (STATE["log"]), pas une ligne par requete —
         # le front interroge /api/state toutes les 1,5 s.
+        # `log_config=None` : uvicorn ne touche pas au logging, donc ses propres
+        # loggers remontent dans les notres (logs.setup configure la RACINE) et
+        # la pile d'une exception ASGI finit dans LOGS/soulglade.log au lieu de
+        # mourir avec la console. `log_level="warning"` garde ses lignes de
+        # demarrage muettes, exactement comme avant.
         uvicorn.run(app, host=args.host, port=args.port, log_level="warning",
-                    access_log=False)
+                    access_log=False, log_config=None)
     except OSError as e:
         # reclaim_port n'a pas libere la place : port tenu par un process tiers
         # (pas notre tableau de bord) ou socket encore en cours de liberation.

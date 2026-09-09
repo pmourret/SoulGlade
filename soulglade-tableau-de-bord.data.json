@@ -635,8 +635,9 @@
           "d": "invariant 11 — jamais de génération"
         },
         {
-          "s": "cours",
-          "t": "Logs structurés plutôt que prints épars"
+          "s": "fait",
+          "t": "Logs structurés plutôt que prints épars",
+          "d": "09/09 — logging de la bibliothèque standard, LOGS/soulglade.log en rotation, niveau par SOULGLADE_LOG_LEVEL. Les exceptions sont classées en refus / environnement / bug : la famille décide du niveau et de la pile, jamais du code HTTP. Cadrage : DOCS/cadrage/2026-09-09-logs-structures.md"
         },
         {
           "s": "fait",

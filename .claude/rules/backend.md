@@ -100,8 +100,43 @@ CHARACTERS/<nom>/config.json via l'API (CLAUDE.md §8.4).
 
 ## Erreurs et logs
 
-Logs structurés plutôt que print() épars. Une erreur remontée au frontend
-explicitement plutôt qu'un échec silencieux ou un code 500 nu.
+`AUTOMATION/logs.py` est le seul endroit où le logging se configure
+(09/09/2026, `DOCS/cadrage/2026-09-09-logs-structures.md`). `logging` de
+la bibliothèque standard, rien d'autre : un `RotatingFileHandler` vers
+`LOGS/soulglade.log` (1 Mo × 5) et une console au format inchangé
+`[HH:MM:SS] message`. Niveau lu depuis `SOULGLADE_LOG_LEVEL` (défaut
+`INFO`). Un point d'entrée appelle `logs.setup()` ; sans lui un module
+qui logge est muet, et c'est voulu — jamais de `LOGS/` créé parce qu'un
+test a importé `runner`.
+
+**Un outil imprime, une bibliothèque logge.** `wf_check.py`, `tools/*`,
+`env_config --diagnostic`, les `_diagnostic()` de `universe`/`worlds`, le
+plan de `--dry-run` et tout `tests/` gardent leurs `print` : cette sortie
+EST leur résultat, pas un événement d'exécution.
+
+**Deux journaux, deux publics.** `ss.push_log()` est celui de
+l'utilisateur (anneau de 200 lignes, affiché à l'écran) ; il alimente
+aussi le fichier. `runner.log()` est celui de la production. Ce sont les
+deux seuls points de passage : les modifier structure 103 messages sans
+toucher un appel.
+
+**La classification décide du niveau et de la pile, jamais du code
+HTTP** (`logs.report(logger, exc, contexte)`) :
+
+| Famille | Ce que c'est | Niveau | Pile |
+|---|---|---|---|
+| Refus | `ValueError` et filles, `BadRequest` | `WARNING` | non |
+| Environnement | `RuntimeError` et filles, `OSError` | `ERROR` | non |
+| Bug | tout le reste, y compris `KeyError`/`TypeError` | `ERROR` | **oui** |
+| Best-effort | export, base, vignette — non bloquants par conception | `WARNING` | non |
+
+Une pile sur « ComfyUI est éteint » est du bruit ; son absence sur un
+`KeyError` inattendu est une enquête perdue. Une erreur déjà passée par
+`report()` se pousse à l'écran avec `push_log(msg, journal=False)` —
+sinon elle s'écrit deux fois dans le fichier.
+
+Une erreur remontée au frontend explicitement plutôt qu'un échec
+silencieux ou un code 500 nu.
 
 Toute réponse porte un corps JSON, succès comme échec — le front lit du
 JSON sur chaque réponse quel que soit le statut. Une erreur a la forme
