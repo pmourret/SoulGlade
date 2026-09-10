@@ -71,16 +71,43 @@ verifie(legende.terme_de_visage(b) is None,
 verifie(legende.base("un prompt sans ancre", ANCRE, TRIG) is None,
         "ancre absente du prompt -> None, on ne devine pas ou elle s'arrete")
 
-print("\n[2] une vision qui decrit le visage est REFUSEE")
+print("\n[2] une vision qui decrit le visage est ELAGUEE, pas jetee")
+# Jeter la legende entiere etait le mauvais geste : un meilleur legendeur
+# decrit PLUS, donc il heurte PLUS souvent le vocabulaire interdit, et on
+# perdait la scene avec le visage (mesure du 10/09 en changeant de modele).
 legende.vision = lambda *a, **k: (
-    "a close-up of a woman, her eyes are blue, freckles on her face")
+    "a woman with long brown hair and freckles, sitting at a wooden table in "
+    "an outdoor cafe, wearing a beige cardigan")
+texte, source = legende.legender(Path("x.png"), ligne={"scene": "cafe_terrasse"},
+                                 anchor=ANCRE, trigger=TRIG)
+verifie(source.startswith("vision elaguee"), f"source = {source!r}")
+verifie(legende.terme_de_visage(texte) is None,
+        "la clause fautive est partie")
+verifie("wooden table" in texte and "beige cardigan" in texte,
+        f"et la SCENE est restee : « {texte} »")
+
+print("\n[2b] une vision entierement fautive retombe sur les metadonnees")
+legende.vision = lambda *a, **k: "her eyes are blue, freckles on her face"
 texte, source = legende.legender(Path("x.png"), ligne={"scene": "cuisine_matin",
                                                        "intention": "lifestyle"},
                                  anchor=ANCRE, trigger=TRIG)
-verifie("refusee" in source, f"source = {source!r}")
-verifie(legende.terme_de_visage(texte) is None,
+verifie("irrecuperable" in source, f"source = {source!r}")
+verifie(legende.terme_de_visage(texte) is None and texte.startswith(TRIG),
         f"et la legende retenue est propre : « {texte} »")
-verifie(texte.startswith(TRIG), "elle porte quand meme le declencheur")
+
+print("\n[2c] l'elagage repare le moignon, et ne touche pas une legende propre")
+cas = [
+    ("photo of a young woman with long, straight, brown hair and freckles, "
+     "standing in a dimly lit room",
+     "photo of a young woman, standing in a dimly lit room"),
+    ("a woman standing in a kitchen, wearing a white shirt and blue jeans",
+     "a woman standing in a kitchen, wearing a white shirt and blue jeans"),
+]
+for avant, attendu in cas:
+    obtenu = legende.sans_clause_de_visage(avant)
+    verifie(obtenu == attendu, f"« {obtenu} »")
+verifie(legende.sans_clause_de_visage("her eyes are blue, freckles on her face") == "",
+        "tout fautif -> rien, et l'appelant retombe ailleurs")
 
 print("\n[3] une vision propre est gardee")
 legende.vision = lambda *a, **k: "a woman standing in a kitchen, grey top, daylight"

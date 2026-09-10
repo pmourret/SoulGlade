@@ -57,8 +57,18 @@ import llm_local                                              # noqa: E402
 # Legendeur d'image. Choisi parce qu'il est DEJA installe et declare au
 # manifeste, et parce qu'il ne suit aucune instruction : il decrit, point --
 # donc aucun des modes d'echec d'un modele de conversation.
-FLORENCE_MODELE = "gokaygokay/Florence-2-Flux-Large"
+# PromptGen v2.0 depuis le 2026-09-10, mesure contre Florence-2-Flux-Large sur
+# les memes images : la ou l'ancien voyait « a woman sitting on a stool »,
+# celui-ci lit « sitting at a wooden table in an outdoor cafe, wearing a beige
+# knitted cardigan over a white shirt and blue jeans » -- et le prompt d'origine
+# lui donne raison. MIT, 0,8B, ~1 Go de VRAM, 2 a 3 s a chaud. Le nom suffit :
+# le noeud installe telecharge la variante tout seul.
+FLORENCE_MODELE = "MiaoshouAI/Florence-2-large-PromptGen-v2.0"
 FLORENCE_TACHE = "detailed_caption"
+
+# Mots de liaison auxquels une clause fautive s'accrochait. Voir
+# `sans_clause_de_visage`.
+_LIAISON = re.compile(r"\b(with|and|or|of|in|on|at|wearing|having)\b", re.I)
 
 # La legende de l'ancre : le declencheur et le strict minimum. Elle ne varie
 # pas d'un personnage a l'autre parce qu'elle ne decrit rien de personnel.
@@ -143,6 +153,65 @@ def terme_de_visage(texte):
     return m.group(0) if m else None
 
 
+def sans_clause_de_visage(texte):
+    """Retire les CLAUSES qui decrivent le visage, garde tout le reste.
+
+    REFUSER LA LEGENDE ENTIERE ETAIT LE MAUVAIS GESTE, et ca s'est vu en
+    changeant de legendeur (10/09). Un meilleur modele decrit PLUS, donc il
+    heurte PLUS souvent le vocabulaire interdit : PromptGen rend « a young woman
+    with long brown hair and freckles, sitting at a wooden table in an outdoor
+    cafe, wearing a beige knitted cardigan... » -- une seule clause fautive, et
+    l'ancien garde-fou jetait la table, le cafe et le cardigan avec.
+
+    On decoupe donc en clauses, on retire celles qui portent un terme de
+    `FORBIDDEN_FACE`, et on garde le reste.
+
+    LA REPARATION DU MOIGNON. Une clause fautive est souvent la SUITE de la
+    precedente : « ...a young woman with long, / wavy brown hair and freckles, /
+    sitting on a bed ». Retirer la deuxieme laisse « a young woman with long »,
+    qui ne veut plus rien dire. Quand la clause suivante est retiree, on coupe
+    donc la precedente a son dernier mot de liaison -- mais seulement s'il n'est
+    suivi que d'un mot, sinon on amputerait une clause complete
+    (« ...a white shirt and blue jeans » doit rester entier).
+
+    ponytail: heuristique de ponctuation, pas d'analyse grammaticale. Elle tient
+    parce que ces legendeurs ecrivent tous la meme phrase (sujet, puis scene) ;
+    un modele qui structurerait autrement demanderait autre chose.
+    """
+    morceaux = [m.strip() for m in re.split(r"\s*[,;.]\s*", texte or "")]
+    morceaux = [m for m in morceaux if m]
+    gardes = []
+    for m in morceaux:
+        if terme_de_visage(m):
+            # On remonte TANT QUE la clause precedente est un moignon : une
+            # description de visage s'etale souvent sur plusieurs clauses
+            # (« with long, / straight, / brown hair and freckles »), et ne
+            # reparer que la derniere laissait « with long, straight, ».
+            while gardes:
+                gardes[-1] = _coupe_au_mot_de_liaison(gardes[-1])
+                if gardes[-1] and not _est_moignon(gardes[-1]):
+                    break
+                gardes.pop()
+            continue
+        gardes.append(m)
+    return _propre(", ".join(g for g in gardes if g))
+
+
+def _est_moignon(clause):
+    """Une clause qui ne dit plus rien seule : trop courte, ou en suspens."""
+    mots = clause.split()
+    return len(mots) <= 2 or bool(_LIAISON.fullmatch(mots[-1]))
+
+
+def _coupe_au_mot_de_liaison(clause, mots_max=1):
+    """Tronque la clause a son dernier mot de liaison s'il pend en fin."""
+    mots = clause.split()
+    for i in range(len(mots) - 1, -1, -1):
+        if _LIAISON.fullmatch(mots[i]):
+            return " ".join(mots[:i]) if len(mots) - i - 1 <= mots_max else clause
+    return clause
+
+
 def _graphe_florence(nom_image, max_new_tokens=256):
     return {
         "1": {"class_type": "DownloadAndLoadFlorence2Model",
@@ -220,9 +289,17 @@ def legender(image, ligne=None, anchor=None, trigger="", avec_vision=True,
     if avec_vision:
         vu = vision(image, comfy_url=comfy_url, timeout=timeout)
         faute = terme_de_visage(vu)
-        if vu and not faute:
+        if faute:
+            # On RETIRE la clause fautive au lieu de jeter la legende : un bon
+            # legendeur decrit le visage ET la scene, et la scene est ce qu'on
+            # est venu chercher.
+            elague = sans_clause_de_visage(vu)
+            if elague and not terme_de_visage(elague):
+                return _avec_trigger(elague, trigger), f"vision elaguee ({faute})"
+        elif vu:
             return _avec_trigger(vu, trigger), "vision"
-        source_refus = f"vision refusee ({faute})" if faute else "vision muette"
+        source_refus = (f"vision irrecuperable ({faute})" if faute
+                        else "vision muette")
     else:
         source_refus = "vision desactivee"
 

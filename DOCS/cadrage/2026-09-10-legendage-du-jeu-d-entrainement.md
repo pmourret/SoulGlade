@@ -191,3 +191,79 @@ dépendance écrite plus haut — mais le motif « on a déjà ce qu'il faut » 
 tient plus tout à fait : on a de quoi *décrire*, pas de quoi *reformuler*. Si
 la forme des légendes devient un problème mesuré, c'est ce compromis-là qu'il
 faudra rouvrir, et il appartient à Pierre.
+
+## Bascule du légendeur, le même jour
+
+Recherche demandée par Pierre sur les meilleurs modèles de vision, avec
+l'accord d'en télécharger un de plus. Deux noms sortent partout : **JoyCaption**
+et **Florence-2 PromptGen**. Mesurés plutôt que comparés sur catalogue — le
+nœud installé télécharge les variantes tout seul.
+
+**PromptGen v2.0 remplace Florence-2-Flux-Large.** Sur la même image :
+
+```
+Flux-Large    : « a woman sitting on a stool, a table beside her »
+PromptGen v2.0: « sitting at a wooden table in an outdoor cafe, wearing a beige
+                  knitted cardigan over a white shirt and blue jeans, the
+                  lighting is soft and natural, the background is blurred, a
+                  city street »
+```
+
+Le prompt d'origine donne raison au second : il n'y a pas de tabouret. MIT,
+0,8 Go de paramètres, ~1 Go de VRAM, **2 à 3 s à chaud** (les 34 s du premier
+appel étaient le téléchargement). Le remplacer a coûté une constante.
+
+### Le vrai défaut que la bascule a révélé, et il était dans le garde-fou
+
+PromptGen décrit **mieux**, donc il décrit aussi le visage : *« a young woman
+with long brown hair and freckles, sitting at a wooden table… »*. Le garde-fou
+jetait la légende **entière** sur `freckles`, et perdait la table, le café et
+le cardigan avec.
+
+C'était le mauvais geste, et il ne se voyait pas tant que le légendeur était
+médiocre : **un meilleur modèle heurte forcément plus souvent un vocabulaire
+interdit.** Le garde-fou retire donc maintenant la **clause** fautive, pas la
+légende.
+
+Avec sa réparation de moignon : une description de visage s'étale souvent sur
+plusieurs clauses (« with long, / straight, / brown hair and freckles »), et
+retirer la dernière laissait « with long, straight, ». On remonte donc tant que
+la clause précédente ne dit plus rien seule, en coupant au dernier mot de
+liaison. Heuristique de ponctuation, pas d'analyse grammaticale — elle tient
+parce que ces légendeurs écrivent tous la même phrase, sujet puis scène.
+
+Effet mesuré sur le jeu de Léna : les deux images sans prompt passent de
+« déclencheur seul » et « vision refusée » à deux légendes de scène complètes.
+
+### JoyCaption, rangé et pas écarté
+
+C'est le seul candidat **construit pour ça** — « a free, open and uncensored
+model for the community to use in training Diffusion models » — et le seul qui
+couvre le NSFW à égalité avec le SFW. Ce n'est pas anecdotique ici : le NSFW
+est citoyen de première classe du produit, et on a mesuré qu'un modèle censuré
+**refuse en silence** dès qu'on lui parle d'une personne et de ses vêtements.
+Le jour où un jeu d'entraînement contiendra des images de cette branche,
+PromptGen laissera tomber sans le dire.
+
+Ses coûts, nommés : un custom node de plus (invariant 12, et ADR-0024 à passer
+**deux fois**, sur le node et sur les poids) ; 8B en bf16 ≈ 16 Go, quand la
+carte en a 17,2 dont 10,5 libres avec ComfyUI chargé — donc une variante GGUF
+quantifiée ; et une licence à lire vraiment. Le dépôt déclare Apache-2.0, mais
+les poids dérivent de Llama 3.1, dont la licence communautaire se propage
+normalement aux dérivés, et le README ne dit rien de cette héritance.
+**Non tranché, et pas affirmé.**
+
+Le moment de l'ouvrir est nommé : quand le NSFW entrera dans un jeu
+d'entraînement, ou quand la forme des légendes deviendra un problème mesuré.
+
+### Ce que je n'ai pas vérifié
+
+- **PromptGen sur du NSFW** — non testé, et c'est précisément là que je
+  m'attends à ce qu'il refuse.
+- **JoyCaption à l'usage** : ni installé, ni chronométré, ni comparé. Tout ce
+  qui le concerne ci-dessus est *lu annoncé*.
+- Le mode `mixed_caption` de PromptGen rend un 400 sur le nœud installé : sa
+  liste de tâches ne l'expose pas.
+- Les tournures méta de Florence (« the image is high quality and
+  professional ») restent dans les légendes. Sans conséquence d'identité, mais
+  c'est du bruit dans une légende d'entraînement.
