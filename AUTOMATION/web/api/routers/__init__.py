@@ -6,6 +6,7 @@
     images      ex routes/vignettes  image bytes, thumbnails, poses
     production  ex routes/production launching, job queue, declensions
     review      ex routes/tri        QC, review, judgements, export
+    training    (2026-09-10)         a character's training set, and its export
 
 The five-way split was kept through the FastAPI migration. `app` was cut out of
 `state` on 31/08/2026: reading what the studio is doing and ACTING on the two

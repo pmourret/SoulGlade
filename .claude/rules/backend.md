@@ -62,6 +62,8 @@ migration FastAPI) — une nouvelle route rejoint le router qui correspond
 - api/routers/expression — aperçu non-destructif d'expression, plage d'un ton
 - api/routers/photo_editor — persistance des calques de l'éditeur photo
   avancé (le compositing lui-même reste côté client, Canvas2D)
+- api/routers/training — jeu d'entraînement d'un personnage : proposition,
+  exports passés, export d'un dossier daté. N'entraîne jamais rien
 
 **Une règle de dépendance, une seule** (31/08/2026) :
 
@@ -84,6 +86,8 @@ transport) ; une `JSONResponse` non — une fonction qui doit choisir un
   de la plage d'un ton dans creative.json
 - api/services/photo_editor — résolution de photo, lecture/écriture du
   sidecar `<nom>.layers.json`
+- api/services/training — mise en forme de la proposition d'entraînement
+  pour le fil, lecture des manifestes d'export, lancement de l'export
 
 Le test d'une règle vise le service, jamais le router : c'est ce qui a
 motivé la couche (`test_valider_banque.py` importait `api.routers.bank`

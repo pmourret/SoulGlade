@@ -2621,7 +2621,7 @@
     "/api/flag": {
       "post": {
         "summary": "Jugement humain (réalisme ou anatomie)",
-        "description": "Human judgement on one image. Independent of sorting: it moves nothing.\n\nTook no character parameter at all until 2026-09-01 — the DB write this\ntriggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently\nrecorded every judgement, for every character, under one specific\ncharacter_id, because that was the only default `enregistrer_image` had.\n\nSEVERAL AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`:\n`realisme` (historical, `flag`) plus every corpus label of\n`mesures.ETIQUETTES` — `anatomie` (body proportions) and `mains`. It is the\nsame gesture on the same image, and none of them sorts: a route per axis\nwould have duplicated the name guard and the 400 for nothing.\n\nThey are NOT the same field. An image can be convincing as a photograph AND\nhave one arm too long AND have a clean pair of hands; `mesures.bande`\ncalibrates realism on `flag == \"ok\"`, and `mains` already names the DWPose\nscore. Sharing a field would corrupt several readings at once, silently.\n\nThe corpus labels deliberately do not write to the database: the `jugement`\ntable is single-column, and they are calibration instruments read from\n`mesures.json` (see `mesures.poser_etiquette`).",
+        "description": "Human judgement on one image. Independent of sorting: it moves nothing.\n\nTook no character parameter at all until 2026-09-01 — the DB write this\ntriggers (`mesures.poser_flag` -> `base.enregistrer_image`) silently\nrecorded every judgement, for every character, under one specific\ncharacter_id, because that was the only default `enregistrer_image` had.\n\nSEVERAL AXES SINCE 2026-09-08 (P4.5.1), same route, told apart by `axe`:\n`realisme` (historical, `flag`) plus every corpus label of\n`mesures.ETIQUETTES` — `anatomie` (body proportions) and `mains`. It is the\nsame gesture on the same image, and none of them sorts: a route per axis\nwould have duplicated the name guard and the 400 for nothing.\n\nThey are NOT the same field. An image can be convincing as a photograph AND\nhave one arm too long AND have a clean pair of hands; `mesures.bande`\ncalibrates realism on `flag == \"ok\"`, and `mains` already names the DWPose\nscore. Sharing a field would corrupt several readings at once, silently.\n\nSINCE 2026-09-10 the corpus labels DO write to the database, under this\nrequest's `character_id` — same discipline as the realism flag just below.\nThey stopped being calibration instruments only: the training queue now\ndecides from them (it drops objectively defective images), and a decision\nread from a JSON store while the rest of the mechanism lives in SQL is how\n\"two stores, one truth\" comes back.",
         "operationId": "set_flag_api_flag_post",
         "parameters": [
           {
@@ -3012,6 +3012,196 @@
           },
           "400": {
             "description": "Rien à annuler"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/proposal": {
+      "get": {
+        "summary": "Sur quoi on entrainerait un LoRA d'identite, et ce qui manque",
+        "description": "La proposition complete du personnage. LECTURE SEULE.\n\nRend un 200 meme quand rien n'est pret : un personnage sans jeu de\nreference actif n'est pas une erreur, c'est un etat, et `blocage` le dit\nen toutes lettres. Un 4xx ici ferait afficher un toast rouge la ou\nl'ecran doit afficher « le gabarit n'existe pas encore ».\n\nTourne dans un thread : la lecture ouvre la base et calcule des cosinus\nnumpy sur tous les membres du jeu -- court, mais bloquant, et un handler\nasync ne bloque jamais la boucle.",
+        "operationId": "training_proposal_api_training_proposal_get",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingProposalResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/exports": {
+      "get": {
+        "summary": "Les exports deja sortis pour ce personnage",
+        "description": "Du plus recent au plus ancien, lus dans leur manifeste.",
+        "operationId": "training_exports_api_training_exports_get",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingExportsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/training/export": {
+      "post": {
+        "summary": "Rassembler le jeu d'entrainement dans un dossier date",
+        "description": "Copie les images, les legende, ecrit le manifeste et la recette kohya.\n\n409 PENDANT UNE PRODUCTION, meme garde et meme raison que /api/mesurer :\nle legendeur de repli appelle ComfyUI, et il n'y a qu'un GPU et qu'un\nbatch (`shared_state.py`). Un export peut attendre la fin d'un lot ; un\nlot ralenti par un export ne se rattrape pas.\n\nDeux exports dans la meme seconde tombent sur un `FileExistsError` :\n`entrainement.exporter` refuse un horodatage deja pris plutot que\nd'ecraser une piece d'historique. Traduit ici en refus lisible.",
+        "operationId": "training_export_api_training_export_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TrainingExportRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrainingExportResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Une production tourne"
           },
           "422": {
             "description": "Validation Error",
@@ -7615,6 +7805,391 @@
         ],
         "title": "SystemStateResponse",
         "description": "`STATE` + bucket counts + ETA + undo depth. Polled every 1.5 s.\n\nEvery key of the `STATE` dict is named here, plus the five the route adds.\n`extra=\"allow\"` keeps the response honest if `STATE` ever grows a key:\ndropping one silently would break the frontend far from the change.\n\nCOUPLING — DO NOT BREAK (migration brief §4.3). `running` and `comfy` are\ntwo of the four inputs of the `#btnRun.disabled` rule; see the note on\n`get_system_state` in routers/state.py."
+      },
+      "TrainingExcluded": {
+        "properties": {
+          "fichier": {
+            "type": "string",
+            "title": "Fichier"
+          },
+          "raison": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Raison"
+          }
+        },
+        "type": "object",
+        "required": [
+          "fichier",
+          "raison"
+        ],
+        "title": "TrainingExcluded",
+        "description": "Une ecartee, et l'axe de defaut objectif qui l'a ecartee."
+      },
+      "TrainingExportRequest": {
+        "properties": {
+          "repetitions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetitions"
+          },
+          "avec_vision": {
+            "type": "boolean",
+            "title": "Avec Vision",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "TrainingExportRequest",
+        "description": "Ce que l'ecran envoie pour lancer un export.\n\n`repetitions` absent laisse le defaut propose par `entrainement.py`. Ce\nn'est pas une borne qu'on ecrete : un nombre de repetitions est un reglage\nd'entrainement, il appartient a l'utilisateur (`PROJET.md`), et une valeur\nabsurde se refuse plutot que de se corriger en silence."
+      },
+      "TrainingExportResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "dossier": {
+            "type": "string",
+            "title": "Dossier"
+          },
+          "dossier_images": {
+            "type": "string",
+            "title": "Dossier Images"
+          },
+          "images": {
+            "type": "integer",
+            "title": "Images"
+          },
+          "ancre_reinjectee": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ancre Reinjectee"
+          },
+          "declencheur": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Declencheur"
+          },
+          "declencheur_cree": {
+            "type": "boolean",
+            "title": "Declencheur Cree",
+            "default": false
+          },
+          "famille": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Famille"
+          },
+          "repetitions": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repetitions"
+          },
+          "script": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script"
+          },
+          "legendes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Legendes"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ok",
+          "dossier",
+          "dossier_images",
+          "images",
+          "legendes"
+        ],
+        "title": "TrainingExportResponse"
+      },
+      "TrainingExportsResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "exports": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Exports"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ok",
+          "exports"
+        ],
+        "title": "TrainingExportsResponse"
+      },
+      "TrainingImage": {
+        "properties": {
+          "fichier": {
+            "type": "string",
+            "title": "Fichier"
+          },
+          "scene": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scene"
+          },
+          "intention": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intention"
+          },
+          "ton": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ton"
+          },
+          "format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Format"
+          },
+          "anatomie": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Anatomie"
+          },
+          "mains_juge": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mains Juge"
+          },
+          "lora_identite": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lora Identite"
+          },
+          "sans_fichier": {
+            "type": "boolean",
+            "title": "Sans Fichier",
+            "default": false
+          },
+          "sans_etiquette": {
+            "type": "boolean",
+            "title": "Sans Etiquette",
+            "default": false
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "fichier"
+        ],
+        "title": "TrainingImage",
+        "description": "Une ligne de la file, telle que l'ecran la montre."
+      },
+      "TrainingProposalResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "personnage": {
+            "type": "string",
+            "title": "Personnage"
+          },
+          "declencheur": {
+            "type": "string",
+            "title": "Declencheur"
+          },
+          "jeu": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Jeu"
+          },
+          "pret": {
+            "type": "boolean",
+            "title": "Pret"
+          },
+          "blocage": {
+            "type": "string",
+            "title": "Blocage"
+          },
+          "compteurs": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Compteurs"
+          },
+          "file": {
+            "items": {
+              "$ref": "#/components/schemas/TrainingImage"
+            },
+            "type": "array",
+            "title": "File"
+          },
+          "ecartes": {
+            "items": {
+              "$ref": "#/components/schemas/TrainingExcluded"
+            },
+            "type": "array",
+            "title": "Ecartes"
+          },
+          "cohesion": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cohesion"
+          },
+          "ecart_type": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ecart Type"
+          },
+          "outliers": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Outliers"
+          },
+          "diversite": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Diversite"
+          },
+          "criteres": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Criteres"
+          },
+          "legendes": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Legendes"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "ok",
+          "personnage",
+          "declencheur",
+          "pret",
+          "blocage",
+          "compteurs",
+          "file",
+          "ecartes",
+          "outliers",
+          "diversite",
+          "criteres",
+          "legendes"
+        ],
+        "title": "TrainingProposalResponse"
       },
       "UndoResponse": {
         "properties": {

@@ -1181,9 +1181,12 @@ export interface paths {
          *     calibrates realism on `flag == "ok"`, and `mains` already names the DWPose
          *     score. Sharing a field would corrupt several readings at once, silently.
          *
-         *     The corpus labels deliberately do not write to the database: the `jugement`
-         *     table is single-column, and they are calibration instruments read from
-         *     `mesures.json` (see `mesures.poser_etiquette`).
+         *     SINCE 2026-09-10 the corpus labels DO write to the database, under this
+         *     request's `character_id` — same discipline as the realism flag just below.
+         *     They stopped being calibration instruments only: the training queue now
+         *     decides from them (it drops objectively defective images), and a decision
+         *     read from a JSON store while the rest of the mechanism lives in SQL is how
+         *     "two stores, one truth" comes back.
          */
         post: operations["set_flag_api_flag_post"];
         delete?: never;
@@ -1349,6 +1352,84 @@ export interface paths {
          *     looking at.
          */
         post: operations["undo_sort_api_undo_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/training/proposal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sur quoi on entrainerait un LoRA d'identite, et ce qui manque
+         * @description La proposition complete du personnage. LECTURE SEULE.
+         *
+         *     Rend un 200 meme quand rien n'est pret : un personnage sans jeu de
+         *     reference actif n'est pas une erreur, c'est un etat, et `blocage` le dit
+         *     en toutes lettres. Un 4xx ici ferait afficher un toast rouge la ou
+         *     l'ecran doit afficher « le gabarit n'existe pas encore ».
+         *
+         *     Tourne dans un thread : la lecture ouvre la base et calcule des cosinus
+         *     numpy sur tous les membres du jeu -- court, mais bloquant, et un handler
+         *     async ne bloque jamais la boucle.
+         */
+        get: operations["training_proposal_api_training_proposal_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/training/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Les exports deja sortis pour ce personnage
+         * @description Du plus recent au plus ancien, lus dans leur manifeste.
+         */
+        get: operations["training_exports_api_training_exports_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/training/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Rassembler le jeu d'entrainement dans un dossier date
+         * @description Copie les images, les legende, ecrit le manifeste et la recette kohya.
+         *
+         *     409 PENDANT UNE PRODUCTION, meme garde et meme raison que /api/mesurer :
+         *     le legendeur de repli appelle ComfyUI, et il n'y a qu'un GPU et qu'un
+         *     batch (`shared_state.py`). Un export peut attendre la fin d'un lot ; un
+         *     lot ralenti par un export ne se rattrape pas.
+         *
+         *     Deux exports dans la meme seconde tombent sur un `FileExistsError` :
+         *     `entrainement.exporter` refuse un horodatage deja pris plutot que
+         *     d'ecraser une piece d'historique. Traduit ici en refus lisible.
+         */
+        post: operations["training_export_api_training_export_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3668,6 +3749,158 @@ export interface components {
             eta?: number | null;
             /** Undo */
             undo: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * TrainingExcluded
+         * @description Une ecartee, et l'axe de defaut objectif qui l'a ecartee.
+         */
+        TrainingExcluded: {
+            /** Fichier */
+            fichier: string;
+            /** Raison */
+            raison: string[];
+        };
+        /**
+         * TrainingExportRequest
+         * @description Ce que l'ecran envoie pour lancer un export.
+         *
+         *     `repetitions` absent laisse le defaut propose par `entrainement.py`. Ce
+         *     n'est pas une borne qu'on ecrete : un nombre de repetitions est un reglage
+         *     d'entrainement, il appartient a l'utilisateur (`PROJET.md`), et une valeur
+         *     absurde se refuse plutot que de se corriger en silence.
+         */
+        TrainingExportRequest: {
+            /** Repetitions */
+            repetitions?: number | null;
+            /**
+             * Avec Vision
+             * @default true
+             */
+            avec_vision: boolean;
+        };
+        /** TrainingExportResponse */
+        TrainingExportResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Dossier */
+            dossier: string;
+            /** Dossier Images */
+            dossier_images: string;
+            /** Images */
+            images: number;
+            /** Ancre Reinjectee */
+            ancre_reinjectee?: string | null;
+            /** Declencheur */
+            declencheur?: string | null;
+            /**
+             * Declencheur Cree
+             * @default false
+             */
+            declencheur_cree: boolean;
+            /** Famille */
+            famille?: string | null;
+            /** Repetitions */
+            repetitions?: number | null;
+            /** Script */
+            script?: string | null;
+            /** Legendes */
+            legendes: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** TrainingExportsResponse */
+        TrainingExportsResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Exports */
+            exports: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * TrainingImage
+         * @description Une ligne de la file, telle que l'ecran la montre.
+         */
+        TrainingImage: {
+            /** Fichier */
+            fichier: string;
+            /** Scene */
+            scene?: string | null;
+            /** Intention */
+            intention?: string | null;
+            /** Ton */
+            ton?: string | null;
+            /** Format */
+            format?: string | null;
+            /** Anatomie */
+            anatomie?: string | null;
+            /** Mains Juge */
+            mains_juge?: string | null;
+            /** Lora Identite */
+            lora_identite?: string | null;
+            /**
+             * Sans Fichier
+             * @default false
+             */
+            sans_fichier: boolean;
+            /**
+             * Sans Etiquette
+             * @default false
+             */
+            sans_etiquette: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** TrainingProposalResponse */
+        TrainingProposalResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Personnage */
+            personnage: string;
+            /** Declencheur */
+            declencheur: string;
+            /** Jeu */
+            jeu?: {
+                [key: string]: unknown;
+            } | null;
+            /** Pret */
+            pret: boolean;
+            /** Blocage */
+            blocage: string;
+            /** Compteurs */
+            compteurs: {
+                [key: string]: unknown;
+            };
+            /** File */
+            file: components["schemas"]["TrainingImage"][];
+            /** Ecartes */
+            ecartes: components["schemas"]["TrainingExcluded"][];
+            /** Cohesion */
+            cohesion?: number | null;
+            /** Ecart Type */
+            ecart_type?: number | null;
+            /** Outliers */
+            outliers: {
+                [key: string]: unknown;
+            }[];
+            /** Diversite */
+            diversite: {
+                [key: string]: unknown;
+            };
+            /** Criteres */
+            criteres: {
+                [key: string]: unknown;
+            }[];
+            /** Legendes */
+            legendes: {
+                [key: string]: unknown;
+            };
         } & {
             [key: string]: unknown;
         };
@@ -6122,6 +6355,140 @@ export interface operations {
             };
             /** @description Rien à annuler */
             400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    training_proposal_api_training_proposal_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingProposalResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    training_exports_api_training_exports_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingExportsResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    training_export_api_training_export_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TrainingExportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrainingExportResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Une production tourne */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
