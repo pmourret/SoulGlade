@@ -50,18 +50,48 @@
   .rules li{margin-bottom:.25rem}
   .rules li b{color:var(--txt);font-weight:500}
 
-  /* ---- iterations : une sequence, donc numerotee ---- */
-  .it{display:grid;grid-template-columns:4.2rem 1fr;gap:1rem;padding:1.1rem 0;border-top:1px solid var(--line)}
-  .it:last-child{border-bottom:1px solid var(--line)}
-  .it-id{font-family:var(--f-mono);font-size:.82rem;color:var(--acc);padding-top:.15rem}
+  /* ---- iterations : une sequence, donc numerotee ; close = repliee ---- */
+  .it{border-top:1px solid var(--line)}
+  .it:last-of-type{border-bottom:1px solid var(--line)}
+  .it > summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:4.2rem minmax(0,1fr) auto;
+    gap:1rem;align-items:baseline;padding:.85rem 0}
+  .it > summary::-webkit-details-marker{display:none}
+  .it > summary:hover .it-titre{color:var(--acc)}
+  .it > summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .it-id{font-family:var(--f-mono);font-size:.82rem;color:var(--acc)}
+  .it[data-state="done"] .it-id{color:var(--dim2)}
   .it[data-state="now"] .it-id{color:var(--warn)}
-  .it h3{font-family:var(--f-disp);font-size:1.08rem;font-weight:600;margin:0 0 .35rem}
-  .it p{margin:0 0 .5rem;color:var(--dim);font-size:.93rem}
+  .it-titre{font-family:var(--f-disp);font-size:1.08rem;font-weight:600}
+  .it[data-state="done"] .it-titre{font-weight:400;color:var(--dim)}
+  .it-epics{display:block;font-size:.85rem;color:var(--dim);margin-top:.15rem}
+  .it-epics b{font-family:var(--f-mono);font-size:.76rem;font-weight:500;color:var(--acc-d);margin-right:.3rem}
+  .it-epics span+span{margin-left:.75rem}
+  .it-etat{display:flex;align-items:center;gap:.5rem;font-family:var(--f-mono);font-size:.72rem;
+    color:var(--dim2);white-space:nowrap}
+  .it-bar{display:flex;gap:1.5px;width:66px;height:9px;border-radius:2px;overflow:hidden;background:var(--line)}
+  .it-bar span{display:block}
+  .it-body{padding:0 0 1.1rem 5.2rem}
+  .it-body p{margin:0 0 .6rem;color:var(--dim);font-size:.93rem}
   .it .dod{font-size:.86rem;color:var(--txt);border-left:2px solid var(--acc-d);padding-left:.7rem}
   .it .dod b{font-weight:500;color:var(--acc)}
-  .it .touches{font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);margin-top:.5rem}
-  .now-tag{font-family:var(--f-mono);font-size:.68rem;color:var(--warn);border:1px solid var(--warn);
-    border-radius:3px;padding:.05rem .35rem;margin-left:.5rem;vertical-align:2px}
+  .it .touches{font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);margin-top:.6rem}
+  .it-works{margin:.8rem 0 0;padding:0;list-style:none;font-size:.88rem}
+  .it-works li{display:grid;grid-template-columns:.55rem 2.4rem 1fr;gap:.6rem;align-items:baseline;padding:.28rem 0;
+    border-top:1px solid var(--line)}
+  .it-works .tick{width:.4rem;height:.4rem;border-radius:1px;transform:translateY(.35rem)}
+  .it-works code{font-family:var(--f-mono);font-size:.74rem;color:var(--dim2)}
+  .it-none{font-size:.85rem;color:var(--dim2);margin-top:.8rem}
+  /* une sous-phase est une branche : elle se lit sous sa phase mere */
+  .phase{border-left:2px solid var(--line2);margin-left:1.4rem;padding-left:1.2rem}
+  .phase .it:last-of-type{border-bottom:none}
+  .tag{font-family:var(--f-mono);font-size:.68rem;border:1px solid currentColor;
+    border-radius:3px;padding:.05rem .35rem;margin-left:.5rem;vertical-align:2px;white-space:nowrap}
+  /* l'iteration en tete de file porte son etat en plein, les autres en contour */
+  .tag[data-file]{background:currentColor}
+  .tag[data-file] i{font-style:normal;color:var(--bg)}
+  /* une dependance satisfaite reste lisible sans reclamer l'attention */
+  .tag-dep{color:var(--warn)}
+  .tag-dep[data-ok]{color:var(--dim2);border-color:var(--line2)}
 
   /* ---- filtres ---- */
   .filters{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem}
@@ -74,7 +104,7 @@
   .epic{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin-bottom:.7rem;overflow:hidden}
   .epic[data-veille]{opacity:.72}
   .epic summary{cursor:pointer;list-style:none;padding:.95rem 1.15rem;display:grid;
-    grid-template-columns:3.1rem 1fr auto;gap:.9rem;align-items:baseline}
+    grid-template-columns:3.1rem minmax(0,1fr) auto;gap:.9rem;align-items:baseline}
   .epic summary::-webkit-details-marker{display:none}
   .epic summary:hover{background:var(--panel2)}
   .epic-id{font-family:var(--f-mono);font-size:.8rem;color:var(--acc-d)}
@@ -88,6 +118,18 @@
   .item .lbl b{font-weight:500}
   .item .lbl em{font-style:normal;color:var(--dim);display:block;font-size:.85rem}
   .item code{font-family:var(--f-mono);font-size:.78rem;color:var(--dim2)}
+  .item .itref{font-family:var(--f-mono);font-size:.7rem;color:var(--acc-d);border:1px solid var(--line2);
+    border-radius:3px;padding:0 .3rem;margin-left:.4rem;white-space:nowrap}
+  .epic-its{display:block;font-family:var(--f-mono);font-size:.7rem;color:var(--dim2);margin-top:.3rem}
+  /* une description s'allonge a chaque releve : deux lignes par defaut, tout au clic.
+     Le texte entier vit dans le <summary>, donc rien n'est duplique ni cache au Ctrl+F. */
+  .long{cursor:pointer}
+  .long summary{display:block;list-style:none}
+  .long summary::-webkit-details-marker{display:none}
+  .long:not([open]) em{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .long summary::after{display:block;font-family:var(--f-mono);font-size:.72rem;color:var(--acc-d);margin-top:.1rem}
+  .long:not([open]) summary::after{content:'plus'}
+  .long[open] summary::after{content:'moins'}
   .item[hidden]{display:none}
   .empty{color:var(--dim2);font-size:.88rem;padding:.6rem 0}
 
@@ -95,8 +137,11 @@
   .flag{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;
     background:var(--panel);padding:.85rem 1.1rem;margin-bottom:.6rem}
   .flag[data-e="tranche"]{border-left-color:var(--ok)}
-  .flag h3{font-size:.95rem;margin:0 0 .25rem;font-weight:600}
-  .flag p{margin:0;color:var(--dim);font-size:.9rem}
+  .flag summary{cursor:pointer;list-style:none;font-size:.95rem;font-weight:600}
+  .flag summary::-webkit-details-marker{display:none}
+  .flag summary:hover{color:var(--acc)}
+  .flag summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .flag p{margin:.4rem 0 0;color:var(--dim);font-size:.9rem}
   .flag .mark{font-family:var(--f-mono);font-size:.7rem;color:var(--dim2);margin-right:.45rem}
 
   .hz{display:grid;grid-template-columns:1fr;gap:0}
@@ -113,7 +158,9 @@
     .cap{font-size:1.6rem}
     .epic summary{grid-template-columns:2.6rem 1fr;gap:.6rem}
     .epic-bar{grid-column:1/-1;width:100%;margin-top:.5rem}
-    .it{grid-template-columns:1fr;gap:.3rem}
+    .it > summary{grid-template-columns:1fr;gap:.2rem}
+    .it-body{padding-left:0}
+    .phase{margin-left:.6rem;padding-left:.8rem}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -150,7 +197,9 @@ mondes, publication — attend ce résultat.</p>
 <section>
   <h2 class="sec">Itérations</h2>
   <p class="sec-note">Séquence, pas calendrier. Chacune produit un résultat visible en usage réel ;
-  aucune ne se lance sans son cadrage.</p>
+  aucune ne se lance sans son cadrage. Chacune porte son état ; une clôturée est repliée, une branche
+  se lit sous sa phase mère, et l'avancement à droite compte les travaux d'EPIC rattachés — il n'est
+  jamais déclaré. Une dépendance encore due s'affiche en jaune, satisfaite en gris.</p>
   <div id="iterations"></div>
 </section>
 
@@ -164,7 +213,8 @@ mondes, publication — attend ce résultat.</p>
 <section>
   <h2 class="sec">Décisions</h2>
   <p class="sec-note">Ce qui a été tranché, et ce qui reste ouvert. Une décision tranchée qui touche
-  au cadrage se répercute dans PROJET.md ou dans un ADR — jamais seulement ici.</p>
+  au cadrage se répercute dans PROJET.md ou dans un ADR — jamais seulement ici. Les ouvertes sont
+  dépliées ; une tranchée s'ouvre au clic.</p>
   <div id="decisions"></div>
 </section>
 
@@ -212,6 +262,24 @@ const D = {
       "color": "var(--idle)"
     }
   },
+  "etats": {
+    "done": {
+      "label": "clôturé",
+      "color": "var(--ok)"
+    },
+    "now": {
+      "label": "en cours",
+      "color": "var(--warn)"
+    },
+    "next": {
+      "label": "suivant",
+      "color": "var(--acc)"
+    },
+    "pause": {
+      "label": "en pause",
+      "color": "var(--idle)"
+    }
+  },
   "iterations": [
     {
       "id": "IT-0",
@@ -253,7 +321,7 @@ const D = {
       "id": "IT-3b",
       "state": "done",
       "titre": "Le rendu d'abord, le juge ensuite",
-      "quoi": "À 75 % de mains ratées, trier ne protège plus rien : un filtre qui écarte trois quarts de la production est un arrêt de production. Le sujet se déplace de reconnaître le raté vers ne plus le produire. Phase de R&D à deux fronts : le rendu dans l'ordre fond → peau → mains, puis un juge généraliste agnostique rattaché à la plateforme, pour les proportions et les mains. — Close le 09/09. Le front 1 est allé au bout dans son ordre : le fond refermé par un renoncement écrit (il ne répond pas au prompt), la peau sur un constat d'architecture (identité et texture sont le même curseur ; seul gain sans contrepartie, sharpen 0.30 → 0.55), et les mains sur le premier levier de la phase qui déplace vraiment un taux : 96,4 % de mains ratées → 36,4 % sur 30 seeds appariés, 22 seeds meilleurs et AUCUN pire, sans rien coûter aux cinq autres genres du banc. Le front 2 est SORTI de la phase le même jour, vers IT-7 : sa prémisse — « à 75 %, trier ne protège plus rien » — est tombée avec le front 1.",
+      "quoi": "R&D à deux fronts : le rendu dans l'ordre fond, peau, mains, puis un juge généraliste de plateforme. Close le 09/09. Le fond est refermé par un renoncement écrit, il ne répond pas au prompt. La peau tient sur un constat d'architecture : identité et texture sont le même curseur, seul gain sans contrepartie sharpen 0.30 → 0.55. Les mains passent de 96,4 % à 36,4 % de ratées sur 30 seeds appariés, 22 meilleurs et aucun pire. Le front 2 est sorti vers IT-7 le même jour.",
       "dod": "Le fond, la peau et les mains ont un avant/après jugé au banc, pas à l'impression. — Amendée le 09/09 : les deux conditions sur le juge (un candidat détecteur chiffré sur le corpus, son coût par image mesuré) sont parties avec le front 2 dans la DoD d'IT-7, mot pour mot. Le critère de sortie V1 sur le tri automatique reste debout et non amendé.",
       "epics": "E5, E6",
       "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md (amendé deux fois le 09/09) — DOCS/recherche/2026-09-09-mains-l-etage-qui-divise-le-taux-par-trois.md"
@@ -262,8 +330,8 @@ const D = {
       "id": "IT-3c",
       "titre": "Le mécanisme d'identité, de l'ancre au jeu d'entraînement",
       "state": "done",
-      "quoi": "Chantier ouvert le 09/09 sur les deux points d'E2 — centroïde évolutif et LoRA d'identité — par une phase de recherche que Pierre a demandée. Elle a rendu son verdict : L'ANCRE N'EST PAS LE GABARIT. L'ancre gelée dit QUI est le personnage et ne bouge jamais ; le gabarit dit CONTRE QUOI on le mesure et il est versionné. Les confondre était le défaut de fond, et une photographie unique et figée est une référence hors distribution de la production qu'on lui compare. Mesuré : les 29 images qui portaient un embedding scoraient TOUTES plus haut contre leurs pairs que contre leur ancre. La phase a aussi trouvé un défaut de production que rien ne signalait — le QC d'identité était partagé entre personnages, et une image de Léna avait été mesurée contre l'ancre d'Abyssiaelle puis classée REJET. Le reste s'est enchaîné : le portillon devient relatif et CONVERGE (30 → 44 → 45 → 45 membres, santé qui monte), la file d'entraînement écarte le défaut objectif sans jamais arbitrer le goût, l'export produit un dossier daté avec son manifeste, et le légendage tombe d'une découverte plutôt que d'un outil : `scenes.json` porte déjà l'identité dans un champ `anchor`, donc la légende est `prompt.replace(anchor, déclencheur)`, une substitution exacte. Parité Flux/SDXL branchée au passage, graphe de Léna édité et validé visuellement par Pierre.",
-      "dod": "ATTEINTE. Le gabarit est réel, mesuré et convergent ; la file d'entraînement existe et motive chacun de ses refus ; un jeu exportable part avec ses légendes et son manifeste ; Léna peut porter un LoRA d'identité. Sept commits, six suites de tests neuves, aucune régression. Ce qui reste — entraîner et mesurer au banc — est une itération à part parce qu'il demande des heures de GPU et la main de Pierre, pas du code.",
+      "quoi": "Ouvert le 09/09 sur les deux points d'E2 par une phase de recherche. Son verdict : l'ancre n'est pas le gabarit. L'ancre gelée dit qui est le personnage, le gabarit dit contre quoi on le mesure et il est versionné. Mesuré en leave-one-out : les 29 images qui portent un embedding scorent toutes plus haut contre leurs pairs que contre leur ancre. Le reste s'enchaîne : portillon relatif et convergent, file d'entraînement, export daté avec manifeste, légendage par substitution exacte.",
+      "dod": "Atteinte. Le gabarit est réel, mesuré et convergent ; la file d'entraînement motive chacun de ses refus ; un jeu exportable part avec ses légendes et son manifeste ; Léna peut porter un LoRA d'identité. Sept commits, six suites de tests neuves, aucune régression. Ce qui reste, entraîner et mesurer au banc, part en IT-3d : des heures de GPU et la main de Pierre, pas du code.",
       "epics": "E2",
       "ref": "DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md — DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md — DOCS/cadrage/2026-09-10-legendage-du-jeu-d-entrainement.md"
     },
@@ -271,16 +339,17 @@ const D = {
       "id": "IT-3d",
       "titre": "Le LoRA de Léna existe, ou le renoncement est écrit",
       "state": "next",
-      "quoi": "Tout est branché et rien n'est prouvé. Le jeu d'entraînement est exporté, légendé, manifesté ; le graphe de Léna porte son nœud de LoRA d'identité, validé dans ComfyUI ; le mécanisme d'injection est partagé entre les deux familles de modèle. Ce qui manque n'est pas du code : c'est l'ENTRAÎNEMENT lui-même, hors plateforme (kohya), des heures de GPU et la main de Pierre — plus la convention de dossier et le nombre de répétitions, qui sont des réglages d'entraînement et pas du légendage. POURQUOI AVANT IT-4 : la semaine de production d'IT-4 fait passer chaque image par le curseur identité/texture, dont on a mesuré le 09/09 qu'il échange l'un contre l'autre (identity_weight 0.85 → 0.65 : −0,092 d'identité à 6,2 σ). Lancer la semaine sans savoir si le LoRA desserre ce curseur, c'est produire sept jours d'images et l'apprendre après. Deux réglages attendent aussi ce chiffre : `entrainement.n_min` et `diversite_min` ne se devinent pas, ils se mesurent APRÈS un premier entraînement — 27 images à 8,9 scènes effectives suffisent-elles ? Seul le banc le dira.",
-      "dod": "Un chiffre écrit, dans un sens ou dans l'autre. SOIT le banc montre que le LoRA desserre le curseur — l'identité tient à texture égale ou meilleure — et le réglage retenu est écrit dans config.json, en connaissance du poids PuLID qu'il a fallu bouger (l'IPAdapter d'Abyssiaelle avait dû descendre à 0.0). SOIT il montre que non, et le renoncement est écrit dans DOCS/recherche/, au même titre que le flou de fond et le juge pixel — et IT-4 tourne sur PuLID tel quel, en le sachant.",
+      "quoi": "Le mécanisme est livré, le LoRA ne l'est pas. Ce qui manque n'est pas du code : l'entraînement lui-même, hors plateforme (kohya), des heures de GPU et la main de Pierre. Elle passe avant IT-4 parce que la semaine de production fait passer chaque image par le curseur identité/texture, mesuré comme un troc le 09/09 : la lancer sans savoir si le LoRA le desserre, c'est produire sept jours d'images et l'apprendre après. entrainement.n_min et diversite_min attendent le même chiffre.",
+      "dod": "Un chiffre écrit, dans un sens ou dans l'autre. Soit le banc montre que le LoRA desserre le curseur, et le réglage retenu part dans config.json avec le poids PuLID qu'il a fallu bouger. Soit il montre que non : le renoncement s'écrit dans DOCS/recherche/, comme le flou de fond et le juge pixel, et IT-4 tourne sur PuLID tel quel, en le sachant.",
       "epics": "E2",
       "ref": "DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1, points 4 à 6) — ADR-0021 pour le banc"
     },
     {
       "id": "IT-4",
       "state": "next",
+      "dep": "IT-3d",
       "titre": "Produire une semaine sans être ralenti",
-      "quoi": "Contenu à remplir depuis ton usage réel, pas depuis le code — ce qui te coûte du temps une fois que le rendu est bon. Le bloquant nommé le 08/09 (rendu de peau et de fond, E5) est levé et a CHANGÉ D'EPIC : IT-3b a fermé le fond par renoncement écrit, et la peau sur un constat d'architecture — identité et texture sont le même curseur. Ce qu'il en reste est le LoRA d'identité (E2) : le mécanisme est livré (IT-3c), mais le LoRA lui-même n'existe pas encore — c'est IT-3d, et elle reste le préalable de cette semaine. Le journal de frictions est ouvert avant le jour 1 : le contenu de l'itération vient de la semaine, jamais du code. Autres candidats repérés : garde-robe en dur dans le front, absence de file d'attente serveur, créateur de lumière manquant — aucun n'est un prérequis de la semaine, et le créateur de lumière porte le garde-fou hérité du flou de fond : si le levier passe par le prompt, le mesurer AVANT de construire l'écran.",
+      "quoi": "Contenu à remplir depuis l'usage réel, pas depuis le code : ce qui coûte du temps une fois que le rendu est bon. Le bloquant du 08/09 sur le rendu est levé par IT-3b ; il n'en reste que IT-3d, préalable de cette semaine. Le journal de frictions s'ouvre avant le jour 1. Candidats repérés, aucun prérequis : garde-robe en dur dans le front, pas de file d'attente serveur, créateur de lumière manquant. Ce dernier hérite du garde-fou du flou de fond : mesurer le levier avant de construire l'écran.",
       "dod": "Une semaine de production réelle sans contournement manuel noté, et chaque friction relevée est soit corrigée, soit versée au backlog avec sa raison.",
       "epics": "E3, E4",
       "ref": "DOCS/cadrage/2026-09-09-it4-frictions.md — préalable : DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md"
@@ -297,6 +366,7 @@ const D = {
     {
       "id": "IT-6",
       "state": "next",
+      "dep": "IT-1, IT-3",
       "titre": "La vidéo hérite de l'image",
       "quoi": "La vidéo ne se lance pas avant que l'image soit stable : elle multiplie par le nombre d'images les ratés qu'on ne sait pas encore détecter. Une fois IT-1 à IT-3 fermées, elle devient le prolongement naturel du pipeline — pas un deuxième produit.",
       "dod": "Une vidéo produite depuis une image déjà validée par le tri, avec le même cœur d'exécution, le même journal et le même export. La dérive d'identité sur la séquence est mesurée, même grossièrement.",
@@ -307,8 +377,8 @@ const D = {
       "id": "IT-7",
       "state": "next",
       "titre": "La machine reconnaît un raté, ou on l'écrit noir sur blanc",
-      "quoi": "Le front 2 d'IT-3b, sorti de sa phase le 09/09 et non abandonné. Un passage unique par lequel chaque image produite dit ce qui ne va pas — agnostique, rattaché à la plateforme, proportions ET mains dans le même passage. Sa prémisse d'urgence est tombée (les mains sont passées de 75 % à 36 % de ratées), pas sa raison d'être : le critère de sortie V1 demande des défauts objectifs mesurés ET triés automatiquement, et rien ne sait encore le faire. Trois candidats déjà classés, dans cet ordre d'examen : HADM (poids publiés, cible juste), ViT-HD (meilleur sur le papier, disponibilité à vérifier), ArtifactLens (à notre volume d'étiquettes, mais code non publié).",
-      "dod": "Un candidat détecteur est chiffré sur le corpus du 08/09 — faux positifs et faux négatifs comptés sur les 53 mains jugeables, comparés aux 30 % de rappel de `hands` v1 — ou refermé par écrit, comme la piste géométrique et Florence-2. Et son coût par image est mesuré, pas estimé : souvenir de Florence-2, 9,5 s par crop et ~19 s par image, un juge trop lent ne rentre pas dans la boucle de production quelle que soit sa justesse.",
+      "quoi": "Le front 2 d'IT-3b, sorti de sa phase le 09/09, non abandonné. Un passage unique par lequel chaque image dit ce qui ne va pas : agnostique, rattaché à la plateforme, proportions et mains ensemble. Sa prémisse d'urgence est tombée, les mains sont passées de 75 % à 36 % de ratées ; sa raison d'être tient, le critère de sortie V1 demande des défauts objectifs mesurés et triés. Trois candidats classés : HADM (poids publiés), ViT-HD (disponibilité à vérifier), ArtifactLens (code non publié).",
+      "dod": "Un candidat détecteur est chiffré sur le corpus du 08/09 : faux positifs et faux négatifs sur les 53 mains jugeables, comparés aux 30 % de rappel de `hands` v1. Ou refermé par écrit, comme la piste géométrique et Florence-2. Son coût par image est mesuré, pas estimé : Florence-2 tenait 9,5 s par crop et ~19 s par image, un juge trop lent ne rentre pas dans la boucle quelle que soit sa justesse.",
       "epics": "E6",
       "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md (front 2) — DOCS/recherche/2026-09-08-etat-de-l-art-detection-defauts.md — ADR-0025"
     }
@@ -352,7 +422,7 @@ const D = {
         {
           "s": "faire",
           "t": "Le graphe de production porte le nom du pack, pas celui de Léna",
-          "d": "(9 septembre 2026) `lena_master_prod_ui.json` EST le graphe du pack instagram-influenceur, mais il en porte le nom d'un personnage — et deux fuites réelles avec, toutes deux dans des groupes bypassés : le préfixe de « SORTIE edition Qwen » (OFM/PROD/LENA/EDIT/) et le filigrane DrawText+ qui écrit « Lena », qu'aucun code n'injecte. Le reste de ce qui la nomme est soit injecté à l'exécution (base gelée par identity.apply, préfixe de sortie par comfy.py), soit décoratif (titres, notes). Donc PAS un template recopié par personnage — ADR-0012 a écarté « un fichier de graphe par personnage » explicitement, et HANDDETAILER vient de le démontrer : une édition de graphe au lieu de N, et tout personnage créé avant serait resté sans l'étage. Renommer, neutraliser, boucher les deux fuites, suivre le pointeur dans universe.json, config.json de Léna, tests de rôles et skills. Plus d'une étape : cadrage écrit avant le code (règle 3)."
+          "d": "`lena_master_prod_ui.json` est le graphe du pack instagram-influenceur mais porte le nom d'un personnage, avec deux fuites dans des groupes bypassés : un préfixe de sortie et un filigrane DrawText+. Pas un template par personnage (ADR-0012). Plus d'une étape : cadrage avant le code."
         }
       ]
     },
@@ -390,23 +460,27 @@ const D = {
         },
         {
           "s": "cours",
+          "it": "IT-3d",
           "t": "LoRA d'identité par personnage",
-          "d": "ÉTAGE 1 BRANCHÉ le 10/09 — il ne manque plus que le LoRA lui-même. Points 1, 2, 3 et 7 du périmètre faits ; restent 4, 5 et 6 (entraîner hors plateforme, renseigner config.json, passer le banc), qui demandent le fichier entraîné. Le bloc d'injection est monté dans `identity.injecter_lora` et les DEUX mécanismes l'appellent : PuLID-Flux l'avait perdu par accident d'emplacement, pas par conception. Les deux boucles de vérification de rôles ont fusionné au passage. ÉCART AU CADRAGE, assumé : le point 3 ne se réduisait pas à un renommage. Le nœud que le cadrage désignait porte le LoRA de RÉALISME (Realistic_Adult_Flux, 0.4), déclaré au manifeste comme tel — le réutiliser aurait refusionné les deux concepts que la phase de recherche venait de séparer. Le graphe de Léna reçoit donc un nœud de plus : checkpoint -> LoRA realisme -> LoRA personnage -> ApplyPulidFlux, les deux en bypass. Le fragment de titre attendu (« LoRA personnage ») a été choisi pour qu'AUCUN graphe existant n'ait à être renommé : c'est déjà celui d'Abyssiaelle, dont le rôle passe du type seul au type + titre et devient robuste à un second LoraLoaderModelOnly. VÉRIFIÉ : les trois copies de chaque lien à la main, `wf_check --roles` puis `--essai` (ComfyUI accepte le graphe), l'API convertie IDENTIQUE À L'OCTET avant/après avec et sans les groupes de production — la production d'aujourd'hui est prouvée inchangée — et, avec un identity.lora fictif, le nœud s'active, reçoit nom et force, PuLID prend son modèle depuis lui et le mot déclencheur se préfixe au prompt. RESTE À PIERRE : la validation visuelle dans ComfyUI (invariant 1 amendé), puis l'entraînement. Tests : test_lora_identite_parite."
+          "d": "Étage 1 branché le 10/09 : `identity.injecter_lora` est partagé par les deux mécanismes, et le graphe de Léna chaîne réalisme puis identité avant PuLID, les deux en bypass. Restent l'entraînement hors plateforme, la valeur dans config.json et le passage au banc. Tests : test_lora_identite_parite."
         },
         {
           "s": "fait",
+          "it": "IT-3c",
           "t": "Centroïde évolutif",
-          "d": "LIVRÉ le 10/09. Le centroïde n'est pas un suivi, c'est le GABARIT D'ENRÔLEMENT : `base.construire_jeu` score désormais le portillon contre le centroïde du jeu actif dès qu'un `qc.threshold_gabarit` est configuré, et contre l'ancre gelée sinon (amorçage, ce qui tourne au premier jour d'un personnage). L'ancre ne bouge jamais et reste le JUGE : la santé est toujours son rapport, le gabarit ne se valide jamais lui-même. MESURÉ SUR LA VRAIE BASE : le seuil de Léna (0.9125, soit moy(membres) − 2σ) vient de calibrer_gabarit.py, pas d'une intuition — bande imposteur à 0.236, donc +0.677 de marge au seuil. Les membres passent de 30 à 44, et la boucle CONVERGE au lieu de dériver : 30 → 44 → 45 → 45 en trois reconstructions, santé 1.0715 → 1.0734 → 1.0739 → 1.0739 (elle MONTE), cohésion stable à 0.9312. C'est la démonstration empirique que l'auto-mise-à-jour tient avec ces garde-fous. Livré avec : la provenance (image.lora_identite, une image DERIVED le dit en base et ne peut plus redevenir une donnée d'origine en silence), la pureté du modèle d'embedding (un jeu n'en mélange jamais deux), le refus d'enrôlement à la création d'un personnage plutôt qu'au premier lot, et `identite_centroide` écrit à la génération sans seconde passe InsightFace. Tests : test_gabarit, test_enrolement, test_provenance_lora. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+          "d": "Le centroïde est le gabarit d'enrôlement : `base.construire_jeu` score le portillon contre lui dès qu'un `qc.threshold_gabarit` existe, contre l'ancre sinon. Seuil de Léna 0.9125 calibré, bande imposteur à 0.236. La boucle converge : 30, 44, 45, 45 membres. Tests : test_gabarit, test_enrolement."
         },
         {
           "s": "fait",
+          "it": "IT-3c",
           "t": "File d'entraînement : candidats et proposition",
-          "d": "LIVRÉ le 10/09. `AUTOMATION/entrainement.py` répond « sur quoi entraînerait-on, et est-ce assez ? » — il ne lance rien. La file part des membres du gabarit (donc déjà passés par le portillon d'identité) et n'écarte QUE le défaut objectif : `mains_juge` ou `anatomie` à `ko`. Le goût n'écarte jamais — `flag = ia` reste, c'est un jugement que l'utilisateur final fait lui-même, et il est sans effet mesuré sur l'identité. Sur Léna aujourd'hui : 45 membres, 18 écartés (17 mains, 1 anatomie), FILE = 27, dont 3 jamais étiquetées — signalées comme supposées saines, pas vérifiées. La diversité se compte en CATÉGORIES EFFECTIVES (exp de l'entropie) et non en valeurs distinctes : 11 scènes distinctes ne font que 8,9 effectives, parce que trois d'entre elles pèsent la moitié du lot. Cohésion 0,9339, aucun outlier. La proposition rend un verdict PAR CRITÈRE avec sa raison, et un seuil absent du config.json ne devient jamais une valeur par défaut : le critère est « sans seuil configuré » et rien ne conclut. Livré avec la montée en base des étiquettes de corpus — `poser_etiquette` le demandait dans son propre docstring, « migrer le jour où une seconde lecture le demande », et cette lecture est arrivée. Tests : test_file_entrainement, test_etiquettes_corpus étendu. EXPORT AJOUTE le 10/09 (`--exporter`) : le pont qui manquait entre « la plateforme sait sur quoi entraîner » et « kohya peut tourner dessus ». Il rassemble les images dans PROD/_ENTRAINEMENT/<personnage>/<horodatage>/ avec un manifeste qui garde la liste exacte, les étiquettes, la provenance de chaque image, l'état du gabarit et le seuil qui a filtré — sans ce relevé, comparer deux LoRA au banc ne voudrait rien dire (règle 11 du mécanisme). L'ANCRE est copiée avec (règle 7 : réinjectée à CHAQUE tour, pas seulement au premier, sinon la boucle auto-consommatrice dérive). Et il a révélé un écart qu'il fallait dire : la file compte 27 images, le disque n'en a que 24 — un embedding survit en base à la disparition du PNG. Le rapport et le manifeste nomment les trois manquantes plutôt que de livrer un jeu plus petit que ce qu'ils annoncent. Un export n'écrase jamais le précédent. Légendage et convention de dossier kohya restent à la main : hors périmètre du cadrage."
+          "d": "`AUTOMATION/entrainement.py` dit sur quoi on entraînerait et si c'est assez ; il ne lance rien. Il part des membres du gabarit et n'écarte que le défaut objectif. Sur Léna : 45 membres, 18 écartés, file de 27. `--exporter` écrit un dossier daté avec son manifeste. Test : test_file_entrainement."
         },
         {
           "s": "fait",
+          "it": "IT-3c",
           "t": "Légendage automatique du jeu d'entraînement",
-          "d": "LIVRÉ le 10/09. Le dernier geste manuel de la chaîne disparaît : `--exporter` écrit un `.txt` par image (convention kohya) et crée le mot déclencheur du personnage. LA MÉTHODE VIENT DU DÉPÔT, pas d'un outil externe : `scenes.json` porte un champ `anchor` — l'identité en toutes lettres — et `assert_no_face` (invariant 6) garantit qu'aucun fragment de scène ne décrit le visage. La légende est donc `prompt.replace(anchor, déclencheur)`, une substitution EXACTE vérifiée sur 22 prompts sur 22, où le jeton prend la place du sujet. C'est précisément ce que la pratique appelle « baker l'identité dans le trigger », et ça se fait sans modèle. Sur Léna : 22 prompt, 1 vision, 1 déclencheur seul, 1 ancre — 4 secondes. Cadrage : DOCS/cadrage/2026-09-10-legendage-du-jeu-d-entrainement.md. Tests : test_legende, test_file_entrainement étendu. LÉGENDEUR BASCULÉ le 10/09 après recherche : Florence-2-large-PromptGen-v2.0 (MIT, 0,8B, ~1 Go de VRAM, 2-3 s) remplace Florence-2-Flux-Large. Mesuré sur la même image : « a woman sitting on a stool » contre « sitting at a wooden table in an outdoor cafe, wearing a beige knitted cardigan over a white shirt and blue jeans » — et le prompt d'origine donne raison au second. Déclaré au manifeste (invariant 12). La bascule a révélé un défaut du garde-fou : il jetait la légende ENTIÈRE sur un mot de visage, donc un meilleur légendeur — qui décrit plus — perdait la scène avec le visage. Il retire désormais la CLAUSE fautive, avec réparation du moignon quand la description de visage s'étale sur plusieurs clauses. Effet : les deux images sans prompt passent de « déclencheur seul » et « vision refusée » à deux légendes de scène complètes."
+          "d": "`--exporter` écrit un `.txt` par image et crée le mot déclencheur. La légende est `prompt.replace(anchor, déclencheur)`, substitution exacte vérifiée sur 22 prompts sur 22. Légendeur Florence-2-large-PromptGen-v2.0. Le garde-fou retire la clause fautive, plus la légende entière. Test : test_legende."
         }
       ]
     },
@@ -451,7 +525,7 @@ const D = {
         {
           "s": "veille",
           "t": "Le flou de fond, réglable par scène",
-          "d": "auto / net / flou — la seule dimension du rendu qui se décidait sans l'utilisateur. Cadrage du 08/09. RETIRE le 09/09 par son propre critere de sortie : « net » et « flou » ne se separent pas sur fond_net (0.552 contre 0.561, cinq seeds apparies), et un texte plus fort en tete de prompt ne change rien. Le levier n'est pas le prompt."
+          "d": "auto / net / flou, la seule dimension du rendu qui se décidait sans l'utilisateur. Retiré le 09/09 par son propre critère de sortie : « net » et « flou » ne se séparent pas sur fond_net (0.552 contre 0.561, cinq seeds appariés), et un texte plus fort ne change rien. Le levier n'est pas le prompt."
         }
       ]
     },
@@ -527,23 +601,27 @@ const D = {
         },
         {
           "s": "fait",
+          "it": "IT-1",
           "t": "Sortir le banc de comparaison de pause",
-          "d": "IT-1 — tourne de bout en bout sur Léna, verdict chiffré par variante"
+          "d": "tourne de bout en bout sur Léna, verdict chiffré par variante"
         },
         {
           "s": "fait",
+          "it": "IT-1",
           "t": "Adopter ou rejeter un étage de détail",
-          "d": "IT-1 — HLFrequencyDetailRestore rejeté : netteté −96 pts au banc, cadrage phase 4 § P4.4"
+          "d": "HLFrequencyDetailRestore rejeté : netteté −96 pts au banc, cadrage phase 4 § P4.4"
         },
         {
           "s": "fait",
+          "it": "IT-1",
           "t": "Verdict global du banc masqué par une métrique sous-échantillonnée",
-          "d": "IT-1 — « mains » à n=3 tirait le global à « insuffisant » alors que trois genres tranchaient à n=5. Payée le 09/09, avant le premier banc sur les mains : un genre indécidable sort du verdict global et y est nommé au lieu de le confisquer, et chaque genre n'est comparé que sur les seeds mesurés des DEUX côtés — « mains » ne s'écrit que quand DWPose trouve un poignet, son échantillon se choisit donc lui-même."
+          "d": "« mains » à n=3 tirait le verdict global à « insuffisant » quand trois genres tranchaient à n=5. Payée le 09/09 : un genre indécidable sort du global et y est nommé, et chaque genre n'est comparé que sur les seeds mesurés des deux côtés."
         },
         {
           "s": "fait",
+          "it": "IT-2",
           "t": "Amener le pipeline Abyssiaelle au niveau de Léna",
-          "d": "IT-2 — quatre étages câblés, validés dans ComfyUI et mesurés au banc un axe à la fois. Adoptés : upscale 2K (netteté ×2,1) et grain + export (seul « meilleure sur tous les axes »). Rejetés : refiner (texture +0,93 mais identité 0,67 → 0,46) et FaceDetailer seul — qui garde son rôle de réparation derrière le refiner."
+          "d": "quatre étages câblés, validés dans ComfyUI et mesurés au banc un axe à la fois. Adoptés : upscale 2K (netteté ×2,1) et grain + export. Rejetés : refiner (texture +0,93 mais identité 0,67 → 0,46) et FaceDetailer seul, qui garde son rôle de réparation derrière le refiner."
         },
         {
           "s": "veille",
@@ -552,18 +630,21 @@ const D = {
         },
         {
           "s": "fait",
+          "it": "IT-2",
           "t": "Le banc ne fait varier que des interrupteurs d'étage",
-          "d": "IT-2 — les deux étages rejetés avaient leur vraie question dans un réglage continu que bench.CFG_AXES ne savait pas balayer. Levé le 09/09 : refiner_denoise, sharpen, grain_strength, identity_start_at et identity_end_at sont des axes. Reste hors de portée ce qui n'est pas dans config.json (guide_size du FaceDetailer est un réglage de nœud, il demanderait un rôle)."
+          "d": "les deux étages rejetés avaient leur vraie question dans un réglage continu que bench.CFG_AXES ne balayait pas. Levé le 09/09 : refiner_denoise, sharpen, grain_strength, identity_start_at et identity_end_at sont des axes. Reste hors de portée ce qui n'est pas dans config.json."
         },
         {
           "s": "faire",
+          "it": "IT-2",
           "t": "Combler la texture de visage du pack SDXL",
-          "d": "IT-2 — 3,29 contre ~4,9 côté Léna. Le seul étage qui la comblait (refiner) coûte l'identité : c'est le sujet du candidat #2 de la phase 4, régénération locale masquée"
+          "d": "3,29 contre ~4,9 côté Léna. Le seul étage qui la comblait (refiner) coûte l'identité : c'est le sujet du candidat #2 de la phase 4, régénération locale masquée"
         },
         {
           "s": "fait",
+          "it": "IT-3b",
           "t": "Rendu : fond, peau, puis mains",
-          "d": "IT-3b, clos le 09/09 dans l'ordre décidé. Le fond : renoncement écrit, il ne répond pas au prompt. La peau : identité et texture sont le même curseur sur deux mécanismes indépendants — seul gain sans contrepartie, sharpen 0.30 → 0.55 sur Léna, jugé à l'œil parce que texture_visage ne sépare pas. Les mains : l'étage HANDDETAILER fait passer le taux de mains ratées de 96,4 % à 36,4 % sur cuisine_matin (30 seeds appariés, 8,7 σ, 22 seeds meilleurs et AUCUN pire), sans rien coûter aux cinq autres genres du banc, pour +34,4 s par image. Adoption tranchée en interrupteur de génération plutôt qu'en réglage de personnage, éteint par défaut : temps contre qualité n'a pas de bonne réponse objective, la plateforme ne choisit pas à la place de l'utilisateur (PROJET.md). Graphe validé visuellement dans ComfyUI par Pierre le 09/09 (invariant 1). Reste non mesuré : le denoise de l'étage, 0.5 est une valeur posée à la main — l'axe de banc existe, la question est écrite dans la note."
+          "d": "clos le 09/09 dans l'ordre décidé. Fond : renoncement écrit. Peau : identité et texture sont le même curseur, sharpen 0.30 → 0.55 sur Léna. Mains : HANDDETAILER fait passer le taux de ratées de 96,4 % à 36,4 % sur 30 seeds appariés, pour +34,4 s par image, en interrupteur éteint par défaut."
         }
       ]
     },
@@ -597,13 +678,15 @@ const D = {
         },
         {
           "s": "fait",
+          "it": "IT-3",
           "t": "Constituer un corpus étiqueté à la main",
-          "d": "IT-3 — 102 images, deux axes : proportions 91 ok / 1 ko / 10 na, mains 13 ok / 40 ko / 49 na"
+          "d": "102 images, deux axes : proportions 91 ok / 1 ko / 10 na, mains 13 ok / 40 ko / 49 na"
         },
         {
           "s": "fait",
+          "it": "IT-3",
           "t": "Chiffrer les mains contre le corpus, pas contre le tri",
-          "d": "IT-3 — 15 % de faux positifs et 70 % de faux négatifs, pas les 33 % de faux positifs supposés : 28 des 40 mains cassées scorent 1.00"
+          "d": "15 % de faux positifs et 70 % de faux négatifs, pas les 33 % de faux positifs supposés : 28 des 40 mains cassées scorent 1.00"
         },
         {
           "s": "dette",
@@ -617,13 +700,15 @@ const D = {
         },
         {
           "s": "faire",
+          "it": "IT-7",
           "t": "Un juge généraliste, agnostique, rattaché à la plateforme",
-          "d": "IT-3b — candidats classés : HADM (poids publiés), ViT-HD (disponibilité à vérifier), ArtifactLens (102 étiquettes suffiraient, code non publié)"
+          "d": "candidats classés : HADM (poids publiés), ViT-HD (disponibilité à vérifier), ArtifactLens (102 étiquettes suffiraient, code non publié)"
         },
         {
           "s": "faire",
+          "it": "IT-7",
           "t": "Trancher le tri automatique",
-          "d": "IT-3 — ADR-0025 : aucune mesure ne franchit la barre à ce jour, ni mains (70 % de faux négatifs) ni proportions (rien à calibrer)"
+          "d": "ADR-0025 : aucune mesure ne franchit la barre à ce jour, ni mains (70 % de faux négatifs) ni proportions (rien à calibrer)"
         },
         {
           "s": "dette",
@@ -738,7 +823,7 @@ const D = {
         {
           "s": "fait",
           "t": "URLs de modèles incomplètes au manifeste",
-          "d": "09/09 — 17 entrées sur 27 étaient muettes. Règle totale posée : chaque modèle porte une url (téléchargeable) OU une provenance (comment un humain l'obtient), sans exception, verrouillée par test. 8 URLs vérifiées et recoupées à la taille du fichier installé. Cadrage : DOCS/cadrage/2026-09-09-manifeste-obtention-des-modeles.md"
+          "d": "09/09 : 17 entrées sur 27 étaient muettes. Règle posée et verrouillée par test, chaque modèle porte une url téléchargeable ou une provenance. 8 URLs vérifiées et recoupées à la taille du fichier installé. Cadrage : DOCS/cadrage/2026-09-09-manifeste-obtention-des-modeles.md"
         },
         {
           "s": "faire",
@@ -770,8 +855,9 @@ const D = {
         },
         {
           "s": "faire",
+          "it": "IT-5",
           "t": "Câbler les assets de monde dans le runner",
-          "d": "IT-5 — prérequis pour qu'un monde porte un style"
+          "d": "prérequis pour qu'un monde porte un style"
         },
         {
           "s": "veille",
@@ -807,8 +893,9 @@ const D = {
         },
         {
           "s": "faire",
+          "it": "IT-6",
           "t": "Brancher un graphe vidéo sur le cœur d'exécution unique",
-          "d": "IT-6 — même execute_jobs, l'image source vient de la banque validée"
+          "d": "même execute_jobs, l'image source vient de la banque validée"
         },
         {
           "s": "faire",
@@ -858,13 +945,15 @@ const D = {
         },
         {
           "s": "fait",
+          "it": "IT-0",
           "t": "Éteindre les roadmaps concurrentes",
-          "d": "IT-0 — la roadmap de finition n'a jamais été close ni archivée"
+          "d": "la roadmap de finition n'a jamais été close ni archivée"
         },
         {
           "s": "fait",
+          "it": "IT-0",
           "t": "Décider du sort de ce tableau de bord",
-          "d": "IT-0 — remplacer le fil conducteur, ou le générer comme lui"
+          "d": "remplacer le fil conducteur, ou le générer comme lui"
         }
       ]
     },
@@ -875,8 +964,9 @@ const D = {
       "items": [
         {
           "s": "fait",
+          "it": "IT-0",
           "t": "Poser une licence",
-          "d": "IT-0 — le dépôt est public et sans licence : tous droits réservés par défaut, personne ne peut le forker"
+          "d": "le dépôt est public et sans licence : tous droits réservés par défaut, personne ne peut le forker"
         },
         {
           "s": "fait",
@@ -885,8 +975,9 @@ const D = {
         },
         {
           "s": "fait",
+          "it": "IT-0",
           "t": "Aligner le README sur le statut réel",
-          "d": "IT-0 — il annonce encore un dépôt à rendre public"
+          "d": "il annonce encore un dépôt à rendre public"
         }
       ]
     }
@@ -896,57 +987,57 @@ const D = {
     {
       "e": "ouvert",
       "t": "JoyCaption est rangé, pas écarté — et le moment de l'ouvrir est nommé",
-      "d": "Recherche du 10/09 sur les légendeurs. JoyCaption Beta One est le seul candidat CONSTRUIT pour ça (« a free, open and uncensored model for the community to use in training Diffusion models ») et le seul qui couvre le NSFW à égalité avec le SFW. Ce n'est pas anecdotique : le NSFW est citoyen de première classe du produit, et on a mesuré qu'un modèle censuré REFUSE EN SILENCE dès qu'on lui parle d'une personne et de ses vêtements — sortie vide en 1 s, aucune erreur. Le jour où un jeu d'entraînement contiendra des images de cette branche, PromptGen laissera tomber sans le dire. Coûts nommés : un custom node de plus (invariant 12, et ADR-0024 à passer DEUX fois — sur le node et sur les poids) ; 8B en bf16 ≈ 16 Go quand la carte en a 17,2 dont 10,5 libres, donc une variante GGUF ; et une licence à lire vraiment — le dépôt déclare Apache-2.0 mais les poids dérivent de Llama 3.1, dont la licence communautaire se propage normalement aux dérivés, et le README ne dit rien de cette héritance. NON TRANCHÉ. À ouvrir quand le NSFW entrera dans un jeu d'entraînement, ou quand la forme des légendes deviendra un problème mesuré."
+      "d": "Recherche du 10/09. JoyCaption Beta One est le seul candidat construit pour ça, et le seul qui couvre le NSFW à égalité avec le SFW : un modèle censuré refuse en silence dès qu'on lui parle d'une personne et de ses vêtements, sortie vide en 1 s. Coûts nommés : un custom node de plus, ADR-0024 à passer deux fois, 8B en bf16 ≈ 16 Go pour 10,5 libres donc une variante GGUF, et une licence Llama 3.1 qui se propage sous un README muet. À ouvrir quand le NSFW entrera dans un jeu d'entraînement."
     },
     {
       "e": "tranche",
       "t": "Le LLM local ne sait pas légender ; Florence-2 si",
-      "d": "Mesuré le 10/09. Le cadrage prévoyait une reformulation par `qwen3vl_4b_fp8_scaled` via le nœud `TextGenerate` — le chemin qu'utilise déjà le composeur de scènes. Cinq formulations essayées : refus explicite (« no valid caption can be generated under these constraints »), commentaire de la consigne au lieu de la réponse, écho mot pour mot de l'instruction, sortie VIDE en 1 s dès que la consigne mentionne la personne, listes markdown. Ce n'est pas un modèle de conversation, c'est un encodeur de texte servi par un nœud qui n'est pas fait pour suivre des instructions — le composeur s'en sert avec succès pour une tout autre tâche. Florence-2, écarté au cadrage parce qu'il hallucine les détails du visage, prend sa place pour la raison inverse : il ne suit AUCUNE instruction, il décrit. 2 à 6 s, aucun refus. Son défaut est sans conséquence puisqu'on ne lui demande jamais l'identité — et le garde-fou l'a prouvé dès le premier jour en refusant sa légende du portrait de base, où il décrit les taches de rousseur ET invente des yeux bleus là où Léna les a verts. RESTE OUVERT : Ollama tourne sur ce poste avec qwen3-vl:8b, un vrai modèle de conversation. Il reste écarté comme dépendance non déclarée, mais le motif « on a déjà ce qu'il faut » ne tient plus tout à fait : on a de quoi DÉCRIRE, pas de quoi REFORMULER."
+      "d": "Mesuré le 10/09. Le cadrage prévoyait `qwen3vl_4b_fp8_scaled` via le nœud `TextGenerate`. Cinq formulations : refus explicite, commentaire de la consigne, écho de l'instruction, sortie vide en 1 s dès qu'on mentionne la personne, listes markdown. C'est un encodeur de texte servi par un nœud qui ne suit pas d'instructions. Florence-2 prend sa place pour la raison inverse : il ne suit rien, il décrit, 2 à 6 s, aucun refus. Ollama et qwen3-vl:8b restent écartés, dépendance non déclarée."
     },
     {
       "e": "tranche",
       "t": "Un jeu d'entraînement s'exporte avec son manifeste, jamais seul",
-      "d": "Décidé le 10/09. Copier 24 images dans un dossier ne suffit pas : sans le relevé de ce qui a été retenu, de ce qui a été écarté et pourquoi, de l'état du gabarit et du seuil qui a filtré, deux LoRA entraînés à deux dates ne sont pas comparables — et le banc qui les départage ne mesurerait qu'un écart qu'on ne saurait pas expliquer. C'est la règle 11 du mécanisme d'identité, rendue exécutable. On copie plutôt qu'on ne lie : un lien symbolique demande des droits sur Windows, et un jeu qui pointe vers l'arbre de tri se briserait au premier reclassement."
+      "d": "Décidé le 10/09. Copier 24 images dans un dossier ne suffit pas : sans le relevé de ce qui a été retenu, de ce qui a été écarté et pourquoi, de l'état du gabarit et du seuil qui a filtré, deux LoRA entraînés à deux dates ne sont pas comparables. C'est la règle 11 du mécanisme d'identité, rendue exécutable. On copie plutôt qu'on ne lie : un lien symbolique demande des droits sur Windows, et un jeu qui pointe vers l'arbre de tri se briserait au premier reclassement."
     },
     {
       "e": "tranche",
       "t": "Le LoRA de réalisme et le LoRA d'identité sont deux nœuds, pas un",
-      "d": "Décidé le 10/09 en branchant l'étage 1. Le cadrage prévoyait de renommer le nœud « LoRA realisme (bypass) / futur LoRA Lena » pour en faire le rôle d'identité. À la lecture, ce nœud porte Realistic_Adult_Flux à 0.4 — un LoRA de RÉALISME, déclaré comme tel au manifeste depuis l'arbitrage du 09/09. Le réutiliser aurait fusionné les deux concepts que la phase de recherche venait de séparer, et interdit de porter les deux à la fois. Un nœud de plus donc, chaîné entre les deux : checkpoint -> réalisme -> identité -> ApplyPulidFlux. Le nœud de réalisme reprend son titre exact, et « Lena » disparaît d'un titre de graphe au passage (dette E1 : un graphe appartient au pack, jamais au personnage)."
+      "d": "Décidé le 10/09 en branchant l'étage 1. Le cadrage prévoyait de renommer le nœud « LoRA realisme (bypass) » pour en faire le rôle d'identité. Ce nœud porte Realistic_Adult_Flux à 0.4, un LoRA de réalisme déclaré comme tel au manifeste : le réutiliser aurait refusionné les deux concepts que la recherche venait de séparer, et interdit de porter les deux à la fois. Un nœud de plus donc, chaîné : checkpoint, réalisme, identité, ApplyPulidFlux. « Lena » disparaît d'un titre de graphe au passage."
     },
     {
       "e": "tranche",
       "t": "Les étiquettes de corpus montent en base, leur docstring le demandait",
-      "d": "Décidé le 10/09 en construisant la file d'entraînement. `anatomie` et `mains_juge` ne vivaient que dans `mesures.json`, et `poser_etiquette` posait lui-même la condition de sa migration : « la table jugement est mono-colonne [...] migrer le jour où une SECONDE LECTURE le demande ». La file est cette seconde lecture — elle DÉCIDE d'une admission depuis ces étiquettes. Les laisser dans un store JSON pendant que le reste du mécanisme (embeddings, jeu de référence, portillon) est en SQL, c'était réinstaller « deux stores, une vérité » — la faute qui a coûté deux corrections cette semaine. Double écriture désormais, sur le patron de `poser_flag`. Effet de bord traité : retirer un `flag` ne supprime plus la ligne de jugement, sinon il emporterait une étiquette d'anatomie que personne n'a demandé à retirer."
+      "d": "Décidé le 10/09 en construisant la file d'entraînement. `anatomie` et `mains_juge` ne vivaient que dans `mesures.json`, et `poser_etiquette` posait lui-même la condition de sa migration : migrer le jour où une seconde lecture le demande. La file est cette seconde lecture, elle décide d'une admission depuis ces étiquettes. Double écriture désormais, sur le patron de `poser_flag`. Effet de bord traité : retirer un `flag` ne supprime plus la ligne, sinon il emporterait une étiquette d'anatomie."
     },
     {
       "e": "tranche",
       "t": "La file d'entraînement exclut les défauts objectifs, pas les défauts de goût",
-      "d": "Acté le 10/09, après que Pierre a annoté à la main les 20 images de PROD/LENA/REJET. Le croisement est net : les 7 que le portillon d'identité admettait sont SIX MAINS CASSÉES ET UN BRAS — il ne filtre pas les mains, il les tire à pile ou face (6 admises sur 12). Or une main à six doigts est un défaut OBJECTIF (PROJET.md, amendement du 07/09), pas un choix créatif que l'utilisateur arbitre : entraîner un LoRA dessus lui apprend des mains cassées. La file d'entraînement se ferme donc sur l'identité ET l'absence de défaut objectif. Le signal existe déjà et n'a pas besoin d'être invente : les étiquettes de corpus (mesures.ETIQUETTES, P4.5.1) portent `mains_juge` et `anatomie` sur des AXES SÉPARÉS du flag de réalisme — 40 images déjà marquées ko sur les mains, et les 12 du CSV en font partie. L'agnosticisme tient exactement : la plateforme juge l'identité, l'humain juge l'anatomie, et son jugement est déjà rangé à part de son goût. Le gabarit, lui, ne change pas : il continue de se nourrir de tout ce qui est bien elle, mains cassées comprises — une main ne déforme pas un visage."
+      "d": "Acté le 10/09, après annotation à la main des 20 images de PROD/LENA/REJET. Les 7 que le portillon d'identité admettait sont six mains cassées et un bras : il ne filtre pas les mains, il les tire à pile ou face. Une main à six doigts est un défaut objectif (PROJET.md, 07/09), pas un choix créatif : entraîner un LoRA dessus lui apprend des mains cassées. La file se ferme donc sur l'identité et l'absence de défaut objectif. Le gabarit ne change pas : une main ne déforme pas un visage."
     },
     {
       "e": "tranche",
       "t": "Le gabarit mesure l'identité, jamais le réalisme",
-      "d": "Arbitrage de Pierre le 10/09, en découvrant que 17 des 45 membres du gabarit portaient son flag « ia ». Le portillon reste sur l'identité SEULE : que le visage fasse IA ou non, c'est le même visage, et trier le réalisme est un jugement que l'utilisateur final fait lui-même — la plateforme ne l'arbitre pas à sa place (PROJET.md). MESURÉ dans la foulée, et l'arbitrage est gratuit : sur 30 images « ok » contre 26 « ia », l'écart d'identité contre le gabarit est de -0.001, soit 0.1 sigma — elles sont rigoureusement indiscernables dans l'espace du visage. Les inclure n'abîme pas le thermomètre. Conséquence de cadrage : le GABARIT (instrument de mesure, qui veut couvrir l'espace de conditions de la production) et la FILE D'ENTRAÎNEMENT (qui veut de la qualité) sont DEUX objets, là où le schéma du 09/09 les faisait passer sous une seule flèche."
+      "d": "Arbitrage de Pierre le 10/09, en découvrant que 17 des 45 membres du gabarit portaient son flag « ia ». Le portillon reste sur l'identité seule : que le visage fasse IA ou non, c'est le même visage, et trier le réalisme est un jugement que l'utilisateur fait lui-même (PROJET.md). Mesuré dans la foulée, l'arbitrage est gratuit : sur 30 images « ok » contre 26 « ia », l'écart d'identité est de −0.001, soit 0,1 σ. Conséquence de cadrage : le gabarit et la file d'entraînement sont deux objets."
     },
     {
       "e": "tranche",
       "t": "Le seuil du gabarit se mesure, il ne se recopie pas",
-      "d": "Décidé le 10/09 en implémentant le portillon relatif. `threshold_gabarit` n'a AUCUNE valeur par défaut dans le code, et sa clé absente laisse le portillon en amorçage contre l'ancre : un seuil calibré contre l'ancre (~0.74) n'a aucun sens contre un gabarit (~0.93), le recopier admettrait tout. AUTOMATION/tests/calibrer_gabarit.py mesure et PROPOSE, l'humain écrit la valeur dans config.json — même discipline que les bandes QC d'Abyssiaelle. Le script dit aussi ce qu'il ne sait pas : sans autre personnage en base il n'y a pas de bande imposteur, donc aucun seuil validable, et il le refuse à voix haute plutôt que de rendre un chiffre creux."
+      "d": "Décidé le 10/09 en implémentant le portillon relatif. `threshold_gabarit` n'a aucune valeur par défaut dans le code, et sa clé absente laisse le portillon en amorçage contre l'ancre : un seuil calibré contre l'ancre (~0.74) n'a aucun sens contre un gabarit (~0.93), le recopier admettrait tout. `calibrer_gabarit.py` mesure et propose, l'humain écrit la valeur. Sans autre personnage en base il n'y a pas de bande imposteur, donc aucun seuil validable, et le script le refuse à voix haute."
     },
     {
       "e": "tranche",
       "t": "Le mécanisme d'identité est fixé, et ses onze règles avec",
-      "d": "Validé par Pierre le 09/09 après la phase de recherche. Schéma complet et règles dans DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (§ Le mécanisme d'identité). Les trois qui ne se devinaient pas : (1) on gèle l'ANCRE et le MODÈLE de mesure, jamais le GABARIT, qui est versionné et redevient la référence du portillon dès qu'il est sain — avec un amorçage explicite contre l'ancre tant qu'aucun gabarit n'existe ; (2) la provenance REFERENCE/OBSERVED/DERIVED devient une propriété de la donnée, une image DERIVED ne devenant jamais l'ancre mais pouvant servir de gabarit ; (3) l'instrument doit pouvoir se déclarer NON DISCRIMINANT, ce qui exige une classe négative que le dépôt n'a pas (cohorte d'imposteurs, en horizon). Le reste confirme l'existant : deux portillons en série, publiable ≠ entraînable, la plateforme propose et Pierre décide, le refus est documenté."
+      "d": "Validé par Pierre le 09/09 après la phase de recherche. Schéma et règles dans DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md. Les trois qui ne se devinaient pas : on gèle l'ancre et le modèle de mesure, jamais le gabarit, qui est versionné ; la provenance REFERENCE/OBSERVED/DERIVED devient une propriété de la donnée, une image DERIVED ne devenant jamais l'ancre ; l'instrument doit pouvoir se déclarer non discriminant, ce qui exige une classe négative que le dépôt n'a pas."
     },
     {
       "e": "tranche",
       "t": "L'ancre dit QUI est le personnage, le gabarit dit CONTRE QUOI on le mesure",
-      "d": "Verdict de la phase de recherche du 09/09 (DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md). L'ancre gelée ne bouge jamais — c'est la vérité historique du personnage. Le gabarit de mesure, lui, doit vivre dans l'espace de conditions de la production : une photographie unique et figée est un gabarit HORS DISTRIBUTION. Mesuré en leave-one-out sur les 29 images qui portent un embedding : les 29 scorent plus haut contre leurs pairs que contre leur ancre. Marge personnage/étranger d'Abyssiaelle (stylisée SDXL) : +0.05 contre son ancre, +0.349 contre ses pairs. Le centroïde évolutif n'est donc pas un confort de suivi, c'est le GABARIT D'ENRÔLEMENT correct, et il vaut pour tous les styles. Le dépôt avait déjà fait cette découverte le 24/08 sur le seuil de santé (« le bon test est relatif ») : la leçon n'avait jamais été portée au portillon par image, resté absolu. Corollaire repris d'un apport extérieur : une image DERIVED (produite sous un LoRA) ne devient jamais l'ancre, mais peut servir de gabarit sous surveillance de l'ancre."
+      "d": "Verdict de la phase de recherche du 09/09 (DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md). L'ancre gelée est la vérité historique du personnage ; le gabarit de mesure doit vivre dans l'espace de conditions de la production, où une photographie unique et figée est hors distribution. Mesuré en leave-one-out : les 29 images qui portent un embedding scorent plus haut contre leurs pairs que contre leur ancre. Marge d'Abyssiaelle : +0.05 contre son ancre, +0.349 contre ses pairs."
     },
     {
       "e": "tranche",
       "t": "Le QC d'identité était partagé entre personnages — bug trouvé et corrigé",
-      "d": "Trouvé le 09/09 en phase de recherche, en cherchant pourquoi une image que l'œil valide scorait 0.232. shared_state.checker_partage ne tenait qu'UN checker, construit au premier appel du processus, son argument ensuite ignoré : tout personnage suivant était mesuré contre la base gelée ET les seuils du premier chargé. Daté dans la base : le 08/09 à 08:52 Abyssiaelle produit, à 08:56 une image de Léna est mesurée contre ABY_MAIN_REF.jpg — 0.232, soit la bande d'un visage ÉTRANGER — et rangée dans PROD/LENA/REJET/. services/batch.py lisait la globale pour la production et l'édition NSFW : un lot entier pouvait être trié contre la mauvaise référence. Corrigé à la racine (cache clé par ancre, plus aucune lecture directe de la globale), test_checker_par_personnage.py verrouille les deux. Second défaut refermé au passage : mesures.mesurer() écrivait le score sans l'embedding, et c'est ce désaccord entre les deux moitiés qui était le SEUL témoin de la panne. RAYON D'IMPACT AUDITE le 09/09, apres backfill : sur les 113 images de l'historique, UNE SEULE portait un score calculé contre la mauvaise ancre — celle que l'œil de Pierre avait repérée. Les 84 images re-mesurées rendent 99 scores inchangés et 11 modifiés de moins de 0.11 (médiane 0.028, tous vers le bas, presque tous du même lot du 24/08) : c'est la signature d'un fichier réécrit après sa mesure (grain, export), pas d'une mauvaise ancre, qui vaudrait -0.5. Le score fautif est réparé (base.rescorer depuis l'embedding : 0.232 -> 0.784) et la base est désormais cohérente — chaque `identite` stocké vaut exactement cos(ancre, embedding). Reste une seule incohérence, physique : lifestyle_salon_lecture_20260908_01.png dort encore dans PROD/LENA/REJET/ alors que son score dépasse threshold_ok, à reclasser depuis la Revue."
+      "d": "Trouvé le 09/09 : `shared_state.checker_partage` ne tenait qu'un checker, son argument ensuite ignoré. Daté dans la base : le 08/09 une image de Léna a été mesurée contre l'ancre d'Abyssiaelle, 0.232, et rangée en REJET. Corrigé à la racine, cache clé par ancre, verrouillé par test_checker_par_personnage.py. Audité après backfill : sur 113 images, une seule était fautive, réparée depuis son embedding (0.232 → 0.784). Reste à reclasser depuis la Revue : lifestyle_salon_lecture_20260908_01.png."
     },
     {
       "e": "tranche",
@@ -1016,7 +1107,7 @@ const D = {
     {
       "e": "tranche",
       "t": "Le flou de fond ne repond pas au prompt — reglage retire",
-      "d": "Decide le 09/09 par le critere de sortie du cadrage du 08/09, ecrit avant la premiere ligne de code. Livre la veille, mesure le lendemain : « net » 0.552 contre « flou » 0.561 sur cinq seeds apparies de ruelle_ville, quand la meme scene varie de 0.35 a 0.82 d'un seed a l'autre. Un second essai (texte plus fort, en tete de prompt) donne 0.552 et un fond toujours flou a l'oeil. Le code est reverte : un selecteur qui ne fait rien est un mensonge d'interface. Le flou reste un choix creatif sans prise pour l'utilisateur — le levier est ailleurs que le prompt."
+      "d": "Décidé le 09/09 par le critère de sortie du cadrage du 08/09, écrit avant la première ligne de code. Livré la veille, mesuré le lendemain : « net » 0.552 contre « flou » 0.561 sur cinq seeds appariés de ruelle_ville, quand la même scène varie de 0.35 à 0.82 d'un seed à l'autre. Un second essai, texte plus fort en tête de prompt, donne 0.552 et un fond toujours flou à l'œil. Le code est reverté : un sélecteur qui ne fait rien est un mensonge d'interface."
     },
     {
       "e": "tranche",
@@ -1029,7 +1120,7 @@ const D = {
     "items": [
       {
         "t": "Fond importé, repris entièrement",
-        "d": "(9 septembre 2026) Idée de Pierre le jour où la mesure a montré que le flou de fond ne répond pas au prompt (0.552 contre 0.561, DOCS/recherche/2026-09-09). Si le fond vient d'un fichier et n'est jamais régénéré, sa netteté est celle du fichier — la plateforme cesse d'arbitrer. Point dur déplacé sur le raccord : lumière, ombres, perspective, échelle, bord de détourage, et le piège de la passe img2img finale qui remettrait le modèle sur le fond. Aucune brique : les capacités plateforme sont upscale/bench/hands, aucun graphe de compositing ni de relighting. Premier client sérieux de l'importeur d'assets (E3). Hors parcours nominal : un nouvel utilisateur tape une scène, il n'importe pas un fond."
+        "d": "(9 septembre 2026) Idée de Pierre le jour où la mesure a montré que le flou de fond ne répond pas au prompt. Si le fond vient d'un fichier et n'est jamais régénéré, sa netteté est celle du fichier. Le point dur se déplace sur le raccord : lumière, ombres, perspective, échelle, détourage, et la passe img2img finale qui remettrait le modèle sur le fond. Aucune brique existante, aucun graphe de compositing. Premier client sérieux de l'importeur d'assets (E3). Hors parcours nominal."
       },
       {
         "t": "Test commercial de l'idée pack",
@@ -1069,23 +1160,23 @@ const D = {
       },
       {
         "t": "Le code repasse en anglais",
-        "d": "(8 septembre 2026) CLAUDE.md demande l'anglais pour les noms, commentaires, erreurs et docstrings, mais des fichiers entiers restent en français (shared_state.py entre autres) — et une correction ponctuelle s'y aligne plutôt que d'y mélanger deux langues, ce qui creuse l'écart. Passe de recensement puis de traduction, sur le CODE seul : les docs du repo et les skills restent en français."
+        "d": "(8 septembre 2026) CLAUDE.md demande l'anglais pour les noms, commentaires, erreurs et docstrings, mais des fichiers entiers restent en français (shared_state.py entre autres) — et une correction ponctuelle s'y aligne plutôt que d'y mélanger deux langues, ce qui creuse l'écart. Passe de recensement puis de traduction, sur le code seul : les docs du repo et les skills restent en français."
       },
       {
         "t": "Cohorte d'imposteurs embarquée avec la plateforme",
-        "d": "(9 septembre 2026) Sorti de la phase de recherche du 09/09. Une mesure d'identité doit pouvoir se déclarer NON DISCRIMINANTE — si les bandes personnage et étranger se recouvrent, ni le portillon ni le banc ne valent, et aucun seuil par personnage ne doit masquer ça. Mais ça exige une classe négative, or CHARACTERS/* est hors dépôt (ADR-0005) : un utilisateur qui crée son PREMIER personnage n'a aucun étranger à comparer, et l'alarme ne pourrait jamais se calculer. Piste la moins chère, non tranchée : embarquer une cohorte d'EMBEDDINGS synthétiques — pas d'images, quelques centaines de kilo-octets, issus d'identités générées. Aucun visage réel distribué, cohérent avec un projet où tout est fictif par principe. Demande un ADR. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        "d": "(9 septembre 2026) Sorti de la phase de recherche du 09/09. Une mesure d'identité doit pouvoir se déclarer non discriminante : si les bandes personnage et étranger se recouvrent, ni le portillon ni le banc ne valent. Ça exige une classe négative, or CHARACTERS/* est hors dépôt (ADR-0005) et un premier personnage n'a aucun étranger à comparer. Piste la moins chère, non tranchée : embarquer une cohorte d'embeddings synthétiques, aucun visage réel distribué. Demande un ADR."
       },
       {
         "t": "Mesure d'identité pour un personnage non photoréaliste",
-        "d": "(9 septembre 2026) Sorti de la phase de recherche du 09/09. ADR-0011 a rendu le VERROU agnostique (universe.json/identity) et laissé la MESURE commune, à dessein — mais ça suppose un visage humain photographiable. Un pack manga casse l'hypothèse, et pas en se dégradant : IdentityChecker lève RuntimeError('aucun visage detecte dans la base gelee'), donc pas de score, pas d'embedding, pas de centroïde, pas de banc pour juger le LoRA — alors que c'est là que le LoRA est le plus nécessaire (l'adaptateur ne verrouille pas un personnage stylisé, mesuré sur Abyssiaelle au J6). La mesure doit devenir une interface choisie par le pack, sur le patron d'identity.for_universe. Candidat repéré, non qualifié : CCIP (deepghs) — code dghs-imgutils en MIT, poids en openrail à lire ligne à ligne (ADR-0024), entraîné sur de l'illustration, couverture du semi-réaliste inconnue. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        "d": "(9 septembre 2026) Sorti de la phase de recherche du 09/09. ADR-0011 a rendu le verrou agnostique et laissé la mesure commune, ce qui suppose un visage humain photographiable. Un pack manga casse l'hypothèse sans se dégrader : IdentityChecker lève « aucun visage detecte dans la base gelee », donc pas de score, pas de centroïde, pas de banc pour juger le LoRA. La mesure doit devenir une interface choisie par le pack. Candidat non qualifié : CCIP (deepghs), poids en openrail à lire (ADR-0024)."
       },
       {
         "t": "Entraîner sur des images jugées « fait IA » abîme-t-il le LoRA ?",
-        "d": "(10 septembre 2026) Question ouverte par Pierre le jour où le gabarit a été livré : si le « fait IA » dégrade la qualité globale du LoRA, le système perd de son intérêt. La mesure du 10/09 la déplace sans la fermer : « fait IA » n'est PAS un phénomène d'identité (0.1 sigma contre le gabarit), c'est faiblement un phénomène de NETTETÉ — les images marquées « ia » sont plus nettes de +35 (2.0 sigma, 30 contre 26 images), soit le sur-piqué plastique. Deux erreurs-types, c'est la limite de ce que le protocole appelle tranchable : une piste, pas une conclusion. Si le « fait IA » abîme un jour le LoRA, ce sera par la TEXTURE, jamais par l'identité. Réponse à un seul essai, et il coûte des heures de GPU : deux LoRA — l'un sur tout ce qui passe le portillon d'identité, l'autre sur l'intersection avec le flag « ok » — puis le banc (ADR-0021). C'est la tranche entraînement, pas celle-ci."
+        "d": "(10 septembre 2026) Question ouverte par Pierre à la livraison du gabarit. La mesure du 10/09 la déplace sans la fermer : « fait IA » n'est pas un phénomène d'identité (0,1 σ contre le gabarit), c'est faiblement un phénomène de netteté, les images marquées « ia » étant plus nettes de +35 (2,0 σ). Deux erreurs-types : une piste, pas une conclusion. Si le « fait IA » abîme un jour le LoRA, ce sera par la texture. Réponse à un seul essai : deux LoRA et le banc (ADR-0021)."
       },
       {
         "t": "Justifier un rejet, et que la plateforme en apprenne",
-        "d": "(10 septembre 2026) Idée de Pierre le jour où il a annoté ses rejets dans un tableur : l'utilisateur devrait pouvoir dire POURQUOI il rejette, et cette raison servirait globalement à la plateforme. La moitié du chemin est déjà faite et personne ne s'en sert pour ça : `mesures.ETIQUETTES` (P4.5.1) porte déjà des axes SÉPARÉS du flag — `anatomie` et `mains_juge`, vocabulaire ok/ko/na, 53 images étiquetées. Ce qui manque est (1) le vocabulaire, que son CSV nomme de lui-même : « Identité non respectée », « Texture peau trop lisse », « Anatomie : main / visage / bras » — deux familles qu'aucun axe ne couvre aujourd'hui ; (2) l'écran qui pose l'étiquette AU MOMENT du rejet, plutôt qu'un tableur à côté. Ce que ça débloque : une file d'entraînement qui exclut le défaut objectif sans arbitrer le goût, et un corpus étiqueté par famille de défaut, que ADR-0025 exige avant qu'un détecteur ne devienne bloquant. Hors parcours nominal : un nouvel utilisateur publie sa première image sans jamais justifier un rejet."
+        "d": "(10 septembre 2026) Idée de Pierre le jour où il a annoté ses rejets dans un tableur : l'utilisateur devrait pouvoir dire pourquoi il rejette, et cette raison servirait à la plateforme. La moitié du chemin existe : `mesures.ETIQUETTES` porte déjà `anatomie` et `mains_juge` sur des axes séparés du flag, 53 images étiquetées. Manquent le vocabulaire, que son CSV nomme lui-même (identité, texture de peau, anatomie), et l'écran qui pose l'étiquette au moment du rejet. Hors parcours nominal."
       }
     ]
   },
@@ -1094,19 +1185,19 @@ const D = {
     "items": [
       {
         "t": "Juge de mains sur le squelette DWPose (v2 géométrique)",
-        "d": "(7 septembre 2026) L'information n'est pas dans les keypoints : les 2 images aux mains cassées scorées 1.0, et aucun des trois indicateurs géométriques (hors-cadre, ratio main/avant-bras, asymétrie des bras) ne sort du lot des 13 contrôles. En l'état, brancher la mesure `mains` v1 au tri rejetterait 16 des 48 images validées OK (33 %) en gardant les deux réellement cassées — l'inverse du but, et la condition d'entrée d'ADR-0025 n'est pas remplie. DOCS/recherche/2026-09-07-signal-geometrique-mains.md"
+        "d": "(7 septembre 2026) L'information n'est pas dans les keypoints : les 2 images aux mains cassées sont scorées 1.0, et aucun des trois indicateurs géométriques (hors-cadre, ratio main/avant-bras, asymétrie des bras) ne sort du lot des 13 contrôles. Brancher la mesure `mains` v1 au tri rejetterait 16 des 48 images validées OK, soit 33 %, en gardant les deux réellement cassées. La condition d'entrée d'ADR-0025 n'est pas remplie. DOCS/recherche/2026-09-07-signal-geometrique-mains.md"
       },
       {
         "t": "Juge pixel des mains par Florence-2",
-        "d": "(7 septembre 2026) NO-GO chiffré : sur 42 crops de main issus de 27 images étiquetées, aucune règle simple lue sur la sortie ne sépare les mains cassées des mains propres, et le mode grounding échoue plus nettement encore. En l'état : un tri à 53 % de faux positifs, plus 9,5 s par crop (~19 s par image) sur chaque production. Reprendre demande un VLM à VQA ouverte (Qwen2-VL, InternVL) — nouveau custom node, nouveau poids, entrée de manifeste — ou un classifieur dédié sur un corpus de crops qui n'existe pas. Le graphe de mesure WORKFLOWS/platform/hands_judge_ui.json est conservé. DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md"
+        "d": "(7 septembre 2026) NO-GO chiffré : sur 42 crops de main issus de 27 images étiquetées, aucune règle simple lue sur la sortie ne sépare les mains cassées des mains propres. En l'état : 53 % de faux positifs, plus 9,5 s par crop et ~19 s par image. Reprendre demande un VLM à VQA ouverte ou un classifieur dédié sur un corpus de crops qui n'existe pas. Le graphe WORKFLOWS/platform/hands_judge_ui.json est conservé. DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md"
       },
       {
         "t": "Piloter le flou de fond par le prompt (background_focus)",
-        "d": "(9 septembre 2026) Sur 5 seeds appariés et la chaîne de production réelle, l'écart net − flou vaut −0.009 sur `fond_net`, du mauvais côté ; le seed fait varier la mesure de 0.35 à 0.82 sur la même scène quand les quatre formulations ne la déplacent que de ±0.03. Le fragment atteint bien le modèle (images distinctes à seed égal), il ne déplace jamais la mise au point. Livrable retiré par revert. En l'état : un réglage exposé à l'utilisateur qui ne fait rien. Reprendre demande un autre levier — fond importé et conservé, conditionnement structurel, ou réglage de pipeline — aucun n'est cadré. DOCS/recherche/2026-09-09-fond-le-prompt-n-est-pas-le-levier.md"
+        "d": "(9 septembre 2026) Sur 5 seeds appariés et la chaîne de production réelle, l'écart net moins flou vaut −0.009 sur `fond_net`, du mauvais côté ; le seed fait varier la mesure de 0.35 à 0.82 sur la même scène quand les quatre formulations ne la déplacent que de ±0.03. Le fragment atteint bien le modèle, il ne déplace jamais la mise au point. Livrable retiré par revert. Reprendre demande un autre levier, aucun n'est cadré. DOCS/recherche/2026-09-09-fond-le-prompt-n-est-pas-le-levier.md"
       },
       {
         "t": "texture_visage comme arbitre de la peau",
-        "d": "(9 septembre 2026) Bruit intra-scène de 0.335 pour des écarts de réglage de 0.25 à 0.76 : trancher un écart de +0.35 à deux erreurs-types demanderait 23 seeds par variante, soit ~78 minutes de GPU pour confirmer ce que deux images montrent d'un coup d'œil. Et sur `sharpen` la mesure est juge et partie — elle est la médiane de l'écart-type local, qu'un filtre d'accentuation augmente par définition. En l'état : un banc à 78 min par comparaison, moins fiable que l'œil. Pour la peau on juge à l'œil et on l'écrit ; l'identité reste chiffrée (bruit 0.008). DOCS/recherche/2026-09-09-peau-le-troc-identite-texture.md"
+        "d": "(9 septembre 2026) Bruit intra-scène de 0.335 pour des écarts de réglage de 0.25 à 0.76 : trancher +0.35 à deux erreurs-types demanderait 23 seeds par variante, soit ~78 minutes de GPU pour ce que deux images montrent d'un coup d'œil. Sur `sharpen` la mesure est juge et partie, étant la médiane de l'écart-type local. Pour la peau on juge à l'œil et on l'écrit ; l'identité reste chiffrée (bruit 0.008). DOCS/recherche/2026-09-09-peau-le-troc-identite-texture.md"
       },
       {
         "t": "ComfyUI-IsNiceParts / NiceHand",
@@ -1114,19 +1205,19 @@ const D = {
       },
       {
         "t": "Face swap correctif en fin de chaîne (ReActor / FaceDetailer)",
-        "d": "(9 septembre 2026) Méthode courante du métier — « le filet de sécurité » : générer n'importe quoi puis recoller le bon visage. Refermée sur une raison de mesure : le score d'identité mesurerait le SWAPPER, pas la génération — le cas « juge et partie » de protocole-de-mesure.md. Impact si mis en œuvre en l'état : la cohérence affichée devient une propriété de l'outil de recollage, et la dérive est masquée au lieu d'être mesurée, dans un dépôt dont le produit EST la mesure de cohérence. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        "d": "(9 septembre 2026) Méthode courante du métier, le filet de sécurité : générer n'importe quoi puis recoller le bon visage. Refermée sur une raison de mesure : le score d'identité mesurerait le swapper et non la génération, le cas « juge et partie » de protocole-de-mesure.md. Impact en l'état : la cohérence affichée devient une propriété de l'outil de recollage et la dérive est masquée, dans un dépôt dont le produit est la mesure de cohérence."
       },
       {
         "t": "DINOv2 / CLIP-I comme portillon d'identité",
-        "d": "(9 septembre 2026) DINO est bien la métrique de fidélité au sujet de DreamBooth, préférée à CLIP-I trop permissif sur les indices fins. Mais c'est une similarité de SUJET sur l'image entière : vêtements, pose, décor. Impact si mis en œuvre en l'état : un portillon qui laisse passer une inconnue habillée pareil dans le même décor. Gardée en réserve pour un plan large sans visage lisible, là où InsightFace ne rend rien. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        "d": "(9 septembre 2026) DINO est bien la métrique de fidélité au sujet de DreamBooth, préférée à CLIP-I trop permissif sur les indices fins. Mais c'est une similarité de sujet sur l'image entière : vêtements, pose, décor. Impact si mis en œuvre en l'état : un portillon qui laisse passer une inconnue habillée pareil dans le même décor. Gardée en réserve pour un plan large sans visage lisible, là où InsightFace ne rend rien. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
       },
       {
         "t": "Écrire un entraîneur de LoRA maison",
-        "d": "(9 septembre 2026) Question posée par Pierre à l'ouverture de la phase. Refermée : kohya sd-scripts (Apache-2.0, CLI + TOML) et ai-toolkit (MIT, python run.py config.yml) se réduisent au MÊME patron — sous-processus plus fichier de config — donc le choix du moteur n'est pas une décision d'architecture, c'est une ligne de configuration. Impact si mis en œuvre en l'état : réimplémenter l'entraînement LoRA Flux (block swap, quantification, cache de latents) est un projet, pas un raccourci, sur une brique que deux dépôts maintiennent déjà. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        "d": "(9 septembre 2026) Question posée par Pierre à l'ouverture de la phase. Refermée : kohya sd-scripts (Apache-2.0, CLI + TOML) et ai-toolkit (MIT) se réduisent au même patron, sous-processus plus fichier de config, donc le choix du moteur est une ligne de configuration et non une décision d'architecture. Impact en l'état : réimplémenter l'entraînement LoRA Flux (block swap, quantification, cache de latents) est un projet, pas un raccourci."
       },
       {
         "t": "Geler le gabarit de mesure en même temps que l'ancre",
-        "d": "(9 septembre 2026) Proposition d'un document extérieur soumis par Pierre (§3 : « le jeu de référence initial ET le modèle de mesure sont gelés ensemble »). Le principe est juste pour l'ancre et faux pour le gabarit : c'est exactement le défaut mesuré ce jour-là. Impact si mis en œuvre en l'état : le produit livrerait un portillon absolu dont on sait qu'il sous-sépare dès que la production s'éloigne des conditions de l'ancre, et il interdirait le centroïde évolutif — c'est-à-dire le chantier lui-même. Le reste du document est repris (provenance REFERENCE/OBSERVED/DERIVED, traçabilité du refus, reproductibilité, Studio/Advanced). DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        "d": "(9 septembre 2026) Proposition d'un document extérieur soumis par Pierre : le jeu de référence initial et le modèle de mesure sont gelés ensemble. Le principe est juste pour l'ancre et faux pour le gabarit, c'est exactement le défaut mesuré ce jour-là. Impact en l'état : un portillon absolu dont on sait qu'il sous-sépare dès que la production s'éloigne des conditions de l'ancre, et le centroïde évolutif interdit. Le reste du document est repris."
       }
     ]
   }
@@ -1152,17 +1243,76 @@ document.getElementById('global-legend').innerHTML = order
   .map(k => `<span><i class="dot" style="background:${col(k)}"></i><b>${counts[k]}</b> ${D.statuts[k].label}</span>`)
   .join('') + `<span>${all.length} travaux répartis sur ${D.epics.length} pôles</span>`;
 
-/* iterations */
-document.getElementById('iterations').innerHTML = D.iterations.map(it => `
-  <article class="it" data-state="${it.state}">
-    <div class="it-id">${it.id}</div>
-    <div>
-      <h3>${esc(it.titre)}${it.state === 'now' ? '<span class="now-tag">à ouvrir</span>' : ''}</h3>
+/* ---------------------------------------------------------------------------
+   ITERATIONS
+   Une iteration nomme ses EPIC (champ `epics`) et porte des travaux (champ `it`
+   sur un travail d'EPIC). L'avancement est COMPTE sur ces travaux, jamais
+   declare a la main. Close = repliee : seule celle en cours s'ouvre d'office.
+   ------------------------------------------------------------------------- */
+const epicNom = Object.fromEntries(D.epics.map(e => [e.id, e.nom]));
+const etat = e => D.etats[e];
+const parentDe = id => (/^(IT-\d+)[a-z]$/.exec(id) || [])[1];
+
+const itById = Object.fromEntries(D.iterations.map(it => [it.id, it]));
+const travaux = {};
+D.epics.forEach(e => e.items.forEach(i => {
+  if (i.it) (travaux[i.it] = travaux[i.it] || []).push({...i, epic: e.id});
+}));
+const itsParEpic = {};
+D.iterations.forEach(it => (it.epics || '').split(',').map(x => x.trim()).filter(Boolean)
+  .forEach(id => (itsParEpic[id] = itsParEpic[id] || []).push(it)));
+
+/* la tete de file : celle en cours, sinon la premiere ni close ni en pause */
+const courante = D.iterations.find(it => it.state === 'now')
+  || D.iterations.find(it => it.state !== 'done' && it.state !== 'pause');
+
+const carte = it => {
+  const w = travaux[it.id] || [];
+  const faits = w.filter(i => i.s === 'fait').length;
+  const bar = order.filter(k => w.some(i => i.s === k))
+    .map(k => `<span style="flex:${w.filter(i => i.s === k).length};background:${col(k)}"></span>`).join('');
+  const tete = courante && it.id === courante.id;
+  const deps = (it.dep || '').split(',').map(x => x.trim()).filter(Boolean);
+  const dus = deps.filter(id => (itById[id] || {}).state !== 'done');
+  const poles = (it.epics || '').split(',').map(x => x.trim()).filter(Boolean)
+    .map(id => `<span><b>${id}</b>${esc(epicNom[id] || '?')}</span>`).join('');
+  const liste = w.length ? `<ul class="it-works">` + w.map(i => `
+        <li><i class="tick" style="background:${col(i.s)}"></i><code>${i.epic}</code>
+            <span>${esc(i.t)}</span></li>`).join('') + `</ul>`
+    : `<div class="it-none">Aucun travail d'EPIC rattaché — son contenu vient de l'usage, pas du découpage.</div>`;
+  return `
+  <details class="it" data-state="${it.state}"${tete ? ' open' : ''}>
+    <summary>
+      <span class="it-id">${it.id}</span>
+      <span>
+        <span class="it-titre">${esc(it.titre)}</span><span class="tag"${tete ? ' data-file' : ''
+          } style="color:${etat(it.state).color}"><i>${etat(it.state).label}</i></span>${
+          deps.length ? `<span class="tag tag-dep"${dus.length ? '' : ' data-ok'}>dépend de ${deps.join(' · ')}</span>` : ''}
+        <span class="it-epics">${poles}</span>
+      </span>
+      <span class="it-etat">${w.length ? `<span class="it-bar">${bar}</span>${faits}/${w.length}` : ''}</span>
+    </summary>
+    <div class="it-body">
       <p>${esc(it.quoi)}</p>
       <div class="dod"><b>Fini quand</b> ${esc(it.dod)}</div>
-      <div class="touches">EPIC touchés : ${it.epics}${it.ref ? ' &nbsp;·&nbsp; ' + esc(it.ref) : ''}</div>
+      ${liste}
+      ${it.ref ? `<div class="touches">${esc(it.ref)}</div>` : ''}
     </div>
-  </article>`).join('');
+  </details>`;
+};
+
+document.getElementById('iterations').innerHTML = D.iterations
+  .filter(it => !parentDe(it.id))
+  .map(it => {
+    const branches = D.iterations.filter(x => parentDe(x.id) === it.id);
+    return carte(it) + (branches.length
+      ? `<div class="phase">${branches.map(carte).join('')}</div>` : '');
+  }).join('');
+
+/* Une description courte se lit d'un coup ; une longue se replie. */
+const detail = d => !d ? ''
+  : d.length <= 220 ? `<em>${esc(d)}</em>`
+  : `<details class="long"><summary><em>${esc(d)}</em></summary></details>`;
 
 /* epics */
 document.getElementById('epics').innerHTML = D.epics.map((e, idx) => {
@@ -1171,13 +1321,15 @@ document.getElementById('epics').innerHTML = D.epics.map((e, idx) => {
   const items = e.items.map(i => `
     <div class="item" data-s="${i.s}">
       <div class="tick" style="background:${col(i.s)}"></div>
-      <div class="lbl"><b>${esc(i.t)}</b>${i.d ? `<em>${esc(i.d)}</em>` : ''}</div>
+      <div class="lbl"><b>${esc(i.t)}</b>${i.it ? `<span class="itref">${i.it}</span>` : ''}${detail(i.d)}</div>
     </div>`).join('');
+  const its = (itsParEpic[e.id] || []).map(it => it.id).join(' · ');
   return `
-  <details class="epic" ${e.veille ? 'data-veille' : ''} ${idx < 6 ? 'open' : ''}>
+  <details class="epic" ${e.veille ? 'data-veille' : ''} ${courante && (itsParEpic[e.id] || []).includes(courante) ? 'open' : ''}>
     <summary>
       <span class="epic-id">${e.id}</span>
-      <span><span class="epic-name">${esc(e.nom)}</span><span class="epic-job">${esc(e.job)}</span></span>
+      <span><span class="epic-name">${esc(e.nom)}</span><span class="epic-job">${esc(e.job)}</span>
+        ${its ? `<span class="epic-its">itérations : ${its}</span>` : ''}</span>
       <span class="epic-bar">${bar}</span>
     </summary>
     <div class="items">${items}<div class="empty" hidden>Rien à ce statut dans cet EPIC.</div></div>
@@ -1212,10 +1364,10 @@ fbox.addEventListener('click', ev => {
 
 /* decisions */
 document.getElementById('decisions').innerHTML = D.decisions.map(f => `
-  <div class="flag" data-e="${f.e}">
-    <h3><span class="mark">${f.e === 'tranche' ? 'tranché' : 'ouvert'}</span>${esc(f.t)}</h3>
+  <details class="flag" data-e="${f.e}" ${f.e === 'tranche' ? '' : 'open'}>
+    <summary><span class="mark">${f.e === 'tranche' ? 'tranché' : 'ouvert'}</span>${esc(f.t)}</summary>
     <p>${esc(f.d)}</p>
-  </div>`).join('');
+  </details>`).join('');
 
 /* horizon */
 document.getElementById('horizon-note').textContent = D.horizon.note;

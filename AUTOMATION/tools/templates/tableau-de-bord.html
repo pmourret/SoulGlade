@@ -50,18 +50,48 @@
   .rules li{margin-bottom:.25rem}
   .rules li b{color:var(--txt);font-weight:500}
 
-  /* ---- iterations : une sequence, donc numerotee ---- */
-  .it{display:grid;grid-template-columns:4.2rem 1fr;gap:1rem;padding:1.1rem 0;border-top:1px solid var(--line)}
-  .it:last-child{border-bottom:1px solid var(--line)}
-  .it-id{font-family:var(--f-mono);font-size:.82rem;color:var(--acc);padding-top:.15rem}
+  /* ---- iterations : une sequence, donc numerotee ; close = repliee ---- */
+  .it{border-top:1px solid var(--line)}
+  .it:last-of-type{border-bottom:1px solid var(--line)}
+  .it > summary{cursor:pointer;list-style:none;display:grid;grid-template-columns:4.2rem minmax(0,1fr) auto;
+    gap:1rem;align-items:baseline;padding:.85rem 0}
+  .it > summary::-webkit-details-marker{display:none}
+  .it > summary:hover .it-titre{color:var(--acc)}
+  .it > summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .it-id{font-family:var(--f-mono);font-size:.82rem;color:var(--acc)}
+  .it[data-state="done"] .it-id{color:var(--dim2)}
   .it[data-state="now"] .it-id{color:var(--warn)}
-  .it h3{font-family:var(--f-disp);font-size:1.08rem;font-weight:600;margin:0 0 .35rem}
-  .it p{margin:0 0 .5rem;color:var(--dim);font-size:.93rem}
+  .it-titre{font-family:var(--f-disp);font-size:1.08rem;font-weight:600}
+  .it[data-state="done"] .it-titre{font-weight:400;color:var(--dim)}
+  .it-epics{display:block;font-size:.85rem;color:var(--dim);margin-top:.15rem}
+  .it-epics b{font-family:var(--f-mono);font-size:.76rem;font-weight:500;color:var(--acc-d);margin-right:.3rem}
+  .it-epics span+span{margin-left:.75rem}
+  .it-etat{display:flex;align-items:center;gap:.5rem;font-family:var(--f-mono);font-size:.72rem;
+    color:var(--dim2);white-space:nowrap}
+  .it-bar{display:flex;gap:1.5px;width:66px;height:9px;border-radius:2px;overflow:hidden;background:var(--line)}
+  .it-bar span{display:block}
+  .it-body{padding:0 0 1.1rem 5.2rem}
+  .it-body p{margin:0 0 .6rem;color:var(--dim);font-size:.93rem}
   .it .dod{font-size:.86rem;color:var(--txt);border-left:2px solid var(--acc-d);padding-left:.7rem}
   .it .dod b{font-weight:500;color:var(--acc)}
-  .it .touches{font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);margin-top:.5rem}
-  .now-tag{font-family:var(--f-mono);font-size:.68rem;color:var(--warn);border:1px solid var(--warn);
-    border-radius:3px;padding:.05rem .35rem;margin-left:.5rem;vertical-align:2px}
+  .it .touches{font-family:var(--f-mono);font-size:.72rem;color:var(--dim2);margin-top:.6rem}
+  .it-works{margin:.8rem 0 0;padding:0;list-style:none;font-size:.88rem}
+  .it-works li{display:grid;grid-template-columns:.55rem 2.4rem 1fr;gap:.6rem;align-items:baseline;padding:.28rem 0;
+    border-top:1px solid var(--line)}
+  .it-works .tick{width:.4rem;height:.4rem;border-radius:1px;transform:translateY(.35rem)}
+  .it-works code{font-family:var(--f-mono);font-size:.74rem;color:var(--dim2)}
+  .it-none{font-size:.85rem;color:var(--dim2);margin-top:.8rem}
+  /* une sous-phase est une branche : elle se lit sous sa phase mere */
+  .phase{border-left:2px solid var(--line2);margin-left:1.4rem;padding-left:1.2rem}
+  .phase .it:last-of-type{border-bottom:none}
+  .tag{font-family:var(--f-mono);font-size:.68rem;border:1px solid currentColor;
+    border-radius:3px;padding:.05rem .35rem;margin-left:.5rem;vertical-align:2px;white-space:nowrap}
+  /* l'iteration en tete de file porte son etat en plein, les autres en contour */
+  .tag[data-file]{background:currentColor}
+  .tag[data-file] i{font-style:normal;color:var(--bg)}
+  /* une dependance satisfaite reste lisible sans reclamer l'attention */
+  .tag-dep{color:var(--warn)}
+  .tag-dep[data-ok]{color:var(--dim2);border-color:var(--line2)}
 
   /* ---- filtres ---- */
   .filters{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:1.4rem}
@@ -74,7 +104,7 @@
   .epic{border:1px solid var(--line);border-radius:8px;background:var(--panel);margin-bottom:.7rem;overflow:hidden}
   .epic[data-veille]{opacity:.72}
   .epic summary{cursor:pointer;list-style:none;padding:.95rem 1.15rem;display:grid;
-    grid-template-columns:3.1rem 1fr auto;gap:.9rem;align-items:baseline}
+    grid-template-columns:3.1rem minmax(0,1fr) auto;gap:.9rem;align-items:baseline}
   .epic summary::-webkit-details-marker{display:none}
   .epic summary:hover{background:var(--panel2)}
   .epic-id{font-family:var(--f-mono);font-size:.8rem;color:var(--acc-d)}
@@ -88,6 +118,18 @@
   .item .lbl b{font-weight:500}
   .item .lbl em{font-style:normal;color:var(--dim);display:block;font-size:.85rem}
   .item code{font-family:var(--f-mono);font-size:.78rem;color:var(--dim2)}
+  .item .itref{font-family:var(--f-mono);font-size:.7rem;color:var(--acc-d);border:1px solid var(--line2);
+    border-radius:3px;padding:0 .3rem;margin-left:.4rem;white-space:nowrap}
+  .epic-its{display:block;font-family:var(--f-mono);font-size:.7rem;color:var(--dim2);margin-top:.3rem}
+  /* une description s'allonge a chaque releve : deux lignes par defaut, tout au clic.
+     Le texte entier vit dans le <summary>, donc rien n'est duplique ni cache au Ctrl+F. */
+  .long{cursor:pointer}
+  .long summary{display:block;list-style:none}
+  .long summary::-webkit-details-marker{display:none}
+  .long:not([open]) em{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .long summary::after{display:block;font-family:var(--f-mono);font-size:.72rem;color:var(--acc-d);margin-top:.1rem}
+  .long:not([open]) summary::after{content:'plus'}
+  .long[open] summary::after{content:'moins'}
   .item[hidden]{display:none}
   .empty{color:var(--dim2);font-size:.88rem;padding:.6rem 0}
 
@@ -95,8 +137,11 @@
   .flag{border:1px solid var(--line);border-left:3px solid var(--bad);border-radius:0 8px 8px 0;
     background:var(--panel);padding:.85rem 1.1rem;margin-bottom:.6rem}
   .flag[data-e="tranche"]{border-left-color:var(--ok)}
-  .flag h3{font-size:.95rem;margin:0 0 .25rem;font-weight:600}
-  .flag p{margin:0;color:var(--dim);font-size:.9rem}
+  .flag summary{cursor:pointer;list-style:none;font-size:.95rem;font-weight:600}
+  .flag summary::-webkit-details-marker{display:none}
+  .flag summary:hover{color:var(--acc)}
+  .flag summary:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+  .flag p{margin:.4rem 0 0;color:var(--dim);font-size:.9rem}
   .flag .mark{font-family:var(--f-mono);font-size:.7rem;color:var(--dim2);margin-right:.45rem}
 
   .hz{display:grid;grid-template-columns:1fr;gap:0}
@@ -113,7 +158,9 @@
     .cap{font-size:1.6rem}
     .epic summary{grid-template-columns:2.6rem 1fr;gap:.6rem}
     .epic-bar{grid-column:1/-1;width:100%;margin-top:.5rem}
-    .it{grid-template-columns:1fr;gap:.3rem}
+    .it > summary{grid-template-columns:1fr;gap:.2rem}
+    .it-body{padding-left:0}
+    .phase{margin-left:.6rem;padding-left:.8rem}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
@@ -150,7 +197,9 @@ mondes, publication — attend ce résultat.</p>
 <section>
   <h2 class="sec">Itérations</h2>
   <p class="sec-note">Séquence, pas calendrier. Chacune produit un résultat visible en usage réel ;
-  aucune ne se lance sans son cadrage.</p>
+  aucune ne se lance sans son cadrage. Chacune porte son état ; une clôturée est repliée, une branche
+  se lit sous sa phase mère, et l'avancement à droite compte les travaux d'EPIC rattachés — il n'est
+  jamais déclaré. Une dépendance encore due s'affiche en jaune, satisfaite en gris.</p>
   <div id="iterations"></div>
 </section>
 
@@ -164,7 +213,8 @@ mondes, publication — attend ce résultat.</p>
 <section>
   <h2 class="sec">Décisions</h2>
   <p class="sec-note">Ce qui a été tranché, et ce qui reste ouvert. Une décision tranchée qui touche
-  au cadrage se répercute dans PROJET.md ou dans un ADR — jamais seulement ici.</p>
+  au cadrage se répercute dans PROJET.md ou dans un ADR — jamais seulement ici. Les ouvertes sont
+  dépliées ; une tranchée s'ouvre au clic.</p>
   <div id="decisions"></div>
 </section>
 
@@ -209,17 +259,76 @@ document.getElementById('global-legend').innerHTML = order
   .map(k => `<span><i class="dot" style="background:${col(k)}"></i><b>${counts[k]}</b> ${D.statuts[k].label}</span>`)
   .join('') + `<span>${all.length} travaux répartis sur ${D.epics.length} pôles</span>`;
 
-/* iterations */
-document.getElementById('iterations').innerHTML = D.iterations.map(it => `
-  <article class="it" data-state="${it.state}">
-    <div class="it-id">${it.id}</div>
-    <div>
-      <h3>${esc(it.titre)}${it.state === 'now' ? '<span class="now-tag">à ouvrir</span>' : ''}</h3>
+/* ---------------------------------------------------------------------------
+   ITERATIONS
+   Une iteration nomme ses EPIC (champ `epics`) et porte des travaux (champ `it`
+   sur un travail d'EPIC). L'avancement est COMPTE sur ces travaux, jamais
+   declare a la main. Close = repliee : seule celle en cours s'ouvre d'office.
+   ------------------------------------------------------------------------- */
+const epicNom = Object.fromEntries(D.epics.map(e => [e.id, e.nom]));
+const etat = e => D.etats[e];
+const parentDe = id => (/^(IT-\d+)[a-z]$/.exec(id) || [])[1];
+
+const itById = Object.fromEntries(D.iterations.map(it => [it.id, it]));
+const travaux = {};
+D.epics.forEach(e => e.items.forEach(i => {
+  if (i.it) (travaux[i.it] = travaux[i.it] || []).push({...i, epic: e.id});
+}));
+const itsParEpic = {};
+D.iterations.forEach(it => (it.epics || '').split(',').map(x => x.trim()).filter(Boolean)
+  .forEach(id => (itsParEpic[id] = itsParEpic[id] || []).push(it)));
+
+/* la tete de file : celle en cours, sinon la premiere ni close ni en pause */
+const courante = D.iterations.find(it => it.state === 'now')
+  || D.iterations.find(it => it.state !== 'done' && it.state !== 'pause');
+
+const carte = it => {
+  const w = travaux[it.id] || [];
+  const faits = w.filter(i => i.s === 'fait').length;
+  const bar = order.filter(k => w.some(i => i.s === k))
+    .map(k => `<span style="flex:${w.filter(i => i.s === k).length};background:${col(k)}"></span>`).join('');
+  const tete = courante && it.id === courante.id;
+  const deps = (it.dep || '').split(',').map(x => x.trim()).filter(Boolean);
+  const dus = deps.filter(id => (itById[id] || {}).state !== 'done');
+  const poles = (it.epics || '').split(',').map(x => x.trim()).filter(Boolean)
+    .map(id => `<span><b>${id}</b>${esc(epicNom[id] || '?')}</span>`).join('');
+  const liste = w.length ? `<ul class="it-works">` + w.map(i => `
+        <li><i class="tick" style="background:${col(i.s)}"></i><code>${i.epic}</code>
+            <span>${esc(i.t)}</span></li>`).join('') + `</ul>`
+    : `<div class="it-none">Aucun travail d'EPIC rattaché — son contenu vient de l'usage, pas du découpage.</div>`;
+  return `
+  <details class="it" data-state="${it.state}"${tete ? ' open' : ''}>
+    <summary>
+      <span class="it-id">${it.id}</span>
+      <span>
+        <span class="it-titre">${esc(it.titre)}</span><span class="tag"${tete ? ' data-file' : ''
+          } style="color:${etat(it.state).color}"><i>${etat(it.state).label}</i></span>${
+          deps.length ? `<span class="tag tag-dep"${dus.length ? '' : ' data-ok'}>dépend de ${deps.join(' · ')}</span>` : ''}
+        <span class="it-epics">${poles}</span>
+      </span>
+      <span class="it-etat">${w.length ? `<span class="it-bar">${bar}</span>${faits}/${w.length}` : ''}</span>
+    </summary>
+    <div class="it-body">
       <p>${esc(it.quoi)}</p>
       <div class="dod"><b>Fini quand</b> ${esc(it.dod)}</div>
-      <div class="touches">EPIC touchés : ${it.epics}${it.ref ? ' &nbsp;·&nbsp; ' + esc(it.ref) : ''}</div>
+      ${liste}
+      ${it.ref ? `<div class="touches">${esc(it.ref)}</div>` : ''}
     </div>
-  </article>`).join('');
+  </details>`;
+};
+
+document.getElementById('iterations').innerHTML = D.iterations
+  .filter(it => !parentDe(it.id))
+  .map(it => {
+    const branches = D.iterations.filter(x => parentDe(x.id) === it.id);
+    return carte(it) + (branches.length
+      ? `<div class="phase">${branches.map(carte).join('')}</div>` : '');
+  }).join('');
+
+/* Une description courte se lit d'un coup ; une longue se replie. */
+const detail = d => !d ? ''
+  : d.length <= 220 ? `<em>${esc(d)}</em>`
+  : `<details class="long"><summary><em>${esc(d)}</em></summary></details>`;
 
 /* epics */
 document.getElementById('epics').innerHTML = D.epics.map((e, idx) => {
@@ -228,13 +337,15 @@ document.getElementById('epics').innerHTML = D.epics.map((e, idx) => {
   const items = e.items.map(i => `
     <div class="item" data-s="${i.s}">
       <div class="tick" style="background:${col(i.s)}"></div>
-      <div class="lbl"><b>${esc(i.t)}</b>${i.d ? `<em>${esc(i.d)}</em>` : ''}</div>
+      <div class="lbl"><b>${esc(i.t)}</b>${i.it ? `<span class="itref">${i.it}</span>` : ''}${detail(i.d)}</div>
     </div>`).join('');
+  const its = (itsParEpic[e.id] || []).map(it => it.id).join(' · ');
   return `
-  <details class="epic" ${e.veille ? 'data-veille' : ''} ${idx < 6 ? 'open' : ''}>
+  <details class="epic" ${e.veille ? 'data-veille' : ''} ${courante && (itsParEpic[e.id] || []).includes(courante) ? 'open' : ''}>
     <summary>
       <span class="epic-id">${e.id}</span>
-      <span><span class="epic-name">${esc(e.nom)}</span><span class="epic-job">${esc(e.job)}</span></span>
+      <span><span class="epic-name">${esc(e.nom)}</span><span class="epic-job">${esc(e.job)}</span>
+        ${its ? `<span class="epic-its">itérations : ${its}</span>` : ''}</span>
       <span class="epic-bar">${bar}</span>
     </summary>
     <div class="items">${items}<div class="empty" hidden>Rien à ce statut dans cet EPIC.</div></div>
@@ -269,10 +380,10 @@ fbox.addEventListener('click', ev => {
 
 /* decisions */
 document.getElementById('decisions').innerHTML = D.decisions.map(f => `
-  <div class="flag" data-e="${f.e}">
-    <h3><span class="mark">${f.e === 'tranche' ? 'tranché' : 'ouvert'}</span>${esc(f.t)}</h3>
+  <details class="flag" data-e="${f.e}" ${f.e === 'tranche' ? '' : 'open'}>
+    <summary><span class="mark">${f.e === 'tranche' ? 'tranché' : 'ouvert'}</span>${esc(f.t)}</summary>
     <p>${esc(f.d)}</p>
-  </div>`).join('');
+  </details>`).join('');
 
 /* horizon */
 document.getElementById('horizon-note').textContent = D.horizon.note;
