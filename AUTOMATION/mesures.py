@@ -167,7 +167,7 @@ def poser_flag(nom, flag, character_id):
         return e
 
 
-def poser_etiquette(nom, axe, valeur):
+def poser_etiquette(nom, axe, valeur, character_id=None):
     """Etiquette manuelle de corpus sur un `axe` de `ETIQUETTES`, None pour retirer.
 
     Deuxieme famille de jugement humain, a cote de `flag` — et deliberement PAS
@@ -181,15 +181,33 @@ def poser_etiquette(nom, axe, valeur):
     DOCS/recherche/2026-09-07-juge-pixel-mains-resultats.md) demanderait une
     etiquette par main : re-passer le corpus a ce moment-la, pas maintenant.
 
-    Pas d'ecriture en base, contrairement a `poser_flag` : la table `jugement`
-    est mono-colonne, et ces etiquettes sont un instrument de calibration lu
-    depuis ce store. Migrer le jour ou une seconde lecture le demande.
+    ECRIT AUSSI EN BASE depuis le 2026-09-10, avec `character_id`. Ce
+    paragraphe disait l'inverse — « pas d'ecriture en base [...] migrer le jour
+    ou une SECONDE LECTURE le demande » — et cette seconde lecture est arrivee :
+    la file d'entrainement ecarte les defauts objectifs, donc elle DECIDE
+    depuis ces etiquettes. Les laisser dans le seul store JSON pendant que le
+    reste du mecanisme (embeddings, jeu de reference, portillon) est en SQL,
+    c'etait reinstaller « deux stores, une verite ».
+
+    `character_id` reste optionnel : le corpus de reference (mesurer_references)
+    n'appartient a aucun personnage, et il s'etiquette aussi. Sans lui, on
+    n'ecrit que le store — jamais sous un personnage devine, c'est la faute que
+    `poser_flag` documente juste au-dessus.
     """
     if axe not in ETIQUETTES:
         raise ValueError(f"axe d'etiquette inconnu : {axe}")
     champ, vocabulaire = ETIQUETTES[axe]
     if valeur is not None and valeur not in vocabulaire:
         raise ValueError(f"etiquette {axe} inconnue : {valeur}")
+    if character_id:
+        try:
+            import base
+            with base.ouvrir() as cx:
+                base.enregistrer_etiquette(
+                    cx, base.enregistrer_image(cx, nom, character_id), champ, valeur)
+                cx.commit()
+        except Exception:
+            pass                    # la base ne doit jamais bloquer un jugement
     with _VERROU:
         d = charger()
         e = d.setdefault(nom, {})

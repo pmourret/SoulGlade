@@ -117,6 +117,24 @@ entre deux espaces vectoriels ne veut rien dire — même famille de faute,
 en beaucoup moins visible. `base.MODELE_EMBEDDING` nomme le modèle une
 fois, à l'écriture comme à la lecture.
 
+**Trois axes de jugement humain, jamais fondus** (10/09/2026). `flag`
+(`ok`/`ia`) est le **goût** — « convaincante comme photographie » ;
+`anatomie` et `mains_juge` (`ok`/`ko`/`na`) sont des **défauts
+objectifs** (`PROJET.md`, amendement du 07/09). Les trois vivent dans la
+table `jugement`, et dans `mesures.json` : `poser_flag` et
+`poser_etiquette` écrivent les deux, la base étant la source de lecture.
+Conséquence non évidente : retirer un `flag` ne supprime plus la ligne,
+sinon il emporterait une étiquette que personne n'a demandé à retirer.
+
+**Le goût ne ferme aucune porte automatique.** `AUTOMATION/entrainement.py`
+écarte le défaut objectif et **jamais** `flag == 'ia'` : trier le réalisme
+est un jugement que l'utilisateur final fait lui-même. Mesuré le 10/09,
+c'est aussi sans conséquence — 0,1 σ d'écart d'identité entre les images
+« ok » et « ia ». Le gabarit, lui, n'écarte même pas le défaut objectif :
+une main cassée ne déforme pas un visage, et l'instrument de mesure veut
+couvrir toute la production. **Gabarit et file d'entraînement sont deux
+objets** ; les confondre ferait apprendre des mains cassées à un LoRA.
+
 **L'ancre n'est pas le gabarit.** L'ancre (base gelée) dit *qui est* le
 personnage : elle ne bouge jamais et reste le juge de la santé du jeu.
 Le gabarit (centroïde du jeu actif) dit *contre quoi* on mesure : il est

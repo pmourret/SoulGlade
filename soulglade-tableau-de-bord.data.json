@@ -190,6 +190,11 @@
           "s": "fait",
           "t": "Centroïde évolutif",
           "d": "LIVRÉ le 10/09. Le centroïde n'est pas un suivi, c'est le GABARIT D'ENRÔLEMENT : `base.construire_jeu` score désormais le portillon contre le centroïde du jeu actif dès qu'un `qc.threshold_gabarit` est configuré, et contre l'ancre gelée sinon (amorçage, ce qui tourne au premier jour d'un personnage). L'ancre ne bouge jamais et reste le JUGE : la santé est toujours son rapport, le gabarit ne se valide jamais lui-même. MESURÉ SUR LA VRAIE BASE : le seuil de Léna (0.9125, soit moy(membres) − 2σ) vient de calibrer_gabarit.py, pas d'une intuition — bande imposteur à 0.236, donc +0.677 de marge au seuil. Les membres passent de 30 à 44, et la boucle CONVERGE au lieu de dériver : 30 → 44 → 45 → 45 en trois reconstructions, santé 1.0715 → 1.0734 → 1.0739 → 1.0739 (elle MONTE), cohésion stable à 0.9312. C'est la démonstration empirique que l'auto-mise-à-jour tient avec ces garde-fous. Livré avec : la provenance (image.lora_identite, une image DERIVED le dit en base et ne peut plus redevenir une donnée d'origine en silence), la pureté du modèle d'embedding (un jeu n'en mélange jamais deux), le refus d'enrôlement à la création d'un personnage plutôt qu'au premier lot, et `identite_centroide` écrit à la génération sans seconde passe InsightFace. Tests : test_gabarit, test_enrolement, test_provenance_lora. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+        },
+        {
+          "s": "fait",
+          "t": "File d'entraînement : candidats et proposition",
+          "d": "LIVRÉ le 10/09. `AUTOMATION/entrainement.py` répond « sur quoi entraînerait-on, et est-ce assez ? » — il ne lance rien. La file part des membres du gabarit (donc déjà passés par le portillon d'identité) et n'écarte QUE le défaut objectif : `mains_juge` ou `anatomie` à `ko`. Le goût n'écarte jamais — `flag = ia` reste, c'est un jugement que l'utilisateur final fait lui-même, et il est sans effet mesuré sur l'identité. Sur Léna aujourd'hui : 45 membres, 18 écartés (17 mains, 1 anatomie), FILE = 27, dont 3 jamais étiquetées — signalées comme supposées saines, pas vérifiées. La diversité se compte en CATÉGORIES EFFECTIVES (exp de l'entropie) et non en valeurs distinctes : 11 scènes distinctes ne font que 8,9 effectives, parce que trois d'entre elles pèsent la moitié du lot. Cohésion 0,9339, aucun outlier. La proposition rend un verdict PAR CRITÈRE avec sa raison, et un seuil absent du config.json ne devient jamais une valeur par défaut : le critère est « sans seuil configuré » et rien ne conclut. Livré avec la montée en base des étiquettes de corpus — `poser_etiquette` le demandait dans son propre docstring, « migrer le jour où une seconde lecture le demande », et cette lecture est arrivée. Tests : test_file_entrainement, test_etiquettes_corpus étendu."
         }
       ]
     },
@@ -676,6 +681,11 @@
   ],
   "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
   "decisions": [
+    {
+      "e": "tranche",
+      "t": "Les étiquettes de corpus montent en base, leur docstring le demandait",
+      "d": "Décidé le 10/09 en construisant la file d'entraînement. `anatomie` et `mains_juge` ne vivaient que dans `mesures.json`, et `poser_etiquette` posait lui-même la condition de sa migration : « la table jugement est mono-colonne [...] migrer le jour où une SECONDE LECTURE le demande ». La file est cette seconde lecture — elle DÉCIDE d'une admission depuis ces étiquettes. Les laisser dans un store JSON pendant que le reste du mécanisme (embeddings, jeu de référence, portillon) est en SQL, c'était réinstaller « deux stores, une vérité » — la faute qui a coûté deux corrections cette semaine. Double écriture désormais, sur le patron de `poser_flag`. Effet de bord traité : retirer un `flag` ne supprime plus la ligne de jugement, sinon il emporterait une étiquette d'anatomie que personne n'a demandé à retirer."
+    },
     {
       "e": "tranche",
       "t": "La file d'entraînement exclut les défauts objectifs, pas les défauts de goût",

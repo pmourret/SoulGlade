@@ -88,10 +88,18 @@ CREATE TABLE IF NOT EXISTS score (
   PRIMARY KEY (image_id, genre)
 );
 
+-- Jugements humains. TROIS AXES INDEPENDANTS, jamais fondus : `flag` est le
+-- GOUT (« convaincante comme photographie »), `anatomie` et `mains_juge` sont
+-- des DEFAUTS OBJECTIFS (PROJET.md, amendement du 07/09). Une image peut etre
+-- convaincante ET avoir une main a six doigts ; les melanger fausserait la
+-- bande de realisme, qui s'etalonne sur flag == 'ok', et la file
+-- d'entrainement, qui ecarte le defaut objectif sans jamais arbitrer le gout.
 CREATE TABLE IF NOT EXISTS jugement (
-  image_id INTEGER PRIMARY KEY REFERENCES image(id) ON DELETE CASCADE,
-  flag     TEXT,                      -- ok | ia
-  juge_le  TEXT
+  image_id   INTEGER PRIMARY KEY REFERENCES image(id) ON DELETE CASCADE,
+  flag       TEXT,                    -- ok | ia          (gout)
+  juge_le    TEXT,
+  anatomie   TEXT,                    -- ok | ko | na     (defaut objectif)
+  mains_juge TEXT                     -- ok | ko | na     (defaut objectif)
 );
 
 CREATE TABLE IF NOT EXISTS embedding (
@@ -214,6 +222,16 @@ COLONNES_AJOUTEES = (
     # veut rien dire : un jeu ne melange jamais deux modeles, comme il ne
     # melange jamais deux personnages.
     ("reference_set", "modele", "TEXT"),
+    # Etiquettes de corpus (mesures.ETIQUETTES, P4.5.1), montees en base le
+    # 2026-09-10. Elles ne vivaient que dans mesures.json, et poser_etiquette
+    # disait pourquoi : « la table jugement est mono-colonne [...] migrer le
+    # jour ou une SECONDE LECTURE le demande ». La file d'entrainement est
+    # cette seconde lecture. Faire decider une admission depuis un store JSON
+    # pendant que le reste du mecanisme est en SQL, c'est reinstaller « deux
+    # stores, une verite » -- la faute qui a coute deux corrections cette
+    # semaine.
+    ("jugement", "anatomie", "TEXT"),
+    ("jugement", "mains_juge", "TEXT"),
 )
 
 
@@ -277,13 +295,50 @@ def enregistrer_score(cx, image_id, genre, valeur, mesure_le=None):
 
 
 def enregistrer_jugement(cx, image_id, flag, juge_le=None):
+    """Le GOUT de l'utilisateur. Retirer un flag n'efface pas les etiquettes.
+
+    Cette fonction supprimait la ligne entiere quand `flag` etait None. C'etait
+    sans consequence tant que la ligne ne portait que le flag ; depuis que les
+    etiquettes objectives partagent la table (10/09), effacer la ligne
+    emporterait un jugement d'anatomie que personne n'a demande a retirer. On
+    ne vide donc que la colonne, et la ligne ne part que si elle ne dit plus
+    rien du tout.
+    """
     if flag is None:
-        cx.execute("DELETE FROM jugement WHERE image_id = ?", (image_id,))
+        cx.execute("UPDATE jugement SET flag = NULL, juge_le = NULL "
+                   "WHERE image_id = ?", (image_id,))
+        cx.execute("DELETE FROM jugement WHERE image_id = ? AND flag IS NULL "
+                   "AND anatomie IS NULL AND mains_juge IS NULL", (image_id,))
         return
     cx.execute("INSERT INTO jugement (image_id, flag, juge_le) VALUES (?,?,?) "
                "ON CONFLICT(image_id) DO UPDATE SET flag=excluded.flag, "
                "juge_le=excluded.juge_le",
                (image_id, flag, juge_le or datetime.now().isoformat(timespec="seconds")))
+
+
+# Axes de defaut OBJECTIF portes par la table `jugement`, avec leur vocabulaire.
+# La liste est ici parce que c'est la base qui la contraint ; `mesures.ETIQUETTES`
+# reste la definition cote store, et les deux doivent rester d'accord (verrouille
+# par test_etiquettes_corpus.py).
+ETIQUETTES_BASE = {"anatomie": ("ok", "ko", "na"),
+                   "mains_juge": ("ok", "ko", "na")}
+
+
+def enregistrer_etiquette(cx, image_id, champ, valeur):
+    """Etiquette de defaut objectif. `valeur=None` retire l'etiquette.
+
+    Colonne en liste blanche : le nom entre dans le SQL, il ne vient jamais
+    d'un appelant sans controle.
+    """
+    if champ not in ETIQUETTES_BASE:
+        raise ValueError(f"axe d'etiquette inconnu en base : {champ!r}")
+    if valeur is not None and valeur not in ETIQUETTES_BASE[champ]:
+        raise ValueError(f"etiquette {champ} inconnue : {valeur!r}")
+    cx.execute(f"INSERT INTO jugement (image_id, {champ}) VALUES (?,?) "
+               f"ON CONFLICT(image_id) DO UPDATE SET {champ}=excluded.{champ}",
+               (image_id, valeur))
+    cx.execute("DELETE FROM jugement WHERE image_id = ? AND flag IS NULL "
+               "AND anatomie IS NULL AND mains_juge IS NULL", (image_id,))
 
 
 # ------------------------------------------------------ banc (J8.5, ADR-0021)

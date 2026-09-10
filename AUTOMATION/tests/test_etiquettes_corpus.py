@@ -99,6 +99,45 @@ try:
     verifie(apres.get("anatomie") == "ok" and apres.get("mains_juge") == "na",
             "les deux etiquettes suivent le fichier renomme par le tri")
 
+    # DOUBLE ECRITURE (2026-09-10). Ces etiquettes ont cesse d'etre un simple
+    # instrument de calibration : la file d'entrainement DECIDE depuis elles
+    # (entrainement.candidats ecarte le defaut objectif). Les laisser dans le
+    # seul store JSON pendant que le reste du mecanisme est en SQL, c'etait
+    # reinstaller « deux stores, une verite ». Meme patron que poser_flag, et
+    # meme garde que test_mesurer_double_ecriture.
+    print("\n[6] l'etiquette atterrit AUSSI en base, sous le bon personnage")
+    AUTRE = "sous_personnage.png"
+    mes.poser_etiquette(AUTRE, "mains", "ko", character_id="lena")
+    with db.ouvrir() as cx:
+        r = cx.execute("SELECT j.mains_juge, i.character_id FROM jugement j "
+                       "JOIN image i ON i.id = j.image_id WHERE i.fichier = ?",
+                       (AUTRE,)).fetchone()
+    verifie(r is not None and r["mains_juge"] == "ko", "l'etiquette est en base")
+    verifie(r is not None and r["character_id"] == "lena",
+            "sous le personnage passe par l'appelant, jamais un defaut devine")
+
+    print("\n[7] retirer le realisme n'efface pas les etiquettes en base")
+    mes.poser_flag(AUTRE, "ok", "lena")
+    mes.poser_flag(AUTRE, None, "lena")
+    with db.ouvrir() as cx:
+        r = cx.execute("SELECT j.flag, j.mains_juge FROM jugement j "
+                       "JOIN image i ON i.id = j.image_id WHERE i.fichier = ?",
+                       (AUTRE,)).fetchone()
+    verifie(r is not None and r["mains_juge"] == "ko" and r["flag"] is None,
+            "flag vide, etiquette intacte — la ligne n'est plus supprimee en bloc")
+
+    print("\n[8] sans character_id, on n'ecrit pas en base plutot que d'inventer")
+    CORPUS = "corpus_de_reference.png"
+    mes.poser_etiquette(CORPUS, "anatomie", "ok")
+    verifie(mes.charger().get(CORPUS, {}).get("anatomie") == "ok",
+            "le store porte l'etiquette")
+    with db.ouvrir() as cx:
+        n = cx.execute("SELECT COUNT(*) FROM image WHERE fichier = ?",
+                       (CORPUS,)).fetchone()[0]
+    verifie(n == 0,
+            "et la base n'a AUCUNE ligne : le corpus de reference n'appartient "
+            "a aucun personnage, on ne lui en invente pas un")
+
 finally:
     shutil.rmtree(racine, ignore_errors=True)
 

@@ -140,9 +140,12 @@ async def set_flag(payload: FlagRequest, character_id: RequiredCharacterId):
     calibrates realism on `flag == "ok"`, and `mains` already names the DWPose
     score. Sharing a field would corrupt several readings at once, silently.
 
-    The corpus labels deliberately do not write to the database: the `jugement`
-    table is single-column, and they are calibration instruments read from
-    `mesures.json` (see `mesures.poser_etiquette`).
+    SINCE 2026-09-10 the corpus labels DO write to the database, under this
+    request's `character_id` — same discipline as the realism flag just below.
+    They stopped being calibration instruments only: the training queue now
+    decides from them (it drops objectively defective images), and a decision
+    read from a JSON store while the rest of the mechanism lives in SQL is how
+    "two stores, one truth" comes back.
     """
     name = payload.name
     if not ss.SAFE_NAME.match(name):
@@ -152,7 +155,7 @@ async def set_flag(payload: FlagRequest, character_id: RequiredCharacterId):
         if flag not in (None,) + mes.ETIQUETTES[payload.axe][1]:
             return JSONResponse({"ok": False, "erreur": "étiquette inconnue"},
                                 status_code=400)
-        mes.poser_etiquette(name, payload.axe, flag)
+        mes.poser_etiquette(name, payload.axe, flag, character_id=character_id)
         return {"ok": True, "flag": flag}
     if payload.axe != "realisme":
         return JSONResponse({"ok": False, "erreur": "axe inconnu"}, status_code=400)
