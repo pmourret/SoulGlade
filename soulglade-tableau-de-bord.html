@@ -867,6 +867,11 @@ const D = {
   "decisions": [
     {
       "e": "tranche",
+      "t": "La file d'entraînement exclut les défauts objectifs, pas les défauts de goût",
+      "d": "Acté le 10/09, après que Pierre a annoté à la main les 20 images de PROD/LENA/REJET. Le croisement est net : les 7 que le portillon d'identité admettait sont SIX MAINS CASSÉES ET UN BRAS — il ne filtre pas les mains, il les tire à pile ou face (6 admises sur 12). Or une main à six doigts est un défaut OBJECTIF (PROJET.md, amendement du 07/09), pas un choix créatif que l'utilisateur arbitre : entraîner un LoRA dessus lui apprend des mains cassées. La file d'entraînement se ferme donc sur l'identité ET l'absence de défaut objectif. Le signal existe déjà et n'a pas besoin d'être invente : les étiquettes de corpus (mesures.ETIQUETTES, P4.5.1) portent `mains_juge` et `anatomie` sur des AXES SÉPARÉS du flag de réalisme — 40 images déjà marquées ko sur les mains, et les 12 du CSV en font partie. L'agnosticisme tient exactement : la plateforme juge l'identité, l'humain juge l'anatomie, et son jugement est déjà rangé à part de son goût. Le gabarit, lui, ne change pas : il continue de se nourrir de tout ce qui est bien elle, mains cassées comprises — une main ne déforme pas un visage."
+    },
+    {
+      "e": "tranche",
       "t": "Le gabarit mesure l'identité, jamais le réalisme",
       "d": "Arbitrage de Pierre le 10/09, en découvrant que 17 des 45 membres du gabarit portaient son flag « ia ». Le portillon reste sur l'identité SEULE : que le visage fasse IA ou non, c'est le même visage, et trier le réalisme est un jugement que l'utilisateur final fait lui-même — la plateforme ne l'arbitre pas à sa place (PROJET.md). MESURÉ dans la foulée, et l'arbitrage est gratuit : sur 30 images « ok » contre 26 « ia », l'écart d'identité contre le gabarit est de -0.001, soit 0.1 sigma — elles sont rigoureusement indiscernables dans l'espace du visage. Les inclure n'abîme pas le thermomètre. Conséquence de cadrage : le GABARIT (instrument de mesure, qui veut couvrir l'espace de conditions de la production) et la FILE D'ENTRAÎNEMENT (qui veut de la qualité) sont DEUX objets, là où le schéma du 09/09 les faisait passer sous une seule flèche."
     },
@@ -1024,6 +1029,10 @@ const D = {
       {
         "t": "Entraîner sur des images jugées « fait IA » abîme-t-il le LoRA ?",
         "d": "(10 septembre 2026) Question ouverte par Pierre le jour où le gabarit a été livré : si le « fait IA » dégrade la qualité globale du LoRA, le système perd de son intérêt. La mesure du 10/09 la déplace sans la fermer : « fait IA » n'est PAS un phénomène d'identité (0.1 sigma contre le gabarit), c'est faiblement un phénomène de NETTETÉ — les images marquées « ia » sont plus nettes de +35 (2.0 sigma, 30 contre 26 images), soit le sur-piqué plastique. Deux erreurs-types, c'est la limite de ce que le protocole appelle tranchable : une piste, pas une conclusion. Si le « fait IA » abîme un jour le LoRA, ce sera par la TEXTURE, jamais par l'identité. Réponse à un seul essai, et il coûte des heures de GPU : deux LoRA — l'un sur tout ce qui passe le portillon d'identité, l'autre sur l'intersection avec le flag « ok » — puis le banc (ADR-0021). C'est la tranche entraînement, pas celle-ci."
+      },
+      {
+        "t": "Justifier un rejet, et que la plateforme en apprenne",
+        "d": "(10 septembre 2026) Idée de Pierre le jour où il a annoté ses rejets dans un tableur : l'utilisateur devrait pouvoir dire POURQUOI il rejette, et cette raison servirait globalement à la plateforme. La moitié du chemin est déjà faite et personne ne s'en sert pour ça : `mesures.ETIQUETTES` (P4.5.1) porte déjà des axes SÉPARÉS du flag — `anatomie` et `mains_juge`, vocabulaire ok/ko/na, 53 images étiquetées. Ce qui manque est (1) le vocabulaire, que son CSV nomme de lui-même : « Identité non respectée », « Texture peau trop lisse », « Anatomie : main / visage / bras » — deux familles qu'aucun axe ne couvre aujourd'hui ; (2) l'écran qui pose l'étiquette AU MOMENT du rejet, plutôt qu'un tableur à côté. Ce que ça débloque : une file d'entraînement qui exclut le défaut objectif sans arbitrer le goût, et un corpus étiqueté par famille de défaut, que ADR-0025 exige avant qu'un détecteur ne devienne bloquant. Hors parcours nominal : un nouvel utilisateur publie sa première image sans jamais justifier un rejet."
       }
     ]
   },
