@@ -389,15 +389,26 @@ function SettingRow({
             same contract as the pose badge (§A2): a plain `title` only
             reaches a mouse, this reaches the keyboard and a screen reader
             too. The base fact ("mesuré" / not) stays in visible text. */}
+        {/* TROIS ETATS, PAS DEUX (10/09). Un reglage qui n'a AUCUNE valeur de
+            reference — `handdetailer_denoise`, dont la fiche dit elle-meme
+            « jamais mesuré : 0.5 est une valeur de départ posée à la main » —
+            affichait « mesuré » en gris, ce qui se lit « hors valeur mesurée ».
+            C'est un badge qui ment : il n'y a rien dont s'ecarter, et le reste
+            du panneau le sait deja (le titre ne s'accentue que si
+            `hasReference`, le compteur d'ecarts ne le compte pas). Le mot suit
+            maintenant la meme verite. */}
         <span
           className={`${BADGE_BASE} ${measured ? BADGE_ON : BADGE_OFF}`}
           id={`m_${item.id}`}
           data-mes
           data-off={measured ? undefined : '1'}
+          data-noref={hasReference ? undefined : '1'}
           tabIndex={0}
-          data-hint-text={`valeur mesurée du projet : ${hasReference ? fmtVal(item, reference as number) : '—'}`}
+          data-hint-text={hasReference
+            ? `valeur mesurée du projet : ${fmtVal(item, reference as number)}`
+            : "ce réglage n'a jamais été mesuré : sa valeur est un point de départ"}
         >
-          mesuré
+          {hasReference ? 'mesuré' : 'jamais mesuré'}
         </span>
       </div>
       <input

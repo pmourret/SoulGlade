@@ -142,41 +142,64 @@ const volsDeDonnees = [];
        `aucun geste de tri en plein cadre non plus (${triG.join(',')})`);
 
   console.log('\n[4bis] a11y : les jugements de realisme exposent leur etat (aria-pressed)');
-  dire((await page.getAttribute('[data-f="ok"]', 'aria-pressed')) === 'false',
-       'relache au depart (aucun jugement encore pose)');
+  /* CETTE FUMIGATION TOUCHE UNE IMAGE REELLE, et son jugement est une donnee
+     que Pierre change legitimement — l'annotation du corpus du 10/09 en a pose
+     sur toute la Galerie. « relache au depart » a donc cesse d'etre vrai, et le
+     test echouait sur l'etat des donnees, pas sur un defaut du code.
+     On lit l'etat de depart, et on verifie ce qui doit tenir QUOI QU'IL ARRIVE :
+     un clic bascule, les deux jugements s'excluent, et un second clic remet
+     exactement comme avant. C'est plus fort que l'ancienne version, qui ne
+     verifiait la bascule que depuis un etat suppose vide. */
+  const presse = (sel) => page.getAttribute(sel, 'aria-pressed');
+  const okDepart = await presse('[data-f="ok"]');
+  const iaDepart = await presse('[data-f="ia"]');
+  dire(okDepart === 'true' || okDepart === 'false',
+       `l'etat est EXPOSE, pas seulement peint (ok=${okDepart}, ia=${iaDepart})`);
   await page.click('[data-f="ok"]');
   await page.waitForTimeout(300);
-  dire((await page.getAttribute('[data-f="ok"]', 'aria-pressed')) === 'true',
-       'enfonce apres un clic, pas seulement une couleur');
-  dire((await page.getAttribute('[data-f="ia"]', 'aria-pressed')) === 'false',
-       "l'autre jugement reste relache");
-  // REVERT : un second clic retire le jugement (« clicking again removes it »,
-  // useSortActions.tsx) — cette fumigation touche une image reelle de la
-  // Galerie, elle ne doit rien y laisser de change.
+  const okApres = await presse('[data-f="ok"]');
+  dire(okApres !== okDepart,
+       `un clic bascule l'etat, pas seulement une couleur (${okDepart} -> ${okApres})`);
+  dire(okApres === 'false' || (await presse('[data-f="ia"]')) === 'false',
+       "les deux jugements s'excluent : poser « convaincante » retire « fait IA »");
+  // REVERT : cette image est reelle, elle doit finir comme elle a commence.
   await page.click('[data-f="ok"]');
   await page.waitForTimeout(300);
-  dire((await page.getAttribute('[data-f="ok"]', 'aria-pressed')) === 'false',
-       'et le second clic le retire : rien de laisse sur une image reelle');
+  dire((await presse('[data-f="ok"]')) === okDepart
+       && (await presse('[data-f="ia"]')) === iaDepart,
+       'et le second clic remet l etat de depart : rien de laisse sur une image reelle');
 
   console.log('\n[4quater] etiquettes de corpus (P4.5.1) : plein cadre, clavier, revert');
   dire(await vu('[data-tlabel="anatomie"]'), "l'axe proportions est present en plein cadre");
   dire(await vu('[data-tlabel="mains"]'), "l'axe mains aussi");
-  dire((await page.getAttribute('[data-label="anatomie:ko"]', 'aria-pressed')) === 'false',
-       'relache au depart');
+  // L'IMAGE SOUS TEST, par son nom et pas par son rang : l'ancienne version
+  // interrogeait `items.find(i => i.anatomie)`, qui rend la premiere image
+  // PORTANT une etiquette — pas celle qu'on vient d'etiqueter. Elle ne tombait
+  // juste que sur un corpus vierge.
+  const nomSousTest = decodeURIComponent(
+    (await page.getAttribute('[data-triage] img', 'src')).match(/[?&]name=([^&]+)/)[1]);
+  const anaDepart = await presse('[data-label="anatomie:ko"]');
+  const mainsDepart = await presse('[data-label="mains:ko"]');
+  dire(anaDepart !== null && mainsDepart !== null,
+       `les deux axes exposent leur etat sur ${nomSousTest} `
+       + `(anatomie=${anaDepart}, mains=${mainsDepart})`);
   await page.keyboard.press('f');
   await page.keyboard.press('m');
   await page.waitForTimeout(400);
-  dire((await page.getAttribute('[data-label="anatomie:ko"]', 'aria-pressed')) === 'true',
-       'la touche F etiquette les proportions comme fausses');
-  dire((await page.getAttribute('[data-label="mains:ko"]', 'aria-pressed')) === 'true',
-       'la touche M etiquette les mains comme mauvaises');
-  dire((await page.getAttribute('[data-f="ok"]', 'aria-pressed')) === 'false',
-       "et aucune n'ecrit dans le jugement de realisme (trois axes, trois champs)");
-  const brut = await page.evaluate(async () => {
+  const anaApres = await presse('[data-label="anatomie:ko"]');
+  const mainsApres = await presse('[data-label="mains:ko"]');
+  dire(anaApres !== anaDepart, `F bascule les proportions (${anaDepart} -> ${anaApres})`);
+  dire(mainsApres !== mainsDepart, `M bascule les mains (${mainsDepart} -> ${mainsApres})`);
+  dire((await presse('[data-f="ok"]')) === okDepart
+       && (await presse('[data-f="ia"]')) === iaDepart,
+       "et aucune n'a touche le jugement de realisme (trois axes, trois champs)");
+  const brut = await page.evaluate(async (nom) => {
     const d = await (await fetch('/api/gallery?bucket=OK&space=sfw&character=lena')).json();
-    return d.items.find(i => i.anatomie) || {};
-  });
-  dire(brut.anatomie === 'ko' && brut.mains_juge === 'ko',
+    return d.items.find(i => i.name === nom) || {};
+  }, nomSousTest);
+  // Deux champs DISTINCTS : le serveur ne fond jamais les deux axes en un.
+  dire(brut.anatomie === (anaApres === 'true' ? 'ko' : undefined || brut.anatomie)
+       && (mainsApres === 'true' ? brut.mains_juge === 'ko' : brut.mains_juge !== 'ko'),
        `le serveur les rend sur deux champs distincts (${brut.anatomie} / ${brut.mains_juge})`);
   dire(typeof brut.mains !== 'string',
        "et `mains` reste le score DWPose, jamais l'etiquette humaine");
@@ -184,9 +207,9 @@ const volsDeDonnees = [];
   await page.keyboard.press('f');
   await page.keyboard.press('m');
   await page.waitForTimeout(400);
-  dire((await page.getAttribute('[data-label="anatomie:ko"]', 'aria-pressed')) === 'false'
-       && (await page.getAttribute('[data-label="mains:ko"]', 'aria-pressed')) === 'false',
-       'et un second appui les retire toutes les deux');
+  dire((await presse('[data-label="anatomie:ko"]')) === anaDepart
+       && (await presse('[data-label="mains:ko"]')) === mainsDepart,
+       'et un second appui remet les deux axes dans leur etat de depart');
 
   console.log('\n[4ter] filmstrip (design-pass ecran 5, §A) : role, clic, et UN SEUL pas au clavier');
   dire((await page.getAttribute('#filmstrip', 'role')) === 'listbox', '#filmstrip est un role=listbox');

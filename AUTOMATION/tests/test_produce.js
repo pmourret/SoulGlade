@@ -358,17 +358,35 @@ const PANNEAU = '#gearPanel[data-open]';
      depuis le passage aux utilitaires, la chaine de classes contient des mots
      comme `outline-offset` — un `includes('off')` y serait vrai partout. */
   const mesures = await page.$$eval('#gearBody [data-mes]',
-    e => e.map(x => x.hasAttribute('data-off')));
+    e => e.map(x => ({ off: x.hasAttribute('data-off'),
+                       sansRef: x.hasAttribute('data-noref'),
+                       mot: x.textContent.trim() })));
   dire(mesures.length > 0, `${mesures.length} pastille(s) « mesuré »`);
-  dire(mesures.every(off => !off),
-       'toutes allumees a l ouverture : le panneau part des valeurs mesurees');
+  /* TROIS ETATS, PAS DEUX (corrige le 10/09). « toutes allumees a l'ouverture »
+     etait faux depuis qu'un reglage sans valeur de reference existe :
+     `handdetailer_denoise`, arrive avec l'etage des mains (IT-3b, 09/09), dont
+     la fiche dit elle-meme « jamais mesuré ». La regle vraie est : une pastille
+     eteinte a l'ouverture n'est PAS un ecart, c'est une absence de reference,
+     et elle le DIT. */
+  const ecarts = mesures.filter(m => m.off && !m.sansRef);
+  dire(ecarts.length === 0,
+       `aucun ecart a l'ouverture : le panneau part des valeurs mesurees `
+       + `(${ecarts.length} pastille(s) eteinte(s) avec reference)`);
+  const sansRef = mesures.filter(m => m.sansRef);
+  dire(sansRef.every(m => m.off && m.mot === 'jamais mesuré'),
+       `et les ${sansRef.length} sans reference le disent en toutes lettres `
+       + `plutot que d'afficher « mesuré » en gris`);
   dire((await texte('#gearDiff')) === '', 'et le compteur d ecarts est vide');
   // §A3 : la valeur de reference passe par data-hint-text + tabIndex, plus
   // par un `title` qui ne reagit qu'a la souris (design pass ecran 3).
   const badgesMesures = await page.$$eval('#gearBody [data-mes]',
-    e => e.map(x => ({ hint: x.dataset.hintText || '', tab: x.getAttribute('tabindex'), title: x.hasAttribute('title') })));
-  dire(badgesMesures.every(b => b.hint.includes('valeur mesurée du projet')),
-       'chaque pastille porte sa valeur de reference en data-hint-text');
+    e => e.map(x => ({ hint: x.dataset.hintText || '', tab: x.getAttribute('tabindex'),
+                       title: x.hasAttribute('title'), sansRef: x.hasAttribute('data-noref') })));
+  dire(badgesMesures.every(b => b.sansRef
+        ? b.hint.includes("jamais été mesuré")
+        : b.hint.includes('valeur mesurée du projet')),
+       'chaque pastille porte sa valeur de reference en data-hint-text, ou dit '
+       + 'qu elle n en a pas');
   dire(badgesMesures.every(b => b.tab === '0'), 'et un tabIndex qui la rend joignable au clavier');
   dire(badgesMesures.every(b => !b.title), 'sans le title redondant');
 

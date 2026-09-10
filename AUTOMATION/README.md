@@ -1,7 +1,12 @@
-# AUTOMATION — production en série de Léna
+# AUTOMATION — le moteur du studio
 
 Chaîne complète sans clic : **banque de scènes → ComfyUI → QC d'identité → tri →
 export publiable → journal CSV**.
+
+Le titre disait « production en série de Léna » : c'était vrai au début, ça ne
+l'est plus. Le moteur est **agnostique du personnage et du pack** (invariant 7),
+et rien ici ne connaît Léna en particulier. Les exemples de ce document la
+prennent pour illustration, jamais pour condition.
 
 Le runner convertit le workflow UI en format API à chaque lancement. Ce que tu
 édites dans ComfyUI est ce qui tourne — il n'y a pas de copie API à maintenir en
@@ -35,11 +40,38 @@ VRAM.
 Si ComfyUI ne démarre pas, le tableau de bord s'ouvre quand même et affiche
 l'écran hors ligne : il se débloque tout seul dès que ComfyUI répond.
 
-Le serveur utilise `aiohttp`, déjà fourni avec ComfyUI : rien à installer.
+Le serveur est **FastAPI + uvicorn** (migration du 30/08/2026 ; c'était
+`aiohttp` avant). Documentation d'API sur `/docs`. L'interface est du **React
++ TypeScript** construit par Vite : `python AUTOMATION/tools/toolchain.py build`
+avant de servir, sinon le serveur sert un bundle périmé.
 
-Deux écrans, un menu **⚙ Avancé**, et le curseur d'intensité au-dessus des deux.
+### Les huit destinations
 
-**Créer** — le parcours par défaut, en trois blocs qui se révèlent l'un après
+La barre de navigation, dans son ordre à l'écran. Les chemins sont réels
+(`/produce`, `/bank/poses`…) : le routage par ancre `#trier` a disparu avec
+l'ancien frontend, le bouton retour du navigateur fonctionne et n'importe quel
+écran se met en favori. Le personnage voyage en `?character=`.
+
+| | | |
+|---|---|---|
+| **Fiche** | `/character` | le personnage ouvert, en lecture seule. Sans personnage chargé, l'entrée mène au sas `/characters` |
+| **Produire** | `/produce` | intention → ton → scènes, le curseur d'intensité, et la barre de lancement |
+| **Revue** | `/review` | la file à juger. Porte le compteur de ce qui attend |
+| **Galerie** | `/gallery` | ce qui est gardé |
+| **Ateliers** | `/bank/…` | trois sous-vues : **Scènes**, **Poses**, **Tons** |
+| **Entraînement** | `/training` | le jeu d'un LoRA d'identité et son export (voir plus bas) |
+| **Mondes** | `/worlds` | registre des mondes et catalogue de lieux (ADR-0015/16) |
+| **Application** | `/app` | cycle de vie du serveur et de ComfyUI, sondes, journal, et **le rituel d'armement de la branche adulte** |
+
+Deux écrans ont leur éditeur en plein écran, atteint depuis leur sous-vue :
+l'éditeur de pose (`/bank/poses/edit`) et l'éditeur d'expression
+(`/bank/tones/edit`). L'éditeur photo avancé vit sur `/photo-editor`.
+
+**Le contenu adulte a UN seul geste, et il est sur Application** (ADR-0010) :
+recopier le mot `ARMER`. Aucun autre écran ne l'arme ; la Fiche le lit et dit
+où il se décide.
+
+**Produire** — le parcours par défaut, en trois blocs qui se révèlent l'un après
 l'autre : **Intention** (Selfie, Lifestyle, Sport, Mode, Voyage, Self-care,
 Herbier, Intime, plus une carte *Toutes*) → **Ton** (pré-sélectionné selon
 l'intention, modifiable) → **Scènes**. Chaque carte de scène porte sa vignette,
@@ -72,74 +104,13 @@ n'affiche que ce qui a un sens sur cette image : une scène sans variante affich
 scène et son seed sont inconnus.
 
 **Niveau NSFW** — le quatrième cran du curseur. Il est verrouillé tant que la
-branche n'est pas armée ; cliquer dessus ouvre le rituel (recopier le mot `ARMER`),
-qui a quitté l'onglet pour vivre là où la décision se prend. Une fois armé, un bloc
-**Instruction d'édition** apparaît dans Créer, et la chaîne tourne en deux temps :
+branche n'est pas armée, et l'armement ne se fait PAS ici : il a un seul geste,
+sur l'écran **Application** (ADR-0010). Une fois armé, un bloc
+**Instruction d'édition** apparaît dans Produire, et la chaîne tourne en deux temps :
 génération en **Soft**, puis édition, puis PuLID + FaceDetailer remettent le visage.
 Une image dont la passe SFW sort de la bande d'identité **n'est pas éditée**. Les
 sorties vont dans `PROD/_NSFW/` et ne sont jamais exportées. Désarmer fait
 redescendre le curseur.
-
-**⚙ Avancé** — banque de scènes, journal, branche NSFW (édition d'une image déjà
-validée, sans régénérer). Rien n'a disparu, tout est simplement sorti du chemin par
-défaut.
-
-Description historique des écrans (le tri et la banque n'ont pas changé) :
-
-**Curseur d'intensité** — une barre sous l'en-tête, visible sur tous les écrans :
-`SFW strict` · `Soft` · `Suggestif` · `NSFW`. C'est le seul réglage global. Il
-filtre les scènes (chacune déclare la bande qu'elle supporte) et choisit la tenue
-(`wardrobe` de la scène). *Suggestif* demande une confirmation et sort de l'export ;
-*NSFW* est verrouillé tant que l'enchaînement automatique n'est pas câblé (étape 5).
-L'application rouvre toujours en `SFW strict` — le niveau n'est jamais mémorisé.
-
-**Produire** — les scènes s'affichent en vignettes (la dernière image produite
-pour chacune), on clique pour sélectionner. **Rien n'est sélectionné au départ** :
-on choisit ce qu'on veut produire, on ne déselectionne pas onze scènes pour en
-garder une. Changer de niveau élague la sélection des scènes devenues hors bande. Les pastilles de catégorie
-*filtrent* la grille, elles ne sont pas une deuxième sélection. En bas, une barre
-fixe annonce ce qui va se passer — « 26 images · 12 scènes · environ 23 min », la
-durée étant calculée sur les temps réellement mesurés dans le journal — avec le
-choix de qualité (Réalisme / Rapide / Brut) et le bouton *Lancer*. Tout le reste
-(nombre par scène, format imposé, seed, réglages fins du préréglage) est replié
-dans *Réglages avancés*.
-
-Pendant la production, un panneau prend la tête de l'écran : progression, scène
-en cours, temps restant, **bande des images au fur et à mesure qu'elles tombent**
-(bordure verte / orange / rouge selon le score), bouton *Arrêter*, et le journal
-technique replié. À la fin, un bouton *Trier les résultats* mène directement à
-l'étape suivante.
-
-**Trier** — c'est l'écran où on passe le plus de temps, il est fait pour aller
-vite. Il s'ouvre sur la **grille**, chaque vignette portant son score en pastille,
-avec quatre filtres de lecture : *Tout*, *Excellentes* (≥ 0.74), *Correctes*
-(0.72 – 0.74), *Sous la bande* (< 0.72 ou visage non mesuré). Les filtres
-s'appliquent **à l'intérieur** du dossier courant : c'est ce qui fait ressortir
-les images validées à la main dont le score est en réalité hors bande.
-
-La vue *Revue* montre une image en grand, le score en gros à droite, et le
-clavier —
-<kbd>V</kbd> valider, <kbd>R</kbd> à revoir, <kbd>X</kbd> rejeter,
-<kbd>←</kbd> <kbd>→</kbd> naviguer, <kbd>U</kbd> annuler. Chaque action fait
-avancer automatiquement à l'image suivante et affiche un message avec un lien
-*annuler* (qui remet le fichier où il était et supprime l'export éventuel). La
-navigation et les actions suivent le **filtre actif**, pas le dossier entier.
-Les actions s'adaptent au dossier : dans *Validées* on ne propose pas « valider »,
-dans *Rejetées* le bouton principal devient « restaurer ». Un clic sur une vignette
-de la grille bascule en vue *Revue* sur cette image.
-
-**Scènes** — une carte par scène avec de vrais champs (id, catégorie, format,
-nombre, guidance, prompt, variantes), boutons ajouter et supprimer. L'ancre
-d'identité est en haut, éditable une fois pour toutes. Le JSON brut reste
-accessible en bas pour les modifications en masse. Sauvegarde `.bak` à chaque
-enregistrement.
-
-**Journal** — `journal_batch.csv` filtrable par verdict.
-
-**NSFW** — verrouillé tant que la branche n'est pas armée (voir plus bas).
-
-Les onglets sont dans l'URL (`#trier`, `#scenes`…) : le bouton retour du
-navigateur fonctionne et un onglet peut se mettre en favori.
 
 ### Depuis le téléphone
 
