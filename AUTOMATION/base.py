@@ -71,7 +71,8 @@ CREATE TABLE IF NOT EXISTS image (
   duree_s      REAL,
   export       TEXT,
   source       TEXT,          -- image dont celle-ci derive (branche NSFW)
-  role         TEXT                    -- 'reference' pour le corpus de realisme
+  role         TEXT,                   -- 'reference' pour le corpus de realisme
+  lora_identite TEXT                   -- LoRA d'identite applique : DERIVED si non nul
 );
 -- Remplace l'ancien UNIQUE(fichier) : deux personnages peuvent produire un
 -- fichier de meme nom sans collision.
@@ -110,7 +111,8 @@ CREATE TABLE IF NOT EXISTS reference_set (
   actif        INTEGER DEFAULT 0,
   sante        REAL,                  -- RAPPORT : voir construire_jeu
   sante_abs    REAL,                  -- cos(centroide, base gelee), brut
-  cohesion     REAL                   -- cos(centroide, membres) : coherence interne
+  cohesion     REAL,                  -- cos(centroide, membres) : coherence interne
+  modele       TEXT                   -- modele d'embedding des membres, jamais melange
 );
 CREATE TABLE IF NOT EXISTS reference_member (
   set_id   INTEGER NOT NULL REFERENCES reference_set(id) ON DELETE CASCADE,
@@ -170,6 +172,14 @@ CREATE TABLE IF NOT EXISTS bench_score (
 # thermometre, et c'est ca qu'on veut attraper.
 SANTE_MINI = 0.98
 
+# Modele d'embedding par defaut : celui que qc_identity produit (InsightFace
+# antelopev2, 512d). Nomme ici parce qu'un jeu de reference ne melange jamais
+# deux modeles — deux espaces vectoriels differents ne se comparent pas — et que
+# la valeur doit donc etre la MEME a l'ecriture (enregistrer_embedding) et a la
+# lecture (construire_jeu). Le jour ou un pack apporte une autre mesure, c'est
+# ce parametre qui change, pas un litteral disperse.
+MODELE_EMBEDDING = "antelopev2"
+
 
 class _Connexion(sqlite3.Connection):
     """Connexion qui se ferme a la sortie du bloc `with`.
@@ -186,11 +196,40 @@ class _Connexion(sqlite3.Connection):
             self.close()
 
 
+# Colonnes ajoutees APRES coup, sur une base qui existe deja.
+#
+# `CREATE TABLE IF NOT EXISTS` ne fait rien sur une table presente : il ne voit
+# pas qu'une colonne manque. Tant que la base se reconstruisait (migrer_base.py,
+# J1), le probleme ne se posait pas ; depuis qu'elle EST la source de verite, une
+# colonne neuve ne peut arriver que par un ALTER. Idempotent, appele a chaque
+# ouverture : le cout est une lecture de PRAGMA, et la base se repare seule.
+COLONNES_AJOUTEES = (
+    # LoRA d'identite REELLEMENT applique a cette image, NULL sinon. C'est la
+    # provenance du mecanisme d'identite (2026-09-10) : une image DERIVED est
+    # exactement une image dont cette colonne n'est pas nulle. Sans elle, rien
+    # en base ne dit qu'une image sort d'un modele derive -- et une sortie de
+    # LoRA v1 pouvait redevenir en silence une donnee d'origine pour v2.
+    ("image", "lora_identite", "TEXT"),
+    # Modele d'embedding des membres du jeu. Un cosinus entre deux espaces ne
+    # veut rien dire : un jeu ne melange jamais deux modeles, comme il ne
+    # melange jamais deux personnages.
+    ("reference_set", "modele", "TEXT"),
+)
+
+
+def _ajouter_colonnes(cx):
+    for table, nom, decl in COLONNES_AJOUTEES:
+        presentes = {d[1] for d in cx.execute(f"PRAGMA table_info({table})")}
+        if nom not in presentes:
+            cx.execute(f"ALTER TABLE {table} ADD COLUMN {nom} {decl}")
+
+
 def ouvrir():
     FICHIER.parent.mkdir(parents=True, exist_ok=True)
     cx = sqlite3.connect(FICHIER, timeout=10, factory=_Connexion)
     cx.row_factory = sqlite3.Row
     cx.executescript(SCHEMA)
+    _ajouter_colonnes(cx)
     return cx
 
 
@@ -205,7 +244,7 @@ def enregistrer_image(cx, fichier, character_id, **champs):
     """
     colonnes = ("batch_id", "espace", "bucket", "scene", "intention", "ton",
                 "intensite", "format", "seed", "variante", "prompt", "cree_le",
-                "duree_s", "export", "source", "role")
+                "duree_s", "export", "source", "role", "lora_identite")
     vals = {k: champs.get(k) for k in colonnes}
     cx.execute("INSERT INTO image (character_id, fichier) VALUES (?, ?) "
                "ON CONFLICT(character_id, fichier) DO NOTHING",
@@ -316,7 +355,7 @@ def bench_scores(cx, bench_run_id):
         (bench_run_id,)).fetchall()
 
 
-def enregistrer_embedding(cx, image_id, vecteur, modele="antelopev2"):
+def enregistrer_embedding(cx, image_id, vecteur, modele=MODELE_EMBEDDING):
     """vecteur : numpy float32. Stocke tel quel, pour re-scorer sans relire le PNG."""
     if vecteur is None:
         return
@@ -413,42 +452,79 @@ def centroide(cx, set_id):
     return (c / n) if n > 1e-6 else None
 
 
-def construire_jeu(cx, character_id, base_embedding, seuil_haut, libelle=None):
+def construire_jeu(cx, character_id, base_embedding, seuil_haut, libelle=None,
+                   seuil_gabarit=None, modele=MODELE_EMBEDDING):
     """Construit un jeu de reference d'identite et rend son bilan.
+
+    L'ANCRE N'EST PAS LE GABARIT, et c'est le coeur de cette fonction.
+    L'ancre (base gelee) dit QUI est le personnage : elle ne bouge jamais et
+    reste le juge. Le gabarit dit CONTRE QUOI on mesure : c'est le centroide du
+    jeu actif, et il est versionne, pas gele. Verdict de la phase de recherche
+    du 2026-09-09 (DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md) :
+    une photographie unique et figee est une reference HORS DISTRIBUTION de la
+    production qu'on lui compare. Mesure : les 29 images qui portaient un
+    embedding scoraient TOUTES plus haut contre leurs pairs que contre leur
+    ancre, et la marge personnage/etranger d'Abyssiaelle passe de +0.05 a
+    +0.349.
 
     LES GARDE-FOUS, tous appliques ici :
 
     1. la base gelee reste l'ancre absolue, elle n'est jamais remplacee ;
-    2. une image ne rejoint le jeu que si son score CONTRE LA BASE GELEE est
-       >= seuil_haut. Sans ce portillon, valider des images legerement derivees
-       ferait deriver la reference avec elles — le thermometre bougerait avec la
-       fievre, et c'est precisement ce que le scoring existe pour detecter ;
-    3. la sante du jeu, cos(centroide, base gelee), est calculee et stockee ;
+    2. une image ne rejoint le jeu que si elle passe le PORTILLON :
+       - contre le GABARIT (cos >= seuil_gabarit) des qu'un jeu actif existe et
+         qu'un seuil est configure — c'est la voie normale ;
+       - contre l'ANCRE (cos >= seuil_haut) sinon : c'est l'AMORCAGE, ce qui
+         tourne au premier jour d'un personnage, quand aucun gabarit n'existe.
+       Le portillon ne s'ouvre jamais tout seul : le jeu qu'il alimente est
+       juge par l'ancre au garde-fou 3, et desactive s'il derive ;
+    3. la sante du jeu, cos(centroide, base gelee) RAPPORTEE a celle de ses
+       membres, est calculee et stockee — le test est relatif, jamais absolu
+       (correction du 24/08/2026) ;
     4. sous SANTE_MINI le jeu est cree mais laisse INACTIF : on le voit, on ne
        s'en sert pas ;
     5. les jeux sont versionnes — on peut revenir a un etat anterieur ;
     6. `character_id` obligatoire : un jeu de reference est propre a un
-       personnage, jamais un melange d'embeddings de plusieurs personnages.
+       personnage, jamais un melange d'embeddings de plusieurs personnages ;
+    7. UN SEUL MODELE d'embedding par jeu. Un cosinus entre deux espaces ne veut
+       rien dire : melanger deux modeles est la meme faute que melanger deux
+       personnages, en moins visible.
+
+    `seuil_gabarit` se lit dans CHARACTERS/<nom>/config.json (qc.threshold_gabarit,
+    invariant 4). ABSENT = amorcage : jamais de valeur par defaut ici, le seuil
+    se mesure par personnage (AUTOMATION/tests/calibrer_gabarit.py).
     """
     import numpy as np
     from datetime import datetime as _dt
     base_embedding = np.asarray(base_embedding, dtype=np.float32)
 
+    # Le gabarit : centroide du jeu ACTIF, s'il y en a un et qu'il porte le meme
+    # modele d'embedding. Comparer a un gabarit d'un autre espace serait pire que
+    # ne pas en avoir.
+    actif_avant = jeu_actif(cx, character_id)
+    gabarit = None
+    if (actif_avant and seuil_gabarit is not None
+            and (actif_avant.get("modele") or modele) == modele):
+        gabarit = centroide(cx, actif_avant["id"])
+    voie = "gabarit" if gabarit is not None else "ancre"
+    reference = gabarit if gabarit is not None else base_embedding
+    seuil = seuil_gabarit if gabarit is not None else seuil_haut
+
     eligibles = []
     for r in cx.execute(
             "SELECT i.id AS id, e.vec AS vec FROM image i "
             "JOIN embedding e ON e.image_id = i.id "
-            "WHERE i.character_id = ? AND i.espace = 'lena' AND i.role IS NULL",
-            (character_id,)):
+            "WHERE i.character_id = ? AND i.espace = 'lena' AND i.role IS NULL "
+            "AND e.modele = ?",                                  # garde-fou 7
+            (character_id, modele)):
         v = np.frombuffer(r["vec"], dtype=np.float32)
-        if float(np.dot(base_embedding, v)) >= seuil_haut:   # garde-fou 2
+        if float(np.dot(reference, v)) >= seuil:                 # garde-fou 2
             eligibles.append(r["id"])
 
     cur = cx.execute(
-        "INSERT INTO reference_set (character_id, libelle, cree_le, actif) "
-        "VALUES (?,?,?,0)",
+        "INSERT INTO reference_set (character_id, libelle, cree_le, actif, modele) "
+        "VALUES (?,?,?,0,?)",
         (character_id, libelle or f"auto {_dt.now():%Y-%m-%d %H:%M}",
-         _dt.now().isoformat(timespec="seconds")))
+         _dt.now().isoformat(timespec="seconds"), modele))
     sid = cur.lastrowid
     cx.executemany("INSERT INTO reference_member (set_id, image_id) VALUES (?,?)",
                    [(sid, i) for i in eligibles])
@@ -461,7 +537,7 @@ def construire_jeu(cx, character_id, base_embedding, seuil_haut, libelle=None):
         cx.execute("UPDATE reference_set SET actif = 0 WHERE id = ?", (sid,))
         return {"id": sid, "membres": 0, "sante": None, "sante_abs": None,
                 "cohesion": None, "sim_membres": None, "actif": False,
-                "seuil": seuil_haut}
+                "seuil": seuil, "voie": voie, "modele": modele, "derives": 0}
 
     sante_abs = float(np.dot(base_embedding, c))
     sim_membres = float(np.mean([np.dot(base_embedding, v) for v in vecs]))
@@ -475,9 +551,16 @@ def construire_jeu(cx, character_id, base_embedding, seuil_haut, libelle=None):
         # character_id seulement, jamais ceux d'un autre personnage.
         cx.execute("UPDATE reference_set SET actif = 0 "
                    "WHERE id != ? AND character_id = ?", (sid, character_id))
+    # Combien de membres sortent d'un modele derive (regle 6 du mecanisme) : ils
+    # ont le droit d'etre la — ils sont dans les conditions de la production —
+    # mais l'humain doit voir sur quoi son gabarit est bati.
+    derives = cx.execute(
+        "SELECT COUNT(*) FROM reference_member m JOIN image i ON i.id = m.image_id "
+        "WHERE m.set_id = ? AND i.lora_identite IS NOT NULL", (sid,)).fetchone()[0]
     return {"id": sid, "membres": len(eligibles), "sante": sante,
             "sante_abs": sante_abs, "cohesion": cohesion,
-            "sim_membres": sim_membres, "actif": bool(actif), "seuil": seuil_haut}
+            "sim_membres": sim_membres, "actif": bool(actif), "seuil": seuil,
+            "voie": voie, "modele": modele, "derives": derives}
 
 
 def jeu_actif(cx, character_id):

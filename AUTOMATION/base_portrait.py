@@ -95,7 +95,48 @@ def save_uploaded(cid, image_base64):
     name = frozen_name(cid, ext)
     COMFY_INPUT.mkdir(parents=True, exist_ok=True)
     (COMFY_INPUT / name).write_bytes(raw)
+    verifier_enrolement(COMFY_INPUT / name)
     return name
+
+
+def verifier_enrolement(chemin):
+    """Refuse une base d'identite que la mesure ne sait pas lire, et efface le
+    fichier qu'on venait d'ecrire.
+
+    LE REFUS ARRIVE A LA CREATION, PAS SIX SEMAINES PLUS TARD. La base gelee
+    est l'ancre de tout le mecanisme d'identite : score, embedding, jeu de
+    reference, banc. Sans visage dedans, `qc_identity.IdentityChecker` leve son
+    RuntimeError au PREMIER lot — le personnage est deja cree, ses scenes
+    ecrites, et l'utilisateur decouvre alors que rien ne peut le mesurer. C'est
+    la regle du mecanisme d'identite (cadrage du 09/09) : l'enrolement echoue
+    ou il se produit.
+
+    On appelle `qc_identity.embedding` et rien d'autre : a ce stade le
+    personnage n'existe pas encore, il n'a ni seuils ni config, donc pas de
+    checker a construire.
+
+    Le fichier est SUPPRIME avant de lever : le laisser derriere ferait pointer
+    un `base_gelee` sur une image refusee au prochain essai du wizard.
+    """
+    chemin = Path(chemin)
+    try:
+        import qc_identity
+        vu = qc_identity.embedding(chemin, str(env_config.comfyui_root()
+                                               / "models" / "insightface"))
+    except Exception as e:                       # noqa: BLE001
+        # Mesure indisponible : on REFUSE quand meme, et on dit pourquoi.
+        # Enroler une ancre qu'on n'a pas su verifier, c'est reporter la panne
+        # au premier lot -- le personnage sera cree, ses scenes ecrites, et
+        # c'est la que rien ne pourra le mesurer. Le message distingue les deux
+        # causes pour que l'utilisateur ne cherche pas un defaut dans sa photo.
+        raise BaseImageError(
+            f"impossible de verifier la base d'identite : {type(e).__name__} — {e}"
+        ) from e
+    if vu is None:
+        chemin.unlink(missing_ok=True)
+        raise BaseImageError(
+            "aucun visage detecte dans cette image : elle ne peut pas servir de "
+            "base d'identite. Choisir un portrait net, de face, visage degage.")
 
 
 # ------------------------------------------------------- base GENEREE (5b-ii)
@@ -250,4 +291,5 @@ def freeze(cid, rel_output_file):
     name = frozen_name(cid, ".jpg" if ext == ".jpeg" else ext)
     COMFY_INPUT.mkdir(parents=True, exist_ok=True)
     shutil.copy(src, COMFY_INPUT / name)
+    verifier_enrolement(COMFY_INPUT / name)
     return name

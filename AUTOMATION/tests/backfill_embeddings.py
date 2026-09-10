@@ -108,12 +108,26 @@ def main():
                 print(f"  base gelee enregistree : {gelee.name}")
 
         seuil = cfg["qc"].get("threshold_high", 0.74)
+        # ABSENT = amorcage contre l'ancre, et c'est voulu : un seuil de gabarit
+        # ne se devine pas, il se mesure par personnage
+        # (AUTOMATION/tests/calibrer_gabarit.py).
+        seuil_gabarit = cfg["qc"].get("threshold_gabarit")
         bilan = base.construire_jeu(cx, PERSONNAGE, checker.base, seuil,
-                                    libelle=f"auto — backfill {PERSONNAGE}")
+                                    libelle=f"auto — backfill {PERSONNAGE}",
+                                    seuil_gabarit=seuil_gabarit)
         cx.commit()
+        contre = ("le GABARIT (centroide du jeu precedent)" if bilan["voie"] == "gabarit"
+                  else "l'ANCRE (base gelee) — amorcage")
         print(f"\n  === jeu de reference d'identite ===")
-        print(f"    portillon d'entree      : identite vs base gelee >= {bilan['seuil']}")
-        print(f"    membres                 : {bilan['membres']}")
+        print(f"    portillon               : contre {contre}")
+        print(f"                              seuil {bilan['seuil']}")
+        if bilan["voie"] == "ancre" and seuil_gabarit is None:
+            print(f"      (aucun qc.threshold_gabarit dans le config.json de "
+                  f"{PERSONNAGE} — calibrer_gabarit.py en propose un)")
+        print(f"    membres                 : {bilan['membres']}"
+              + (f", dont {bilan['derives']} issus d'un LoRA (DERIVED)"
+                 if bilan["derives"] else ""))
+        print(f"    modele d'embedding      : {bilan['modele']}  (jamais melange)")
         if bilan["membres"]:
             print(f"    membres vs base gelee   : {bilan['sim_membres']:.4f} en moyenne")
             print(f"    centroide vs base gelee : {bilan['sante_abs']:.4f}")

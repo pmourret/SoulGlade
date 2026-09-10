@@ -323,7 +323,7 @@ def appliquer_expression(path, job, cfg, character_id, checker=None, avant=None)
 
 
 def ranger_mesures(nom, identite, reel, character_id, embedding=None,
-                   apres_expression=None, expression=None):
+                   apres_expression=None, expression=None, lora_identite=None):
     quand = datetime.now().isoformat(timespec="seconds")
     try:
         import mesures
@@ -335,7 +335,8 @@ def ranger_mesures(nom, identite, reel, character_id, embedding=None,
     try:
         import base
         with base.ouvrir() as cx:
-            iid = base.enregistrer_image(cx, nom, character_id=character_id)
+            iid = base.enregistrer_image(cx, nom, character_id=character_id,
+                                         lora_identite=lora_identite)
             base.enregistrer_score(cx, iid, "identite", identite, quand)
             # score d'apres expression : ENREGISTRE, jamais utilise pour trier.
             # Meme regle que identite_centroide — le verdict reste celui du
@@ -345,9 +346,37 @@ def ranger_mesures(nom, identite, reel, character_id, embedding=None,
             for genre, v in (reel or {}).items():
                 base.enregistrer_score(cx, iid, genre, v, quand)
             base.enregistrer_embedding(cx, iid, embedding)
+            base.enregistrer_score(cx, iid, "identite_centroide",
+                                   _score_gabarit(cx, character_id, embedding),
+                                   quand)
             cx.commit()
     except Exception as e:
         _best_effort("base : mesures non enregistrees", e)
+
+
+def _score_gabarit(cx, character_id, embedding):
+    """Score de l'image contre le GABARIT du personnage, ou None.
+
+    Le gabarit est le centroide du jeu de reference actif — la reference
+    style-appariee, celle qui vit dans les conditions de la production, par
+    opposition a l'ancre gelee (cadrage du 09/09, § Le mecanisme d'identite).
+    Ce score n'existait jusqu'ici qu'apres un `base.rescorer` en masse ; il est
+    desormais ecrit a la generation, et il ne coute AUCUNE passe InsightFace
+    de plus : l'embedding est deja en main.
+
+    ENREGISTRE, ne trie rien — le verdict reste celui du score contre l'ancre.
+    """
+    if embedding is None:
+        return None
+    import base
+    actif = base.jeu_actif(cx, character_id)
+    if not actif:
+        return None                      # amorcage : pas encore de gabarit
+    import numpy as np
+    c = base.centroide(cx, actif["id"])
+    if c is None:
+        return None
+    return float(np.dot(c, np.asarray(embedding, dtype=np.float32)))
 
 
 def make_checker(cfg):
@@ -383,6 +412,13 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
     """
     runner = runner or WorkflowRunner(cfg, character_id)
     on_event = on_event or (lambda kind, **kw: None)
+    # Provenance : le LoRA d'identite qui va reellement s'appliquer a TOUTES les
+    # images de ce lot — il depend du graphe et du config.json, pas du job. Une
+    # image qui en sort est DERIVED (mecanisme d'identite, cadrage du 09/09) et
+    # ne pourra jamais servir d'ancre. Meme fonction que le debypass de
+    # comfy.api_for : une seule verite.
+    import identity
+    lora_id = identity.lora_actif(getattr(runner, "roles", None), cfg)
     rows, stats = [], {"OK": 0, "A_REVOIR": 0, "REJET": 0,
                        "SANS_VISAGE": 0, "ERREUR": 0}
 
@@ -440,7 +476,8 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
                                            embedding=(m or {}).get("embedding"),
                                            apres_expression=apres,
                                            expression=params_expr,
-                                           character_id=character_id)
+                                           character_id=character_id,
+                                           lora_identite=lora_id)
                         if params_expr:
                             import expression as _ex
                             log(f"   expression ({job.get('tone') or '—'}) : "

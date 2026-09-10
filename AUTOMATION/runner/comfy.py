@@ -226,9 +226,10 @@ class WorkflowRunner:
         # convert() ; sans forcer le noeud actif ici, convert() l'exclut du
         # graphe converti et apply() leve un KeyError brut au lieu du
         # RuntimeError explicite qu'il croit pouvoir lever sur un role absent.
-        lora_role = self.roles.get("character_lora")
-        if lora_role and (cfg.get("identity") or {}).get("lora", {}).get("name"):
-            node_modes[lora_role["id"]] = 0
+        # La condition vit dans identity.lora_actif : la base a besoin de la
+        # MEME reponse pour marquer l'image DERIVED (base.image.lora_identite).
+        if identity.lora_actif(self.roles, cfg):
+            node_modes[self.roles["character_lora"]["id"]] = 0
 
         api = ui_to_api.convert(self.ui, self.obj, active_groups=self.active_groups,
                                 node_modes=node_modes)

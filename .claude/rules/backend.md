@@ -104,6 +104,29 @@ jamais de connexion ou de fichier de base séparé par personnage. Toute
 requête qui touche des données de personnage prend character_id en
 paramètre explicite.
 
+**Une colonne neuve passe par `base.COLONNES_AJOUTEES`** (10/09/2026).
+`CREATE TABLE IF NOT EXISTS` ne voit pas qu'une colonne manque à une
+table existante : tant que la base se reconstruisait, ça ne se voyait
+pas ; depuis qu'elle **est** la source de vérité, seul un `ALTER` peut
+l'ajouter. La liste est rejouée à chaque `ouvrir()`, la base se répare
+seule.
+
+**Un jeu de référence d'identité ne mélange jamais deux modèles
+d'embedding**, comme il ne mélange jamais deux personnages. Un cosinus
+entre deux espaces vectoriels ne veut rien dire — même famille de faute,
+en beaucoup moins visible. `base.MODELE_EMBEDDING` nomme le modèle une
+fois, à l'écriture comme à la lecture.
+
+**L'ancre n'est pas le gabarit.** L'ancre (base gelée) dit *qui est* le
+personnage : elle ne bouge jamais et reste le juge de la santé du jeu.
+Le gabarit (centroïde du jeu actif) dit *contre quoi* on mesure : il est
+versionné, et c'est lui que le portillon de `construire_jeu` interroge
+dès qu'un `qc.threshold_gabarit` est configuré — sinon amorçage contre
+l'ancre. Jamais de valeur par défaut pour ce seuil dans le code : il se
+mesure par personnage (`AUTOMATION/tests/calibrer_gabarit.py`), un seuil
+calibré contre l'ancre (~0,74) n'a aucun sens contre un gabarit (~0,93).
+Détail dans `DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md`.
+
 ## Configuration
 
 Aucun seuil ni réglage en dur dans le code. Tout se lit depuis
