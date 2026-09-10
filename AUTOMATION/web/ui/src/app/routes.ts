@@ -33,6 +33,10 @@ export const PATHS = {
       URL stays complete and reloadable, unlike the from-scratch pose
       flow's router `state`. */
   photoEditorAdvanced: '/photo-editor',
+  /** The training set of the claimed character, and its export (2026-09-10).
+      A destination of its own rather than a Banque sub-view: it is not a
+      production input one composes, it is what the identity lock is made of. */
+  training: '/training',
   worlds: '/worlds',
   application: '/app',
   journal: '/app/journal',
@@ -51,10 +55,11 @@ export type ScreenKey =
   | 'review'
   | 'gallery'
   | 'bank'
+  | 'training'
   | 'worlds'
   | 'application'
 
-/* The six destinations of the studio navbar, in their order on screen.
+/* The seven destinations of the studio navbar, in their order on screen.
 
    `key` is written to `data-s` on the entry, exactly as the legacy frontend did:
    the navigation contract stays an explicit attribute rather than an assumption
@@ -110,6 +115,14 @@ export const DESTINATIONS: Destination[] = [
     path: PATHS.bankScenes,
     icon: 'bank',
     activePrefix: '/bank',
+  },
+  /* After Ateliers and before Mondes: it reads the character's own images, so
+     it sits with what belongs to the character, not with what is shared. */
+  {
+    key: 'training',
+    label: 'Entraînement',
+    path: PATHS.training,
+    icon: 'training',
   },
   {
     key: 'worlds',

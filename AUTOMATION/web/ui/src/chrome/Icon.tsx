@@ -15,6 +15,10 @@ const PATHS: Record<string, string> = {
   gallery:
     '<rect x="3" y="3" width="6" height="6" rx="1.4"/><rect x="11" y="3" width="6" height="6" rx="1.4"/><rect x="3" y="11" width="6" height="6" rx="1.4"/><rect x="11" y="11" width="6" height="6" rx="1.4"/>',
   bank: '<path d="M10 3l7 3.5-7 3.5-7-3.5z"/><path d="M3 11.2l7 3.5 7-3.5"/>',
+  // A funnel, because that is what the screen reports: a set of images narrowed
+  // by the identity gate and by objective defect, down to what a LoRA would be
+  // trained on. No other destination uses this shape.
+  training: '<path d="M3.5 4.5h13l-4.8 5.6v5.6l-3.4 1.8v-7.4z"/>',
   worlds:
     '<circle cx="10" cy="10" r="7"/><path d="M3 10h14M10 3c2.5 2.2 2.5 11.8 0 14M10 3c-2.5 2.2-2.5 11.8 0 14"/>',
   application:

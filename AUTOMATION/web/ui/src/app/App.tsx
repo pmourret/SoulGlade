@@ -28,6 +28,7 @@ import { BankPosesScreen, BankScenesScreen, BankTonesScreen } from '../screens/b
 import { ExpressionEditorScreen } from '../screens/expression-editor/ExpressionEditorScreen'
 import { PhotoEditorAdvancedScreen } from '../screens/photo-editor-advanced/PhotoEditorAdvancedScreen'
 import { PoseEditorScreen } from '../screens/pose-editor/PoseEditorScreen'
+import { TrainingScreen } from '../screens/training/TrainingScreen'
 import { WorldPlacesScreen } from '../screens/worlds/WorldPlacesScreen'
 import { WorldsScreen } from '../screens/worlds/WorldsScreen'
 import { GalleryRoute, ReviewRoute } from '../screens/review/ReviewScreen'
@@ -93,6 +94,9 @@ export function App() {
                       required, `bucket`/`space` as query params (routes.ts's
                       own note on why). */}
                   <Route path={`${PATHS.photoEditorAdvanced}/:name`} element={<PhotoEditorAdvancedScreen />} />
+                  {/* The training set of the claimed character, and its export.
+                      No route param: it is always the character's own set. */}
+                  <Route path={PATHS.training} element={<TrainingScreen />} />
                   {/* ADR-0016: the world registry, and its catalog editor —
                       the id is a route param, like the review/gallery image
                       name below. */}
