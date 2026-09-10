@@ -867,6 +867,11 @@ const D = {
   "decisions": [
     {
       "e": "tranche",
+      "t": "Le gabarit mesure l'identité, jamais le réalisme",
+      "d": "Arbitrage de Pierre le 10/09, en découvrant que 17 des 45 membres du gabarit portaient son flag « ia ». Le portillon reste sur l'identité SEULE : que le visage fasse IA ou non, c'est le même visage, et trier le réalisme est un jugement que l'utilisateur final fait lui-même — la plateforme ne l'arbitre pas à sa place (PROJET.md). MESURÉ dans la foulée, et l'arbitrage est gratuit : sur 30 images « ok » contre 26 « ia », l'écart d'identité contre le gabarit est de -0.001, soit 0.1 sigma — elles sont rigoureusement indiscernables dans l'espace du visage. Les inclure n'abîme pas le thermomètre. Conséquence de cadrage : le GABARIT (instrument de mesure, qui veut couvrir l'espace de conditions de la production) et la FILE D'ENTRAÎNEMENT (qui veut de la qualité) sont DEUX objets, là où le schéma du 09/09 les faisait passer sous une seule flèche."
+    },
+    {
+      "e": "tranche",
       "t": "Le seuil du gabarit se mesure, il ne se recopie pas",
       "d": "Décidé le 10/09 en implémentant le portillon relatif. `threshold_gabarit` n'a AUCUNE valeur par défaut dans le code, et sa clé absente laisse le portillon en amorçage contre l'ancre : un seuil calibré contre l'ancre (~0.74) n'a aucun sens contre un gabarit (~0.93), le recopier admettrait tout. AUTOMATION/tests/calibrer_gabarit.py mesure et PROPOSE, l'humain écrit la valeur dans config.json — même discipline que les bandes QC d'Abyssiaelle. Le script dit aussi ce qu'il ne sait pas : sans autre personnage en base il n'y a pas de bande imposteur, donc aucun seuil validable, et il le refuse à voix haute plutôt que de rendre un chiffre creux."
     },
@@ -1015,6 +1020,10 @@ const D = {
       {
         "t": "Mesure d'identité pour un personnage non photoréaliste",
         "d": "(9 septembre 2026) Sorti de la phase de recherche du 09/09. ADR-0011 a rendu le VERROU agnostique (universe.json/identity) et laissé la MESURE commune, à dessein — mais ça suppose un visage humain photographiable. Un pack manga casse l'hypothèse, et pas en se dégradant : IdentityChecker lève RuntimeError('aucun visage detecte dans la base gelee'), donc pas de score, pas d'embedding, pas de centroïde, pas de banc pour juger le LoRA — alors que c'est là que le LoRA est le plus nécessaire (l'adaptateur ne verrouille pas un personnage stylisé, mesuré sur Abyssiaelle au J6). La mesure doit devenir une interface choisie par le pack, sur le patron d'identity.for_universe. Candidat repéré, non qualifié : CCIP (deepghs) — code dghs-imgutils en MIT, poids en openrail à lire ligne à ligne (ADR-0024), entraîné sur de l'illustration, couverture du semi-réaliste inconnue. DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md"
+      },
+      {
+        "t": "Entraîner sur des images jugées « fait IA » abîme-t-il le LoRA ?",
+        "d": "(10 septembre 2026) Question ouverte par Pierre le jour où le gabarit a été livré : si le « fait IA » dégrade la qualité globale du LoRA, le système perd de son intérêt. La mesure du 10/09 la déplace sans la fermer : « fait IA » n'est PAS un phénomène d'identité (0.1 sigma contre le gabarit), c'est faiblement un phénomène de NETTETÉ — les images marquées « ia » sont plus nettes de +35 (2.0 sigma, 30 contre 26 images), soit le sur-piqué plastique. Deux erreurs-types, c'est la limite de ce que le protocole appelle tranchable : une piste, pas une conclusion. Si le « fait IA » abîme un jour le LoRA, ce sera par la TEXTURE, jamais par l'identité. Réponse à un seul essai, et il coûte des heures de GPU : deux LoRA — l'un sur tout ce qui passe le portillon d'identité, l'autre sur l'intersection avec le flag « ok » — puis le banc (ADR-0021). C'est la tranche entraînement, pas celle-ci."
       }
     ]
   },
