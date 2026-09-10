@@ -182,8 +182,8 @@ export function ProposalPanel({ proposal }: { proposal: Proposal }) {
           </ul>
           <p className="tiny mt-[8px] mb-0">
             Un seuil absent ne devient jamais une valeur par défaut : il se
-            mesure par personnage, dans le bloc <code>entrainement</code> du
-            <code> config.json</code>.
+            mesure par personnage, dans le bloc <code>entrainement</code> du{' '}
+            <code>config.json</code>.
           </p>
           <Label className="mt-[14px] mb-[6px]">Légendes à venir</Label>
           <p className="tiny m-0">

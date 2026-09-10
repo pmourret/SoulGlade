@@ -268,7 +268,7 @@ def proposition(cx, character_id, configuration=None):
         return {**d, "pret": False, "criteres": [], "sans_fichier": [],
                 "diversite": diversite([]), "derives": 0, "cohesion": None,
                 "ecart_type": None, "outliers": [],
-                "blocage": "aucun jeu de reference actif : le gabarit n'existe "
+                "blocage": "aucun jeu de référence actif : le gabarit n'existe "
                            "pas encore pour ce personnage"}
 
     file_ = d["file"]
@@ -302,8 +302,8 @@ def proposition(cx, character_id, configuration=None):
                              f"{len(file_)} image(s) dans la file"))
     div_min = seuils.get("diversite_min")
     eff = rapport["diversite"]["scene"]["effectives"]
-    criteres.append(_critere("diversite de scenes", eff, div_min,
-                             f"{eff:.1f} categorie(s) de scene effectives"))
+    criteres.append(_critere("diversité de scènes", eff, div_min,
+                             f"{eff:.1f} catégorie(s) de scène effectives"))
 
     manquants = [c for c in criteres if c["verdict"] == "manque"]
     injugeables = [c for c in criteres if c["verdict"] == "sans seuil"]
@@ -315,8 +315,11 @@ def proposition(cx, character_id, configuration=None):
         noms = " et ".join(c["nom"] for c in injugeables)
         verbe = "n'a pas" if len(injugeables) == 1 else "n'ont pas"
         rapport["blocage"] = (
+            # Pas de guillemets obliques autour de `entrainement` : ce message
+            # s'affiche AUSSI en HTML, ou une syntaxe de terminal se lit comme
+            # une faute de frappe (audit UX du 10/09).
             f"rien ne manque, mais {noms} {verbe} de seuil dans le config.json "
-            f"de ce personnage (bloc `entrainement`) : impossible de conclure")
+            f"de ce personnage, bloc « entrainement » : impossible de conclure")
     else:
         rapport["blocage"] = ""
     return rapport
@@ -562,9 +565,15 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
 
 
 def _critere(nom, valeur, seuil, texte):
+    """ACCENTUE, contrairement au reste du fichier. Ces chaines ne sont pas du
+    code : elles s'affichent telles quelles a l'utilisateur, au terminal comme
+    dans l'ecran Entrainement (audit UX du 10/09 : « diversite de scenes » se
+    lisait comme du francais casse sur la page). Meme regle que les messages
+    d'erreur du backend, francais et affiches verbatim (`backend.md`).
+    """
     if seuil is None:
         return {"nom": nom, "valeur": valeur, "seuil": None,
-                "verdict": "sans seuil", "message": f"{texte}, aucun seuil configure"}
+                "verdict": "sans seuil", "message": f"{texte}, aucun seuil configuré"}
     if valeur >= seuil:
         return {"nom": nom, "valeur": valeur, "seuil": seuil, "verdict": "tenu",
                 "message": f"{texte} (seuil {seuil})"}
