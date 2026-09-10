@@ -366,3 +366,37 @@ tombé.
 
 Il reste la validation visuelle par Pierre dans ComfyUI (invariant 1 amendé) :
 un lien mal câblé à la main ne se voit pas à la relecture du JSON.
+
+## Le hors-périmètre « génération de TOML », amendé le 2026-09-10
+
+Ce cadrage range hors périmètre « toute chaîne d'entraînement dans le dépôt —
+kohya_ss, sd-scripts, génération de TOML, sous-processus, écran d'atelier,
+suivi d'avancement ». Le point 4 (« entraîner le LoRA de Léna hors
+plateforme ») a montré ce que cette liste mélangeait : **exécuter un
+entraînement** et **préparer ce sur quoi il s'exécute** ne sont pas le même
+chantier.
+
+Ce qui est fait, et qui reste du côté préparation : le dossier exporté par
+`entrainement.py --exporter` porte désormais ses images sous la convention
+kohya `<répétitions>_<déclencheur>`, un `dataset.toml` et un `entrainer.sh`.
+La recette suit `universe.json / model_family` du pack — flux ou sdxl — donc
+jamais un `if character ==` (invariant 7), et une famille inconnue sort le jeu
+**sans** recette plutôt qu'avec une fausse. Les chemins de modèles sont des
+variables d'environnement : le dossier part sur une machine qu'on ne connaît
+pas.
+
+Ce qui reste hors périmètre, inchangé : le sous-processus, l'écran d'atelier,
+le suivi d'avancement, et le fait même de lancer un entraînement depuis la
+plateforme. C'est l'étage 3, et il attend toujours le chiffre de l'étage 1.
+Versé à l'horizon du tableau de bord le 10/09, avec ComfyUI-FluxTrainer pour
+candidat.
+
+Pourquoi maintenant : le point 4 est ce qui bloque IT-3d, et il se paie en
+heures de GPU sur une machine louée. Devoir y refaire à la main la convention
+de dossier, le TOML et la ligne de commande de la famille, à chaque essai,
+c'est trois façons de rater un entraînement qu'on paie à l'heure.
+
+**Le nombre de répétitions est un défaut proposé, pas un arbitrage.** Il vise
+200 pas par époque, l'export l'annonce à l'écran et dans le manifeste, et
+`--repetitions=N` le remplace. C'est un réglage d'entraînement : il appartient
+à Pierre (`PROJET.md`).

@@ -208,10 +208,15 @@ try:
                "entrainement": {"n_min": 3, "diversite_min": 2.0}}
         # avec_vision=False : ce test ne doit jamais toucher ComfyUI, et les
         # « images » sont des octets PNG factices que rien ne saurait lire.
+        # La famille de modele vient du PACK (universe.json /
+        # model_family). Ce test ne suppose pas CHARACTERS/ present
+        # (CLAUDE.md, §Donnees) : il la fixe, et verifie la recette,
+        # pas la resolution du pack.
+        en._famille_du_personnage = lambda cid: "flux"
         res = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 8, 0, 0),
                           avec_vision=False)
         dossier = res["dossier"]
-        copies = {p.name for p in (dossier / "images").glob("*.png")}
+        copies = {p.name for p in res["dossier_images"].glob("*.png")}
         verifie(copies == {"a.png", "b.png", "d.png", "LENA_BASE.png"},
                 f"copie : {sorted(copies)}")
         verifie("c.png" not in copies,
@@ -238,8 +243,8 @@ try:
                 "identifiable des annees plus tard")
 
         print("\n[8b] chaque image emporte sa legende, et sa source")
-        txts = {p.stem for p in (dossier / "images").glob("*.txt")}
-        pngs = {p.stem for p in (dossier / "images").glob("*.png")}
+        txts = {p.stem for p in res["dossier_images"].glob("*.txt")}
+        pngs = {p.stem for p in res["dossier_images"].glob("*.png")}
         verifie(txts == pngs,
                 f"un .txt par image, convention kohya ({len(txts)}/{len(pngs)})")
         verifie(all(x.get("source_legende") for x in m["images"]),
@@ -252,6 +257,51 @@ try:
         import legende as lg
         verifie(all(lg.terme_de_visage(x["legende"]) is None for x in m["images"]),
                 "aucune legende ne decrit un trait de visage")
+
+        print("\n[8c] le dossier exporte est EXECUTABLE, pas seulement complet")
+        # La famille vient du PACK (universe.json), pas d'ici : un test ne
+        # suppose jamais CHARACTERS/ present (CLAUDE.md, §Donnees).
+        verifie(res["dossier_images"].name == f"{res['repetitions']}_essaitrig"
+                and res["dossier_images"].parent.name == "dataset",
+                f"convention kohya <repetitions>_<declencheur> : "
+                f"dataset/{res['dossier_images'].name}")
+        toml = (dossier / "dataset.toml").read_text(encoding="utf-8")
+        verifie(f'image_dir = "dataset/{res["dossier_images"].name}"' in toml
+                and f"num_repeats = {res['repetitions']}" in toml,
+                "dataset.toml pointe le dossier reel, avec le meme nombre de "
+                "repetitions que son nom")
+        verifie("keep_tokens = 1" in toml,
+                "keep_tokens = 1 : le declencheur reste en tete de legende")
+        octets = (dossier / "entrainer.sh").read_bytes()
+        verifie(b"\r\n" not in octets,
+                "entrainer.sh est en LF : un .sh en CRLF ne demarre pas sous "
+                "Linux, et la machine d'entrainement en est une")
+        sh = octets.decode("utf-8")
+        cmd = sh[sh.index("accelerate launch"):].strip().splitlines()
+        # LE PIEGE : une seule ligne sans son antislash et la commande s'arrete
+        # la, sans dataset, sans sortie -- et accelerate demarre quand meme.
+        verifie(all(l.rstrip().endswith("\\") for l in cmd[:-1])
+                and not cmd[-1].rstrip().endswith("\\"),
+                f"les {len(cmd)} lignes de la commande sont enchainees, la "
+                f"derniere seule sans antislash")
+        verifie("--dataset_config dataset.toml" in sh
+                and f'--output_name "{m["declencheur"]}_v1"' in sh,
+                "la commande lit le TOML ecrit a cote et nomme sa sortie")
+        verifie(m["entrainement"]["repetitions"] == res["repetitions"]
+                and m["entrainement"]["repetitions_defaut"] is True
+                and m["entrainement"]["script"] == res["script_kohya"],
+                "le manifeste garde la recette : un dossier se perd, le releve "
+                "doit dire ce qui a ete prepare")
+
+        print("\n[8d] les repetitions sont un DEFAUT, jamais un arbitrage")
+        res3 = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 10, 0, 0),
+                           avec_vision=False, repetitions=3)
+        m3 = json.loads((res3["dossier"] / "manifeste.json").read_text(encoding="utf-8"))
+        verifie(res3["repetitions"] == 3
+                and res3["dossier_images"].name == "3_essaitrig"
+                and m3["entrainement"]["repetitions_defaut"] is False,
+                "--repetitions remplace le defaut, jusque dans le nom du "
+                "dossier et le releve du manifeste")
 
         print("\n[9] un export n'ecrase jamais le precedent")
         res2 = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 9, 0, 0),

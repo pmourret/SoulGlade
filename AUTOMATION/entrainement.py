@@ -2,12 +2,21 @@
 """Sur quoi entrainerait-on un LoRA d'identite, et est-ce assez ?
 
     python AUTOMATION/entrainement.py [personnage]
+    python AUTOMATION/entrainement.py [personnage] --exporter [--repetitions=N]
 
 CE MODULE NE LANCE RIEN. Il lit la base et rend une PROPOSITION : combien
 d'images, lesquelles, ce qui a ete ecarte et pourquoi, la diversite, et quel
 critere manque. C'est Pierre qui decide (PROJET.md : la plateforme n'arbitre
 jamais a la place de l'utilisateur), et une proposition qui ne sait pas dire
 POURQUOI elle n'aboutit pas ne sert a rien.
+
+`--exporter` ne l'entraine pas davantage : il RASSEMBLE. Le dossier date qui
+en sort porte les images, leurs legendes, le manifeste de ce qui les a
+choisies, et depuis le 10/09 de quoi lancer -- `dataset.toml` et
+`entrainer.sh`. C'est une unite qu'on envoie telle quelle sur une machine
+louee (RunPod ou autre), parce que l'entrainement se fait HORS PLATEFORME :
+l'atelier integre est l'etage 3 du cadrage du 09/09, et il attend le chiffre
+de l'etage 1.
 
 DEUX OBJETS, PAS UN. Le GABARIT (base.construire_jeu) est un instrument de
 mesure : il veut couvrir l'espace de conditions de la production, donc il
@@ -56,6 +65,102 @@ Z_OUTLIER = -2.0
 # (43/45 chez Lena) ; `variante` en est absente, elle n'est renseignee que sur
 # 6 images sur 45.
 AXES_DIVERSITE = ("scene", "intention", "ton", "format")
+
+# Cible de pas par epoque (images x repetitions) pour choisir un nombre de
+# repetitions par defaut. CE N'EST PAS UN ARBITRAGE : le nombre de repetitions
+# est un reglage d'entrainement, il appartient a Pierre (PROJET.md). L'export
+# en propose un pour que le dossier soit executable tel quel, l'annonce a
+# l'ecran et dans le manifeste, et `--repetitions=N` le remplace.
+# ponytail: cible plate a 200, a remplacer par une regle qui tient compte de la
+# resolution et du nombre d'epoques le jour ou un banc les separe.
+REPETITIONS_CIBLE = 200
+
+# Ce qui change d'une famille de modele a l'autre dans la ligne d'entrainement
+# kohya. Cle = `universe.json / model_family` du PACK, jamais le personnage
+# (invariant 7). Ce qui est commun vit dans RECETTE, une seule fois.
+RECETTES = {
+    "flux": {
+        "script": "flux_train_network.py",
+        "module": "networks.lora_flux",
+        "resolution": 1024,
+        "modeles": [
+            '--pretrained_model_name_or_path "$MODELES/unet/flux1-dev.safetensors"',
+            '--clip_l "$MODELES/clip/clip_l.safetensors"',
+            '--t5xxl "$MODELES/clip/t5xxl_fp16.safetensors"',
+            '--ae "$MODELES/vae/ae.safetensors"',
+        ],
+        "specifique": [
+            "--timestep_sampling shift --discrete_flow_shift 3.1582",
+            "--model_prediction_type raw --guidance_scale 1.0",
+            "--fp8_base",
+            "--cache_text_encoder_outputs --cache_text_encoder_outputs_to_disk",
+        ],
+    },
+    "sdxl": {
+        "script": "sdxl_train_network.py",
+        "module": "networks.lora",
+        "resolution": 1024,
+        "modeles": ['--pretrained_model_name_or_path "$CHECKPOINT"'],
+        "specifique": ["--no_half_vae", "--cache_text_encoder_outputs"],
+    },
+}
+
+# Le squelette commun aux familles. Les chemins de modeles sont des VARIABLES
+# D'ENVIRONNEMENT avec un defaut : ce dossier part sur une machine qu'on ne
+# connait pas, un chemin en dur y serait faux une fois sur deux. Les defauts
+# visent le template RunPod kohya_ss, le plus repandu.
+RECETTE = """#!/usr/bin/env bash
+# LoRA d'identite de {perso} — jeu exporte par Soulglade le {date}.
+#
+# {n} image(s), {repetitions} repetition(s) chacune, declencheur « {trigger} ».
+# manifeste.json, a cote, dit d'ou vient chaque image, ce qui a ete ecarte et
+# pourquoi, et l'etat du gabarit au moment de l'export. Sans lui, deux LoRA
+# entraines a deux dates ne sont pas comparables.
+#
+# SUR UNE MACHINE D'ENTRAINEMENT (RunPod ou autre) :
+#   1. envoyer ce dossier entier
+#   2. verifier les chemins ci-dessous — ce sont ceux du template RunPod
+#      kohya_ss, rien ne les garantit ailleurs
+#   3. bash entrainer.sh
+#
+# Le LoRA sort dans output/. Ce qui revient dans Soulglade est le .safetensors
+# et rien d'autre : il se pose dans models/loras/ et se declare dans
+# CHARACTERS/{perso}/config.json / identity / lora.
+set -euo pipefail
+cd "$(dirname "$0")"
+
+SD_SCRIPTS=${{SD_SCRIPTS:-/workspace/kohya_ss/sd-scripts}}
+MODELES=${{MODELES:-/workspace/kohya_ss/models}}
+CHECKPOINT=${{CHECKPOINT:-$MODELES/checkpoints/model.safetensors}}
+EPOCHS=${{EPOCHS:-10}}
+
+accelerate launch --mixed_precision bf16 --num_cpu_threads_per_process 1 \\
+  "$SD_SCRIPTS/{script}" \\
+{modeles}  --dataset_config dataset.toml \\
+  --output_dir output --output_name "{sortie}" \\
+  --network_module {module} --network_dim 16 --network_alpha 16 \\
+  --optimizer_type adamw8bit --learning_rate 1e-4 \\
+  --max_train_epochs "$EPOCHS" --save_every_n_epochs 2 \\
+  --save_model_as safetensors --save_precision bf16 \\
+  --cache_latents_to_disk --gradient_checkpointing --sdpa --seed 42 \\
+{specifique}
+"""
+
+# `keep_tokens = 1` : la legende commence par le declencheur (cadrage du
+# 10/09), et un melange le noierait dans la description — c'est la constance du
+# jeton que la pratique demande le plus.
+DATASET_TOML = """[general]
+caption_extension = ".txt"
+keep_tokens = 1
+
+[[datasets]]
+resolution = {resolution}
+batch_size = 1
+
+  [[datasets.subsets]]
+  image_dir = "{dossier_images}"
+  num_repeats = {repetitions}
+"""
 
 
 def categories_effectives(valeurs):
@@ -251,7 +356,54 @@ def _anchor_du_personnage(character_id):
         return ""
 
 
-def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True):
+def _famille_du_personnage(character_id):
+    """Famille de modele du PACK du personnage (`universe.json / model_family`).
+
+    Jamais un `if character ==` (invariant 7) : la recette d'entrainement suit
+    la famille, exactement comme la suivent deja les roles latent/guidance du
+    runner. Un pack qu'on ne connait pas rend None, et l'export sort alors sans
+    recette plutot qu'avec une fausse.
+    """
+    try:
+        import runner as lb
+        import universe
+        return universe.model_family(lb.character_universe(character_id))
+    except Exception:                                    # noqa: BLE001
+        return None
+
+
+def _ecrire_recette(dossier, famille, **champs):
+    """`dataset.toml` + `entrainer.sh` a cote des images. Rend le script kohya
+    ecrit, ou None si la famille est inconnue.
+
+    LE JEU EXPORTE ETAIT COMPLET MAIS PAS EXECUTABLE. Il restait a retrouver la
+    convention de dossier kohya, ecrire le TOML et reconstituer la ligne de
+    commande de la famille — trois choses qu'on refait a chaque entrainement et
+    qu'on rate une fois sur deux. Le dossier date devient l'unite qu'on envoie
+    telle quelle sur une machine louee : les images, leurs legendes, le releve
+    de ce qui les a choisies, et de quoi lancer.
+
+    ON N'ENTRAINE PAS ICI, et c'est le cadrage du 09/09 qui le dit : l'atelier
+    integre est l'etage 3, il attend le chiffre de l'etage 1.
+    """
+    recette = RECETTES.get(famille)
+    if not recette:
+        return None
+    (dossier / "dataset.toml").write_bytes(
+        DATASET_TOML.format(resolution=recette["resolution"], **champs)
+        .encode("utf-8"))
+    # write_bytes, jamais write_text : un .sh en CRLF ne demarre pas sous Linux,
+    # et la machine d'entrainement en est une.
+    (dossier / "entrainer.sh").write_bytes(RECETTE.format(
+        script=recette["script"], module=recette["module"],
+        modeles="".join(f"  {x} \\\n" for x in recette["modeles"]),
+        specifique=" \\\n".join(f"  {x}" for x in recette["specifique"]),
+        **champs).encode("utf-8"))
+    return recette["script"]
+
+
+def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
+             repetitions=None):
     """Rassemble le jeu d'entrainement dans un dossier date, avec son manifeste.
 
     LE PONT QUI MANQUAIT. La plateforme savait sur quoi entrainer ; il fallait
@@ -290,10 +442,17 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True)
 
     horodate = (quand or datetime.now()).strftime("%Y%m%d-%H%M%S")
     dossier = RACINE_EXPORT / character_id / horodate
-    images = dossier / "images"
-    images.mkdir(parents=True, exist_ok=False)
+    dossier.mkdir(parents=True, exist_ok=False)
 
     trigger, trigger_cree = trigger_du_personnage(character_id, configuration)
+    # Convention kohya : <repetitions>_<mot declencheur>. `dataset/` isole les
+    # images du manifeste et du script — kohya lit TOUS les sous-dossiers de
+    # celui qu'on lui donne, et se plaindrait de ceux qui n'en sont pas un.
+    repetitions_demandees = repetitions
+    repetitions = int(repetitions or max(1, round(REPETITIONS_CIBLE / len(a_copier))))
+    sous_dossier = f"dataset/{repetitions}_{trigger}"
+    images = dossier / sous_dossier
+    images.mkdir(parents=True)
     anchor = _anchor_du_personnage(character_id)
     legendes = {}
 
@@ -320,6 +479,14 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True)
             shutil.copy2(src, images / src.name)
             ancre = src.name
             _legender(images / src.name, {}, est_ancre=True)
+
+    famille = _famille_du_personnage(character_id)
+    script_kohya = _ecrire_recette(
+        dossier, famille, perso=character_id,
+        date=(quand or datetime.now()).strftime("%d/%m/%Y"),
+        n=len(a_copier) + (1 if ancre else 0), trigger=trigger,
+        repetitions=repetitions, dossier_images=sous_dossier,
+        sortie=f"{trigger}_v1")
 
     manifeste = {
         "personnage": character_id,
@@ -364,17 +531,34 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True)
         "criteres": r["criteres"],
         "pret": r["pret"],
         "blocage": r["blocage"],
-        "note": ("La convention de dossier kohya (« <repetitions>_<mot "
-                 "declencheur> ») et le nombre de repetitions restent a faire a "
-                 "la main : reglage d'entrainement, pas de legendage. Cadrage : "
-                 "DOCS/cadrage/2026-09-10-legendage-du-jeu-d-entrainement.md"),
+        # De quoi refaire A L'IDENTIQUE l'entrainement qui a produit un LoRA,
+        # des mois plus tard : la recette part avec le jeu, mais un dossier se
+        # perd et le manifeste, lui, dit ce qui a ete prepare.
+        "entrainement": {
+            "famille": famille,
+            "dossier_images": sous_dossier,
+            "repetitions": repetitions,
+            "repetitions_defaut": repetitions_demandees is None,
+            "script": script_kohya,
+        },
+        "note": ("Le dossier est executable tel quel : `bash entrainer.sh` sur "
+                 "une machine kohya (RunPod ou autre), chemins de modeles en "
+                 "variables d'environnement. Le nombre de repetitions est un "
+                 "DEFAUT propose pour que ca tourne, pas un arbitrage — "
+                 "`--repetitions=N` le remplace."
+                 if script_kohya else
+                 f"Famille de modele inconnue ({famille!r}) : ni dataset.toml "
+                 f"ni entrainer.sh n'ont ete ecrits. Le jeu et ses legendes "
+                 f"sont complets, la recette d'entrainement est a faire a la "
+                 f"main."),
     }
     (dossier / "manifeste.json").write_text(
         json.dumps(manifeste, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {**r, "exportes": [x["fichier"] for x, _ in a_copier],
             "dossier": dossier, "ancre_reinjectee": ancre,
             "declencheur": trigger, "declencheur_cree": trigger_cree,
-            "legendes": legendes}
+            "legendes": legendes, "dossier_images": images, "famille": famille,
+            "repetitions": repetitions, "script_kohya": script_kohya}
 
 
 def _critere(nom, valeur, seuil, texte):
@@ -388,7 +572,7 @@ def _critere(nom, valeur, seuil, texte):
             "message": f"{texte}, il en faut {seuil}"}
 
 
-def _main(character_id, export=False, avec_vision=True):
+def _main(character_id, export=False, avec_vision=True, repetitions=None):
     """Un outil imprime, une bibliotheque logge (.claude/rules/backend.md)."""
     import runner as lb
     try:
@@ -397,8 +581,11 @@ def _main(character_id, export=False, avec_vision=True):
         print(f"  config.json illisible pour {character_id!r} : {e}")
         configuration = {}
     with base.ouvrir() as cx:
-        r = exporter(cx, character_id, configuration, avec_vision=avec_vision) \
-            if export else proposition(cx, character_id, configuration)
+        if export:
+            r = exporter(cx, character_id, configuration,
+                         avec_vision=avec_vision, repetitions=repetitions)
+        else:
+            r = proposition(cx, character_id, configuration)
 
     if r["jeu"] is None:
         print(f"  {r['blocage']}")
@@ -462,14 +649,30 @@ def _main(character_id, export=False, avec_vision=True):
         print(f"    manifeste.json garde la liste exacte, les etiquettes, la")
         print(f"    provenance de chaque image et l'etat du gabarit — sans quoi")
         print(f"    comparer deux LoRA au banc ne voudrait rien dire.")
-        print(f"\n  Reste a faire a la main (hors perimetre du cadrage) : la")
-        print(f"  convention de dossier kohya « <repetitions>_<declencheur> »")
-        print(f"  et le nombre de repetitions — reglages d'entrainement.")
+        if r.get("script_kohya"):
+            defaut = ("  (DEFAUT propose, --repetitions=N pour le changer)"
+                      if repetitions is None else "  (demande)")
+            print(f"\n  repetitions : {r['repetitions']}{defaut}")
+            print(f"  famille     : {r['famille']}  ->  {r['script_kohya']}")
+            print(f"\n  Le dossier tourne tel quel sur une machine kohya : "
+                  f"l'envoyer entier")
+            print(f"  (RunPod ou autre), verifier les chemins en tete du "
+                  f"script, puis")
+            print(f"  « bash entrainer.sh ». Le LoRA sort dans output/.")
+        else:
+            print(f"\n  ATTENTION : famille de modele inconnue "
+                  f"({r.get('famille')!r}) — ni dataset.toml")
+            print(f"  ni entrainer.sh ecrits. Le jeu est complet, la recette "
+                  f"d'entrainement")
+            print(f"  est a faire a la main.")
     return 0
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    rep = next((a.split("=", 1)[1] for a in sys.argv[1:]
+                if a.startswith("--repetitions=")), None)
     sys.exit(_main(args[0].lower() if args else "lena",
                    export="--exporter" in sys.argv,
-                   avec_vision="--sans-vision" not in sys.argv))
+                   avec_vision="--sans-vision" not in sys.argv,
+                   repetitions=int(rep) if rep else None))

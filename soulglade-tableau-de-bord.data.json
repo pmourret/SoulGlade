@@ -244,7 +244,7 @@
           "s": "fait",
           "it": "IT-3c",
           "t": "File d'entraînement : candidats et proposition",
-          "d": "`AUTOMATION/entrainement.py` dit sur quoi on entraînerait et si c'est assez ; il ne lance rien. Il part des membres du gabarit et n'écarte que le défaut objectif. Sur Léna : 45 membres, 18 écartés, file de 27. `--exporter` écrit un dossier daté avec son manifeste. Test : test_file_entrainement."
+          "d": "`AUTOMATION/entrainement.py` dit sur quoi on entraînerait et si c'est assez ; il ne lance rien, et n'écarte que le défaut objectif : sur Léna, file de 27. `--exporter` écrit un dossier daté qui tourne tel quel sur une machine kohya : images, légendes, manifeste, `dataset.toml`, `entrainer.sh`."
         },
         {
           "s": "fait",
