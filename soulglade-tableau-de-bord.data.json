@@ -251,6 +251,12 @@
           "it": "IT-3c",
           "t": "Légendage automatique du jeu d'entraînement",
           "d": "`--exporter` écrit un `.txt` par image et crée le mot déclencheur. La légende est `prompt.replace(anchor, déclencheur)`, substitution exacte vérifiée sur 22 prompts sur 22. Légendeur Florence-2-large-PromptGen-v2.0. Le garde-fou retire la clause fautive, plus la légende entière. Test : test_legende."
+        },
+        {
+          "t": "Écran du jeu d'entraînement",
+          "s": "fait",
+          "it": "IT-3d",
+          "d": "`/training`, huitième destination : la file, les écartées avec leur raison, la diversité, les critères, et l'export lancé depuis l'écran. Trois routes en lecture, une en écriture refusée pendant une production. Tests : test_training_api, test_training."
         }
       ]
     },
