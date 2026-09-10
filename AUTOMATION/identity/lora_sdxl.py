@@ -44,14 +44,20 @@ Injecte dans le graphe converti, depuis WorkflowRunner.api_for :
     `identity.lora`, seulement si presente
 """
 
+from . import ROLE_LORA, injecter_lora, verifier_roles   # noqa: E402
+
 REQUIRED_ROLES = {
     "ipadapter_apply": ("IPAdapterFaceID", "IPAdapter FaceID - verrou identite"),
     "ipadapter_ref": ("LoadImage", "BASE GELEE - reference d'identite"),
-    # role optionnel : identity.apply() ne l'exige que si config.json /
-    # identity / lora est renseigne (voir plus bas). Resolu ici de facon
-    # tolerante comme le reste (comfy.py._roles()) -> None si le graphe ne le
-    # porte pas encore.
-    "character_lora": ("LoraLoaderModelOnly", None),
+    # role optionnel (identity.ROLES_OPTIONNELS) : exige seulement si
+    # config.json / identity / lora est renseigne. Resolu de facon tolerante
+    # par comfy.py._roles() -> None si le graphe ne le porte pas.
+    # Cherchait par TYPE SEUL jusqu'au 2026-09-10 : ca tenait parce que le
+    # graphe d'Abyssiaelle ne porte qu'un LoraLoaderModelOnly, et ca serait
+    # tombe en silence (find_node leve sur l'ambigu, le role retombe a None)
+    # le jour ou il en porterait un second. Le titre est desormais attendu,
+    # partage avec pulid_flux, et celui de son noeud le contient deja.
+    "character_lora": ROLE_LORA,
 }
 
 # Points de depart generiques de l'ecosysteme IPAdapter FaceID SDXL — remplaces
@@ -62,14 +68,7 @@ DEFAULTS = {"weight": 0.7, "weight_faceidv2": 1.0, "start_at": 0.0, "end_at": 1.
 
 
 def apply(api, roles, character_config, job):
-    for role, (typ, titre) in REQUIRED_ROLES.items():
-        if role == "character_lora":
-            continue  # optionnel — verifie plus bas, seulement si demande
-        if not roles.get(role):
-            raise RuntimeError(
-                f"verrou IPAdapter FaceID : role « {role} » introuvable dans "
-                f"le workflow ({typ} / {titre!r}) — le graphe de ce "
-                f"personnage doit porter le groupe d'identite")
+    verifier_roles(roles, REQUIRED_ROLES, "IPAdapter FaceID")
 
     idc = {**DEFAULTS, **(character_config.get("identity") or {})}
     knobs = api[str(roles["ipadapter_apply"]["id"])]["inputs"]
@@ -83,20 +82,9 @@ def apply(api, roles, character_config, job):
         raise RuntimeError("verrou IPAdapter FaceID : config.json sans `base_gelee`")
     api[str(roles["ipadapter_ref"]["id"])]["inputs"]["image"] = ref
 
-    lora = idc.get("lora")
-    if lora and lora.get("name"):
-        lora_role = roles.get("character_lora")
-        if not lora_role:
-            raise RuntimeError(
-                "verrou IPAdapter FaceID : config.json / identity / lora "
-                "demande un LoRA de personnage, mais ce workflow n'a pas le "
-                "role « character_lora » (LoraLoaderModelOnly) pour le recevoir")
-        lknobs = api[str(lora_role["id"])]["inputs"]
-        lknobs["lora_name"] = lora["name"]
-        lknobs["strength_model"] = float(lora.get("strength", 1.0))
-        trigger = (lora.get("trigger_word") or "").strip()
-        if trigger:
-            positive = roles.get("positive")
-            if positive:
-                pknobs = api[str(positive["id"])]["inputs"]
-                pknobs["text"] = f"{trigger}, {pknobs['text']}"
+    # Le bloc d'injection vit maintenant dans identity/__init__.py : il ne
+    # dependait que des roles `character_lora` et `positive` et de
+    # `identity.lora`, donc il etait deja agnostique de la famille de modele --
+    # il lui manquait juste d'etre a un endroit ou PuLID-Flux pouvait l'appeler
+    # aussi (2026-09-10).
+    injecter_lora(api, roles, character_config, "IPAdapter FaceID")

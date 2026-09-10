@@ -12,9 +12,17 @@ personnage. Reperes de lecture des valeurs : note « Reglages PuLID » du graphe
 + DOCS/lena-realisme.md.
 """
 
+from . import ROLE_LORA, injecter_lora, verifier_roles   # noqa: E402
+
 REQUIRED_ROLES = {
     "pulid_apply": ("ApplyPulidFlux", "Apply PuLID Flux - verrou identite"),
     "pulid_ref": ("LoadImage", "BASE GELEE - reference d'identite"),
+    # Role OPTIONNEL (identity.ROLES_OPTIONNELS) : un personnage sous PuLID
+    # n'a pas de LoRA d'identite au depart, et le graphe n'a pas a en porter
+    # un. Ajoute le 2026-09-10 -- ce cote-la ne l'avait pas, alors que le
+    # mecanisme de consommation existait deja cote SDXL et tournait en
+    # production. Le manque etait donc dans CE module, pas dans le graphe.
+    "character_lora": ROLE_LORA,
 }
 
 # Valeurs de repli = celles mesurees pour Lena, au cas ou config.json ne porte
@@ -23,12 +31,7 @@ DEFAULTS = {"weight": 0.85, "start_at": 0.10, "end_at": 1.00}
 
 
 def apply(api, roles, character_config, job):
-    for role, (typ, titre) in REQUIRED_ROLES.items():
-        if not roles.get(role):
-            raise RuntimeError(
-                f"verrou PuLID-Flux : role « {role} » introuvable dans le "
-                f"workflow ({typ} / {titre!r}) — le graphe de ce personnage "
-                f"doit porter le groupe d'identite")
+    verifier_roles(roles, REQUIRED_ROLES, "PuLID-Flux")
 
     idc = {**DEFAULTS, **(character_config.get("identity") or {})}
     knobs = api[str(roles["pulid_apply"]["id"])]["inputs"]
@@ -40,3 +43,9 @@ def apply(api, roles, character_config, job):
     if not ref:
         raise RuntimeError("verrou PuLID-Flux : config.json sans `base_gelee`")
     api[str(roles["pulid_ref"]["id"])]["inputs"]["image"] = ref
+
+    # PARITE AVEC SDXL (2026-09-10) : un personnage Flux peut porter son LoRA
+    # d'identite EN PLUS de PuLID, exactement comme Abyssiaelle le porte en
+    # plus d'IPAdapter. Sans effet tant que config.json / identity / lora est
+    # absent, ce qui est le cas nominal.
+    injecter_lora(api, roles, character_config, "PuLID-Flux")

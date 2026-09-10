@@ -312,3 +312,57 @@ flowchart TD
     par ADR.
 11. **La plateforme propose, Pierre décide** (`PROJET.md`), et un refus est
     documenté dans l'historique du personnage — pas un échec silencieux.
+
+## Étage 1, note d'implémentation du 2026-09-10
+
+**Fait : les points 1, 2, 3 et 7 du périmètre.** Restent 4, 5 et 6 — entraîner,
+renseigner `config.json`, passer le banc — qui demandent le LoRA lui-même.
+
+Le point 1 s'est confirmé à la lecture : le bloc d'injection ne dépendait que
+des rôles `character_lora` et `positive` et de `identity.lora`. Il est monté
+tel quel dans `identity/injecter_lora`, et les deux mécanismes l'appellent. Les
+deux boucles de vérification de rôles ont fusionné au passage
+(`identity.verifier_roles`), avec `ROLES_OPTIONNELS` pour dire une fois ce que
+chacune redisait dans son coin.
+
+**Le point 3 ne se réduisait pas à un renommage, et c'est le seul écart au
+cadrage.** Le nœud que ce document désignait — « LoRA realisme (bypass) /
+futur LoRA Lena » — porte `Realistic_Adult_Flux_10-000001.safetensors` à 0,4 :
+c'est un LoRA de **réalisme**, déclaré comme tel au manifeste depuis
+l'arbitrage du 09/09. Le réutiliser aurait fusionné les deux concepts que la
+phase de recherche venait de séparer, et interdit de porter les deux à la fois.
+
+Le graphe reçoit donc un **nœud de plus** :
+
+```
+avant : 10 checkpoint -> 11 LoRA realisme -> 12 ApplyPulidFlux
+après : 10 -> 11 LoRA realisme -> 61 LoRA personnage -> 12
+```
+
+Le nœud 11 reprend son titre exact, « LoRA realisme (bypass) » — « futur LoRA
+Lena » était une intention, elle a maintenant son propre nœud, et « Lena »
+disparaît d'un titre de graphe au passage (dette E1 : un graphe appartient au
+pack, pas au personnage).
+
+**Le fragment de titre attendu est « LoRA personnage », et il a été choisi pour
+qu'aucun graphe existant n'ait à être renommé** : c'est déjà le titre du nœud
+d'Abyssiaelle (« LoRA personnage (bypass) / abyss1a »). Son rôle passe donc du
+type seul au type + titre, ce qui la protège du jour où son graphe portera un
+second `LoraLoaderModelOnly` — exactement le piège où celui de Léna était
+tombé.
+
+**Vérifications faites, dans l'ordre du skill `workflow-comfyui` :**
+
+- les trois copies de chaque lien (`links[]`, `outputs[].links`,
+  `inputs[].link`) recontrôlées à la main — `convert()` n'en lit que deux, une
+  désynchronisation passerait tout et ne casserait qu'à la réouverture ;
+- `wf_check --roles` puis `--essai` : **ComfyUI accepte le graphe** ;
+- l'API convertie est **identique à l'octet** avant et après, avec et sans les
+  groupes de production actifs (21 et 29 nœuds) — la production d'aujourd'hui
+  est prouvée inchangée ;
+- avec un `identity.lora` fictif, le nœud 61 s'active, reçoit son nom et sa
+  force, `ApplyPulidFlux` prend son modèle depuis lui, et le mot déclencheur se
+  préfixe au prompt.
+
+Il reste la validation visuelle par Pierre dans ComfyUI (invariant 1 amendé) :
+un lien mal câblé à la main ne se voit pas à la relecture du JSON.

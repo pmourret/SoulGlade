@@ -1,6 +1,6 @@
 {
-  "last_node_id": 60,
-  "last_link_id": 79,
+  "last_node_id": 61,
+  "last_link_id": 80,
   "nodes": [
     {
       "id": 1,
@@ -353,7 +353,7 @@
         "Realistic_Adult_Flux_10-000001.safetensors",
         0.4
       ],
-      "title": "LoRA realisme (bypass) / futur LoRA Lena"
+      "title": "LoRA realisme (bypass)"
     },
     {
       "id": 12,
@@ -373,7 +373,7 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 2
+          "link": 80
         },
         {
           "name": "pulid_flux",
@@ -2633,6 +2633,45 @@
         false
       ],
       "title": "HandDetailer mains - modele PATCHE PuLID (bypass)"
+    },
+    {
+      "id": 61,
+      "type": "LoraLoaderModelOnly",
+      "title": "LoRA personnage (bypass) - nom pose par config.json",
+      "pos": [
+        1240.0,
+        1280.0
+      ],
+      "size": [
+        340,
+        110
+      ],
+      "flags": {},
+      "order": 60,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            80
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "Realistic_Adult_Flux_10-000001.safetensors",
+        1.0
+      ]
     }
   ],
   "links": [
@@ -2648,7 +2687,7 @@
       2,
       11,
       0,
-      12,
+      61,
       0,
       "MODEL"
     ],
@@ -3243,6 +3282,14 @@
       34,
       1,
       "IMAGE"
+    ],
+    [
+      80,
+      61,
+      0,
+      12,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [
