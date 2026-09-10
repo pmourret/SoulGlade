@@ -3805,6 +3805,8 @@ export interface components {
             repetitions?: number | null;
             /** Script */
             script?: string | null;
+            /** Config Gui */
+            config_gui?: string | null;
             /** Legendes */
             legendes: {
                 [key: string]: unknown;

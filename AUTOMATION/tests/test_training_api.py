@@ -216,10 +216,48 @@ try:
     r = CLIENT.get(f"/api/training/exports?character={CHAR_B}")
     verifie(len(r.json()["exports"]) == 1, "et le sien lui est bien rendu")
 
+    # =================================== [7] la reponse annonce ce que le disque porte
+    print("\n[7] un export reussi annonce LES DEUX chemins d'entrainement")
+    # Des PNG factices dans l'arbre de production du personnage : sans fichier
+    # sur le disque, l'export refuse (section [5]) et on ne verrait jamais ce
+    # que la reponse dit d'un succes.
+    prod_a = OFM / "PROD" / CHAR_A.upper() / "OK"
+    prod_a.mkdir(parents=True, exist_ok=True)
+    for nom in IMAGES[CHAR_A]:
+        (prod_a / nom).write_bytes(b"\x89PNG\r\n\x1a\nfaux fichier, jamais lu")
+    r = CLIENT.post(f"/api/training/export?character={CHAR_A}",
+                    json={"avec_vision": False})
+    verifie(r.status_code == 200, f"l'export aboutit ({r.status_code} — {r.text[:200]})")
+    corps = r.json()
+    verifie(corps.get("script") == "flux_train_network.py",
+            f"la reponse nomme le script de ligne de commande ({corps.get('script')})")
+    # LE TROU QUE CETTE LIGNE FERME (10/09). Le fichier etait ecrit, et la
+    # reponse n'en disait rien : l'ecran ne pouvait pas savoir que le dossier
+    # porte de quoi charger la GUI kohya_ss.
+    verifie(corps.get("config_gui") == "kohya_config.json",
+            f"ET la config de la GUI ({corps.get('config_gui')})")
+    dossier_exporte = Path(corps["dossier"])
+    for nom in ("dataset.toml", "entrainer.sh", "kohya_config.json", "manifeste.json"):
+        verifie((dossier_exporte / nom).is_file(),
+                f"{nom} est reellement sur le disque, pas seulement annonce")
+    kohya = json.loads((dossier_exporte / "kohya_config.json").read_text(encoding="utf-8"))
+    verifie(kohya["output_name"] == f"{corps['declencheur']}_v1"
+            and kohya["keep_tokens"] == 1,
+            "et la config porte bien ce que CE jeu determine, pas le preset nu")
+
+    print("\n[7b] l'historique rend la meme chose au rechargement")
+    h = CLIENT.get(f"/api/training/exports?character={CHAR_A}").json()
+    verifie(len(h["exports"]) == 1, f"un export liste ({len(h['exports'])})")
+    verifie(h["exports"][0]["config_gui"] == "kohya_config.json"
+            and h["exports"][0]["script"] == corps["script"],
+            "avec les deux chemins, relus dans son manifeste")
+
+
 finally:
     shutil.rmtree(racine, ignore_errors=True)
     for cid in (CHAR_A, CHAR_B):
         shutil.rmtree(OFM / "CHARACTERS" / cid, ignore_errors=True)
+        shutil.rmtree(OFM / "PROD" / cid.upper(), ignore_errors=True)
 
 print("\n" + "=" * 70)
 print("tout est vert" if not KO else f"{KO} ECHEC(S)")

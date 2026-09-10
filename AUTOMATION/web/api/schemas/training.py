@@ -96,5 +96,9 @@ class TrainingExportResponse(BaseModel):
     declencheur_cree: bool = False
     famille: Optional[str] = None
     repetitions: Optional[int] = None
+    # Les deux chemins d'entrainement que le dossier porte : la ligne de
+    # commande et la config de la GUI kohya_ss. `None` quand la famille n'a pas
+    # de preset vendore (sdxl), et l'ecran le dit plutot que de le taire.
     script: Optional[str] = None
+    config_gui: Optional[str] = None
     legendes: dict

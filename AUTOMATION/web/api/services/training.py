@@ -155,6 +155,9 @@ def exports(character_id):
             "repetitions": ent.get("repetitions"),
             "repetitions_defaut": ent.get("repetitions_defaut"),
             "script": ent.get("script"),
+            # None sur un export anterieur au 10/09 : la GUI n'avait pas encore
+            # sa config. Absent, pas faux.
+            "config_gui": ent.get("config_gui"),
             "dossier_images": ent.get("dossier_images"),
             "illisible": None,
         })
@@ -193,6 +196,11 @@ def run_export(character_id, configuration, repetitions=None, avec_vision=True):
         "declencheur_cree": bool(r.get("declencheur_cree")),
         "famille": r.get("famille"),
         "repetitions": r.get("repetitions"),
+        # LES DEUX CHEMINS D'ENTRAINEMENT, tous les deux annonces. Le dossier
+        # porte `entrainer.sh` pour la ligne de commande et `kohya_config.json`
+        # pour la GUI ; une reponse qui n'en nomme qu'un laisse croire que
+        # l'autre n'a pas ete ecrit.
         "script": r.get("script_kohya"),
+        "config_gui": r.get("config_kohya"),
         "legendes": par_source,
     }

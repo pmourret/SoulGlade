@@ -7929,6 +7929,17 @@
             ],
             "title": "Script"
           },
+          "config_gui": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Gui"
+          },
           "legendes": {
             "additionalProperties": true,
             "type": "object",
