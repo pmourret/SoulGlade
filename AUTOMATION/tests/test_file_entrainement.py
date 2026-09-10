@@ -303,6 +303,60 @@ try:
                 "--repetitions remplace le defaut, jusque dans le nom du "
                 "dossier et le releve du manifeste")
 
+        print("\n[8e] la GUI kohya a sa config, et elle ne contredit pas le script")
+        cfg_gui = json.loads((dossier / "kohya_config.json").read_text(encoding="utf-8"))
+        verifie(cfg_gui["LoRA_type"] == "Flux1" and cfg_gui["flux1_checkbox"] is True,
+                "la config annonce la famille du pack, pas un reglage par defaut")
+        verifie(cfg_gui["keep_tokens"] == 1,
+                "keep_tokens = 1 : le preset amont dit 0, mais NOS legendes "
+                "commencent par le declencheur")
+        verifie(cfg_gui["max_train_steps"]
+                == cfg_gui["epoch"] * res["repetitions"] * (len(res["exportes"]) + 1),
+                f"le compte de pas se DEDUIT du jeu ({cfg_gui['max_train_steps']}) — "
+                f"laisse a la valeur du preset, il couperait l'entrainement au "
+                f"milieu sans le dire")
+        verifie("dataset" in cfg_gui["train_data_dir"]
+                and f"{res['repetitions']}_essaitrig" in cfg_gui["train_data_dir"],
+                "train_data_dir dit quel dossier viser, et nomme le sous-dossier "
+                "pour qu'on ne pointe pas les images elles-memes")
+        for cle in ("pretrained_model_name_or_path", "clip_l", "t5xxl", "ae"):
+            verifie("path" in cfg_gui[cle] or "chemin" in cfg_gui[cle],
+                    f"{cle} reste un chemin A REMPLIR : il depend de la machine")
+
+        # LE PIEGE QUE CETTE SECTION FERME. Le dossier porte DEUX recettes du
+        # meme entrainement : `entrainer.sh` (ligne de commande) et
+        # `kohya_config.json` (GUI). Si elles divergent, on entraine autre chose
+        # que ce qu'on croit, et le banc mesure un ecart qu'on ne saura pas
+        # expliquer.
+        sh = (dossier / "entrainer.sh").read_bytes().decode("utf-8")
+        for cle, valeur in en.RECETTES["flux"]["reglages"].items():
+            verifie(cfg_gui[cle] == valeur,
+                    f"kohya_config.{cle} = {valeur} (comme la recette)")
+            arg = en.ARGS_DE_REGLAGE.get(cle)
+            if arg:
+                verifie(f"{arg} {valeur}" in sh,
+                        f"et entrainer.sh porte « {arg} {valeur} », la meme")
+
+        print("\n[8f] le preset vendore est la reference, jamais une copie qui derive")
+        amont = json.loads((en.PRESETS / "flux1.json").read_text(encoding="utf-8"))
+        for cle, valeur in en.RECETTES["flux"]["reglages"].items():
+            verifie(amont.get(cle) == valeur,
+                    f"RECETTES['flux'].reglages[{cle!r}] == preset amont ({valeur})")
+        verifie(amont["keep_tokens"] == 0 and cfg_gui["keep_tokens"] == 1,
+                "et ce que le JEU determine surcharge bien l'amont "
+                "(keep_tokens 0 -> 1)")
+
+        print("\n[8g] le jeu n'est jamais recadre au carre")
+        toml = (dossier / "dataset.toml").read_text(encoding="utf-8")
+        # Mesure du 10/09 : aucune image de Lena n'est carree (1080x1350,
+        # 1080x1920, 1080x1620). Sans bucketing, sd-scripts recadre au carre de
+        # `resolution` et le LoRA apprend des portraits tronques.
+        verifie("enable_bucket = true" in toml and "bucket_no_upscale = true" in toml,
+                "dataset.toml active les paniers de ratio, et interdit "
+                "d'agrandir")
+        verifie(cfg_gui["enable_bucket"] is True and cfg_gui["bucket_no_upscale"] is True,
+                "et la config GUI dit la meme chose")
+
         print("\n[9] un export n'ecrase jamais le precedent")
         res2 = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 9, 0, 0),
                            avec_vision=False)

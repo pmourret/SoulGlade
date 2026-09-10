@@ -75,14 +75,33 @@ AXES_DIVERSITE = ("scene", "intention", "ton", "format")
 # resolution et du nombre d'epoques le jour ou un banc les separe.
 REPETITIONS_CIBLE = 200
 
+# Presets kohya vendores (AUTOMATION/kohya_presets/, voir son LISEZ-MOI) : le
+# fichier amont VERBATIM, avec la date de son releve. Il fait reference, et
+# l'export ecrit ce fichier avec par-dessus les seules valeurs que le jeu de
+# donnees determine.
+PRESETS = HERE / "kohya_presets"
+
 # Ce qui change d'une famille de modele a l'autre dans la ligne d'entrainement
 # kohya. Cle = `universe.json / model_family` du PACK, jamais le personnage
 # (invariant 7). Ce qui est commun vit dans RECETTE, une seule fois.
+#
+# `reglages` porte les valeurs PARTAGEES avec le preset vendore. Elles y sont
+# nommees plutot qu'ecrites dans la ligne de commande, pour qu'un test puisse
+# verifier qu'elles disent la meme chose : sans lui, un dossier d'export
+# porterait deux recettes qui n'entrainent pas le meme LoRA — `entrainer.sh`
+# d'un cote, `kohya_config.json` de l'autre.
 RECETTES = {
     "flux": {
         "script": "flux_train_network.py",
         "module": "networks.lora_flux",
         "resolution": 1024,
+        "preset": "flux1.json",
+        "reglages": {
+            "network_dim": 16, "network_alpha": 16,
+            "learning_rate": 0.0003, "optimizer": "AdamW8bit",
+            "timestep_sampling": "sigmoid", "discrete_flow_shift": 3,
+            "model_prediction_type": "raw", "guidance_scale": 1,
+        },
         "modeles": [
             '--pretrained_model_name_or_path "$MODELES/unet/flux1-dev.safetensors"',
             '--clip_l "$MODELES/clip/clip_l.safetensors"',
@@ -90,16 +109,24 @@ RECETTES = {
             '--ae "$MODELES/vae/ae.safetensors"',
         ],
         "specifique": [
-            "--timestep_sampling shift --discrete_flow_shift 3.1582",
-            "--model_prediction_type raw --guidance_scale 1.0",
-            "--fp8_base",
+            "--fp8_base --full_bf16",
             "--cache_text_encoder_outputs --cache_text_encoder_outputs_to_disk",
+            "--apply_t5_attn_mask --t5xxl_max_token_length 512",
+            "--min_snr_gamma 7 --noise_offset 0.05",
         ],
     },
     "sdxl": {
         "script": "sdxl_train_network.py",
         "module": "networks.lora",
         "resolution": 1024,
+        # Pas de preset vendore : aucun des presets SDXL amont ne fait autorite
+        # comme celui de Flux, et en choisir un serait un arbitrage deguise en
+        # donnee. Un export sdxl sort donc sans `kohya_config.json`.
+        "preset": None,
+        "reglages": {
+            "network_dim": 16, "network_alpha": 16,
+            "learning_rate": 0.0001, "optimizer": "AdamW8bit",
+        },
         "modeles": ['--pretrained_model_name_or_path "$CHECKPOINT"'],
         "specifique": ["--no_half_vae", "--cache_text_encoder_outputs"],
     },
@@ -138,9 +165,8 @@ accelerate launch --mixed_precision bf16 --num_cpu_threads_per_process 1 \\
   "$SD_SCRIPTS/{script}" \\
 {modeles}  --dataset_config dataset.toml \\
   --output_dir output --output_name "{sortie}" \\
-  --network_module {module} --network_dim 16 --network_alpha 16 \\
-  --optimizer_type adamw8bit --learning_rate 1e-4 \\
-  --max_train_epochs "$EPOCHS" --save_every_n_epochs 2 \\
+  --network_module {module} \\
+{reglages}  --max_train_epochs "$EPOCHS" --save_every_n_epochs 2 \\
   --save_model_as safetensors --save_precision bf16 \\
   --cache_latents_to_disk --gradient_checkpointing --sdpa --seed 42 \\
 {specifique}
@@ -149,6 +175,14 @@ accelerate launch --mixed_precision bf16 --num_cpu_threads_per_process 1 \\
 # `keep_tokens = 1` : la legende commence par le declencheur (cadrage du
 # 10/09), et un melange le noierait dans la description — c'est la constance du
 # jeton que la pratique demande le plus.
+#
+# `enable_bucket` N'EST PAS UN DETAIL, et son absence etait un bug (10/09).
+# Sans lui, sd-scripts redimensionne ET RECADRE chaque image au carre de
+# `resolution` : mesure sur le jeu de Lena, aucune image n'est carree (1080x1350,
+# 1080x1920, 1080x1620). Un LoRA se serait entraine sur des portraits tronques,
+# et le banc aurait mesure ce recadrage sans savoir qu'il le mesurait.
+# `bucket_no_upscale` interdit d'agrandir : mieux vaut un lot plus petit qu'une
+# image inventee.
 DATASET_TOML = """[general]
 caption_extension = ".txt"
 keep_tokens = 1
@@ -156,6 +190,10 @@ keep_tokens = 1
 [[datasets]]
 resolution = {resolution}
 batch_size = 1
+enable_bucket = true
+bucket_no_upscale = true
+min_bucket_reso = 256
+max_bucket_reso = 2048
 
   [[datasets.subsets]]
   image_dir = "{dossier_images}"
@@ -376,8 +414,18 @@ def _famille_du_personnage(character_id):
 
 
 def _ecrire_recette(dossier, famille, **champs):
-    """`dataset.toml` + `entrainer.sh` a cote des images. Rend le script kohya
-    ecrit, ou None si la famille est inconnue.
+    """La recette a cote des images. Rend `(script, config_gui)`, `(None, None)`
+    si la famille est inconnue.
+
+    TROIS FICHIERS, DEUX CHEMINS D'ENTRAINEMENT, et il faut savoir lequel sert
+    a quoi :
+
+      dataset.toml + entrainer.sh   la ligne de commande sd-scripts
+      kohya_config.json             le champ « Configuration file » de la GUI
+
+    Ils decrivent le MEME entrainement, et un test verrouille les valeurs qu'ils
+    partagent — deux recettes divergentes dans un meme dossier seraient pires
+    qu'une seule.
 
     LE JEU EXPORTE ETAIT COMPLET MAIS PAS EXECUTABLE. Il restait a retrouver la
     convention de dossier kohya, ecrire le TOML et reconstituer la ligne de
@@ -391,7 +439,7 @@ def _ecrire_recette(dossier, famille, **champs):
     """
     recette = RECETTES.get(famille)
     if not recette:
-        return None
+        return None, None
     (dossier / "dataset.toml").write_bytes(
         DATASET_TOML.format(resolution=recette["resolution"], **champs)
         .encode("utf-8"))
@@ -400,9 +448,110 @@ def _ecrire_recette(dossier, famille, **champs):
     (dossier / "entrainer.sh").write_bytes(RECETTE.format(
         script=recette["script"], module=recette["module"],
         modeles="".join(f"  {x} \\\n" for x in recette["modeles"]),
+        reglages=_lignes_de_reglages(recette["reglages"]),
         specifique=" \\\n".join(f"  {x}" for x in recette["specifique"]),
         **champs).encode("utf-8"))
-    return recette["script"]
+    config = _ecrire_config_kohya(
+        dossier, famille, recette, repetitions=champs["repetitions"],
+        n_images=champs["n"], trigger=champs["trigger"], sortie=champs["sortie"])
+    return recette["script"], config
+
+
+# Les reglages partages, traduits en arguments sd-scripts. La table est ici et
+# nulle part ailleurs : c'est elle qui garantit que `entrainer.sh` dit la meme
+# chose que `kohya_config.json`, dont les cles sont celles de la GUI.
+ARGS_DE_REGLAGE = {
+    "network_dim": "--network_dim", "network_alpha": "--network_alpha",
+    "learning_rate": "--learning_rate", "optimizer": "--optimizer_type",
+    "timestep_sampling": "--timestep_sampling",
+    "discrete_flow_shift": "--discrete_flow_shift",
+    "model_prediction_type": "--model_prediction_type",
+    "guidance_scale": "--guidance_scale",
+}
+
+
+def _lignes_de_reglages(reglages):
+    """Les reglages partages, un par ligne de commande, ordre stable."""
+    lignes = [f"  {ARGS_DE_REGLAGE[k]} {v}"
+              for k, v in reglages.items() if k in ARGS_DE_REGLAGE]
+    return "".join(f"{ligne} \\\n" for ligne in lignes)
+
+
+def _ecrire_config_kohya(dossier, famille, recette, repetitions, n_images,
+                         trigger, sortie, epoques=10):
+    """`kohya_config.json` : le preset amont, avec ce que le jeu determine.
+
+    CE QUE LA GUI kohya_ss ATTEND. Elle ne lit ni TOML ni ligne de commande :
+    son champ « Configuration file » prend un JSON dont les cles sont ses
+    propres champs. Sans lui, on remplit une trentaine de cases a la main, et
+    une case ratee ne se voit qu'apres les heures de GPU.
+
+    ON PART DU PRESET AMONT, VERBATIM (AUTOMATION/kohya_presets/, releve du
+    10/09), et on n'ecrit par-dessus que ce que le jeu de donnees determine
+    reellement. Ce n'est donc pas une recette maison : c'est celle de kohya,
+    remplie. Ce qui depend de la MACHINE — les quatre chemins de modeles —
+    reste au texte d'origine, qui dit lui-meme quoi y mettre.
+
+    Rend le chemin ecrit, ou None si la famille n'a pas de preset.
+    """
+    nom = recette.get("preset")
+    if not nom:
+        return None
+    source = PRESETS / nom
+    if not source.exists():
+        return None
+    cfg = json.loads(source.read_text(encoding="utf-8"))
+
+    # Ce que le JEU determine, et rien d'autre.
+    cfg.update({
+        # CHEMINS DE MACHINE, laisses en texte a remplir comme les quatre du
+        # preset amont. Y ecrire le chemin Windows d'ici serait faux partout
+        # ailleurs, et un dossier inexistant ne se voit qu'au lancement. La GUI
+        # parcourt les SOUS-dossiers de `train_data_dir` et lit la convention
+        # <repetitions>_<declencheur> dans leur nom : c'est le PARENT qu'elle
+        # attend, jamais le dossier d'images lui-meme.
+        "train_data_dir": (f"chemin du dossier « dataset » une fois envoye "
+                           f"(le parent de {repetitions}_{trigger})"),
+        "output_dir": "chemin du dossier de sortie sur cette machine",
+        "output_name": sortie,
+        "caption_extension": ".txt",
+        # La legende commence par le declencheur : il se protege, le preset
+        # amont ne le sait pas (il ships 0).
+        "keep_tokens": 1,
+        # Le preset amont ships 512,512. Le jeu est produit en 1080 de large,
+        # et aucune image n'est carree : c'est la CIBLE de surface des paniers,
+        # pas une taille imposee.
+        "max_resolution": f"{recette['resolution']},{recette['resolution']}",
+        "epoch": epoques,
+        # Le compte de pas se DEDUIT du jeu ; le laisser a la valeur du preset
+        # (1000) couperait l'entrainement au milieu sans le dire.
+        "max_train_steps": n_images * repetitions * epoques,
+        "save_every_n_epochs": 2,
+        # Le preset ships 50 : sur ce jeu, ce serait une quarantaine de
+        # fichiers intermediaires pour rien.
+        "save_every_n_steps": 0,
+        "sample_prompts": (f"{trigger}, photo of a woman, natural light "
+                           f"--w 832 --h 1216 --s 20 --l 4 --d 42"),
+        # Relatif : valable sur n'importe quelle machine, contrairement au
+        # `./test/logs-saruman` du preset amont.
+        "logging_dir": "./logs",
+        # De quoi retrouver d'ou sort un LoRA des mois plus tard, DANS le
+        # fichier de metadonnees que kohya grave dans le .safetensors.
+        "training_comment": (f"Soulglade — {dossier.name} — "
+                             f"{n_images} images x{repetitions}, "
+                             f"declencheur {trigger}"),
+    })
+    for cle, valeur in recette["reglages"].items():
+        cfg[cle] = valeur
+    # `unet_lr` doit suivre `learning_rate` : la GUI ecrit les deux, et deux
+    # valeurs differentes ici entrainent a une vitesse qu'aucune des deux
+    # n'annonce.
+    cfg["unet_lr"] = cfg["learning_rate"]
+
+    chemin = dossier / "kohya_config.json"
+    chemin.write_text(json.dumps(cfg, ensure_ascii=False, indent=2) + "\n",
+                      encoding="utf-8")
+    return chemin.name
 
 
 def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
@@ -484,7 +633,7 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
             _legender(images / src.name, {}, est_ancre=True)
 
     famille = _famille_du_personnage(character_id)
-    script_kohya = _ecrire_recette(
+    script_kohya, config_kohya = _ecrire_recette(
         dossier, famille, perso=character_id,
         date=(quand or datetime.now()).strftime("%d/%m/%Y"),
         n=len(a_copier) + (1 if ancre else 0), trigger=trigger,
@@ -543,12 +692,15 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
             "repetitions": repetitions,
             "repetitions_defaut": repetitions_demandees is None,
             "script": script_kohya,
+            "config_gui": config_kohya,
         },
-        "note": ("Le dossier est executable tel quel : `bash entrainer.sh` sur "
-                 "une machine kohya (RunPod ou autre), chemins de modeles en "
-                 "variables d'environnement. Le nombre de repetitions est un "
-                 "DEFAUT propose pour que ca tourne, pas un arbitrage — "
-                 "`--repetitions=N` le remplace."
+        "note": ("Deux chemins, le meme entrainement. Ligne de commande : "
+                 "`bash entrainer.sh` (chemins de modeles en variables "
+                 "d'environnement). GUI kohya_ss : charger kohya_config.json "
+                 "dans « Configuration file », puis remplir les quatre chemins "
+                 "de modeles. Le nombre de repetitions est un DEFAUT propose "
+                 "pour que ca tourne, pas un arbitrage — `--repetitions=N` le "
+                 "remplace."
                  if script_kohya else
                  f"Famille de modele inconnue ({famille!r}) : ni dataset.toml "
                  f"ni entrainer.sh n'ont ete ecrits. Le jeu et ses legendes "
@@ -561,7 +713,8 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
             "dossier": dossier, "ancre_reinjectee": ancre,
             "declencheur": trigger, "declencheur_cree": trigger_cree,
             "legendes": legendes, "dossier_images": images, "famille": famille,
-            "repetitions": repetitions, "script_kohya": script_kohya}
+            "repetitions": repetitions, "script_kohya": script_kohya,
+            "config_kohya": config_kohya}
 
 
 def _critere(nom, valeur, seuil, texte):
@@ -663,11 +816,18 @@ def _main(character_id, export=False, avec_vision=True, repetitions=None):
                       if repetitions is None else "  (demande)")
             print(f"\n  repetitions : {r['repetitions']}{defaut}")
             print(f"  famille     : {r['famille']}  ->  {r['script_kohya']}")
-            print(f"\n  Le dossier tourne tel quel sur une machine kohya : "
-                  f"l'envoyer entier")
-            print(f"  (RunPod ou autre), verifier les chemins en tete du "
-                  f"script, puis")
-            print(f"  « bash entrainer.sh ». Le LoRA sort dans output/.")
+            if r.get("config_kohya"):
+                print(f"  GUI kohya_ss : {r['config_kohya']}  (preset amont "
+                      f"{RECETTES[r['famille']]['preset']}, rempli)")
+            print(f"\n  Envoyer le dossier entier sur la machine "
+                  f"d'entrainement, puis :")
+            print(f"    ligne de commande  « bash entrainer.sh », chemins de "
+                  f"modeles en variables")
+            print(f"    GUI kohya_ss       charger kohya_config.json dans "
+                  f"« Configuration file »,")
+            print(f"                       puis remplir les quatre chemins de "
+                  f"modeles")
+            print(f"  Le LoRA sort dans output/.")
         else:
             print(f"\n  ATTENTION : famille de modele inconnue "
                   f"({r.get('famille')!r}) — ni dataset.toml")

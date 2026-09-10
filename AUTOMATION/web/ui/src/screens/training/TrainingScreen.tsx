@@ -55,8 +55,10 @@ export function TrainingScreen() {
               </h3>
               <p className="tiny mt-0 mb-[12px]">
                 Copie les {exportable} image(s) exportable(s) et l’ancre dans un
-                dossier daté, avec leurs légendes, le manifeste,{' '}
-                <code>dataset.toml</code> et <code>entrainer.sh</code>.
+                dossier daté, avec leurs légendes, le manifeste, et de quoi
+                lancer par les deux chemins : <code>dataset.toml</code> +{' '}
+                <code>entrainer.sh</code> en ligne de commande,{' '}
+                <code>kohya_config.json</code> pour la GUI kohya_ss.
                 {captions?.repli_vision
                   ? ` ${captions.repli_vision} légende(s) demanderont le légendeur : compter plusieurs minutes.`
                   : ' Toutes les légendes viennent du prompt : compter quelques secondes.'}

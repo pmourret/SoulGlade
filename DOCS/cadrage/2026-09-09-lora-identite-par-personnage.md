@@ -400,3 +400,32 @@ c'est trois façons de rater un entraînement qu'on paie à l'heure.
 200 pas par époque, l'export l'annonce à l'écran et dans le manifeste, et
 `--repetitions=N` le remplace. C'est un réglage d'entraînement : il appartient
 à Pierre (`PROJET.md`).
+
+### Complété le soir même : la GUI, et un recadrage qui aurait tout gâché
+
+Deux choses sont venues du premier export réel, et aucune ne se voyait à la
+relecture.
+
+**Le jeu n'est pas carré, et le TOML le recadrait.** Mesuré sur les 25 images
+sorties : 1080×1350, 1080×1920, 1080×1620, aucune carrée. Le `dataset.toml`
+généré disait `resolution = 1024` sans bucketing — or sd-scripts, dans ce cas,
+redimensionne **et recadre** au carré. Le LoRA aurait appris des portraits
+tronqués, et le banc aurait mesuré ce recadrage sans savoir qu'il le mesurait.
+Corrigé : `enable_bucket`, `bucket_no_upscale`, et les bornes de paniers.
+
+**La GUI kohya_ss ne lit ni TOML ni ligne de commande.** Son champ
+« Configuration file » attend un JSON dont les clés sont ses propres champs.
+L'export en écrit donc un — mais pas une recette maison : le préset officiel
+`flux1D - adamw8bit fp8.json` est **vendoré verbatim** dans
+`AUTOMATION/kohya_presets/` avec la date de son relevé, et l'export n'écrit
+par-dessus que ce que le jeu de données détermine (dossier, déclencheur,
+`keep_tokens`, résolution, nombre de pas déduit du lot).
+
+Conséquence à tenir, et c'est ce qui a motivé un test : le dossier porte
+maintenant **deux recettes du même entraînement**, une par chemin. Les valeurs
+qu'elles partagent vivent dans un seul endroit (`RECETTES[...]["reglages"]`),
+et un test échoue si elles divergent — d'elles-mêmes ou du préset amont. Deux
+recettes qui n'entraînent pas la même chose seraient pires qu'une seule.
+
+Rien de tout cela ne déplace la frontière : la plateforme prépare, elle
+n'entraîne toujours pas.
