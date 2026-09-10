@@ -345,6 +345,15 @@ const D = {
       "ref": "DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1, points 4 à 6) — ADR-0021 pour le banc"
     },
     {
+      "id": "IT-3e",
+      "titre": "Le NSFW sait ce qu'il produit, et pour qui",
+      "state": "next",
+      "quoi": "La branche fabrique des images qui ne sortent nulle part : l'export est refusé en dur, le gabarit l'ignore (construire_jeu filtre espace = lena), la file d'entraînement aussi. Et elle affiche le plus mauvais taux du dépôt, 77 % de « ia » contre 56 %, sans qu'aucune mesure dise pourquoi : tout ce qu'on mesure porte sur le visage ou sur le fond, jamais sur le corps. Avant IT-4, parce qu'une semaine de production s'appuiera sur une capacité qu'on ne sait pas décrire.",
+      "dod": "Le corps a une mesure, faux positifs et faux négatifs comptés sur corpus étiqueté (ADR-0025), ou un renoncement écrit. La voie d'édition répare les mains, ou on sait pourquoi elle ne le peut pas. Le modèle de la scène native est nommé et mesuré, son revers tranché avec lui. La destination d'une image NSFW est décidée, et le filtre espace = lena aligné dessus.",
+      "epics": "E9",
+      "ref": "DOCS/cadrage/2026-09-10-capacite-nsfw.md, ADR-0003 amendé le 10/09"
+    },
+    {
       "id": "IT-4",
       "state": "next",
       "dep": "IT-3d",
@@ -802,17 +811,20 @@ const D = {
         {
           "s": "dette",
           "t": "Le corps n'est mesuré nulle part",
-          "d": "Toutes les mesures portent sur le visage ou sur le fond. La seule branche où le corps est le sujet n'a aucun instrument : 77 % des images NSFW sont jugées « ia » contre 56 % en SFW, sans qu'un chiffre dise pourquoi. Cadrage du 10/09."
+          "d": "Toutes les mesures portent sur le visage ou sur le fond. La seule branche où le corps est le sujet n'a aucun instrument : 77 % des images NSFW sont jugées « ia » contre 56 % en SFW, sans qu'un chiffre dise pourquoi. Cadrage du 10/09.",
+          "it": "IT-3e"
         },
         {
           "s": "dette",
           "t": "La voie d'édition ne répare pas les mains",
-          "d": "La production porte le groupe HandDetailer depuis le 09/09 ; le graphe d'édition ne déclare aucun rôle handdetailer. 7 des 10 mains jugées côté NSFW sont cassées."
+          "d": "La production porte le groupe HandDetailer depuis le 09/09 ; le graphe d'édition ne déclare aucun rôle handdetailer. 7 des 10 mains jugées côté NSFW sont cassées.",
+          "it": "IT-3e"
         },
         {
           "s": "faire",
           "t": "Scène NSFW native, en plus de l'édition",
-          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. La question ouverte est le modèle, pas le pipeline. Son revers se décide avec elle : ouvrir la voie native ouvre celle du nu involontaire en SFW."
+          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. La question ouverte est le modèle, pas le pipeline. Son revers se décide avec elle : ouvrir la voie native ouvre celle du nu involontaire en SFW.",
+          "it": "IT-3e"
         }
       ]
     },
