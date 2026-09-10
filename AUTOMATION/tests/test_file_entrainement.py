@@ -23,10 +23,24 @@ Ce test verrouille, dans l'ordre de ce qui casserait le plus silencieusement :
      critere qui bloque au lieu de refuser sec ;
   6. deux personnages ne se melangent jamais (CLAUDE.md, §Methode).
 
+Puis l'EXPORT, qui a ses propres facons de mentir :
+
+  7. la file et l'exportable ne sont pas le meme nombre. Un embedding survit en
+     base a la disparition du PNG -- chez Lena au 10/09, 27 dans la file et 24
+     sur le disque. Copier en silence produirait un jeu plus petit que ce que
+     le manifeste annonce ;
+  8. le manifeste garde ce qui n'est PAS parti et pourquoi, l'etat du gabarit,
+     le seuil qui a filtre, et la provenance de chaque image -- sans quoi
+     comparer deux LoRA au banc ne voudrait rien dire. Et l'ANCRE est
+     reinjectee (regle 7 du mecanisme) ;
+  9. un export n'ecrase jamais le precedent : un entrainement passe est une
+     piece d'historique.
+
 Aucun GPU, aucune image : des vecteurs a la main, une base temporaire.
 
 Lancer :  python AUTOMATION\\tests\\test_file_entrainement.py
 """
+import json
 import shutil
 import sys
 import tempfile
@@ -166,7 +180,70 @@ try:
         verifie("image(s) dans la file" in r3["blocage"],
                 "le blocage NOMME le critere, il ne dit pas « refuse »")
 
-        print("\n[7] deux personnages ne se melangent jamais")
+        print("\n[7] l'export ne copie que ce qui existe sur le disque")
+        # LA FILE ET L'EXPORTABLE NE SONT PAS LE MEME NOMBRE : un embedding
+        # survit en base a la disparition du PNG. Chez Lena au 10/09, 27 dans
+        # la file et 24 sur le disque. Le taire produirait un jeu
+        # d'entrainement plus petit que le manifeste ne l'annonce.
+        import env_config
+        from datetime import datetime as _dt
+        en.OFM = racine
+        en.RACINE_EXPORT = racine / "PROD" / "_ENTRAINEMENT"
+        prod = racine / "PROD" / "LENA" / "OK"
+        prod.mkdir(parents=True, exist_ok=True)
+        for nom in ("a.png", "b.png", "d.png", "c.png"):   # c.png est ECARTEE
+            (prod / nom).write_bytes(b"\x89PNG\r\n\x1a\n")
+        # f.png et g.png sont dans la file mais n'ont AUCUN fichier
+        entree = racine / "input"
+        entree.mkdir(parents=True, exist_ok=True)
+        (entree / "LENA_BASE.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+        env_config.comfyui_root = lambda: racine
+
+        cfg = {"base_gelee": "LENA_BASE.png",
+               "qc": {"threshold_gabarit": 0.9},
+               "entrainement": {"n_min": 3, "diversite_min": 2.0}}
+        res = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 8, 0, 0))
+        dossier = res["dossier"]
+        copies = {p.name for p in (dossier / "images").glob("*.png")}
+        verifie(copies == {"a.png", "b.png", "d.png", "LENA_BASE.png"},
+                f"copie : {sorted(copies)}")
+        verifie("c.png" not in copies,
+                "l'image ecartee pour defaut objectif n'est PAS copiee")
+        verifie(sorted(res["exportes"]) == ["a.png", "b.png", "d.png"],
+                f"{len(res['exportes'])} image(s) exportees sur "
+                f"{len(res['file'])} dans la file")
+
+        print("\n[8] le manifeste dit ce qui n'est pas parti, et pourquoi")
+        m = json.loads((dossier / "manifeste.json").read_text(encoding="utf-8"))
+        verifie(sorted(m["non_exportees"]["sans_fichier"]) == ["f.png", "g.png"],
+                "les images sans fichier sont nommees")
+        raisons = {e["fichier"]: e["raison"] for e in m["non_exportees"]["defaut_objectif"]}
+        verifie(raisons.get("c.png") == ["mains_juge"],
+                "et chaque ecartee garde la raison de son exclusion")
+        verifie(m["ancre_reinjectee"] == "LENA_BASE.png",
+                "l'ANCRE est reinjectee — regle 7 : jamais seulement au premier "
+                "tour, sinon la boucle auto-consommatrice derive")
+        verifie(m["jeu_de_reference"]["id"] == d["jeu"]["id"]
+                and m["seuils"]["portillon_identite"] == 0.9,
+                "le manifeste garde l'etat du gabarit et le seuil qui a filtre")
+        verifie(all("lora_identite" in x for x in m["images"]),
+                "et la provenance de chaque image : une DERIVED reste "
+                "identifiable des annees plus tard")
+
+        print("\n[9] un export n'ecrase jamais le precedent")
+        res2 = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 9, 0, 0))
+        verifie(res2["dossier"] != dossier and res2["dossier"].is_dir(),
+                "deux exports = deux dossiers dates")
+        verifie(dossier.is_dir(), "et le premier est intact")
+        rate = ""
+        try:
+            en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 9, 0, 0))
+        except FileExistsError as e:
+            rate = str(e)
+        verifie(bool(rate),
+                "meme horodatage : on refuse plutot que d'ecraser un historique")
+
+        print("\n[10] deux personnages ne se melangent jamais")
         verifie("autre.png" not in noms
                 and "autre.png" not in {e["fichier"] for e in d["ecartes"]},
                 "l'image d'abyssiaelle n'apparait ni dans la file ni dans les "

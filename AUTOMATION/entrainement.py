@@ -24,9 +24,12 @@ sans effet sur l'identite (0.1 sigma contre le gabarit, 10/09). Seuls les axes
 de defaut OBJECTIF comptent ici -- une main a six doigts n'est pas un choix
 creatif (PROJET.md, amendement du 07/09).
 """
+import json
 import math
+import shutil
 import sys
 from collections import Counter
+from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -34,6 +37,12 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import base                                                    # noqa: E402
+
+OFM = HERE.parent
+# Hors de l'arbre de tri, comme PROD/_ANALYSES : un jeu d'entrainement n'est pas
+# une image de production, il ne doit pas apparaitre dans la Revue ni etre
+# ramasse par ce qui parcourt les buckets.
+RACINE_EXPORT = OFM / "PROD" / "_ENTRAINEMENT"
 
 # Axes de defaut objectif qui ecartent de la file. `flag` n'y est PAS, et c'est
 # la decision du 10/09 : la plateforme juge l'identite, l'humain juge
@@ -118,6 +127,25 @@ def candidats(cx, character_id):
     return {"jeu": actif, "file": file_, "ecartes": ecartes, "sans_etiquette": sans}
 
 
+def fichiers_sur_disque(character_id):
+    """nom -> chemin, dans l'arbre de production du personnage.
+
+    `_BATCH` (planches de contact) et `_BENCH` (sorties de banc) sont exclus :
+    ce ne sont pas des images de production, et un homonyme y ferait exporter
+    la mauvaise. `_NSFW` aussi — la file est SFW par construction
+    (`construire_jeu` filtre `espace = 'lena'`), et un nom identique des deux
+    cotes prendrait au hasard de l'ordre de parcours.
+    """
+    racine = OFM / "PROD" / character_id.upper()
+    out = {}
+    if racine.exists():
+        for f in racine.rglob("*.png"):
+            if {"_BATCH", "_BENCH", "_NSFW"} & set(f.parts):
+                continue
+            out.setdefault(f.name, f)
+    return out
+
+
 def proposition(cx, character_id, configuration=None):
     """Le rapport complet, avec un verdict PAR CRITERE et sa raison.
 
@@ -130,13 +158,21 @@ def proposition(cx, character_id, configuration=None):
     seuils = ((configuration or {}).get("entrainement") or {})
     d = candidats(cx, character_id)
     if d["jeu"] is None:
-        return {**d, "pret": False, "criteres": [],
+        return {**d, "pret": False, "criteres": [], "sans_fichier": [],
+                "diversite": diversite([]), "derives": 0, "cohesion": None,
+                "ecart_type": None, "outliers": [],
                 "blocage": "aucun jeu de reference actif : le gabarit n'existe "
                            "pas encore pour ce personnage"}
 
     file_ = d["file"]
+    # LA FILE ET CE QUI EST EXPORTABLE NE SONT PAS LE MEME NOMBRE, et le taire
+    # serait un mensonge de plus. La file raisonne sur des EMBEDDINGS, qui
+    # survivent en base a la disparition du PNG ; l'entrainement, lui, a besoin
+    # du fichier. Chez Lena au 10/09 : 27 dans la file, 24 sur le disque.
+    disque = fichiers_sur_disque(character_id)
     rapport = {**d, "diversite": diversite(file_),
                "derives": sum(1 for r in file_ if r["lora_identite"]),
+               "sans_fichier": [r for r in file_ if r["fichier"] not in disque],
                "cohesion": None, "ecart_type": None, "outliers": []}
 
     if file_:
@@ -179,6 +215,106 @@ def proposition(cx, character_id, configuration=None):
     return rapport
 
 
+def exporter(cx, character_id, configuration=None, quand=None):
+    """Rassemble le jeu d'entrainement dans un dossier date, avec son manifeste.
+
+    LE PONT QUI MANQUAIT. La plateforme savait sur quoi entrainer ; il fallait
+    encore ramasser les fichiers a la main, disperses entre les dossiers de
+    tri. Cette fonction les copie et ECRIT CE QU'ELLE A FAIT — c'est la regle 11
+    du mecanisme d'identite (cadrage du 09/09) : un entrainement doit etre
+    reproductible, donc on garde la liste exacte, les scores, les etiquettes,
+    la provenance de chaque image, et l'etat du gabarit au moment de l'export.
+    Sans ce releve, comparer deux LoRA au banc ne voudrait rien dire : on ne
+    saurait pas ce qui les separe.
+
+    L'ANCRE EST COPIEE AVEC. Regle 7 du mecanisme : la base gelee et les
+    candidats d'origine sont REINJECTES a chaque tour d'entrainement, jamais
+    seulement au premier. C'est ce qui empeche la boucle auto-consommatrice de
+    deriver (les sorties d'un LoRA v1 ne doivent pas devenir seules les donnees
+    d'origine de v2). Elle est copiee dans le meme dossier et signalee comme
+    telle dans le manifeste.
+
+    ON COPIE, on ne lie pas : un lien symbolique demande des droits sur Windows,
+    et un jeu d'entrainement qui pointe vers l'arbre de tri se briserait au
+    premier reclassement. 75 Mo pour Lena, le prix est nul.
+
+    Ne remplace jamais un export existant : le dossier porte la date et
+    l'heure. Un entrainement passe est une piece d'historique.
+    """
+    r = proposition(cx, character_id, configuration)
+    if r["jeu"] is None:
+        return {**r, "exportes": [], "dossier": None}
+
+    disque = fichiers_sur_disque(character_id)
+    a_copier = [(x, disque[x["fichier"]]) for x in r["file"]
+                if x["fichier"] in disque]
+    if not a_copier:
+        return {**r, "exportes": [], "dossier": None,
+                "blocage": "aucune image de la file n'a de fichier sur le disque"}
+
+    horodate = (quand or datetime.now()).strftime("%Y%m%d-%H%M%S")
+    dossier = RACINE_EXPORT / character_id / horodate
+    images = dossier / "images"
+    images.mkdir(parents=True, exist_ok=False)
+
+    for _, chemin in a_copier:
+        shutil.copy2(chemin, images / chemin.name)
+
+    ancre = None
+    nom_ancre = (configuration or {}).get("base_gelee")
+    if nom_ancre:
+        import env_config
+        src = env_config.comfyui_root() / "input" / nom_ancre
+        if src.exists():
+            shutil.copy2(src, images / src.name)
+            ancre = src.name
+
+    manifeste = {
+        "personnage": character_id,
+        "exporte_le": (quand or datetime.now()).isoformat(timespec="seconds"),
+        "jeu_de_reference": {
+            "id": r["jeu"]["id"], "sante": r["jeu"]["sante"],
+            "cohesion": r["jeu"]["cohesion"],
+            "modele_embedding": r["jeu"].get("modele"),
+        },
+        "seuils": {
+            "portillon_identite": (configuration or {}).get("qc", {}).get(
+                "threshold_gabarit"),
+            "entrainement": (configuration or {}).get("entrainement") or {},
+        },
+        "ancre_reinjectee": ancre,
+        "cohesion_de_la_file": r["cohesion"],
+        "diversite": {a: {"distinctes": v["distinctes"],
+                          "effectives": round(v["effectives"], 3),
+                          "sans": v["sans"]}
+                      for a, v in r["diversite"].items()},
+        "images": [{
+            "fichier": x["fichier"], "scene": x["scene"],
+            "intention": x["intention"], "ton": x["ton"], "format": x["format"],
+            "mains_juge": x["mains_juge"], "anatomie": x["anatomie"],
+            # Provenance (regle 6) : une image DERIVED sort d'un LoRA du
+            # personnage. Entrainer v2 dessus sans le savoir, c'est la boucle
+            # autophage.
+            "lora_identite": x["lora_identite"],
+        } for x, _ in a_copier],
+        "non_exportees": {
+            "sans_fichier": [x["fichier"] for x in r["sans_fichier"]],
+            "defaut_objectif": [{"fichier": e["fichier"], "raison": e["raison"]}
+                                for e in r["ecartes"]],
+        },
+        "criteres": r["criteres"],
+        "pret": r["pret"],
+        "blocage": r["blocage"],
+        "note": ("Legendage et convention de dossier kohya (« <repetitions>_"
+                 "<mot declencheur> ») restent a faire a la main : hors perimetre "
+                 "du cadrage 2026-09-09, § Hors perimetre."),
+    }
+    (dossier / "manifeste.json").write_text(
+        json.dumps(manifeste, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {**r, "exportes": [x["fichier"] for x, _ in a_copier],
+            "dossier": dossier, "ancre_reinjectee": ancre}
+
+
 def _critere(nom, valeur, seuil, texte):
     if seuil is None:
         return {"nom": nom, "valeur": valeur, "seuil": None,
@@ -190,7 +326,7 @@ def _critere(nom, valeur, seuil, texte):
             "message": f"{texte}, il en faut {seuil}"}
 
 
-def _main(character_id):
+def _main(character_id, export=False):
     """Un outil imprime, une bibliotheque logge (.claude/rules/backend.md)."""
     import runner as lb
     try:
@@ -199,7 +335,8 @@ def _main(character_id):
         print(f"  config.json illisible pour {character_id!r} : {e}")
         configuration = {}
     with base.ouvrir() as cx:
-        r = proposition(cx, character_id, configuration)
+        r = exporter(cx, character_id, configuration) if export \
+            else proposition(cx, character_id, configuration)
 
     if r["jeu"] is None:
         print(f"  {r['blocage']}")
@@ -212,6 +349,12 @@ def _main(character_id):
              if r["sans_etiquette"] else ""))
     print(f"    dont DERIVED            : {r['derives']}"
           + ("   (produites sous un LoRA du personnage)" if r["derives"] else ""))
+    if r["sans_fichier"]:
+        print(f"    SANS FICHIER sur disque : {len(r['sans_fichier'])}"
+              f"   -> {len(r['file']) - len(r['sans_fichier'])} reellement "
+              f"exportables")
+        for x in r["sans_fichier"]:
+            print(f"      {x['fichier']}")
     print(f"  ecartees (defaut objectif): {len(r['ecartes'])}")
     for axe in AXES_OBJECTIFS:
         n = sum(1 for e in r["ecartes"] if axe in e["raison"])
@@ -238,8 +381,25 @@ def _main(character_id):
     print(f"\n  {'PROPOSITION D ENTRAINEMENT PRETE' if r['pret'] else 'PAS DE PROPOSITION'}")
     if r["blocage"]:
         print(f"    {r['blocage']}")
+
+    if export:
+        if not r.get("dossier"):
+            print("\n  RIEN EXPORTE.")
+            return 1
+        print(f"\n  EXPORTE : {len(r['exportes'])} image(s)"
+              + (f" + l'ancre ({r['ancre_reinjectee']})"
+                 if r.get("ancre_reinjectee") else
+                 "   /!\\ ancre NON reinjectee : elle est introuvable"))
+        print(f"    {r['dossier']}")
+        print(f"    manifeste.json garde la liste exacte, les etiquettes, la")
+        print(f"    provenance de chaque image et l'etat du gabarit — sans quoi")
+        print(f"    comparer deux LoRA au banc ne voudrait rien dire.")
+        print(f"\n  Reste a faire a la main (hors perimetre du cadrage) : le")
+        print(f"  legendage et la convention de dossier kohya.")
     return 0
 
 
 if __name__ == "__main__":
-    sys.exit(_main(sys.argv[1].lower() if len(sys.argv) > 1 else "lena"))
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    sys.exit(_main(args[0].lower() if args else "lena",
+                   export="--exporter" in sys.argv))
