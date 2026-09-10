@@ -256,6 +256,108 @@ D'où le dossier `A_REVOIR` plutôt qu'une poubelle.
 
 ---
 
+## Le jeu d'entraînement d'un LoRA d'identité
+
+**Rien ne s'entraîne ici.** La plateforme prépare le jeu, l'utilisateur
+l'emporte sur une machine kohya. C'est un choix, pas un manque : l'atelier
+intégré est rangé à l'horizon du tableau de bord
+(`DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md`).
+
+### Voir sur quoi on entraînerait
+
+```bat
+python AUTOMATION/entrainement.py lena
+```
+
+La file part des membres du gabarit — ils ont déjà passé le portillon
+d'identité — et n'écarte qu'une chose de plus : le **défaut objectif**
+(`mains_juge`, `anatomie`). Le goût n'écarte jamais : une image jugée « ça
+fait IA » reste dans la file, c'est un jugement de réalisme que l'utilisateur
+final fait lui-même.
+
+Quatre nombres se ressemblent et ne sont pas le même, et l'outil les sépare :
+
+| | |
+|---|---|
+| **dans la file** | raisonne sur des empreintes, qui survivent en base à la disparition du PNG |
+| **exportables** | ce qui a réellement un fichier sur le disque |
+| **jamais étiquetées** | entrent, comptées à part : leur absence de défaut est supposée, pas connue |
+| **produites sous un LoRA** | `DERIVED` — entraîner v2 dessus sans le savoir, c'est la boucle autophage |
+
+Un critère sans seuil dans `config.json / entrainement` n'est ni tenu ni
+manqué : il est **injugeable**, et l'outil le dit plutôt que de conclure.
+Aucun seuil par défaut dans le code (invariant 4).
+
+### Sortir le jeu
+
+```bat
+python AUTOMATION/entrainement.py lena --exporter
+python AUTOMATION/entrainement.py lena --exporter --repetitions=5
+python AUTOMATION/entrainement.py lena --exporter --sans-vision
+```
+
+Le même geste existe dans l'écran **Entraînement** du studio (`/training`),
+qui montre en plus les écartées avec leur raison et l'historique des exports.
+Les deux appellent le même cœur.
+
+```
+PROD/_ENTRAINEMENT/<perso>/<horodatage>/
+  dataset/<répétitions>_<déclencheur>/   images + une légende .txt chacune
+  dataset.toml                            la ligne de commande sd-scripts
+  entrainer.sh                            idem, prête à lancer
+  kohya_config.json                       le champ « Configuration file » de la GUI
+  manifeste.json                          ce qui est parti, ce qui ne l'est pas, pourquoi
+```
+
+**L'ancre est copiée avec.** La base gelée est réinjectée à *chaque* tour
+d'entraînement, jamais seulement au premier : c'est ce qui empêche les sorties
+d'un LoRA v1 de devenir seules les données d'origine de v2.
+
+**Un export n'écrase jamais le précédent.** Le dossier porte l'horodatage, et
+un horodatage déjà pris est refusé : un entraînement passé est une pièce
+d'historique.
+
+### Les légendes
+
+Elles viennent du **prompt**, par substitution exacte de l'ancre par le mot
+déclencheur — 22 sur 22 chez Léna. Le légendeur de vision n'est qu'un repli,
+pour une image dont le prompt ne porte pas l'ancre, et la proposition annonce
+combien d'images en dépendront *avant* qu'on lance : c'est ce compte qui dit
+si un export coûte des secondes ou des minutes.
+
+Un garde-fou retire toute clause qui décrirait un **trait de visage** — le
+visage doit venir du LoRA, jamais du texte. Sur l'export de Léna du 10/09, il
+a élagué `freckles` et `eyes` sans jeter les descriptions de scène.
+
+### Entraîner, ailleurs
+
+Deux chemins, le même entraînement :
+
+- **ligne de commande** — `bash entrainer.sh`, les chemins de modèles sont des
+  variables d'environnement (`SD_SCRIPTS`, `MODELES`) ;
+- **GUI kohya_ss** (c'est le chemin de MimicPC) — charger `kohya_config.json`
+  dans « Configuration file », puis remplir les six chemins qui dépendent de la
+  machine : les quatre modèles, `train_data_dir` et `output_dir`.
+
+`kohya_config.json` n'est pas une recette maison : c'est le préset officiel de
+kohya_ss vendoré verbatim (`AUTOMATION/kohya_presets/`, avec la date de son
+relevé), avec par-dessus les seules valeurs que le jeu détermine — dossier,
+déclencheur, `keep_tokens`, résolution, nombre de pas déduit du lot. Un test
+échoue si les deux recettes cessent de dire la même chose.
+
+La recette suit `universe.json / model_family` du **pack**, jamais le
+personnage. Une famille sans préset amont qui fasse autorité (`sdxl`) sort sans
+`kohya_config.json` : pas de recette plutôt qu'une fausse.
+
+### Ce qui revient
+
+Le `.safetensors` et rien d'autre. Il se pose dans `models/loras/`, se déclare
+dans `CHARACTERS/<perso>/config.json / identity / lora` (`name`, `strength`,
+`trigger_word`), et le rôle `character_lora` du graphe le charge. Puis le
+banc : c'est lui qui dit si le LoRA desserre le curseur identité/texture.
+
+---
+
 ## Décrire une intention plutôt qu'écrire un prompt
 
 Depuis le 24/08/2026 le composeur produit le **nouveau schéma** : prompt sans

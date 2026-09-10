@@ -99,8 +99,8 @@
     {
       "id": "IT-3d",
       "titre": "Le LoRA de Léna existe, ou le renoncement est écrit",
-      "state": "next",
-      "quoi": "Le mécanisme est livré, le LoRA ne l'est pas. Ce qui manque n'est pas du code : l'entraînement lui-même, hors plateforme (kohya), des heures de GPU et la main de Pierre. Elle passe avant IT-4 parce que la semaine de production fait passer chaque image par le curseur identité/texture, mesuré comme un troc le 09/09 : la lancer sans savoir si le LoRA le desserre, c'est produire sept jours d'images et l'apprendre après. entrainement.n_min et diversite_min attendent le même chiffre.",
+      "state": "now",
+      "quoi": "Le mécanisme est livré, le LoRA ne l'est pas. Le jeu est sorti le 10/09 : 24 images et l'ancre, légendées, avec la recette kohya. Ce qui manque n'est pas du code, c'est des heures de GPU hors plateforme. Elle passe avant IT-4 parce que la semaine de production fait passer chaque image par le curseur identité/texture, mesuré comme un troc le 09/09 : la lancer sans savoir si le LoRA le desserre, c'est produire sept jours d'images et l'apprendre après.",
       "dod": "Un chiffre écrit, dans un sens ou dans l'autre. Soit le banc montre que le LoRA desserre le curseur, et le réglage retenu part dans config.json avec le poids PuLID qu'il a fallu bouger. Soit il montre que non : le renoncement s'écrit dans DOCS/recherche/, comme le flou de fond et le juge pixel, et IT-4 tourne sur PuLID tel quel, en le sachant.",
       "epics": "E2",
       "ref": "DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1, points 4 à 6) — ADR-0021 pour le banc"
@@ -244,7 +244,7 @@
           "s": "fait",
           "it": "IT-3c",
           "t": "File d'entraînement : candidats et proposition",
-          "d": "`AUTOMATION/entrainement.py` dit sur quoi on entraînerait et si c'est assez ; il ne lance rien, et n'écarte que le défaut objectif : sur Léna, file de 27. `--exporter` écrit un dossier daté qui tourne tel quel sur une machine kohya : images, légendes, manifeste, `dataset.toml`, `entrainer.sh`."
+          "d": "`AUTOMATION/entrainement.py` dit sur quoi on entraînerait et si c'est assez ; il ne lance rien, et n'écarte que le défaut objectif : sur Léna, file de 27. `--exporter` écrit un dossier daté qui tourne tel quel sur une machine kohya, par la ligne de commande ou par la GUI."
         },
         {
           "s": "fait",
@@ -256,7 +256,7 @@
           "t": "Écran du jeu d'entraînement",
           "s": "fait",
           "it": "IT-3d",
-          "d": "`/training`, huitième destination : la file, les écartées avec leur raison, la diversité, les critères, et l'export lancé depuis l'écran. Trois routes en lecture, une en écriture refusée pendant une production. Tests : test_training_api, test_training."
+          "d": "`/training`, huitième destination : la file, les écartées avec leur raison, la diversité, les critères, et l'export lancé depuis l'écran. Trois routes, une écriture refusée pendant une production. Tests : test_training_api, test_training."
         }
       ]
     },
