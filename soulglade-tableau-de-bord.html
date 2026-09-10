@@ -188,7 +188,7 @@ mondes, publication — attend ce résultat.</p>
    Ce gabarit ne porte aucun contenu : un changement d'état va dans le JSON,
    un changement de rendu vient ici. La page n'est jamais éditée à la main. */
 const D = {
-  "maj": "9 septembre 2026",
+  "maj": "10 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -259,10 +259,28 @@ const D = {
       "ref": "DOCS/cadrage/2026-09-08-phase-rd-juge-generaliste.md (amendé deux fois le 09/09) — DOCS/recherche/2026-09-09-mains-l-etage-qui-divise-le-taux-par-trois.md"
     },
     {
+      "id": "IT-3c",
+      "titre": "Le mécanisme d'identité, de l'ancre au jeu d'entraînement",
+      "state": "done",
+      "quoi": "Chantier ouvert le 09/09 sur les deux points d'E2 — centroïde évolutif et LoRA d'identité — par une phase de recherche que Pierre a demandée. Elle a rendu son verdict : L'ANCRE N'EST PAS LE GABARIT. L'ancre gelée dit QUI est le personnage et ne bouge jamais ; le gabarit dit CONTRE QUOI on le mesure et il est versionné. Les confondre était le défaut de fond, et une photographie unique et figée est une référence hors distribution de la production qu'on lui compare. Mesuré : les 29 images qui portaient un embedding scoraient TOUTES plus haut contre leurs pairs que contre leur ancre. La phase a aussi trouvé un défaut de production que rien ne signalait — le QC d'identité était partagé entre personnages, et une image de Léna avait été mesurée contre l'ancre d'Abyssiaelle puis classée REJET. Le reste s'est enchaîné : le portillon devient relatif et CONVERGE (30 → 44 → 45 → 45 membres, santé qui monte), la file d'entraînement écarte le défaut objectif sans jamais arbitrer le goût, l'export produit un dossier daté avec son manifeste, et le légendage tombe d'une découverte plutôt que d'un outil : `scenes.json` porte déjà l'identité dans un champ `anchor`, donc la légende est `prompt.replace(anchor, déclencheur)`, une substitution exacte. Parité Flux/SDXL branchée au passage, graphe de Léna édité et validé visuellement par Pierre.",
+      "dod": "ATTEINTE. Le gabarit est réel, mesuré et convergent ; la file d'entraînement existe et motive chacun de ses refus ; un jeu exportable part avec ses légendes et son manifeste ; Léna peut porter un LoRA d'identité. Sept commits, six suites de tests neuves, aucune régression. Ce qui reste — entraîner et mesurer au banc — est une itération à part parce qu'il demande des heures de GPU et la main de Pierre, pas du code.",
+      "epics": "E2",
+      "ref": "DOCS/recherche/2026-09-09-l-ancre-n-est-pas-le-gabarit.md — DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md — DOCS/cadrage/2026-09-10-legendage-du-jeu-d-entrainement.md"
+    },
+    {
+      "id": "IT-3d",
+      "titre": "Le LoRA de Léna existe, ou le renoncement est écrit",
+      "state": "next",
+      "quoi": "Tout est branché et rien n'est prouvé. Le jeu d'entraînement est exporté, légendé, manifesté ; le graphe de Léna porte son nœud de LoRA d'identité, validé dans ComfyUI ; le mécanisme d'injection est partagé entre les deux familles de modèle. Ce qui manque n'est pas du code : c'est l'ENTRAÎNEMENT lui-même, hors plateforme (kohya), des heures de GPU et la main de Pierre — plus la convention de dossier et le nombre de répétitions, qui sont des réglages d'entraînement et pas du légendage. POURQUOI AVANT IT-4 : la semaine de production d'IT-4 fait passer chaque image par le curseur identité/texture, dont on a mesuré le 09/09 qu'il échange l'un contre l'autre (identity_weight 0.85 → 0.65 : −0,092 d'identité à 6,2 σ). Lancer la semaine sans savoir si le LoRA desserre ce curseur, c'est produire sept jours d'images et l'apprendre après. Deux réglages attendent aussi ce chiffre : `entrainement.n_min` et `diversite_min` ne se devinent pas, ils se mesurent APRÈS un premier entraînement — 27 images à 8,9 scènes effectives suffisent-elles ? Seul le banc le dira.",
+      "dod": "Un chiffre écrit, dans un sens ou dans l'autre. SOIT le banc montre que le LoRA desserre le curseur — l'identité tient à texture égale ou meilleure — et le réglage retenu est écrit dans config.json, en connaissance du poids PuLID qu'il a fallu bouger (l'IPAdapter d'Abyssiaelle avait dû descendre à 0.0). SOIT il montre que non, et le renoncement est écrit dans DOCS/recherche/, au même titre que le flou de fond et le juge pixel — et IT-4 tourne sur PuLID tel quel, en le sachant.",
+      "epics": "E2",
+      "ref": "DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1, points 4 à 6) — ADR-0021 pour le banc"
+    },
+    {
       "id": "IT-4",
       "state": "next",
       "titre": "Produire une semaine sans être ralenti",
-      "quoi": "Contenu à remplir depuis ton usage réel, pas depuis le code — ce qui te coûte du temps une fois que le rendu est bon. Le bloquant nommé le 08/09 (rendu de peau et de fond, E5) est levé et a CHANGÉ D'EPIC : IT-3b a fermé le fond par renoncement écrit, et la peau sur un constat d'architecture — identité et texture sont le même curseur. Ce qu'il en reste est le LoRA d'identité (E2), cadré le 09/09 en préalable à cette itération. Le journal de frictions est ouvert avant le jour 1 : le contenu de l'itération vient de la semaine, jamais du code. Autres candidats repérés : garde-robe en dur dans le front, absence de file d'attente serveur, créateur de lumière manquant — aucun n'est un prérequis de la semaine, et le créateur de lumière porte le garde-fou hérité du flou de fond : si le levier passe par le prompt, le mesurer AVANT de construire l'écran.",
+      "quoi": "Contenu à remplir depuis ton usage réel, pas depuis le code — ce qui te coûte du temps une fois que le rendu est bon. Le bloquant nommé le 08/09 (rendu de peau et de fond, E5) est levé et a CHANGÉ D'EPIC : IT-3b a fermé le fond par renoncement écrit, et la peau sur un constat d'architecture — identité et texture sont le même curseur. Ce qu'il en reste est le LoRA d'identité (E2) : le mécanisme est livré (IT-3c), mais le LoRA lui-même n'existe pas encore — c'est IT-3d, et elle reste le préalable de cette semaine. Le journal de frictions est ouvert avant le jour 1 : le contenu de l'itération vient de la semaine, jamais du code. Autres candidats repérés : garde-robe en dur dans le front, absence de file d'attente serveur, créateur de lumière manquant — aucun n'est un prérequis de la semaine, et le créateur de lumière porte le garde-fou hérité du flou de fond : si le levier passe par le prompt, le mesurer AVANT de construire l'écran.",
       "dod": "Une semaine de production réelle sans contournement manuel noté, et chaque friction relevée est soit corrigée, soit versée au backlog avec sa raison.",
       "epics": "E3, E4",
       "ref": "DOCS/cadrage/2026-09-09-it4-frictions.md — préalable : DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md"
