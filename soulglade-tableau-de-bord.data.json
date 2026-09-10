@@ -975,6 +975,14 @@
       {
         "t": "Justifier un rejet, et que la plateforme en apprenne",
         "d": "(10 septembre 2026) Idée de Pierre le jour où il a annoté ses rejets dans un tableur : l'utilisateur devrait pouvoir dire pourquoi il rejette, et cette raison servirait à la plateforme. La moitié du chemin existe : `mesures.ETIQUETTES` porte déjà `anatomie` et `mains_juge` sur des axes séparés du flag, 53 images étiquetées. Manquent le vocabulaire, que son CSV nomme lui-même (identité, texture de peau, anatomie), et l'écran qui pose l'étiquette au moment du rejet. Hors parcours nominal."
+      },
+      {
+        "t": "Atelier d'entraînement intégré",
+        "d": "(10 septembre 2026) L'entraînement d'un LoRA d'identité se fait hors plateforme : le jeu exporté part avec sa recette kohya vers une machine louée. L'intégrer demande de trancher quelle couche le porte, et ne se justifie que si le LoRA desserre le curseur identité/texture. Candidat nommé le 09/09 : ComfyUI-FluxTrainer, même environnement Python, l'entraînement devient un job de la file ComfyUI. Cadrage : 2026-09-09-lora-identite-par-personnage.md, étages 2 et 3."
+      },
+      {
+        "t": "Production sur GPU distant",
+        "d": "(10 septembre 2026) Pointer COMFY_URL vers un pod loué marche déjà pour la soumission : le canal de commande est HTTP, et le QC d'identité tourne en CPU. Le verrou est le disque partagé, une vingtaine de sites qui échangent les fichiers par COMFY_INPUT et COMFY_OUTPUT ; ComfyUI expose /upload/image et /view, donc un adaptateur plutôt qu'une refonte. Ce qui décide est ailleurs : 40 Go de modèles par pod, et pousser l'identité d'un personnage chez un tiers appartient à l'utilisateur."
       }
     ]
   },
