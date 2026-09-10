@@ -37,6 +37,7 @@ if str(HERE) not in sys.path:
     sys.path.insert(0, str(HERE))
 
 import base                                                    # noqa: E402
+import legende                                                 # noqa: E402
 
 OFM = HERE.parent
 # Hors de l'arbre de tri, comme PROD/_ANALYSES : un jeu d'entrainement n'est pas
@@ -107,6 +108,7 @@ def candidats(cx, character_id):
     lignes = [dict(r) for r in cx.execute(
         "SELECT i.id AS id, i.fichier AS fichier, i.scene AS scene, "
         "       i.intention AS intention, i.ton AS ton, i.format AS format, "
+        "       i.prompt AS prompt, "
         "       i.lora_identite AS lora_identite, e.vec AS vec, "
         "       j.anatomie AS anatomie, j.mains_juge AS mains_juge "
         "FROM reference_member m "
@@ -215,7 +217,41 @@ def proposition(cx, character_id, configuration=None):
     return rapport
 
 
-def exporter(cx, character_id, configuration=None, quand=None):
+def trigger_du_personnage(character_id, configuration, ecrire=True):
+    """Le mot declencheur du personnage, cree s'il n'en a pas encore.
+
+    DETERMINISTE et ECRIT UNE SEULE FOIS. Un declencheur deja choisi ne se
+    reecrit jamais : il est grave dans le LoRA entraine avec lui, et le changer
+    rendrait muet un LoRA qui marchait. On l'ecrit donc dans le config.json
+    seulement s'il est absent, et on rend aussi ce qu'on a fait pour que
+    l'outil puisse le dire a l'ecran.
+    """
+    lora = ((configuration or {}).get("identity") or {}).get("lora") or {}
+    existant = (lora.get("trigger_word") or "").strip()
+    if existant:
+        return existant, False
+    propose = legende.declencheur(character_id)
+    if not ecrire:
+        return propose, False
+    import runner as lb
+    chemin = lb.config_path(character_id)
+    d = json.loads(Path(chemin).read_text(encoding="utf-8"))
+    d.setdefault("identity", {}).setdefault("lora", {})["trigger_word"] = propose
+    Path(chemin).write_text(json.dumps(d, ensure_ascii=False, indent=2) + "\n",
+                            encoding="utf-8")
+    return propose, True
+
+
+def _anchor_du_personnage(character_id):
+    """Le champ `anchor` de scenes.json — l'identite en toutes lettres."""
+    try:
+        import runner as lb
+        return (lb.load_scenes(character_id) or {}).get("anchor") or ""
+    except Exception:                                    # noqa: BLE001
+        return ""
+
+
+def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True):
     """Rassemble le jeu d'entrainement dans un dossier date, avec son manifeste.
 
     LE PONT QUI MANQUAIT. La plateforme savait sur quoi entrainer ; il fallait
@@ -257,8 +293,23 @@ def exporter(cx, character_id, configuration=None, quand=None):
     images = dossier / "images"
     images.mkdir(parents=True, exist_ok=False)
 
-    for _, chemin in a_copier:
+    trigger, trigger_cree = trigger_du_personnage(character_id, configuration)
+    anchor = _anchor_du_personnage(character_id)
+    legendes = {}
+
+    def _legender(chemin, ligne, est_ancre=False):
+        texte, source = legende.legender(
+            chemin, ligne=ligne, anchor=anchor, trigger=trigger,
+            avec_vision=avec_vision, est_ancre=est_ancre)
+        if texte:
+            # convention kohya : <nom>.txt a cote de <nom>.png
+            (images / (chemin.stem + ".txt")).write_text(texte + "\n",
+                                                         encoding="utf-8")
+        legendes[chemin.name] = {"legende": texte, "source": source}
+
+    for ligne, chemin in a_copier:
         shutil.copy2(chemin, images / chemin.name)
+        _legender(images / chemin.name, ligne)
 
     ancre = None
     nom_ancre = (configuration or {}).get("base_gelee")
@@ -268,6 +319,7 @@ def exporter(cx, character_id, configuration=None, quand=None):
         if src.exists():
             shutil.copy2(src, images / src.name)
             ancre = src.name
+            _legender(images / src.name, {}, est_ancre=True)
 
     manifeste = {
         "personnage": character_id,
@@ -283,6 +335,8 @@ def exporter(cx, character_id, configuration=None, quand=None):
             "entrainement": (configuration or {}).get("entrainement") or {},
         },
         "ancre_reinjectee": ancre,
+        "declencheur": trigger,
+        "declencheur_cree": trigger_cree,
         "cohesion_de_la_file": r["cohesion"],
         "diversite": {a: {"distinctes": v["distinctes"],
                           "effectives": round(v["effectives"], 3),
@@ -296,7 +350,12 @@ def exporter(cx, character_id, configuration=None, quand=None):
             # personnage. Entrainer v2 dessus sans le savoir, c'est la boucle
             # autophage.
             "lora_identite": x["lora_identite"],
+            # D'ou vient la legende : sans ce releve, on ne saurait pas des mois
+            # plus tard laquelle des sources a produit quoi.
+            "legende": legendes.get(x["fichier"], {}).get("legende", ""),
+            "source_legende": legendes.get(x["fichier"], {}).get("source", ""),
         } for x, _ in a_copier],
+        "legende_ancre": legendes.get(ancre, {}) if ancre else {},
         "non_exportees": {
             "sans_fichier": [x["fichier"] for x in r["sans_fichier"]],
             "defaut_objectif": [{"fichier": e["fichier"], "raison": e["raison"]}
@@ -305,14 +364,17 @@ def exporter(cx, character_id, configuration=None, quand=None):
         "criteres": r["criteres"],
         "pret": r["pret"],
         "blocage": r["blocage"],
-        "note": ("Legendage et convention de dossier kohya (« <repetitions>_"
-                 "<mot declencheur> ») restent a faire a la main : hors perimetre "
-                 "du cadrage 2026-09-09, § Hors perimetre."),
+        "note": ("La convention de dossier kohya (« <repetitions>_<mot "
+                 "declencheur> ») et le nombre de repetitions restent a faire a "
+                 "la main : reglage d'entrainement, pas de legendage. Cadrage : "
+                 "DOCS/cadrage/2026-09-10-legendage-du-jeu-d-entrainement.md"),
     }
     (dossier / "manifeste.json").write_text(
         json.dumps(manifeste, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     return {**r, "exportes": [x["fichier"] for x, _ in a_copier],
-            "dossier": dossier, "ancre_reinjectee": ancre}
+            "dossier": dossier, "ancre_reinjectee": ancre,
+            "declencheur": trigger, "declencheur_cree": trigger_cree,
+            "legendes": legendes}
 
 
 def _critere(nom, valeur, seuil, texte):
@@ -326,7 +388,7 @@ def _critere(nom, valeur, seuil, texte):
             "message": f"{texte}, il en faut {seuil}"}
 
 
-def _main(character_id, export=False):
+def _main(character_id, export=False, avec_vision=True):
     """Un outil imprime, une bibliotheque logge (.claude/rules/backend.md)."""
     import runner as lb
     try:
@@ -335,8 +397,8 @@ def _main(character_id, export=False):
         print(f"  config.json illisible pour {character_id!r} : {e}")
         configuration = {}
     with base.ouvrir() as cx:
-        r = exporter(cx, character_id, configuration) if export \
-            else proposition(cx, character_id, configuration)
+        r = exporter(cx, character_id, configuration, avec_vision=avec_vision) \
+            if export else proposition(cx, character_id, configuration)
 
     if r["jeu"] is None:
         print(f"  {r['blocage']}")
@@ -391,15 +453,23 @@ def _main(character_id, export=False):
                  if r.get("ancre_reinjectee") else
                  "   /!\\ ancre NON reinjectee : elle est introuvable"))
         print(f"    {r['dossier']}")
+        marque = "  (CREE et ecrit dans config.json)" if r.get("declencheur_cree") else ""
+        print(f"\n  declencheur : {r.get('declencheur')}{marque}")
+        par_source = Counter(v["source"] for v in (r.get("legendes") or {}).values())
+        print(f"  legendes ({sum(par_source.values())} fichier(s) .txt) :")
+        for src, n in par_source.most_common():
+            print(f"    {n:>3}  {src}")
         print(f"    manifeste.json garde la liste exacte, les etiquettes, la")
         print(f"    provenance de chaque image et l'etat du gabarit — sans quoi")
         print(f"    comparer deux LoRA au banc ne voudrait rien dire.")
-        print(f"\n  Reste a faire a la main (hors perimetre du cadrage) : le")
-        print(f"  legendage et la convention de dossier kohya.")
+        print(f"\n  Reste a faire a la main (hors perimetre du cadrage) : la")
+        print(f"  convention de dossier kohya « <repetitions>_<declencheur> »")
+        print(f"  et le nombre de repetitions — reglages d'entrainement.")
     return 0
 
 
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     sys.exit(_main(args[0].lower() if args else "lena",
-                   export="--exporter" in sys.argv))
+                   export="--exporter" in sys.argv,
+                   avec_vision="--sans-vision" not in sys.argv))

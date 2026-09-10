@@ -82,7 +82,12 @@ def injecter_lora(api, roles, character_config, mecanisme):
     knobs = api[str(role["id"])]["inputs"]
     knobs["lora_name"] = lora["name"]
     knobs["strength_model"] = float(lora.get("strength", 1.0))
-    trigger = (lora.get("trigger_word") or "").strip()
+    # `trigger_actif` (defaut vrai) : l'utilisateur final peut couper l'ajout
+    # automatique du mot declencheur au prompt, tout en gardant le LoRA charge.
+    # Demande par Pierre le 10/09 avec le legendage -- l'ecran qui bascule ce
+    # reglage viendra avec l'UI de ce module.
+    trigger = ((lora.get("trigger_word") or "").strip()
+               if lora.get("trigger_actif", True) else "")
     if trigger:
         positive = roles.get("positive")
         if positive:

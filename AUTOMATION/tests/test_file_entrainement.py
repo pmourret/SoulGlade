@@ -199,10 +199,17 @@ try:
         (entree / "LENA_BASE.png").write_bytes(b"\x89PNG\r\n\x1a\n")
         env_config.comfyui_root = lambda: racine
 
+        # `trigger_word` fourni EXPRES : sans lui, `trigger_du_personnage` en
+        # creerait un et l'ecrirait dans le vrai CHARACTERS/lena/config.json.
+        # Un test n'ecrit jamais hors de son dossier temporaire.
         cfg = {"base_gelee": "LENA_BASE.png",
+               "identity": {"lora": {"trigger_word": "essaitrig"}},
                "qc": {"threshold_gabarit": 0.9},
                "entrainement": {"n_min": 3, "diversite_min": 2.0}}
-        res = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 8, 0, 0))
+        # avec_vision=False : ce test ne doit jamais toucher ComfyUI, et les
+        # « images » sont des octets PNG factices que rien ne saurait lire.
+        res = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 8, 0, 0),
+                          avec_vision=False)
         dossier = res["dossier"]
         copies = {p.name for p in (dossier / "images").glob("*.png")}
         verifie(copies == {"a.png", "b.png", "d.png", "LENA_BASE.png"},
@@ -230,8 +237,25 @@ try:
                 "et la provenance de chaque image : une DERIVED reste "
                 "identifiable des annees plus tard")
 
+        print("\n[8b] chaque image emporte sa legende, et sa source")
+        txts = {p.stem for p in (dossier / "images").glob("*.txt")}
+        pngs = {p.stem for p in (dossier / "images").glob("*.png")}
+        verifie(txts == pngs,
+                f"un .txt par image, convention kohya ({len(txts)}/{len(pngs)})")
+        verifie(all(x.get("source_legende") for x in m["images"]),
+                "le manifeste dit d'ou vient chaque legende")
+        verifie(all(x["legende"].startswith(m["declencheur"]) for x in m["images"]),
+                f"toutes commencent par le declencheur ({m['declencheur']}) — "
+                f"la constance du jeton est ce que la pratique demande le plus")
+        verifie(m["legende_ancre"]["source"] == "ancre",
+                "et l'ancre reinjectee a sa legende neutre a elle")
+        import legende as lg
+        verifie(all(lg.terme_de_visage(x["legende"]) is None for x in m["images"]),
+                "aucune legende ne decrit un trait de visage")
+
         print("\n[9] un export n'ecrase jamais le precedent")
-        res2 = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 9, 0, 0))
+        res2 = en.exporter(cx, "lena", cfg, quand=_dt(2026, 9, 10, 9, 0, 0),
+                           avec_vision=False)
         verifie(res2["dossier"] != dossier and res2["dossier"].is_dir(),
                 "deux exports = deux dossiers dates")
         verifie(dossier.is_dir(), "et le premier est intact")

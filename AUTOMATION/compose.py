@@ -64,27 +64,23 @@ TAGS_COURANTS = ("interieur", "exterieur", "matin", "jour", "soir", "assise",
 
 
 def build_graph(intention, count, creative, seed):
+    """Le graphe du modele local, monte par `llm_local`.
+
+    Ce graphe etait ecrit ici, et il l'a ete une seconde fois le 10/09 pour le
+    legendage du jeu d'entrainement. Deux implementations de la meme
+    conversation avec ComfyUI, c'est la faute qui a coute deux corrections
+    cette semaine — d'ou l'extraction. Les valeurs d'echantillonnage sont
+    celles d'origine, inchangees.
+    """
     prompt = SYSTEM % {
         "intentions": ", ".join(i["key"] for i in creative.get("intentions", []))
                       or "lifestyle",
         "tones": ", ".join(t["key"] for t in creative.get("tones", [])) or "doux",
         "tags": ", ".join(TAGS_COURANTS),
         "n": count, "intention": intention}
-    return {
-        "1": {"class_type": "CLIPLoader",
-              "inputs": {"clip_name": CLIP_MODEL, "type": "krea2", "device": "default"}},
-        "2": {"class_type": "TextGenerate",
-              "inputs": {"clip": ["1", 0], "prompt": prompt,
-                         "max_length": 260 * count,
-                         "sampling_mode": "on",
-                         "sampling_mode.temperature": 0.75,
-                         "sampling_mode.top_k": 64,
-                         "sampling_mode.top_p": 0.95,
-                         "sampling_mode.min_p": 0.05,
-                         "sampling_mode.repetition_penalty": 1.05,
-                         "sampling_mode.seed": seed}},
-        "3": {"class_type": "PreviewAny", "inputs": {"source": ["2", 0]}},
-    }
+    import llm_local
+    return llm_local.graphe_texte(prompt, seed=seed, max_length=260 * count,
+                                  temperature=0.75)
 
 
 def _json_objects(text):
