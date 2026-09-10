@@ -34,6 +34,11 @@ fermée, décision actée, entrée horizon), régénérer :
 
     python AUTOMATION/tools/build_tableau_de_bord.py
 
+Toute édition de ce fichier suit le skill `tableau-de-bord` : ce qui vit
+ici (l'état) et ce qui vit dans `DOCS/` (le raisonnement), les plafonds
+d'écriture qui gardent la page lisible, le rattachement d'un travail à
+son itération.
+
 `--check` vérifie que le HTML committé correspond aux données ; le hook
 pre-commit bloque un commit du `.data.json` si le HTML n'a pas été
 régénéré. Le gabarit `AUTOMATION/tools/templates/tableau-de-bord.html`
