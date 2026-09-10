@@ -797,7 +797,22 @@ const D = {
         {
           "s": "veille",
           "t": "Pas de cran d'édition pour le pack RPG",
-          "d": "dépend du graphe d'édition SDXL (E5)"
+          "d": "Décision du 10/09 : l'exploration se concentre sur Léna. La théorie doit rester agnostique, sa vérification attend un second personnage armé."
+        },
+        {
+          "s": "dette",
+          "t": "Le corps n'est mesuré nulle part",
+          "d": "Toutes les mesures portent sur le visage ou sur le fond. La seule branche où le corps est le sujet n'a aucun instrument : 77 % des images NSFW sont jugées « ia » contre 56 % en SFW, sans qu'un chiffre dise pourquoi. Cadrage du 10/09."
+        },
+        {
+          "s": "dette",
+          "t": "La voie d'édition ne répare pas les mains",
+          "d": "La production porte le groupe HandDetailer depuis le 09/09 ; le graphe d'édition ne déclare aucun rôle handdetailer. 7 des 10 mains jugées côté NSFW sont cassées."
+        },
+        {
+          "s": "faire",
+          "t": "Scène NSFW native, en plus de l'édition",
+          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. La question ouverte est le modèle, pas le pipeline. Son revers se décide avec elle : ouvrir la voie native ouvre celle du nu involontaire en SFW."
         }
       ]
     },
@@ -984,6 +999,16 @@ const D = {
   ],
   "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
   "decisions": [
+    {
+      "e": "tranche",
+      "t": "Le NSFW a deux voies, et l'édition reste la première",
+      "d": "ADR-0003 amendé le 10/09. Ce qu'il écartait, la génération native dans chaque outil, reste écarté pour le même motif. Ce que Pierre demande n'avait pas été considéré : un palier de plus sur le pipeline produce existant, même execute_jobs, mêmes rôles, même verrou d'identité. L'invariant 9 tient. Non tranché : quel modèle rend ce palier possible, le checkpoint Flux de Léna n'étant pas fait pour ça."
+    },
+    {
+      "e": "ouvert",
+      "t": "À quoi sert une image NSFW une fois produite",
+      "d": "Pierre tranche l'usage : plateformes tierces et usage personnel. Il conditionne l'alimentation de l'identité aux taux, et ils se contredisent : identité 0,757 contre 0,739 en SFW, jugement humain 77 % « ia » contre 56 %. La condition n'est décidable qu'après la mesure du corps. Deux obstacles concrets : construire_jeu filtre espace = lena, et l'export NSFW est refusé en dur."
+    },
     {
       "e": "ouvert",
       "t": "JoyCaption est rangé, pas écarté — et le moment de l'ouvrir est nommé",
