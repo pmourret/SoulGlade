@@ -23,3 +23,9 @@ Notes à ce jour :
   v362 (workflows curatés, custom nodes, familles de modèles, outils
   d'identité/retouche) comme source d'inspiration pour le panel d'outils
   SoulGlade.
+- `2026-09-10-maestro-blizaine.md` — Maestro (Blizaine), studio local
+  tout-en-un lu au README seul : installation des outils tiers par Pinokio,
+  navigateur de LoRA intégré, personnage portable en un fichier.
+- `2026-09-10-pinokio-distribution.md` — le système de distribution Pinokio
+  (lanceur = dépôt git de scripts déclaratifs, gestionnaires de paquets et
+  prérequis AI portés par le runtime) comme candidat pour E10.
