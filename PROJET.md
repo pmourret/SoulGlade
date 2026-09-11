@@ -50,12 +50,29 @@ Non-cibles V1 : néophyte complet en IA générative ; utilisateur qui veut
 publier automatiquement sans intervention ; opérateur multi-utilisateur en
 SaaS.
 
+**Amendé le 2026-09-11.** Pierre est l'utilisateur zéro. Sa production
+(Léna, Abyssiaelle) est le premier usage réel du studio et sa vitrine : la
+qualité mesurée de ce qu'elle produit est un chantier V1 à part entière,
+pas une dérive. Elle ne remplace pas la cible pour autant. La séquence
+porte les deux pistes, et aucune ne pilote seule l'ordre du tableau de
+bord : un chantier passe le test de la règle 2 s'il sert la première
+publication d'un tiers, ou la qualité mesurée de la production de
+l'utilisateur zéro
+(`DOCS/cadrage/2026-09-11-seance-cadrage-global.md`).
+
 ## Aha moment
 
 Un utilisateur exécute le parcours complet du néant à la publication :
 installation, création d'un personnage, production d'une image
 satisfaisante, export prêt-à-poster. La V1 est finie quand ce parcours est
 possible sans intervention extérieure.
+
+**Amendé le 2026-09-11.** L'installation V1 est un installeur maison,
+livré dans le dépôt : il assemble la chaîne d'outils portable et le
+provisioning par manifeste (ADR-0022) qui existent déjà, plutôt que de
+faire du produit l'invité d'un runtime tiers. Un modèle qui ne se
+télécharge pas automatiquement reste un geste humain, demandé par un
+message actionnable.
 
 ## Positionnement
 
@@ -80,6 +97,17 @@ un plan large.
 - La base plateforme reste open source, gratuite, sans dégradation
   fonctionnelle
 
+**Amendé le 2026-09-11.** Ce qui se vend est un **abonnement**, pas un
+monde à l'acte. Un monde est une donnée : il se copie une fois vendu, et
+ce que l'abonnement paie, c'est la cadence, la curation et le canal
+officiel. Un monde vendu porte ses catalogues (lieux, intentions, tons) et
+son style sous forme d'un LoRA appliqué sur le checkpoint du pack. Le
+checkpoint reste au pack, parce qu'en changer périme les mesures
+d'identité. Un pack vendu peut porter une branche NSFW, sur le même rail.
+Pas de test de marché isolé : une chaîne dédiée, un Instagram et un
+Discord SoulGlade s'ouvrent et s'alimentent quand les premiers packs de
+base sont disponibles.
+
 **Licence, arrêtée le 2026-09-07 (ADR-0026).** La base est publiée sous
 AGPL-3.0 : un tiers qui la déploie en service en ligne doit publier ses
 modifications. Un pack de monde est un jeu de données, jamais un graphe
@@ -97,6 +125,10 @@ propriété exclusive, donc la double licence, donc le modèle.
 
 Citoyen de première classe du produit. Activable par personnage, désactivé
 par défaut. Aucun sous-système parallèle : recompose les outils existants.
+
+**Amendé le 2026-09-11.** Un pack vendu peut en porter une branche (voir
+Monétisation) : le NSFW est une capacité du produit, jamais un produit à
+part.
 
 ## Publication
 
@@ -151,7 +183,9 @@ Cinq règles matérialisées dans le dépôt, à respecter avant tout code :
 2. **Un chantier hors parcours nominal attend.** Se demander avant tout
    nouveau chantier : "un utilisateur qui n'a jamais installé Soulglade
    en a-t-il besoin pour aller jusqu'à sa première publication ?". Sinon,
-   le tableau de bord (section horizon).
+   le tableau de bord (section horizon). Depuis le 2026-09-11, le test
+   admet aussi la qualité mesurée de la production de l'utilisateur zéro
+   (voir « Pour qui »).
 
 3. **Un chantier ambitieux se cadre par écrit avant la première ligne de
    code.** Tout chantier de plus d'une étape dans le tableau de bord a

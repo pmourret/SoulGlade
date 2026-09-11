@@ -18,6 +18,10 @@ Sessions à ce jour :
 - `2026-09-05-phase-2-cloture-v1.md` — découpage de la clôture réelle de
   V1 en 4 étapes testables (tests verts, périmètre du parcours nominal,
   audit UX/UI, décision Abyssiaelle/SDXL)
+- `2026-09-11-seance-cadrage-global.md` — confrontation du cadrage global
+  v2 (document extérieur) et du cadrage J8 avec le dépôt réel : huit
+  décisions (double piste, abonnement, style de monde en LoRA, installeur
+  maison…) et le cadrage d'IT-8, un tiers installe SoulGlade
 
 **Ce ne sont pas des documents de référence à jour.** Ils capturent la
 réflexion telle qu'elle s'est déroulée, y compris des formulations depuis

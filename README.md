@@ -1,44 +1,53 @@
 # Soulglade
 
 > Studio de création de personnages IA construit au-dessus de ComfyUI —
-> orchestration multi-personnage et multi-univers, pensée comme une couche
-> supplémentaire au-dessus de ComfyUI plutôt qu'un remplacement.
+> orchestration multi-personnage en quatre couches (plateforme, pack,
+> monde, personnage), pensée comme une couche supplémentaire au-dessus de
+> ComfyUI plutôt qu'un remplacement.
 
 ## Statut
 
 Projet personnel, en développement actif. Voir
 [`soulglade-tableau-de-bord.html`](soulglade-tableau-de-bord.html) pour
-l'avancement (V1 en cours — fondations et généralisation à deux univers
-réels).
+l'avancement (V1 en cours).
 
 ## Ce que c'est
 
-Une plateforme qui gère plusieurs personnages IA, chacun rattaché à un
-**univers** (un monde créatif avec sa propre famille de modèle et son
-propre panel d'outils), avec pour chaque personnage un outil de travail
-complet plutôt qu'un pipeline à usage unique.
+Une plateforme qui gère plusieurs personnages IA, chacun avec un outil de
+travail complet plutôt qu'un pipeline à usage unique. Elle s'organise en
+quatre couches, découpées par une règle : qui a le droit de porter un
+graphe ComfyUI (`DOCS/adr/0017-quatre-couches-plateforme-pack-monde-personnage.md`).
 
-Univers en place ou en cours :
-- **Instagram / influenceur** — cohérence de personnage, création de
-  publications, contenu lifestyle
-- **RPG / personnage** — personnage ancré dans un univers narratif
+- **Plateforme** — capacités agnostiques du modèle, appliquées à une image
+  finie : upscale, banc de comparaison, détection des mains. Porte des
+  graphes.
+- **Pack** — capacités liées à une famille de modèle : production, verrou
+  d'identité, édition. Porte des graphes. En place :
+  `instagram-influenceur` (Flux) et `rpg-personnage` (SDXL).
+- **Monde** — données pures, aucun graphe : lieux, intentions, tons, style.
+  En place : `slow-life` et `terres-sauvages`.
+- **Personnage** — instance d'un pack et d'un monde, avec son identité et
+  ses seuils mesurés. Hors dépôt.
 
-D'autres univers (art pur, monde RPG complet) sont sur la feuille de route
-mais pas encore construits — voir le tableau de bord.
+D'autres packs (art pur) et un monde RPG complet sont à l'horizon — voir
+le tableau de bord.
 
 ## Structure du repo
 
 ```
-CHARACTERS/<nom>/     # données de chaque personnage — non versionnées
-PACKS/<nom>/            # panel d'outils par pack (tools.json)
-AUTOMATION/                # moteur partagé : exécution, conversion de
-                              # workflows, verrous d'identité, base
+CHARACTERS/<nom>/    # données de chaque personnage — non versionnées
+PLATFORM/            # carte des capacités de plateforme
+PACKS/<nom>/         # capacités et panel d'outils par pack
+WORLDS/<nom>.json    # catalogues et style par monde
+WORKFLOWS/           # graphes ComfyUI (plateforme et packs)
+AUTOMATION/          # moteur partagé : exécution, conversion de
+                     # workflows, verrous d'identité, base
 DOCS/
-  adr/                        # historique des décisions d'architecture
-  cadrage/                      # sessions de cadrage brutes (archivé)
+  adr/               # historique des décisions d'architecture
+  cadrage/           # sessions de cadrage brutes (archivé)
 .claude/
-  skills/                        # connaissances de domaine pour Claude Code
-CLAUDE.md                          # règles pour Claude Code
+  skills/            # connaissances de domaine pour Claude Code
+CLAUDE.md                            # règles pour Claude Code
 soulglade-tableau-de-bord.data.json  # état du projet : EPIC, statuts, itérations
 ```
 

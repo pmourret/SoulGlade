@@ -12,8 +12,9 @@ Les cinq règles s'appliquent ici directement :
 1. Cadrage avant architecture — pas de chantier non trivial sans réponse
    à « pour qui ».
 2. Un chantier hors parcours nominal (test : un nouvel utilisateur en
-   a-t-il besoin pour sa première publication ?) va au tableau de bord,
-   pas dans l'itération en cours.
+   a-t-il besoin pour sa première publication ? — ou sert-il la qualité
+   mesurée de la production de l'utilisateur zéro, double piste du
+   2026-09-11) va au tableau de bord, pas dans l'itération en cours.
 3. Tout chantier de plus d'une étape a son cadrage écrit dans
    `DOCS/cadrage/` avant la première ligne de code — **refuser** de
    générer du code multi-fichier sans ce cadrage, sauf correction de bug

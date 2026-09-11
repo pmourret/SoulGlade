@@ -1,5 +1,5 @@
 {
-  "maj": "10 septembre 2026",
+  "maj": "11 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -125,13 +125,22 @@
       "ref": "DOCS/cadrage/2026-09-09-it4-frictions.md — préalable : DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md"
     },
     {
+      "id": "IT-8",
+      "state": "next",
+      "titre": "Un tiers installe SoulGlade sans aide",
+      "quoi": "La double piste décidée le 11/09 met le parcours d'un tiers dans la séquence, et l'aha moment exige une installation sans intervention. Aujourd'hui elle tient de la main de Pierre : ComfyUI posé à la main, .env renseigné, environnement Python absent du README, nœuds et modèles provisionnés par manifeste mais jamais hors de sa machine. Mode tranché : un installeur maison, sur toolchain.py et comfy_provision.py.",
+      "dod": "Sur une machine qui n'est pas celle de Pierre, une personne de la cible V1 part du dépôt cloné, lance l'installeur et exporte une image sans aide. Chaque blocage relevé pendant l'essai est corrigé, ou versé au tableau avec sa raison.",
+      "epics": "E10",
+      "ref": "DOCS/cadrage/2026-09-11-seance-cadrage-global.md (§ 6)"
+    },
+    {
       "id": "IT-5",
       "state": "next",
       "titre": "Un monde porte enfin un style",
-      "quoi": "Les assets de monde ne sont pas consommés par le runner : aucun monde ne peut valoir readiness.style. C'est le premier pas concret vers un pack vendable, et il sert d'abord ta production.",
+      "quoi": "Les assets de monde ne sont pas consommés par le runner : aucun monde ne peut valoir readiness.style. Le style d'un monde est un LoRA appliqué sur le checkpoint du pack, jamais un checkpoint, dont le changement périmerait les mesures d'identité. C'est ce qui donne à un monde vendu par abonnement autre chose que du texte de prompt, et il sert d'abord ta production.",
       "dod": "Un monde câblé bout en bout, son style visible sur une image produite, et le drapeau readiness posé en connaissance de cause.",
       "epics": "E11, E1",
-      "ref": "DOCS/cadrage/2026-09-06-contrat-de-pack.md (C3)"
+      "ref": "DOCS/cadrage/2026-09-06-contrat-de-pack.md (C3) — DOCS/cadrage/2026-09-11-seance-cadrage-global.md (décision 3)"
     },
     {
       "id": "IT-6",
@@ -627,7 +636,14 @@
         {
           "s": "faire",
           "t": "Installation de bout en bout vérifiée par un tiers",
-          "d": "jamais testée hors de ta machine"
+          "d": "jamais testée hors de ta machine",
+          "it": "IT-8"
+        },
+        {
+          "s": "faire",
+          "it": "IT-8",
+          "t": "Installeur maison, du dépôt cloné à la première image",
+          "d": "Assemble ce qui existe : toolchain.py pour l'interface, comfy_provision.py pour nœuds et modèles. Manquent le cœur ComfyUI, l'environnement Python du studio et le .env. Un modèle à provenance seule reste un geste humain, demandé par un message actionnable."
         }
       ]
     },
@@ -660,8 +676,8 @@
         },
         {
           "s": "veille",
-          "t": "Test commercial de l'idée pack",
-          "d": "à poster à ton audience quand un monde est réellement prêt"
+          "t": "Canaux SoulGlade : chaîne dédiée, Instagram, Discord",
+          "d": "Ouverts et alimentés quand les premiers packs de base existent. Il n'y a pas de test de marché isolé avant."
         }
       ]
     },
@@ -778,6 +794,31 @@
   ],
   "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
   "decisions": [
+    {
+      "e": "ouvert",
+      "t": "Le critère V1 de tri automatique se tranche au verdict d'IT-7",
+      "d": "Séance du 11/09. « Mesurés et triés, sous condition de fiabilité démontrée » ne dit pas si un renoncement écrit d'IT-7 ferme la V1 ou la bloque. Pierre garde le critère intact et tranchera sur le chiffre, pas avant."
+    },
+    {
+      "e": "tranche",
+      "t": "Double piste : la production de Pierre et le parcours d'un tiers",
+      "d": "Séance du 11/09, PROJET.md amendé. Pierre est l'utilisateur zéro : la qualité mesurée de sa production est un chantier V1, pas une dérive. La séquence porte aussi le parcours d'un tiers : IT-8 s'intercale avant IT-5, et le test de la règle 2 s'applique aux deux pistes."
+    },
+    {
+      "e": "tranche",
+      "t": "Un monde porte un LoRA de style, jamais un checkpoint",
+      "d": "Séance du 11/09. Le checkpoint reste au pack : en changer périme les mesures d'identité (cadrage du 08/09). Le monde apporte ses catalogues et un LoRA de style appliqué dessus. La « peau » du cadrage J8, qui portait un checkpoint, est dépassée. IT-5 câble assets.lora."
+    },
+    {
+      "e": "tranche",
+      "t": "On vend un abonnement, et un pack peut porter du NSFW",
+      "d": "Séance du 11/09, PROJET.md amendé. Un monde est une donnée copiable : l'abonnement Patreon paie la cadence, la curation et le canal officiel. Un pack vendu peut porter une branche NSFW sur le même rail, ce que le modèle permet déjà (intention boudoir sous l'intensité 2). Les canaux SoulGlade s'ouvrent avec les premiers packs de base."
+    },
+    {
+      "e": "tranche",
+      "t": "L'installation V1 est un installeur maison",
+      "d": "Séance du 11/09, PROJET.md amendé. Il assemble ce que le dépôt porte déjà, chaîne d'outils portable et provisioning par manifeste (ADR-0022), plutôt que de faire du produit l'invité d'un runtime tiers. Pinokio reste une note de recherche. Porté par IT-8."
+    },
     {
       "e": "tranche",
       "t": "Le NSFW a deux voies, et l'édition reste la première",
@@ -927,10 +968,6 @@
         "d": "(9 septembre 2026) Idée de Pierre le jour où la mesure a montré que le flou de fond ne répond pas au prompt. Si le fond vient d'un fichier et n'est jamais régénéré, sa netteté est celle du fichier. Le point dur se déplace sur le raccord : lumière, ombres, perspective, échelle, détourage, et la passe img2img finale qui remettrait le modèle sur le fond. Aucune brique existante, aucun graphe de compositing. Premier client sérieux de l'importeur d'assets (E3). Hors parcours nominal."
       },
       {
-        "t": "Test commercial de l'idée pack",
-        "d": "poster l'idée de mondes vendables à l'audience existante et regarder la réaction — coût nul, information décisive avant tout éditeur de packs"
-      },
-      {
         "t": "Univers « art pur »",
         "d": "pack technique distinct, jamais commencé"
       },
@@ -992,13 +1029,21 @@
       },
       {
         "t": "Embarquer les outils tiers dans le produit",
-        "d": "(10 septembre 2026) ComfyUI, kohya_ss et ce qui suivra sont aujourd'hui des prérequis que l'utilisateur installe lui-même. Le produit final devra les porter, ou savoir les poser sans intervention. Touche E10, l'EPIC le moins avancé, dont « installation de bout en bout vérifiée par un tiers » n'a jamais été faite. Prévu pour une itération à venir, noté ici pour ne pas le perdre."
+        "d": "(10 septembre 2026) kohya_ss et ce qui suivra restent des prérequis que l'utilisateur installe lui-même. La part ComfyUI est promue le 11/09 en IT-8, par un installeur maison ; Pinokio, relevé le 10/09, n'est pas retenu. Reste ici l'outillage d'entraînement, lié à l'atelier intégré."
+      },
+      {
+        "t": "Le code dit pack et monde, plus univers",
+        "d": "(11 septembre 2026) Relevé à la séance de cadrage global. Le renommage J8.1 a déplacé les dossiers, pas le vocabulaire : PACKS/<id>/universe.json, AUTOMATION/universe.py et plus de 400 occurrences nomment encore « univers » ce qui est un pack. Le README est aligné. À faire avec la passe « le code repasse en anglais », qui touche les mêmes fichiers."
       }
     ]
   },
   "ecartees": {
     "note": "Pistes explorées puis refermées par écrit. À lire avant de rouvrir un sujet : chaque entrée dit la date, la raison de l'abandon, et ce que coûterait sa mise en œuvre en l'état.",
     "items": [
+      {
+        "t": "Tester l'idée de mondes vendables avant les packs",
+        "d": "(11 septembre 2026) Proposée par le cadrage global v2 : poster l'idée à l'audience Instagram existante, coût nul. Refermée par Pierre : le signal viendra de canaux SoulGlade dédiés, ouverts avec les premiers packs de base. Impact en l'état : aucun chiffre de marché avant que deux ou trois mondes soient construits. DOCS/cadrage/2026-09-11-seance-cadrage-global.md"
+      },
       {
         "t": "Juge de mains sur le squelette DWPose (v2 géométrique)",
         "d": "(7 septembre 2026) L'information n'est pas dans les keypoints : les 2 images aux mains cassées sont scorées 1.0, et aucun des trois indicateurs géométriques (hors-cadre, ratio main/avant-bras, asymétrie des bras) ne sort du lot des 13 contrôles. Brancher la mesure `mains` v1 au tri rejetterait 16 des 48 images validées OK, soit 33 %, en gardant les deux réellement cassées. La condition d'entrée d'ADR-0025 n'est pas remplie. DOCS/recherche/2026-09-07-signal-geometrique-mains.md"
