@@ -1,5 +1,5 @@
 {
-  "maj": "11 septembre 2026",
+  "maj": "20 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -99,11 +99,11 @@
     {
       "id": "IT-3d",
       "titre": "Le LoRA de Léna existe, ou le renoncement est écrit",
-      "state": "now",
-      "quoi": "Le mécanisme est livré, le LoRA ne l'est pas. Le jeu est sorti le 10/09 : 24 images et l'ancre, légendées, avec la recette kohya. Ce qui manque n'est pas du code, c'est des heures de GPU hors plateforme. Elle passe avant IT-4 parce que la semaine de production fait passer chaque image par le curseur identité/texture, mesuré comme un troc le 09/09 : la lancer sans savoir si le LoRA le desserre, c'est produire sept jours d'images et l'apprendre après.",
-      "dod": "Un chiffre écrit, dans un sens ou dans l'autre. Soit le banc montre que le LoRA desserre le curseur, et le réglage retenu part dans config.json avec le poids PuLID qu'il a fallu bouger. Soit il montre que non : le renoncement s'écrit dans DOCS/recherche/, comme le flou de fond et le juge pixel, et IT-4 tourne sur PuLID tel quel, en le sachant.",
+      "state": "done",
+      "quoi": "Le jeu est sorti le 10/09, le LoRA entraîné hors plateforme, trois bancs l'ont mesuré le 14/09. Fermée le 20/09 sur un chiffre qui dit non : le LoRA achète du piqué, pas de l'identité. Deux constats sortis du même banc partent en dette, la référence primaire de Léna qui n'a jamais été posée et la chaîne qui n'est pas reproductible à seed fixée.",
+      "dod": "Atteinte, dans le sens du renoncement. Identité contre l'ancre 0.758 sans LoRA contre 0.779 à pleine force, soit le bruit de réplicat du banc ; netteté 193 contre 431 sur les mêmes seeds. Le LoRA reste dans config.json parce qu'il ne coûte rien, et IT-4 ne compte pas sur lui pour desserrer le troc identité/texture.",
       "epics": "E2",
-      "ref": "DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1, points 4 à 6) — ADR-0021 pour le banc"
+      "ref": "DOCS/recherche/2026-09-20-la-reference-primaire-n-a-jamais-ete-posee.md — DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1)"
     },
     {
       "id": "IT-3e",
@@ -238,10 +238,10 @@
           "d": "invariant 6"
         },
         {
-          "s": "cours",
+          "s": "fait",
           "it": "IT-3d",
           "t": "LoRA d'identité par personnage",
-          "d": "Étage 1 branché le 10/09 : `identity.injecter_lora` est partagé par les deux mécanismes, et le graphe de Léna chaîne réalisme puis identité avant PuLID, les deux en bypass. Restent l'entraînement hors plateforme, la valeur dans config.json et le passage au banc. Tests : test_lora_identite_parite."
+          "d": "Le LoRA de Léna est entraîné et branché, `lenadaab_v1` à la force 0.8. Mesuré au banc le 14/09 : il gagne sur la netteté (193 contre 431) et rien sur l'identité (+0.021, dans le bruit de réplicat). Les époques intermédiaires sont toutes sous la v1 finale."
         },
         {
           "s": "fait",
@@ -266,6 +266,11 @@
           "s": "fait",
           "it": "IT-3d",
           "d": "`/training`, huitième destination : la file, les écartées avec leur raison, la diversité, les critères, et l'export lancé depuis l'écran. Trois routes, une écriture refusée pendant une production. Tests : test_training_api, test_training."
+        },
+        {
+          "s": "dette",
+          "t": "L'ancre de Léna ne montre plus le visage qu'elle produit",
+          "d": "L'ancre gelée date du 24/07, le visage qui fait foi est celui de septembre (décision du 20/09). Elle sert à la fois d'injection PuLID et d'étalon : aucune image de production ne la remplace, leur visage fait 230 à 360 px contre 989. Reste à geler un portrait frontal et rescorer l'historique."
         }
       ]
     },
@@ -430,6 +435,11 @@
           "it": "IT-3b",
           "t": "Rendu : fond, peau, puis mains",
           "d": "clos le 09/09 dans l'ordre décidé. Fond : renoncement écrit. Peau : identité et texture sont le même curseur, sharpen 0.30 → 0.55 sur Léna. Mains : HANDDETAILER fait passer le taux de ratées de 96,4 % à 36,4 % sur 30 seeds appariés, pour +34,4 s par image, en interrupteur éteint par défaut."
+        },
+        {
+          "s": "dette",
+          "t": "Le banc n'est pas reproductible à seed fixée",
+          "d": "Quatre lots du 14/09 tournent la même configuration sur les mêmes cinq seeds et rendent quatre images différentes. Étendue des moyennes 0.019 quand `margin.identite` vaut 0.02 : tout verdict d'identité sous 0.03 est illisible. Cause non identifiée, premier candidat `expression_budget`."
         }
       ]
     },
@@ -958,6 +968,11 @@
       "e": "tranche",
       "t": "Le flou de fond est un choix, pas un défaut",
       "d": "Décidé le 08/09. 71 % de la variance du flou vient de la scène, pas du pipeline — mais un créateur peut le vouloir. La plateforme ne l'arbitre donc pas : le flou devient un réglage de scène à trois valeurs (auto/net/flou). Deux corrections faites dans la journée ont été annulées pour ça. Nouvelle mesure fond_net, instrument du flou et jamais un juge (à scène fixée elle ne sépare le jugement qu'à 0.58). Voir le cadrage du 08/09."
+    },
+    {
+      "e": "tranche",
+      "t": "L'ancre de Léna est le visage de septembre, plus celui de juillet",
+      "d": "Décidé le 20/09. Les quatre images publiées de juillet ne s'accordent ni avec l'ancre gelée du 24/07 (0.50 à 0.65) ni entre elles (0.605 en leave-one-out) : elles ne font pas une référence mesurable. Le visage produit depuis le 22/08 fait foi, cohérent à 0.931, et c'est lui que le gabarit et le LoRA portent. Reposer l'ancre dessus est une dette assumée, pas un chantier de la séquence en cours."
     }
   ],
   "horizon": {
