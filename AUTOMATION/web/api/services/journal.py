@@ -137,7 +137,7 @@ def apply_overwrite_side_effects(image_path, name, bucket, space, character_id):
     Returns the export's new name, or "" if nothing was (re)exported.
     """
     ss.oublier_vignette(name, bucket, space, character_id)
-    mes.demesurer(name)
+    mes.demesurer(name, character_id)
     if bucket == "OK" and space == "sfw":
         return export_image(image_path, name, space, character_id)
     return ""

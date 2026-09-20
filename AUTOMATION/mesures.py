@@ -11,11 +11,18 @@ generation et n'est plus touchee. Or le jugement humain (`flag`) arrive plus tar
 dans la revue, et peut changer d'avis. Il faut donc un stockage modifiable en
 place — d'ou ce fichier separe.
 
-DOUBLE ECRITURE depuis le 24/08/2026. La bascule SQLite est faite : `base.py`
-porte les memes donnees dans les tables `score` et `jugement`. Ce fichier reste
-ecrit — il est lisible sans outil et sert de repli — mais la BASE est la source
-de verite en lecture. Quand la base sera partout en lecture, ce store pourra
-devenir une simple sortie.
+DOUBLE ECRITURE depuis le 24/08/2026, LECTURE EN BASE depuis le 20/09/2026.
+`base.py` porte les memes donnees dans `score` et `jugement`, avec la cle qui
+manque ici : (character_id, fichier). Ce fichier reste ecrit, il est lisible
+sans outil, mais plus personne ne le lit pour savoir ce qu'on sait d'une image
+de personnage — `par_personnage()` interroge la base et ne retombe ici que
+pour les noms que la base ne connait a personne.
+
+CE STORE NE SAIT PAS A QUI APPARTIENT UNE IMAGE, et c'est sa limite de
+naissance : deux personnages d'un meme monde heritent du meme catalogue de
+scenes (ADR-0019), produisent donc le meme nom de fichier, et n'ont ici
+qu'une seule entree pour deux images. Le corpus de reference, lui, reste
+pleinement chez lui : il n'appartient a aucun personnage.
 
 DEUX ETALONNAGES, dans cet ordre (voir `bande`) :
 
@@ -29,6 +36,7 @@ DEUX ETALONNAGES, dans cet ordre (voir `bande`) :
 Aucun seuil n'est ecrit en dur nulle part.
 """
 import json
+import logging
 import os
 import threading
 from datetime import datetime
@@ -39,6 +47,7 @@ OFM = HERE.parent
 FICHIER = OFM / "PROD" / "mesures.json"
 REFERENCES = OFM / "INPUTS" / "REALISME"   # corpus de reference du realisme
 
+_LOG = logging.getLogger(__name__)
 _VERROU = threading.Lock()          # le batch ecrit pendant que le web lit
 FLAGS = ("ok", "ia")
 
@@ -103,7 +112,14 @@ def renommer(ancien, nouveau):
             _ecrire(d)
 
 
-def demesurer(nom):
+# Genres de score qui decrivent les PIXELS, donc perimes des que les pixels
+# changent. `identite_centroide` en fait partie : il est calcule sur le meme
+# embedding que `identite`, par `base.rescorer`.
+GENRES_PIXELS = ("nettete", "texture_visage", "bruit_fond", "identite",
+                 "identite_centroide", "mains")
+
+
+def demesurer(nom, character_id=None):
     """Efface les MESURES d'une image dont les pixels ont change (F3.3).
 
     Ecraser une source depuis l'editeur garde le nom de fichier mais change ce
@@ -116,7 +132,22 @@ def demesurer(nom):
     et sur ce que l'image donne a voir, pas sur trois nombres ; l'effacer
     silencieusement detruirait une saisie de l'utilisateur. Rend l'entree
     restante, ou None si l'image n'en avait aucune.
+
+    `character_id` EFFACE AUSSI EN BASE, et c'est desormais le chemin qui
+    compte : la Revue lit ses mesures en base depuis le 20/09, une mesure
+    laissee la-bas survivrait a l'ecrasement et afficherait un badge qui
+    ment. Sans personnage, seul le store est nettoye — l'appelant qui en a
+    un doit le passer.
     """
+    if character_id:
+        try:
+            import base
+            with base.ouvrir() as cx:
+                base.oublier_scores(cx, character_id, nom, GENRES_PIXELS)
+                cx.commit()
+        except Exception as e:
+            _LOG.warning("base : mesures non effacees pour %s (%s) — %s: %s",
+                         nom, character_id, type(e).__name__, e)
     with _VERROU:
         d = charger()
         e = d.get(nom)
@@ -284,6 +315,44 @@ def _quantiles(vals, n_min, source):
     q = lambda p: vals[min(len(vals) - 1, int(round(p * (len(vals) - 1))))]
     return {"min": q(0.25), "median": q(0.5), "max": q(0.75),
             "etendue": [vals[0], vals[-1]], "n": len(vals), "source": source}
+
+
+def par_personnage(character_id):
+    """Mesures et jugements de CE personnage : {fichier: entree}.
+
+    LA BASE D'ABORD, ET C'EST LE POINT. Ce store est indexe par nom de
+    fichier NU, sans champ personnage, et deux personnages d'un meme monde
+    heritent du meme catalogue de scenes (ADR-0019) : ils peuvent produire le
+    meme nom, et leurs mesures se recouvriraient sans que rien ne le signale.
+    La base, elle, porte la bonne cle depuis le depart —
+    UNIQUE(character_id, fichier).
+
+    Le store ne sert plus que de REPLI, et seulement pour les noms que la
+    base ne connait a PERSONNE : ce sont les images anterieures a la double
+    ecriture du 24/08. Un nom que la base connait pour quelqu'un d'autre
+    n'est jamais repli, c'est exactement le melange qu'on evite.
+
+    Le corpus de reference est exclu : il n'appartient a aucun personnage et
+    se lit par `corpus()`. Cadrage : DOCS/cadrage/2026-09-20-mesures-par-personnage.md
+    """
+    import base
+    with base.ouvrir() as cx:
+        out = base.mesures_par_fichier(cx, character_id)
+        connus = base.fichiers_connus(cx)
+    for nom, e in charger().items():
+        if nom not in out and nom not in connus and not e.get("role"):
+            out[nom] = e
+    return out
+
+
+def corpus():
+    """Entrees du corpus de reference : {fichier: entree}, role='reference'.
+
+    Reste lu dans le store, et pas en base : le corpus est de plateforme
+    (`INPUTS/REALISME/`), il n'appartient a aucun personnage, donc a aucune
+    ligne `image.character_id` qui voudrait dire quelque chose.
+    """
+    return {n: e for n, e in charger().items() if e.get("role") == "reference"}
 
 
 def bande(entrees, champ):

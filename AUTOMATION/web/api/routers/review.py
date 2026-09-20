@@ -83,7 +83,13 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
                    reverse=True) if d.exists() else []
     index = (nsfw_journal_index(cid) if space == "nsfw"
              else ss.journal_index(cid))
-    store = mes.charger()
+    # What we know about THIS character's images, from the database — the only
+    # store with a (character_id, fichier) key. `PROD/mesures.json` has no
+    # character field at all, and two characters of one world inherit the same
+    # scene catalogue (ADR-0019), so they can produce the same file name and
+    # would share its single entry. See
+    # DOCS/cadrage/2026-09-20-mesures-par-personnage.md
+    store = mes.par_personnage(cid)
     # Counted over the WHOLE folder, not the 200 displayed: the button
     # announces what /api/mesurer will really have to do, and that one walks
     # everything. The two figures contradicted each other past 200 images.
@@ -107,16 +113,12 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
             "flag": m.get("flag"), "anatomie": m.get("anatomie"),
             "mains_juge": m.get("mains_juge"),
         })
-    # Calibration entries: THIS character's images, plus the reference corpus,
-    # which belongs to the platform and not to anyone. `store` is keyed by bare
-    # file name with no character field, so taking it whole calibrated one
-    # character's review on another's judgements as soon as the corpus was
-    # missing — the same isolation bug `shared_state.bucket_dir` documents, one
-    # level up. The items above are already folder-scoped; these were not.
-    miens = ss.fichiers_du_personnage(cid)
-    entries = [e for nom, e in store.items()
-               if e.get("role") == "reference" or nom in miens]
-    refs = [e for e in entries if e.get("role") == "reference"]
+    # Calibration entries: THIS character's images (already scoped above),
+    # plus the reference corpus, which belongs to the platform and to nobody.
+    # Taking the whole store calibrated one character's review on another's
+    # judgements as soon as the corpus was missing.
+    refs = list(mes.corpus().values())
+    entries = list(store.values()) + refs
     return {
         "items": items, "sans_mesure": unmeasured,
         "references": {"mesurees": len(refs), "total": len(mes.fichiers_reference())},
@@ -224,12 +226,15 @@ async def measure_batch(payload: MeasureRequest, character_id: RequiredCharacter
     if not d.exists():
         return {"ok": True, "faites": 0, "restant": 0}
 
-    store = mes.charger()
+    # Same split as the gallery: the character's images come from the base,
+    # the platform corpus from the store, which is its home.
+    store = mes.par_personnage(cid)
+    corpus = mes.corpus()
     todo = [f for f in sorted(d.glob("*.png"), key=lambda f: f.stat().st_mtime,
                               reverse=True)
             if "nettete" not in store.get(f.name, {})]
     refs_todo = [f for f in mes.fichiers_reference()
-                 if "nettete" not in store.get(f.name, {})]
+                 if "nettete" not in corpus.get(f.name, {})]
     if not todo and not refs_todo:
         return {"ok": True, "faites": 0, "restant": 0}
 

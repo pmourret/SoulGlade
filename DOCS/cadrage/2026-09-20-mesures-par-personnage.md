@@ -104,3 +104,38 @@ une expression et à une fonction :
   du personnage qui lance la mesure en premier : il ne reçoit plus qu'une
   bbox, dont `qc_realisme` a besoin pour la texture
   (`mesures._bbox_sans_ancre`).
+
+## Réalisation, le 20/09
+
+Les quatre étapes sont faites, le critère de sortie est tenu par
+`AUTOMATION/tests/test_mesures_isolation.py` — vérifié en remettant
+l'ancien code : les deux personnages y lisaient la même entrée, 42.0 des
+deux côtés.
+
+1. `mesures.par_personnage(character_id)` lit la base
+   (`base.mesures_par_fichier`) et ne retombe sur le store que pour les
+   noms que la base ne connaît **à personne** (`base.fichiers_connus`).
+   Un nom que la base connaît pour quelqu'un d'autre n'est jamais replié.
+   La Revue l'appelle à ses trois points de lecture ; plus aucune lecture
+   par nom nu ne subsiste dans `api/routers/`.
+2. `mesures.corpus()` sert le corpus de réalisme depuis le store, par
+   `role`, sans personnage.
+3. Deux écritures ne suivaient pas. `base.mesures_par_fichier` ne rendait
+   que `flag` : `anatomie` et `mains_juge` seraient sortis de l'écran dès
+   que la Revue lirait la base. Et `mesures.demesurer` ne nettoyait que le
+   store, donc une mesure périmée par un écrasement de pixels aurait
+   survécu en base et continué de s'afficher ; elle prend maintenant le
+   personnage et efface aussi les scores de pixels
+   (`base.oublier_scores`).
+4. **Les 117 entrées existantes restent en place, sans migration.** Plus
+   rien ne les lit par personnage : la base est la source, et le repli ne
+   les touche que pour les noms qu'elle ignore, c'est-à-dire les images
+   antérieures au 24/08 qui n'ont par construction pas d'homonyme récent.
+   Leur migrer une clé composée coûterait un script et un risque pour un
+   gain nul.
+
+Une conséquence connue et laissée dehors : l'**embedding** d'une image
+dont les pixels changent reste lui aussi périmé, et `demesurer` ne le
+touche pas. Il n'est pas affiché, mais il nourrit le gabarit. Le
+supprimer déplacerait le jeu de référence d'identité, ce qui est un autre
+sujet que celui-ci.

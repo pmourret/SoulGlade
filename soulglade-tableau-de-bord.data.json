@@ -569,9 +569,9 @@
           "d": "hors périmètre assumé : tokens tiers, NSFW incompatible Meta, responsabilité"
         },
         {
-          "s": "faire",
-          "t": "La Revue lit les mesures par nom de fichier nu",
-          "d": "`PROD/mesures.json` n'a pas de champ personnage, et deux personnages d'un même monde peuvent produire le même nom (ADR-0019) : leurs mesures et leurs jugements se recouvriraient. La base a déjà la bonne clé, la Revue ne la lit pas. Cadré le 20/09, aucune collision à ce jour."
+          "s": "fait",
+          "t": "Les mesures d'une image appartiennent à un personnage",
+          "d": "La Revue lit ses mesures en base, qui porte la clé (character_id, fichier), et ne retombe sur `mesures.json` que pour les noms qu'aucun personnage ne revendique. Deux images homonymes affichent chacune les siennes ; le corpus de réalisme reste commun, il est de plateforme."
         }
       ]
     },

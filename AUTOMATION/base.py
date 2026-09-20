@@ -458,7 +458,15 @@ def stats_par_scene(cx, character_id):
 
 
 def mesures_par_fichier(cx, character_id, role=None):
-    """{fichier: {identite, nettete, ..., flag, role}} — forme du store JSON."""
+    """{fichier: {identite, nettete, ..., flag, anatomie, mains_juge, role}}
+    — forme du store JSON, pour UN personnage.
+
+    LES TROIS AXES DE JUGEMENT, pas seulement le flag. Cette fonction ne
+    rendait que `flag` : tant qu'elle ne servait qu'aux tests, l'absence
+    d'`anatomie` et de `mains_juge` ne se voyait pas. Depuis que la Revue lit
+    ses mesures ici (20/09), les taire ferait disparaitre de l'ecran deux
+    colonnes que l'utilisateur a saisies a la main.
+    """
     where = "i.character_id = ? AND i.role IS ?" if role is None else \
         "i.character_id = ? AND i.role = ?"
     out = {}
@@ -467,11 +475,44 @@ def mesures_par_fichier(cx, character_id, role=None):
         e = {"role": r["role"]} if r["role"] else {}
         for s in cx.execute("SELECT genre, valeur FROM score WHERE image_id = ?", (r["id"],)):
             e[s["genre"]] = s["valeur"]
-        j = cx.execute("SELECT flag FROM jugement WHERE image_id = ?", (r["id"],)).fetchone()
-        if j and j["flag"]:
-            e["flag"] = j["flag"]
+        j = cx.execute("SELECT flag, anatomie, mains_juge FROM jugement "
+                       "WHERE image_id = ?", (r["id"],)).fetchone()
+        for champ in ("flag", "anatomie", "mains_juge"):
+            if j and j[champ]:
+                e[champ] = j[champ]
         out[r["fichier"]] = e
     return out
+
+
+def fichiers_connus(cx):
+    """Tous les noms de fichiers que la base connait, quel que soit le
+    personnage.
+
+    Sert a distinguer « la base ignore cette image » de « cette image est
+    celle d'un AUTRE personnage ». Le store JSON, lui, est indexe par nom nu :
+    sans cette distinction, le repli sur le store rendrait les mesures du
+    voisin des que deux personnages produisent le meme nom
+    (DOCS/cadrage/2026-09-20-mesures-par-personnage.md).
+    """
+    return {r["fichier"] for r in cx.execute("SELECT DISTINCT fichier FROM image")}
+
+
+def oublier_scores(cx, character_id, fichier, genres):
+    """Efface des scores d'UNE image, sans toucher au jugement humain.
+
+    Pendant en base de `mesures.demesurer` : ecraser les pixels d'une image
+    perime ses mesures, et un badge qui ment est un bug. Tant que la Revue
+    lisait le store JSON, l'effacer la-bas suffisait ; depuis qu'elle lit la
+    base, une mesure laissee ici survivrait a l'ecrasement.
+    """
+    ligne = cx.execute("SELECT id FROM image WHERE character_id = ? AND fichier = ?",
+                       (character_id, fichier)).fetchone()
+    if not ligne:
+        return 0
+    marques = ",".join("?" * len(genres))
+    cur = cx.execute(f"DELETE FROM score WHERE image_id = ? AND genre IN ({marques})",
+                     [ligne["id"], *genres])
+    return cur.rowcount
 
 
 def derive_par_scene(cx, character_id, genre="identite", mini=3):
