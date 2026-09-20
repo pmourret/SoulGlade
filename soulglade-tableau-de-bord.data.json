@@ -108,21 +108,20 @@
     {
       "id": "IT-3e",
       "titre": "Le NSFW sait ce qu'il produit, et pour qui",
-      "state": "next",
-      "quoi": "La branche fabrique des images qui ne sortent nulle part : l'export est refusé en dur, le gabarit l'ignore (construire_jeu filtre espace = lena), la file d'entraînement aussi. Et elle affiche le plus mauvais taux du dépôt, 77 % de « ia » contre 56 %, sans qu'aucune mesure dise pourquoi : tout ce qu'on mesure porte sur le visage ou sur le fond, jamais sur le corps. Avant IT-4, parce qu'une semaine de production s'appuiera sur une capacité qu'on ne sait pas décrire.",
+      "state": "now",
+      "quoi": "La branche fabrique des images qui ne sortent nulle part : l'export est refusé en dur, le gabarit l'ignore (construire_jeu filtre espace = lena), la file d'entraînement aussi. Et elle affiche le plus mauvais taux du dépôt, 77 % de « ia » contre 56 %, sans qu'aucune mesure dise pourquoi. La semaine d'IT-4 en produit sans le publier : ce qui la bloque est la mesure du corps et le filtre, pas l'export.",
       "dod": "Le corps a une mesure, faux positifs et faux négatifs comptés sur corpus étiqueté (ADR-0025), ou un renoncement écrit. La voie d'édition répare les mains, ou on sait pourquoi elle ne le peut pas. Le modèle de la scène native est nommé et mesuré, son revers tranché avec lui. La destination d'une image NSFW est décidée, et le filtre espace = lena aligné dessus.",
       "epics": "E9",
-      "ref": "DOCS/cadrage/2026-09-10-capacite-nsfw.md, ADR-0003 amendé le 10/09"
+      "ref": "DOCS/cadrage/2026-09-10-capacite-nsfw.md, ADR-0003 amendé le 10/09 — ordre : DOCS/cadrage/2026-09-20-semaine-de-production.md"
     },
     {
       "id": "IT-4",
       "state": "next",
-      "dep": "IT-3d",
       "titre": "Produire une semaine sans être ralenti",
-      "quoi": "Contenu à remplir depuis l'usage réel, pas depuis le code : ce qui coûte du temps une fois que le rendu est bon. Le bloquant du 08/09 sur le rendu est levé par IT-3b ; il n'en reste que IT-3d, préalable de cette semaine. Le journal de frictions s'ouvre avant le jour 1. Candidats repérés, aucun prérequis : garde-robe en dur dans le front, pas de file d'attente serveur, créateur de lumière manquant. Ce dernier hérite du garde-fou du flou de fond : mesurer le levier avant de construire l'écran.",
-      "dod": "Une semaine de production réelle sans contournement manuel noté, et chaque friction relevée est soit corrigée, soit versée au backlog avec sa raison.",
+      "quoi": "Contenu à remplir depuis l'usage réel, pas depuis le code : ce qui coûte du temps une fois que le rendu est bon. Le journal de frictions s'ouvre avant le jour 1, avec deux colonnes de comptage. Cadrée le 20/09 : elle produit du NSFW sans le publier, ne se fixe aucune cible, et n'a qu'un préalable, reposer l'ancre de Léna sur le visage de septembre.",
+      "dod": "Une semaine de production réelle sans contournement manuel noté, et chaque friction relevée est soit corrigée, soit versée au backlog avec sa raison. Le comptage produites / publiables et le temps par image publiable sont tenus, pour que la cadence soit lisible après coup.",
       "epics": "E3, E4",
-      "ref": "DOCS/cadrage/2026-09-09-it4-frictions.md — préalable : DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md"
+      "ref": "DOCS/cadrage/2026-09-20-semaine-de-production.md — journal : DOCS/cadrage/2026-09-09-it4-frictions.md"
     },
     {
       "id": "IT-8",
@@ -270,7 +269,7 @@
         {
           "s": "dette",
           "t": "L'ancre de Léna ne montre plus le visage qu'elle produit",
-          "d": "L'ancre gelée date du 24/07, le visage qui fait foi est celui de septembre (décision du 20/09). Elle sert à la fois d'injection PuLID et d'étalon : aucune image de production ne la remplace, leur visage fait 230 à 360 px contre 989. Reste à geler un portrait frontal et rescorer l'historique."
+          "d": "L'ancre gelée date du 24/07, le visage qui fait foi est celui de septembre (décision du 20/09). Elle sert à la fois d'injection PuLID et d'étalon. Préalable du jour 1 de la semaine d'IT-4, qui trie cinq jours sur ce score : geler un portrait frontal et rescorer l'historique."
         }
       ]
     },
@@ -301,7 +300,7 @@
         {
           "s": "faire",
           "t": "Gestionnaire de vêtements",
-          "d": "le catalogue est aujourd'hui en dur dans le front"
+          "d": "La garde-robe est le seul axe créatif sans catalogue héritable : lieux, intentions et tons viennent du monde (ADR-0019), elle vit en texte libre par scène. Le besoin est une tenue réutilisée d'une scène à l'autre, pas un catalogue illustré. À confirmer par la semaine d'IT-4."
         },
         {
           "s": "faire",
@@ -602,13 +601,13 @@
         {
           "s": "dette",
           "t": "Le corps n'est mesuré nulle part",
-          "d": "Toutes les mesures portent sur le visage ou sur le fond. La seule branche où le corps est le sujet n'a aucun instrument : 77 % des images NSFW sont jugées « ia » contre 56 % en SFW, sans qu'un chiffre dise pourquoi. Cadrage du 10/09.",
+          "d": "Toutes les mesures portent sur le visage ou sur le fond. L'axe anatomie, déjà étiqueté, ne donne rien à séparer : 24 « ok », 1 « na », zéro « ko » sur le corpus NSFW. Reste la texture de peau du corps, jamais mesurée, et le vocabulaire des 11 rejets sans défaut nommé.",
           "it": "IT-3e"
         },
         {
-          "s": "dette",
-          "t": "La voie d'édition ne répare pas les mains",
-          "d": "La production porte le groupe HandDetailer depuis le 09/09 ; le graphe d'édition ne déclare aucun rôle handdetailer. 7 des 10 mains jugées côté NSFW sont cassées.",
+          "s": "fait",
+          "t": "La voie d'édition répare les mains",
+          "d": "Le graphe d'édition porte le groupe N4b, motif copié du groupe 14 de production, et ComfyUI l'exécute. Éteint par défaut sur le même interrupteur que le SFW : allumé là, il s'allume ici. 7 des 9 mains jugeables côté NSFW étaient cassées.",
           "it": "IT-3e"
         },
         {
@@ -616,6 +615,12 @@
           "t": "Scène NSFW native, en plus de l'édition",
           "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. La question ouverte est le modèle, pas le pipeline. Son revers se décide avec elle : ouvrir la voie native ouvre celle du nu involontaire en SFW.",
           "it": "IT-3e"
+        },
+        {
+          "s": "fait",
+          "it": "IT-3e",
+          "t": "Le NSFW passe la même chaîne de validation que le SFW",
+          "d": "La boucle d'édition s'arrêtait au score d'identité : réalisme, mains, embedding et score de gabarit n'étaient jamais mesurés à la production. Même chaîne désormais, même ordre. `espace` est explicite, sans quoi une image NSFW entrait dans le gabarit d'identité."
         }
       ]
     },
@@ -810,6 +815,26 @@
   "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
   "decisions": [
     {
+      "e": "tranche",
+      "t": "Le NSFW passe la même chaîne de validation que le SFW",
+      "d": "Règle posée par Pierre le 20/09 et câblée le jour même. Le cadrage du 10/09 affirmait la mesure « entièrement partagée » ; le code ne la partageait pas, et les mesures des images NSFW en base venaient d'un backfill. Trouvé au passage, par le test : la colonne `espace` vaut DEFAULT 'lena', donc mesurer une image NSFW sans la nommer la faisait entrer dans le gabarit d'identité."
+    },
+    {
+      "e": "tranche",
+      "t": "Le corps n'explique pas les 77 % de « ia » du NSFW",
+      "d": "Mesuré le 20/09 sur la base, avant toute ligne de code. L'axe anatomie est déjà étiqueté et vide de positifs : 24 « ok », zéro « ko ». `texture_visage` sépare à 0,50, le hasard exact. Sur les 20 images rejetées, 7 ont une main cassée et 11 ne portent aucun défaut que le vocabulaire actuel sache nommer. Une mesure de proportions n'a rien à séparer ici."
+    },
+    {
+      "e": "tranche",
+      "t": "La semaine de production produit du NSFW, sans le publier",
+      "d": "Décidé le 20/09 en cadrant la semaine d'IT-4. Elle en produit pour alimenter l'identité et le corpus, pas pour sortir des fichiers : le refus d'export en dur n'est pas levé et la part « plateformes tierces » reste ouverte. Ce qui bloque le jour 1 est donc la mesure du corps et l'alignement du filtre espace = lena, pas l'export ni la voie native."
+    },
+    {
+      "e": "tranche",
+      "t": "La semaine ne se fixe pas de cible, et n'a qu'un préalable",
+      "d": "Décidé le 20/09. Aucun nombre d'images ni calendrier écrit d'avance : on compte après coup, par deux colonnes de plus au journal de frictions. Assumé, moins d'étalon pour « sans être ralenti » contre aucun risque de forcer la semaine. Le seul préalable est l'ancre de Léna ; file d'attente, créateur de lumière et garde-robe attendent que la semaine les nomme."
+    },
+    {
       "e": "ouvert",
       "t": "Le critère V1 de tri automatique se tranche au verdict d'IT-7",
       "d": "Séance du 11/09. « Mesurés et triés, sous condition de fiabilité démontrée » ne dit pas si un renoncement écrit d'IT-7 ferme la V1 ou la bloque. Pierre garde le critère intact et tranchera sur le chiffre, pas avant."
@@ -842,7 +867,7 @@
     {
       "e": "ouvert",
       "t": "À quoi sert une image NSFW une fois produite",
-      "d": "Pierre tranche l'usage : plateformes tierces et usage personnel. Il conditionne l'alimentation de l'identité aux taux, et ils se contredisent : identité 0,757 contre 0,739 en SFW, jugement humain 77 % « ia » contre 56 %. La condition n'est décidable qu'après la mesure du corps. Deux obstacles concrets : construire_jeu filtre espace = lena, et l'export NSFW est refusé en dur."
+      "d": "Pierre tranche l'usage : plateformes tierces et usage personnel. Il conditionne l'alimentation de l'identité aux taux, et ils se contredisent : identité 0,757 contre 0,739 en SFW, jugement humain 77 % « ia » contre 56 %. La condition n'est décidable qu'après la mesure du corps. La semaine d'IT-4 ne tranche que son propre cas, produire sans publier : l'export reste refusé en dur."
     },
     {
       "e": "ouvert",
