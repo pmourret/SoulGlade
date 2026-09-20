@@ -1,6 +1,6 @@
 {
-  "last_node_id": 42,
-  "last_link_id": 46,
+  "last_node_id": 44,
+  "last_link_id": 53,
   "nodes": [
     {
       "id": 1,
@@ -894,14 +894,16 @@
           "links": [
             31,
             32,
-            36
+            36,
+            50
           ]
         },
         {
           "name": "VAE",
           "type": "VAE",
           "links": [
-            37
+            37,
+            51
           ]
         }
       ],
@@ -1136,7 +1138,8 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            35
+            35,
+            49
           ]
         }
       ],
@@ -1218,7 +1221,8 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            39
+            39,
+            53
           ]
         }
       ],
@@ -1258,7 +1262,8 @@
           "name": "CONDITIONING",
           "type": "CONDITIONING",
           "links": [
-            38
+            38,
+            52
           ]
         }
       ],
@@ -1385,7 +1390,7 @@
           "name": "image",
           "type": "IMAGE",
           "links": [
-            42
+            48
           ]
         },
         {
@@ -1747,6 +1752,188 @@
       "title": "QC et reglages",
       "color": "#233",
       "bgcolor": "#355"
+    },
+    {
+      "id": 43,
+      "type": "UltralyticsDetectorProvider",
+      "pos": [
+        4560.0,
+        0.0
+      ],
+      "size": [
+        340,
+        80
+      ],
+      "flags": {},
+      "order": 42,
+      "mode": 4,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "BBOX_DETECTOR",
+          "type": "BBOX_DETECTOR",
+          "links": [
+            47
+          ]
+        },
+        {
+          "name": "SEGM_DETECTOR",
+          "type": "SEGM_DETECTOR",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UltralyticsDetectorProvider"
+      },
+      "widgets_values": [
+        "bbox/hand_yolov8s.pt"
+      ],
+      "title": "Detecteur de mains (hand_yolov8s)"
+    },
+    {
+      "id": 44,
+      "type": "FaceDetailer",
+      "pos": [
+        4560.0,
+        140.0
+      ],
+      "size": [
+        360,
+        700
+      ],
+      "flags": {},
+      "order": 43,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "link": 48
+        },
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 49
+        },
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 50
+        },
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 51
+        },
+        {
+          "name": "positive",
+          "type": "CONDITIONING",
+          "link": 52
+        },
+        {
+          "name": "negative",
+          "type": "CONDITIONING",
+          "link": 53
+        },
+        {
+          "name": "bbox_detector",
+          "type": "BBOX_DETECTOR",
+          "link": 47
+        },
+        {
+          "name": "sam_model_opt",
+          "type": "SAM_MODEL",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "segm_detector_opt",
+          "type": "SEGM_DETECTOR",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "detailer_hook",
+          "type": "DETAILER_HOOK",
+          "link": null,
+          "shape": 7
+        },
+        {
+          "name": "scheduler_func_opt",
+          "type": "SCHEDULER_FUNC",
+          "link": null,
+          "shape": 7
+        }
+      ],
+      "outputs": [
+        {
+          "name": "image",
+          "type": "IMAGE",
+          "links": [
+            42
+          ]
+        },
+        {
+          "name": "cropped_refined",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "cropped_enhanced_alpha",
+          "type": "IMAGE",
+          "links": null
+        },
+        {
+          "name": "mask",
+          "type": "MASK",
+          "links": null
+        },
+        {
+          "name": "detailer_pipe",
+          "type": "DETAILER_PIPE",
+          "links": null
+        },
+        {
+          "name": "cnet_images",
+          "type": "IMAGE",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "FaceDetailer"
+      },
+      "widgets_values": [
+        512,
+        true,
+        1024,
+        723451234567890,
+        "randomize",
+        20,
+        1.0,
+        "euler",
+        "simple",
+        0.5,
+        8,
+        true,
+        true,
+        0.5,
+        10,
+        3.0,
+        "center-1",
+        0,
+        0.93,
+        0,
+        0.7,
+        "False",
+        10,
+        "",
+        1,
+        false,
+        20,
+        false,
+        false
+      ],
+      "title": "HandDetailer mains - modele PATCHE PuLID (bypass)"
     }
   ],
   "links": [
@@ -2080,7 +2267,7 @@
     ],
     [
       42,
-      33,
+      44,
       0,
       36,
       1,
@@ -2117,6 +2304,62 @@
       41,
       0,
       "IMAGE"
+    ],
+    [
+      47,
+      43,
+      0,
+      44,
+      6,
+      "BBOX_DETECTOR"
+    ],
+    [
+      48,
+      33,
+      0,
+      44,
+      0,
+      "IMAGE"
+    ],
+    [
+      49,
+      28,
+      0,
+      44,
+      1,
+      "MODEL"
+    ],
+    [
+      50,
+      22,
+      1,
+      44,
+      2,
+      "CLIP"
+    ],
+    [
+      51,
+      22,
+      2,
+      44,
+      3,
+      "VAE"
+    ],
+    [
+      52,
+      31,
+      0,
+      44,
+      4,
+      "CONDITIONING"
+    ],
+    [
+      53,
+      30,
+      0,
+      44,
+      5,
+      "CONDITIONING"
     ]
   ],
   "groups": [
@@ -2190,6 +2433,18 @@
         710.0
       ],
       "color": "#6b1f1f",
+      "flags": {}
+    },
+    {
+      "id": 7,
+      "title": "N4b - HANDDETAILER",
+      "bounding": [
+        4520.0,
+        -110.0,
+        520.0,
+        1100.0
+      ],
+      "color": "#b58b2a",
       "flags": {}
     }
   ],

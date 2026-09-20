@@ -323,7 +323,21 @@ def appliquer_expression(path, job, cfg, character_id, checker=None, avant=None)
 
 
 def ranger_mesures(nom, identite, reel, character_id, embedding=None,
-                   apres_expression=None, expression=None, lora_identite=None):
+                   apres_expression=None, expression=None, lora_identite=None,
+                   espace=None):
+    """`espace` EST OBLIGATOIRE DES QU'ON N'EST PAS EN SFW (20/09).
+
+    La colonne vaut `DEFAULT 'lena'` au schema : une ligne creee sans espace
+    explicite atterrit dans l'espace SFW. Tant que cette fonction n'etait
+    appelee que par la branche SFW, le defaut disait vrai. Depuis que la
+    boucle d'edition mesure elle aussi (meme chaine de validation), il ment —
+    et il ment la ou ca coute le plus cher : `base.construire_jeu` filtre
+    `i.espace = 'lena'` pour batir le gabarit d'identite, donc une image NSFW
+    mal estampillee entre dans la reference du personnage.
+
+    `None` laisse le defaut, c'est-a-dire le SFW : le comportement de la
+    branche SFW ne change pas d'un iota.
+    """
     quand = datetime.now().isoformat(timespec="seconds")
     try:
         import mesures
@@ -336,7 +350,8 @@ def ranger_mesures(nom, identite, reel, character_id, embedding=None,
         import base
         with base.ouvrir() as cx:
             iid = base.enregistrer_image(cx, nom, character_id=character_id,
-                                         lora_identite=lora_identite)
+                                         lora_identite=lora_identite,
+                                         espace=espace)
             base.enregistrer_score(cx, iid, "identite", identite, quand)
             # score d'apres expression : ENREGISTRE, jamais utilise pour trier.
             # Meme regle que identite_centroide — le verdict reste celui du

@@ -122,6 +122,94 @@ for pack_id in ("instagram-influenceur", "rpg-personnage"):
                 f"groupe HANDDETAILER : le detecteur et le detailer, rien d'autre "
                 f"({len(ids)} noeuds)")
 
+# --------------------------------------------------------------------------
+# Le graphe d'EDITION (capacite `edit`, ADR-0018), ajoute en IT-3e.
+#
+# POURQUOI IL ENTRE ICI. Il n'avait aucun test de contrat, alors qu'il
+# s'accroche a ses noeuds exactement comme un graphe de production —
+# `nsfw_batch.NsfwRunner._roles` par `find_node`, ses groupes par
+# `active_groups`. Le cas reel : IT-3e y ajoute un SECOND `FaceDetailer`
+# (les mains), ce qui rendait AMBIGUE la recherche par type seul du premier
+# et cassait toute la voie d'edition — meme famille de faute que le
+# `CheckpointLoaderSimple` d'IT-2, en plus brutal puisqu'ici `find_node`
+# leve au lieu de rendre None.
+#
+# Titres recopies en dur, comme ROLES_COMMUNS plus haut : ce fichier
+# RESTATE le contrat au lieu de l'importer, pour qu'un titre change d'un
+# cote fasse echouer de l'autre.
+ROLES_EDITION = [
+    ("source", "LoadImage", "Image SFW validee"),
+    ("ref", "LoadImage", "BASE GELEE - identite"),
+    ("ref_face", "LoadImage", "BASE GELEE - source du visage"),
+    ("facedetailer", "FaceDetailer", "remet le visage"),
+    ("final_size", "ImageScale", "Taille finale"),
+    ("switch", "Switch any [Crystools]", None),
+    ("refiner", "KSampler", "img2img realisme"),
+    ("grain", "ImageAddNoise", None),
+    ("sharpen", "ImageCASharpening+", None),
+    ("positive", "TextEncodeQwenImageEditPlus", "POSITIF"),
+    ("latent", "EmptySD3LatentImage", None),
+    ("sampler", "KSampler", "edition Qwen"),
+    ("save", "SaveImage", None),
+    ("lora", "LoraLoaderModelOnly", None),
+]
+# Groupes toujours actifs, `nsfw_batch.GROUPS`. `N4b - HANDDETAILER` en est
+# volontairement absent : il est optionnel et bypasse par defaut.
+GROUPES_EDITION = ["N1 - ENTREES", "N2 - MODELE NSFW LOCAL", "N3 - EDITION GUIDEE",
+                   "N3b - REFINER REALISME", "N4 - IDENTITE RESTAUREE", "N5 - SORTIE"]
+
+for pack_id in ("instagram-influenceur", "rpg-personnage"):
+    uni = universe.load_universe(pack_id)
+    cap = (uni.get("capabilities") or {}).get("edit")
+    if not cap:                      # un pack a le droit de ne pas editer
+        continue
+    chemin = OFM / cap["graph"]
+    ui = json.loads(chemin.read_text(encoding="utf-8"))
+    print(f"\n[{pack_id}] edition : {chemin.name}")
+
+    for role, typ, titre in ROLES_EDITION:
+        try:
+            n = ui_to_api.find_node(ui, typ, titre)
+            verifie(True, f"role {role!r} -> #{n['id']} {n.get('title') or n['type']!r}")
+        except LookupError as e:
+            verifie(False, f"role {role!r} : {e}")
+
+    # Ce que la carte de capacites PROMET doit etre ce que le graphe porte.
+    # `handdetailer` est OPTIONNEL (invariant 7 : la capacite est portee par le
+    # graphe du pack, jamais par le code) : il a le droit d'etre absent des
+    # deux, jamais d'etre promis sans etre la.
+    promis = set(cap.get("roles") or [])
+    obligatoires = {r for r, _, _ in ROLES_EDITION}
+    manquants = obligatoires - promis
+    en_trop = promis - obligatoires - {"handdetailer"}
+    verifie(not manquants and not en_trop,
+            f"carte de capacites et contrat d'accroche d'accord "
+            f"{(manquants | en_trop) or ''}")
+
+    for fragment in GROUPES_EDITION:
+        verifie(bool(ui_to_api.nodes_in_group(ui, fragment)),
+                f"groupe ~{fragment!r} present et non vide")
+
+    titres = [g.get("title", "").lower() for g in ui.get("groups", [])]
+    chevauche = [(a, b) for a in titres for b in titres if a != b and a in b]
+    verifie(not chevauche, f"aucun titre de groupe fragment d'un autre {chevauche or ''}")
+
+    # Meme contrat que le groupe 14 cote production, et meme raison.
+    ids = ui_to_api.nodes_in_group(ui, "N4b - HANDDETAILER")
+    verifie("handdetailer" not in promis or bool(ids),
+            "'handdetailer' promis par la carte -> le groupe N4b existe vraiment")
+    if ids:
+        try:
+            n = ui_to_api.find_node(ui, "FaceDetailer", "HandDetailer")
+            verifie(n["id"] in ids,
+                    f"role 'handdetailer' -> #{n['id']} et il est DANS le groupe N4b")
+        except LookupError as e:
+            verifie(False, f"groupe N4b present mais le noeud pilote est "
+                           f"introuvable ou ambigu : {e}")
+        verifie(len(ids) == 2,
+                f"groupe N4b : le detecteur et le detailer, rien d'autre "
+                f"({len(ids)} noeuds)")
+
 print("\n" + "=" * 70)
 print("tout est vert" if not KO else f"{KO} ECHEC(S)")
 print("=" * 70)

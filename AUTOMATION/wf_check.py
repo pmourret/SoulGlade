@@ -71,6 +71,39 @@ ROLES_PROD_SDXL = [
     ("SaveImage", "SORTIE production"),
 ]
 ROLES_PROD_PAR_FAMILLE = {"flux": ROLES_PROD_FLUX, "sdxl": ROLES_PROD_SDXL}
+
+# Roles que `nsfw_batch.NsfwRunner` cherche dans le graphe d'EDITION (capacite
+# `edit`, ADR-0018). Ajoutes en IT-3e : jusque-la `--roles` ne connaissait que
+# les graphes de production et echouait sur un graphe d'edition en cherchant
+# « POSITIF - scene » et « SORTIE production », deux roles qu'un graphe
+# d'edition n'a aucune raison de porter. Le drapeau qui les separe est
+# `--capacite`, sur le meme patron que `--famille`.
+#
+# La famille de modele ne joue pas ici : le graphe d'edition porte son propre
+# modele (Qwen), pas celui du pack.
+ROLES_EDIT = [
+    ("LoadImage", "Image SFW validee"),
+    ("LoadImage", "BASE GELEE - identite"),
+    ("LoadImage", "BASE GELEE - source du visage"),
+    ("FaceDetailer", "remet le visage"),
+    ("ImageScale", "Taille finale"),
+    ("TextEncodeQwenImageEditPlus", "POSITIF"),
+    ("EmptySD3LatentImage", None),
+    ("KSampler", "edition Qwen"),
+    ("SaveImage", None),
+]
+ROLES_EDIT_OPTIONNELS = [
+    ("Switch any [Crystools]", None),
+    ("KSampler", "img2img realisme"),
+    ("ImageAddNoise", None),
+    ("ImageCASharpening+", None),
+    ("LoraLoaderModelOnly", None),
+    # groupe N4b - HANDDETAILER (IT-3e). Optionnel par graphe, exactement comme
+    # le groupe 14 cote production : la capacite est portee par le graphe du
+    # pack, jamais par le code (invariant 7).
+    ("FaceDetailer", "HandDetailer"),
+]
+
 ROLES_OPTIONNELS = [
     ("Switch any [Crystools]", None),
     ("KSampler", "img2img denoise"),
@@ -105,9 +138,12 @@ def main():
     ap.add_argument("--essai", action="store_true",
                     help="met le graphe en file pour de vrai (produit une image)")
     ap.add_argument("--roles", action="store_true",
-                    help="verifie les roles attendus par le runner de production")
+                    help="verifie les roles attendus par le runner")
+    ap.add_argument("--capacite", default="produce", choices=("produce", "edit"),
+                    help="quel runner s'accroche a ce graphe (defaut : produce)")
     ap.add_argument("--famille", default="flux", choices=sorted(ROLES_PROD_PAR_FAMILLE),
-                    help="famille de modele du workflow (defaut : flux)")
+                    help="famille de modele du workflow, capacite produce "
+                         "seulement (defaut : flux)")
     args = ap.parse_args()
 
     chemin = Path(args.workflow)
@@ -182,16 +218,21 @@ def main():
 
     # 5 ----------------------------------------------- roles du runner
     if args.roles:
+        if args.capacite == "edit":
+            obligatoires, optionnels = ROLES_EDIT, ROLES_EDIT_OPTIONNELS
+        else:
+            obligatoires, optionnels = ROLES_PROD_PAR_FAMILLE[args.famille], ROLES_OPTIONNELS
         manquants = []
-        for typ, titre in ROLES_PROD_PAR_FAMILLE[args.famille]:
+        for typ, titre in obligatoires:
             try:
                 ui_to_api.find_node(ui, typ, titre)
             except LookupError:
                 manquants.append(f"{typ}" + (f" / « {titre} »" if titre else ""))
-        echecs += not dire(not manquants, "roles obligatoires du runner presents",
+        echecs += not dire(not manquants,
+                           f"roles obligatoires du runner {args.capacite} presents",
                            "introuvables : " + " | ".join(manquants) if manquants else "")
         absents = []
-        for typ, titre in ROLES_OPTIONNELS:
+        for typ, titre in optionnels:
             try:
                 ui_to_api.find_node(ui, typ, titre)
             except LookupError:

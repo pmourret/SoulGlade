@@ -12,9 +12,9 @@
     },
     "edit": {
       "graph": "WORKFLOWS/nsfw/lena_nsfw_branch_ui.json",
-      "roles": ["source", "ref", "ref_face", "facedetailer", "final_size",
-                "switch", "refiner", "grain", "sharpen", "positive",
-                "latent", "sampler", "save", "lora"]
+      "roles": ["source", "ref", "ref_face", "facedetailer", "handdetailer",
+                "final_size", "switch", "refiner", "grain", "sharpen",
+                "positive", "latent", "sampler", "save", "lora"]
     }
   },
   "output_styles": {

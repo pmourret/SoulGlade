@@ -53,6 +53,12 @@ GROUPS = ("N1 - ENTREES", "N2 - MODELE NSFW LOCAL", "N3 - EDITION GUIDEE",
 # N4 : PuLID + FaceDetailer. ReActor a ete retire du graphe, son classificateur
 # NSFW integre renvoyait un carre noir (verifie le 23/08).
 
+# Groupe OPTIONNEL, hors de GROUPS pour la meme raison que le groupe 14 cote
+# production : il coute ~34 s par image et reste eteint par defaut (IT-3b).
+# Son interrupteur est le meme reglage `handdetailer` que la branche SFW, lu
+# par `reglage()` — le preset fait foi, `nsfw` ne porte qu'une surcharge.
+GROUPE_MAINS = "N4b - HANDDETAILER"
+
 
 def edit_workflow_path(character_id):
     """Absolute path of the live-AI-edit graph serving THIS character.
@@ -281,7 +287,11 @@ class NsfwRunner:
             "source": f(self.ui, "LoadImage", "Image SFW validee"),
             "ref": f(self.ui, "LoadImage", "BASE GELEE - identite"),
             "ref_face": f(self.ui, "LoadImage", "BASE GELEE - source du visage"),
-            "facedetailer": f(self.ui, "FaceDetailer"),
+            # Cherche par FRAGMENT DE TITRE depuis IT-3e : le graphe porte deux
+            # FaceDetailer (visage et mains), une recherche par type seul
+            # deviendrait ambigue, find_node leverait, et toute la voie
+            # d'edition casserait. Meme correction qu'IT-2 cote production.
+            "facedetailer": f(self.ui, "FaceDetailer", "remet le visage"),
             "final_size": f(self.ui, "ImageScale", "Taille finale"),
             "switch": f(self.ui, "Switch any [Crystools]"),
             "refiner": f(self.ui, "KSampler", "img2img realisme"),
@@ -293,10 +303,21 @@ class NsfwRunner:
             "save": f(self.ui, "SaveImage"),
             "lora": f(self.ui, "LoraLoaderModelOnly"),
         }
+        # Role TOLERANT, comme ses homologues optionnels cote production : un
+        # graphe d'edition sans etage de mains reste valide, le runner s'adapte
+        # (invariant 7 — la capacite est portee par le graphe du pack, jamais
+        # par ce code).
+        try:
+            self.roles["handdetailer"] = f(self.ui, "FaceDetailer", "HandDetailer")
+        except LookupError:
+            self.roles["handdetailer"] = None
+        self.mains = bool(lb.reglage(cfg, "handdetailer", False)) and \
+            self.roles["handdetailer"] is not None
 
     def api_for(self, src_name, instruction, size, seed, batch_id, final_size=None):
         # le LoRA Lightning reste desactive : Qwen-Rapid est deja distille
-        api = ui_to_api.convert(self.ui, self.obj, active_groups=GROUPS,
+        groupes = GROUPS + ((GROUPE_MAINS,) if self.mains else ())
+        api = ui_to_api.convert(self.ui, self.obj, active_groups=groupes,
                                 node_modes={self.roles["lora"]["id"]: 4})
         node = lambda role: api[str(self.roles[role]["id"])]
         node("source")["inputs"]["image"] = src_name
@@ -305,6 +326,12 @@ class NsfwRunner:
         fd = node("facedetailer")["inputs"]
         fd["denoise"] = self.cfg.get("nsfw", {}).get("face_denoise", 0.35)
         fd["seed"] = seed + 11
+        if self.mains:
+            # Decale du visage pour que les deux Detailer ne tirent pas le meme
+            # bruit. Le `denoise` reste celui du graphe : cote production il
+            # n'est touche que par un axe de banc, pas par un reglage de
+            # production, et rien ne justifie de diverger ici.
+            node("handdetailer")["inputs"]["seed"] = seed + 13
         node("positive")["inputs"]["prompt"] = PREAMBLE + instruction.strip()
         node("latent")["inputs"].update(width=size[0], height=size[1], batch_size=1)
         ks = node("sampler")["inputs"]
@@ -414,7 +441,12 @@ def editer(src, instruction, cfg, checker=None, runner=None, batch_id=None,
             else:
                 for im in images:
                     out = COMFY_OUTPUT / im.get("subfolder", "") / im["filename"]
-                    score = checker.score(out) if checker else None
+                    # `mesure` et non `score` : le meme passage InsightFace rend
+                    # aussi le cadre du visage et l'embedding, dont la suite a
+                    # besoin. Aucune passe de plus, c'est le meme appel.
+                    m = checker.mesure(out) if checker else None
+                    score = m["score"] if m else None
+                    bbox = m["bbox"] if m else None
                     verdict = checker.verdict(score) if checker else "OK"
                     dest_dir = bucket_dir(verdict, character_id)
                     dest_dir.mkdir(parents=True, exist_ok=True)
@@ -426,6 +458,30 @@ def editer(src, instruction, cfg, checker=None, runner=None, batch_id=None,
                     # meme grain que la branche SFW, sinon les deux sorties n'ont
                     # pas la meme signature de bruit dans un meme feed
                     lb.appliquer_grain(dest, cfg, seed=seed)
+                    # MEME CHAINE DE VALIDATION QUE LE SFW (decision du 20/09).
+                    # Elle manquait : la boucle d'edition s'arretait au score
+                    # d'identite, et les mesures des images NSFW deja en base
+                    # venaient d'un backfill, pas de la production. Meme ordre
+                    # que `runner/sortie.py` : le QC juge d'abord, le grain est
+                    # cosmetique et vient apres, les mesures se prennent sur
+                    # l'image FINALE — les mesurer avant le grain les rendrait
+                    # incomparables a celles de la branche SFW.
+                    reel = lb.mesurer_realisme(dest, bbox)
+                    mains = lb.mesurer_mains(dest, cfg)
+                    if mains:
+                        reel = {**(reel or {}), **mains}
+                    if reel or score is not None:
+                        # `espace` EXPLICITE, jamais laisse au defaut : la
+                        # colonne vaut DEFAULT 'lena' au schema, et
+                        # `construire_jeu` filtre dessus pour batir le gabarit
+                        # d'identite. Sans ce mot, chaque image NSFW mesuree
+                        # entrerait dans la reference du personnage. Le bucket,
+                        # lui, est estampille en fin de lot par
+                        # `ecrire_nsfw_en_base`.
+                        lb.ranger_mesures(dest.name, score, reel,
+                                          character_id=character_id,
+                                          embedding=(m or {}).get("embedding"),
+                                          espace="nsfw")
                     result.update(verdict=verdict, score=score, fichier=dest.name)
                     ligne = [datetime.now().isoformat(timespec="seconds"),
                              batch_id, src.name, seed,

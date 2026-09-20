@@ -206,6 +206,65 @@ try:
     verifie("rpg-personnage" in (o["reason"] or ""),
             f"et la raison nomme le pack : {o['reason']}")
 
+    # ---------------------------------------------------------------- 20/09
+    # Une image NSFW mesuree ne doit JAMAIS atterrir dans l'espace SFW.
+    #
+    # Depuis le 20/09 la boucle d'edition applique la meme chaine de mesures
+    # que la branche SFW (`ranger_mesures`). Le piege que ce test a trouve :
+    # la colonne `espace` vaut DEFAULT 'lena' au schema, donc mesurer une
+    # image NSFW sans passer l'espace la rangeait cote SFW — et
+    # `base.construire_jeu` filtre `i.espace = 'lena'` pour batir le gabarit
+    # d'identite, donc elle serait entree dans la REFERENCE du personnage.
+    # Base temporaire : rien n'est ecrit dans PROD/soulglade.db.
+    import base                                       # noqa: E402
+    import mesures                                     # noqa: E402
+    import runner as lb                                # noqa: E402
+    # LES DEUX FICHIERS, pas seulement la base : `ranger_mesures` fait une
+    # double ecriture (base + mesures.json). N'en rediriger qu'un laisse des
+    # entrees de test dans le vrai PROD/mesures.json, et c'est
+    # `test_coherence_base` qui les trouve, apres coup.
+    vrai_fichier, vraies_mesures = base.FICHIER, mesures.FICHIER
+    base.FICHIER = OFM / "PROD" / "_test_nsfw_espace.db"
+    mesures.FICHIER = OFM / "PROD" / "_test_nsfw_mesures.json"
+    base.FICHIER.unlink(missing_ok=True)
+    mesures.FICHIER.unlink(missing_ok=True)
+    try:
+        nom = "nsfw_probe_20260920_01.png"
+        lb.ranger_mesures(nom, 0.781, {"nettete": 142.0, "texture_visage": 4.7},
+                          character_id=A, embedding=None, espace="nsfw")
+        with base.ouvrir() as cx:
+            r = cx.execute("SELECT espace FROM image WHERE fichier = ?", (nom,)).fetchone()
+        verifie(r is not None and r["espace"] == "nsfw",
+                f"image NSFW mesuree -> espace 'nsfw', jamais le defaut 'lena' "
+                f"({r['espace'] if r else 'ligne absente'})")
+
+        # Le defaut ne bouge pas pour la branche SFW, qui ne passe rien.
+        lb.ranger_mesures("sfw_probe.png", 0.74, {"nettete": 120.0},
+                          character_id=A, embedding=None)
+        with base.ouvrir() as cx:
+            r2 = cx.execute("SELECT espace FROM image WHERE fichier = ?",
+                            ("sfw_probe.png",)).fetchone()
+        verifie(r2["espace"] == "lena",
+                f"branche SFW inchangee : espace par defaut ({r2['espace']})")
+
+        lb.ecrire_nsfw_en_base(
+            [["2026-09-20T12:00:00", "b1", "src.png", "42", "0.781",
+              "OK", nom, "12", "instruction"]], A)
+        with base.ouvrir() as cx:
+            r = cx.execute("SELECT espace, bucket FROM image WHERE fichier = ?",
+                           (nom,)).fetchone()
+            genres = {g for (g,) in cx.execute(
+                "SELECT genre FROM score WHERE image_id = "
+                "(SELECT id FROM image WHERE fichier = ?)", (nom,))}
+        verifie(r["espace"] == "nsfw", f"fin de lot : espace toujours 'nsfw' ({r['espace']})")
+        verifie(r["bucket"] == "OK", f"et le bucket suit le verdict ({r['bucket']})")
+        verifie({"nettete", "texture_visage"} <= genres,
+                f"les mesures de realisme ont survecu a l'estampillage ({sorted(genres)})")
+    finally:
+        base.FICHIER.unlink(missing_ok=True)
+        mesures.FICHIER.unlink(missing_ok=True)
+        base.FICHIER, mesures.FICHIER = vrai_fichier, vraies_mesures
+
     print("\n" + "=" * 70)
     print("tout est vert" if not KO else f"{KO} ECHEC(S)")
     print("=" * 70)
