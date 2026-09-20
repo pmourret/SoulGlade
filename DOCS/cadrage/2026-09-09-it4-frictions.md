@@ -26,6 +26,21 @@ itération cherche — et elle est invisible si on ne l'a notée qu'une fois.
 |---|---|---|---|
 | | | | |
 
+## Le comptage
+
+Deux colonnes de plus, décidées le 20/09
+(`2026-09-20-semaine-de-production.md`). Elles ne mesurent pas la
+friction mais la **production** : sans elles, la semaine dit ce qui
+freine et rien de ce qui sort, et le calcul « cadence × prix ×
+abonnés », laissé ouvert le 11/09, n'a aucun autre instrument.
+
+Aucune cible n'est fixée d'avance, on compte après coup. Tenu à la main,
+une ligne par jour.
+
+| Jour | Images produites | Images publiables | Temps par image publiable |
+|---|---|---|---|
+| | | | |
+
 ## Clôture
 
 À la fin de la semaine, chaque ligne repart dans **un** des trois tas, et
