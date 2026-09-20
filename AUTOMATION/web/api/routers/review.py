@@ -107,7 +107,15 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
             "flag": m.get("flag"), "anatomie": m.get("anatomie"),
             "mains_juge": m.get("mains_juge"),
         })
-    entries = list(store.values())
+    # Calibration entries: THIS character's images, plus the reference corpus,
+    # which belongs to the platform and not to anyone. `store` is keyed by bare
+    # file name with no character field, so taking it whole calibrated one
+    # character's review on another's judgements as soon as the corpus was
+    # missing — the same isolation bug `shared_state.bucket_dir` documents, one
+    # level up. The items above are already folder-scoped; these were not.
+    miens = ss.fichiers_du_personnage(cid)
+    entries = [e for nom, e in store.items()
+               if e.get("role") == "reference" or nom in miens]
     refs = [e for e in entries if e.get("role") == "reference"]
     return {
         "items": items, "sans_mesure": unmeasured,

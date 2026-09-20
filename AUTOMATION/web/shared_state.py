@@ -385,6 +385,28 @@ def bucket_dir(bucket, space, character_id):
     return racine / bucket
 
 
+def fichiers_du_personnage(character_id):
+    """Noms de fichiers ranges sous UN personnage, tous buckets, tous espaces.
+
+    `PROD/mesures.json` est indexe par nom de fichier nu, sans champ personnage :
+    une liste d'entrees prise telle quelle melange tout le monde. Un appelant qui
+    etalonne quelque chose dessus (les bandes de la Revue) doit donc restreindre
+    lui-meme, et c'est ce que cette fonction lui donne.
+
+    Les dossiers font foi, pas la base : une image mesuree avant la bascule
+    SQLite n'a pas forcement de ligne, et c'est bien son fichier qui dit a qui
+    elle appartient.
+    """
+    noms = set()
+    for space in SPACES:
+        for bucket in BUCKETS:
+            d = bucket_dir(bucket, space, character_id)
+            if d.exists():
+                noms.update(f.name for f in d.iterdir()
+                            if f.suffix.lower() == ".png")
+    return noms
+
+
 def export_dir(character_id):
     """Dossier de publication d'un personnage : PROD/EXPORT/<cid>/<categorie>/.
 

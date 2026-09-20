@@ -315,18 +315,37 @@ def fichiers_reference():
                   if f.suffix.lower() in (".png", ".jpg", ".jpeg"))
 
 
+def _bbox_sans_ancre(path, checker):
+    """Cadre du visage SANS score d'identite, pour le corpus de plateforme.
+
+    Le corpus n'appartient a aucun personnage. Le mesurer avec le `checker` du
+    personnage courant lui collait un score d'identite contre l'ancre de celui
+    qui a lance la mesure EN PREMIER : une valeur qui ne veut rien dire, ecrite
+    une fois pour toutes, et qui se lit comme un score. La bbox, elle, reste
+    necessaire — `qc_realisme` mesure la texture sur le visage — et elle ne
+    depend d'aucune ancre.
+    """
+    if checker is None:
+        return None
+    import qc_identity
+    return qc_identity.analyse(path, checker.root)[1]
+
+
 def mesurer_references(checker=None, force=False):
     """Mesure le corpus de reference. Retourne (mesurees, total).
 
     Les entrees portent role="reference" : elles etalonnent les bandes mais
     n'apparaissent jamais dans la revue, qui ne liste que les dossiers de tri.
+
+    `checker` ne sert qu'a localiser le visage (voir `_bbox_sans_ancre`) : le
+    corpus ne recoit jamais de score d'identite.
     """
     store = charger()
     faites = 0
     for f in fichiers_reference():
         if not force and "nettete" in store.get(f.name, {}):
             continue
-        if mesurer(f, checker=checker) is not None:
+        if mesurer(f, bbox=_bbox_sans_ancre(f, checker)) is not None:
             maj(f.name, role="reference")
             faites += 1
     return faites, len(fichiers_reference())
