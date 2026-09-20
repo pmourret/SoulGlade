@@ -131,6 +131,39 @@ try:
         attend_leve = True
     verifie(attend_leve, "axe hors liste blanche (base_gelee) -> UnknownAxisError")
 
+    # Axe a TROIS niveaux (identity.lora.strength), ouvert le 12/09 pour
+    # IT-3d : le seul qui ne tient pas dans (section, cle).
+    ref_lora = {"identity": {"weight": 0.7, "lora": {"name": "x.safetensors",
+                                                     "strength": 0.8}},
+                "preset": {"steps": 20}}
+    v_lora = bench.build_variant_cfg(ref_lora, "lora_strength", 0.0)
+    verifie(v_lora["identity"]["lora"]["strength"] == 0.0
+            and v_lora["identity"]["lora"]["name"] == "x.safetensors"
+            and v_lora["identity"]["weight"] == 0.7,
+            "lora_strength (3 niveaux) change la force, et elle seule")
+    verifie(ref_lora["identity"]["lora"]["strength"] == 0.8,
+            "reference_cfg n'est pas mute par un axe imbrique")
+    try:
+        bench.validate_variant_cfg(ref_lora, v_lora, "lora_strength")
+        verifie(True, "un axe imbrique passe la garantie d'axe unique")
+    except bench.MultiAxisError as e:
+        verifie(False, f"aurait du etre accepte : {e}")
+
+    v_2 = bench.build_variant_cfg(ref_lora, "lora_strength", 0.0)
+    v_2["identity"]["lora"]["name"] = "autre.safetensors"
+    attend_leve = False
+    try:
+        bench.validate_variant_cfg(ref_lora, v_2, "lora_strength")
+    except bench.MultiAxisError:
+        attend_leve = True
+    verifie(attend_leve, "LoRA change EN PLUS de sa force -> MultiAxisError")
+
+    v_nom = bench.build_variant_cfg(ref_lora, "lora_name", "x-000004.safetensors")
+    verifie(v_nom["identity"]["lora"] == {"name": "x-000004.safetensors",
+                                          "strength": 0.8},
+            "lora_name change le checkpoint, et lui seul")
+    bench.validate_variant_cfg(ref_lora, v_nom, "lora_name")
+
     overrides = bench.build_variant_job_overrides("sampler", "dpmpp_2m")
     verifie(overrides == {"sampler_name": "dpmpp_2m"},
             f"axe de job (sampler) -> job['overrides'], pas cfg : {overrides}")

@@ -39,6 +39,10 @@ OFM = Path(__file__).resolve().parent.parent
 # champ hors banc). CFG_AXES vit dans cfg ; JOB_AXES vit dans
 # job["overrides"] (sampler_name/scheduler, poses par WorkflowRunner.api_for
 # depuis J8.5 — voir AUTOMATION/runner/comfy.py).
+#
+# La valeur d'un axe CFG est un CHEMIN de cles, de profondeur libre : deux
+# niveaux pour tous les axes jusqu'au 12/09, trois pour `lora_strength`, le
+# premier reglage du banc qui ne vit pas directement sous sa section.
 CFG_AXES = {
     "identity_weight": ("identity", "weight"),
     "steps": ("preset", "steps"),
@@ -64,6 +68,21 @@ CFG_AXES = {
     "grain_strength": ("preset", "grain_strength"),
     "identity_start_at": ("identity", "start_at"),
     "identity_end_at": ("identity", "end_at"),
+    # Force du LoRA d'identite, ouvert le 12/09 pour IT-3d. Le cadrage du
+    # 09/09 (point 6) annoncait cet axe comme existant : il ne l'etait pas,
+    # et sans lui la force du LoRA se fait varier en editant config.json a la
+    # main entre deux variantes — seeds non appariees, garantie d'axe unique
+    # rompue, chiffre de la DoD sans valeur.
+    #
+    # PAS D'AXE « avec / sans LoRA », et ce n'est pas un oubli : des que le
+    # personnage nomme un LoRA, `identity.injecter_lora` prefixe son mot
+    # declencheur au prompt. Retirer le LoRA retirerait aussi le declencheur
+    # — deux changements, donc jamais un axe. Faire varier la force de 0.0 a
+    # sa valeur cible garde le prompt identique des deux cotes.
+    "lora_strength": ("identity", "lora", "strength"),
+    # Checkpoint du LoRA (epoques d'un meme entrainement), ouvert le 14/09 :
+    # meme mot declencheur d'un fichier a l'autre, donc un seul changement.
+    "lora_name": ("identity", "lora", "name"),
 }
 JOB_AXES = {
     "sampler": "sampler_name",
@@ -92,6 +111,16 @@ def _check_axis(axis):
             f"axe inconnu : {axis!r} — axes declares : {', '.join(ALLOWED_AXES)}")
 
 
+def _lire_chemin(source, chemin):
+    """Valeur au bout d'un chemin de cles imbriquees, None si la branche
+    manque a mi-parcours (`identity` sans `lora`, par exemple)."""
+    for cle in chemin:
+        if not isinstance(source, dict):
+            return None
+        source = source.get(cle)
+    return source
+
+
 def build_variant_cfg(reference_cfg, axis, value):
     """Clone `reference_cfg` (deepcopy) et applique la surcharge de `axis`
     si c'est un axe de config (CFG_AXES) ; copie identique, inchangee, pour
@@ -99,8 +128,11 @@ def build_variant_cfg(reference_cfg, axis, value):
     _check_axis(axis)
     cfg = copy.deepcopy(reference_cfg)
     if axis in CFG_AXES:
-        section, cle = CFG_AXES[axis]
-        cfg.setdefault(section, {})[cle] = value
+        *branches, cle = CFG_AXES[axis]
+        noeud = cfg
+        for branche in branches:
+            noeud = noeud.setdefault(branche, {})
+        noeud[cle] = value
     return cfg
 
 
@@ -210,6 +242,13 @@ def run_bench(character_id, scene, seeds, axis, values, checker=None,
     if not seeds:
         raise ValueError("seeds ne peut pas etre vide — un banc sans seed ne mesure rien")
     reference_cfg = lb.load_config(character_id)
+    if axis in ("lora_strength", "lora_name") and not _lire_chemin(
+            reference_cfg, ("identity", "lora", "name")):
+        raise ValueError(
+            f"axe {axis!r} : ce personnage ne nomme aucun LoRA d'identite "
+            "(config.json / identity / lora / name). `identity.injecter_lora` "
+            "sort sans rien faire dans ce cas : le banc produirait des variantes "
+            "identiques et couterait ses heures de GPU pour rien.")
     checker = checker or lb.make_checker(reference_cfg)
     creative = lb.load_creative(character_id)
     scenes_path = lb.scenes_path(character_id)
@@ -221,8 +260,7 @@ def run_bench(character_id, scene, seeds, axis, values, checker=None,
 
     reference_value = None
     if axis in CFG_AXES:
-        section, cle = CFG_AXES[axis]
-        reference_value = reference_cfg.get(section, {}).get(cle)
+        reference_value = _lire_chemin(reference_cfg, CFG_AXES[axis])
 
     plan = [{"label": "reference", "value": reference_value, "is_reference": True}]
     plan += [{"label": f"{axis}={v}", "value": v, "is_reference": False} for v in values]
