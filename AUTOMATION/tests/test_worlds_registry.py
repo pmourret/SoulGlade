@@ -168,6 +168,39 @@ finally:
     worlds.WORLDS_DIR = _vrai
     shutil.rmtree(_tmp, ignore_errors=True)
 
+# --------------------------------- [9b] catalogue ADULTE, cle a part (21/09)
+print()
+print("[9b] le catalogue adulte est une cle a part, validee comme l'autre")
+_tmp = Path(tempfile.mkdtemp(prefix="worlds_adulte_"))
+try:
+    worlds.WORLDS_DIR = _tmp
+    (_tmp / "sobre.json").write_text(json.dumps(
+        {"id": "sobre", "label": "Sobre", "compatible_families": ["flux"],
+         "places": [{"id": "s1", "prompt": "x"}]}), encoding="utf-8")
+    verifie(worlds.places_adulte("sobre") == [],
+            "un monde sans catalogue adulte rend [] : c'est le cas nominal")
+
+    (_tmp / "adulte.json").write_text(json.dumps(
+        {"id": "adulte", "label": "Adulte", "compatible_families": ["flux"],
+         "places": [{"id": "s1", "prompt": "un cafe"}],
+         "places_adulte": [{"id": "a1", "prompt": "une chambre"}]}), encoding="utf-8")
+    verifie([p["id"] for p in worlds.places_adulte("adulte")] == ["a1"],
+            "le catalogue adulte se lit")
+    verifie([p["id"] for p in worlds.places("adulte")] == ["s1"],
+            "et il ne fuit JAMAIS dans le catalogue ordinaire : la banque "
+            "habituelle ne peut pas en afficher un par accident")
+
+    (_tmp / "habille2.json").write_text(json.dumps(
+        {"id": "habille2", "label": "H", "compatible_families": ["flux"],
+         "places_adulte": [{"id": "a1", "prompt": "x",
+                            "wardrobe": {"3": "nothing"}}]}), encoding="utf-8")
+    attend(ValueError, lambda: worlds.places_adulte("habille2"),
+           "un lieu adulte qui habille : refuse comme les autres, la nudite "
+           "est la garde-robe du PERSONNAGE a son palier, pas celle du monde")
+finally:
+    worlds.WORLDS_DIR = _vrai
+    shutil.rmtree(_tmp, ignore_errors=True)
+
 # --------------------------------- [10] place() / save_places() / merge_scene()
 print("\n[10] catalogue vivant : place(), save_places(), merge_scene() (ADR-0015)")
 for wid in REELS:

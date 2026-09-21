@@ -265,6 +265,17 @@ CHARACTER_ONLY_SCENE_KEYS = ("wardrobe", "pose", "format", "count", "variants")
 SCENE_OVERLAY_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("tones", "tags", "intensity", "guidance")
 
 
+CLE_PLACES = "places"
+# Catalogue ADULTE du monde, tranche le 21/09 (cadrage 2026-09-21-flux-nsfw,
+# arbitrage 3, couche decidee le meme jour). UNE CLE A PART, pas un drapeau
+# sur chaque lieu : un monde qui ne livre rien d'adulte n'a pas la cle, ce qui
+# se lit d'un coup d'oeil, et la banque ordinaire ne peut pas en afficher un
+# par accident puisqu'elle ne lit pas cette liste. Separation de DONNEES, pas
+# de sous-systeme (invariant 9) : meme validation, meme forme, meme heritage,
+# et c'est `scene_band` qui masque ensuite la scene hors de sa bande.
+CLE_PLACES_ADULTE = "places_adulte"
+
+
 def places(wid):
     """Catalogue de lieux du monde — le CADRE que chaque personnage de ce
     monde peut composer (ADR-0015). Vivant : lu a la creation du personnage
@@ -276,10 +287,32 @@ def places(wid):
     explicite ici, pas un silence qui se propage a chaque personnage qui le
     reference.
     """
-    entries = list(load_world(wid).get("places", []))
+    return _catalogue(wid, CLE_PLACES)
+
+
+def places_adulte(wid):
+    """Catalogue ADULTE du monde : meme chose, autre cle, et vide par defaut.
+
+    Un monde qui n'en livre pas rend [] — c'est le cas nominal, et aucun
+    appelant n'a a savoir si la cle existe. La validation est la MEME que
+    celle du catalogue ordinaire, et c'est voulu : un lieu adulte qui
+    habillerait le personnage serait la meme faute qu'ailleurs. La nudite
+    n'est pas une garde-robe livree par le monde, c'est la garde-robe du
+    personnage a son palier natif.
+
+    Ce catalogue ne se melange jamais au premier : `places()` ne le lit pas,
+    la banque ordinaire ne peut donc pas en afficher un lieu par accident.
+    Ce qui rend une scene adulte visible reste sa bande de niveaux
+    (`runner.prompt.scene_band`), jamais la liste dont elle sort.
+    """
+    return _catalogue(wid, CLE_PLACES_ADULTE)
+
+
+def _catalogue(wid, cle):
+    entries = list(load_world(wid).get(cle, []))
     for i, s in enumerate(entries):
         if not isinstance(s, dict):
-            raise ValueError(f"monde {wid!r} : places[{i}] n'est pas un objet")
+            raise ValueError(f"monde {wid!r} : {cle}[{i}] n'est pas un objet")
         intrus = [k for k in CHARACTER_ONLY_SCENE_KEYS if k in s]
         if intrus:
             raise ValueError(
