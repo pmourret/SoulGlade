@@ -354,6 +354,14 @@ const D = {
       "ref": "DOCS/cadrage/ : 2026-09-10-capacite-nsfw (capacité), 2026-09-21-flux-nsfw (parcours d'usage), 2026-09-21-scene-nsfw-native-le-modele (le modèle) — ADR-0003 amendé le 10/09"
     },
     {
+      "id": "IT-3f",
+      "state": "next",
+      "titre": "Un LoRA peut s'attacher à une scène",
+      "quoi": "Une scène et son LoRA sont parfois le même objet : une position NSFW ne veut rien dire sans le modèle qui la rend. Deux provenances aux obligations opposées, et c'est tout le sujet. Livré avec le pack, le fichier est déclaré au manifeste et voyage avec la scène. Ajouté par l'utilisateur, il est sa donnée, ne voyage pas, et la plateforme doit le dire au lieu de faire comme si. Relevé le 21/09 en câblant le premier LoRA de pack, promu le même jour.",
+      "dod": "Une scène livrée nomme son LoRA et rend à l'identique sur une autre installation. Une scène qu'un utilisateur enrichit d'un LoRA à lui le garde, et l'interface dit qu'il ne voyage pas. Le graphe du pack fournit l'emplacement, la donnée ne nomme qu'un fichier : jamais un checkpoint, jamais un graphe (invariants 7 et 10).",
+      "ref": "cadrage à écrire avant ouverture — pièces repérées : emplacement de LoRA de scène dans le graphe du pack, attachement depuis l'éditeur de scène, mention « ne voyage pas », et la recherche CivitAI en confort"
+    },
+    {
       "id": "IT-4",
       "state": "next",
       "titre": "Produire une semaine sans être ralenti",
@@ -1376,10 +1384,6 @@ const D = {
       {
         "t": "Le code dit pack et monde, plus univers",
         "d": "(11 septembre 2026) Relevé à la séance de cadrage global. Le renommage J8.1 a déplacé les dossiers, pas le vocabulaire : PACKS/<id>/universe.json, AUTOMATION/universe.py et plus de 400 occurrences nomment encore « univers » ce qui est un pack. Le README est aligné. À faire avec la passe « le code repasse en anglais », qui touche les mêmes fichiers."
-      },
-      {
-        "t": "Choisir un LoRA depuis l'éditeur de scène, et le chercher chez CivitAI",
-        "d": "(21 septembre 2026) Idée de Pierre le jour où le premier LoRA de pack a été câblé. À trancher : la couche. Un LoRA est un asset de pack, une scène une donnée de monde, et laisser la scène nommer le modèle ferait porter le graphe par la donnée (invariant 7). Le manifeste n'est pas concerné, il déclare ce que les scènes LIVRÉES demandent ; un LoRA cherché en phase créative est une donnée de l'utilisateur, comme son LoRA d'identité. Le coût : une scène ainsi modifiée ne rend plus ailleurs."
       }
     ]
   },
