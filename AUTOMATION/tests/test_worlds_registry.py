@@ -178,12 +178,16 @@ try:
         {"id": "sobre", "label": "Sobre", "compatible_families": ["flux"],
          "places": [{"id": "s1", "prompt": "x"}]}), encoding="utf-8")
     verifie(worlds.places_adulte("sobre") == [],
-            "un monde sans catalogue adulte rend [] : c'est le cas nominal")
+            "un monde sans fichier adulte a cote rend [] : c'est le cas nominal")
+    verifie(not worlds.adulte_path("sobre").exists(),
+            "et ce fichier n'existe pas : le catalogue adulte ne vit JAMAIS "
+            "dans WORLDS/<id>.json, qui est versionne et public")
 
     (_tmp / "adulte.json").write_text(json.dumps(
         {"id": "adulte", "label": "Adulte", "compatible_families": ["flux"],
-         "places": [{"id": "s1", "prompt": "un cafe"}],
-         "places_adulte": [{"id": "a1", "prompt": "une chambre"}]}), encoding="utf-8")
+         "places": [{"id": "s1", "prompt": "un cafe"}]}), encoding="utf-8")
+    (_tmp / "adulte.adulte.json").write_text(json.dumps(
+        {"places_adulte": [{"id": "a1", "prompt": "une chambre"}]}), encoding="utf-8")
     verifie([p["id"] for p in worlds.places_adulte("adulte")] == ["a1"],
             "le catalogue adulte se lit")
     verifie([p["id"] for p in worlds.places("adulte")] == ["s1"],
@@ -192,7 +196,9 @@ try:
 
     (_tmp / "habille2.json").write_text(json.dumps(
         {"id": "habille2", "label": "H", "compatible_families": ["flux"],
-         "places_adulte": [{"id": "a1", "prompt": "x",
+         "places": []}), encoding="utf-8")
+    (_tmp / "habille2.adulte.json").write_text(json.dumps(
+        {"places_adulte": [{"id": "a1", "prompt": "x",
                             "wardrobe": {"3": "nothing"}}]}), encoding="utf-8")
     attend(ValueError, lambda: worlds.places_adulte("habille2"),
            "un lieu adulte qui habille : refuse comme les autres, la nudite "

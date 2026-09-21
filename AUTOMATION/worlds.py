@@ -267,13 +267,18 @@ SCENE_OVERLAY_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("tones", "tags", "intensity", 
 
 CLE_PLACES = "places"
 # Catalogue ADULTE du monde, tranche le 21/09 (cadrage 2026-09-21-flux-nsfw,
-# arbitrage 3, couche decidee le meme jour). UNE CLE A PART, pas un drapeau
-# sur chaque lieu : un monde qui ne livre rien d'adulte n'a pas la cle, ce qui
-# se lit d'un coup d'oeil, et la banque ordinaire ne peut pas en afficher un
-# par accident puisqu'elle ne lit pas cette liste. Separation de DONNEES, pas
-# de sous-systeme (invariant 9) : meme validation, meme forme, meme heritage,
-# et c'est `scene_band` qui masque ensuite la scene hors de sa bande.
-CLE_PLACES_ADULTE = "places_adulte"
+# arbitrage 3, couche decidee le meme jour). Meme validation, meme forme, meme
+# heritage que le catalogue ordinaire : separation de DONNEES, pas de
+# sous-systeme (invariant 9), et c'est `scene_band` qui masque ensuite la
+# scene hors de sa bande.
+#
+# DANS UN FICHIER A COTE, ET PAS DANS LE MONDE. `WORLDS/<id>.json` est
+# VERSIONNE, et le depot est public : y ecrire des scenes explicites les
+# publierait. La regle des donnees de CLAUDE.md range deja les reglages NSFW
+# hors du depot, comme CHARACTERS/. Le catalogue adulte vit donc dans
+# `WORLDS/<id>.adulte.json`, git-ignore, qui voyage avec le monde le jour ou
+# il se vend et n'existe simplement pas pour les mondes livres d'origine.
+SUFFIXE_ADULTE = ".adulte.json"
 
 
 def places(wid):
@@ -290,11 +295,16 @@ def places(wid):
     return _catalogue(wid, CLE_PLACES)
 
 
+def adulte_path(wid):
+    """`WORLDS/<wid>.adulte.json`, present ou non."""
+    return world_path(wid).with_name(f"{wid}{SUFFIXE_ADULTE}")
+
+
 def places_adulte(wid):
-    """Catalogue ADULTE du monde : meme chose, autre cle, et vide par defaut.
+    """Catalogue ADULTE du monde : meme chose, autre fichier, vide par defaut.
 
     Un monde qui n'en livre pas rend [] — c'est le cas nominal, et aucun
-    appelant n'a a savoir si la cle existe. La validation est la MEME que
+    appelant n'a a savoir si le fichier existe. La validation est la MEME que
     celle du catalogue ordinaire, et c'est voulu : un lieu adulte qui
     habillerait le personnage serait la meme faute qu'ailleurs. La nudite
     n'est pas une garde-robe livree par le monde, c'est la garde-robe du
@@ -304,12 +314,27 @@ def places_adulte(wid):
     la banque ordinaire ne peut donc pas en afficher un lieu par accident.
     Ce qui rend une scene adulte visible reste sa bande de niveaux
     (`runner.prompt.scene_band`), jamais la liste dont elle sort.
+
+    Le monde doit exister : demander le catalogue adulte d'un monde inconnu
+    leve, comme pour l'autre. Seul le FICHIER a cote est optionnel.
     """
-    return _catalogue(wid, CLE_PLACES_ADULTE)
+    load_world(wid)                       # leve si le monde n'existe pas
+    chemin = adulte_path(wid)
+    if not chemin.exists():
+        return []
+    return _valider(wid, _read_json(chemin).get(CLE_PLACES_ADULTE, []),
+                    CLE_PLACES_ADULTE)
+
+
+CLE_PLACES_ADULTE = "places_adulte"
 
 
 def _catalogue(wid, cle):
-    entries = list(load_world(wid).get(cle, []))
+    return _valider(wid, load_world(wid).get(cle, []), cle)
+
+
+def _valider(wid, entries, cle):
+    entries = list(entries)
     for i, s in enumerate(entries):
         if not isinstance(s, dict):
             raise ValueError(f"monde {wid!r} : {cle}[{i}] n'est pas un objet")
@@ -324,8 +349,20 @@ def _catalogue(wid, cle):
 
 def place(wid, place_id):
     """Un lieu du catalogue de `wid`. Leve UnknownPlaceError si absent —
-    monde inconnu leve deja UnknownWorldError via `places()`."""
+    monde inconnu leve deja UnknownWorldError via `places()`.
+
+    LES DEUX CATALOGUES, l'ordinaire puis l'adulte (21/09). C'est ce qui rend
+    le merge vivant d'ADR-0015 vrai pour une scene adulte : sans ca
+    `refresh_world_scenes` lirait UnknownPlaceError et laisserait la scene se
+    perimer en silence, avec un cadre fige au jour ou elle a ete ajoutee.
+    Chercher ici ne montre rien a personne : ce qui affiche une scene reste
+    sa bande de niveaux, et ce qui affiche un CATALOGUE appelle `places()` ou
+    `places_adulte()` en connaissance de cause.
+    """
     for p in places(wid):
+        if p.get("id") == place_id:
+            return p
+    for p in places_adulte(wid):
         if p.get("id") == place_id:
             return p
     raise UnknownPlaceError(f"lieu inconnu : {place_id!r} dans le monde {wid!r}")
