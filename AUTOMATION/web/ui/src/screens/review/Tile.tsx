@@ -156,17 +156,19 @@ export function Tile(props: {
             >
               ♥
             </button>
-            {item.space !== 'nsfw' && (
-              <button
-                className={`${TACT} ${TACT_IDLE}`}
-                data-d="1"
-                aria-label="Décliner"
-                title="Décliner (D)"
-                onClick={() => props.onAct('decliner')}
-              >
-                ⟳
-              </button>
-            )}
+            {/* Offered whatever the space since 21/09, like the full-frame
+                actions: an NSFW image can be declined — generated ones have a
+                scene and a seed, edited ones can be edited again, and the
+                dialog says which of the two it is. */}
+            <button
+              className={`${TACT} ${TACT_IDLE}`}
+              data-d="1"
+              aria-label="Décliner"
+              title="Décliner (D)"
+              onClick={() => props.onAct('decliner')}
+            >
+              ⟳
+            </button>
             <button
               className={`${TACT} ${TACT_IDLE}`}
               data-a="rejeter"

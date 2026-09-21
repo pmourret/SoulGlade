@@ -198,6 +198,9 @@ class DeclineDryResponse(BaseModel):
     edition_verrouillee: bool
     edition_raison: Optional[str] = None
     suivant_instruction: bool
+    # L'image vient de la voie d'edition : ni scene ni seed, donc aucune
+    # declinaison a reconstruire. Seule `modes.editer` peut etre vraie.
+    origine_edition: bool = False
 
 
 # ------------------------------------------------------- /api/nsfw/instructions

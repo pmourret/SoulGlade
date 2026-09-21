@@ -645,9 +645,10 @@
           "d": "Une image NSFW validée sort dans `PROD/EXPORT_NSFW/`, un arbre frère de celui qu'on synchronise vers une plateforme, jamais rangé dessous. Même geste, mêmes formats. L'espace cesse aussi d'être un critère d'identité : les trois filtres sont ouverts, et le jeu d'entraînement dit son espace."
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "La boucle courte s'arrête à la première image NSFW",
-          "d": "En espace NSFW la Revue trie et rien d'autre : la déclinaison y est refusée et l'export absent. Produire, juger, repartir de l'image ne se referme pas. Hors définition de fin d'IT-3e."
+          "d": "Produire, juger, repartir de l'image vaut aussi en espace NSFW : la déclinaison y est offerte, l'export existe. Une image née de l'édition n'a ni scène ni seed, le dialogue s'ouvre quand même sur la seule porte qui a du sens, l'éditer à nouveau, et dit pourquoi les autres sont absentes.",
+          "it": "IT-3e"
         }
       ]
     },

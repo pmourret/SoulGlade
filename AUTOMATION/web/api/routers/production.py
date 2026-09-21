@@ -39,6 +39,7 @@ from ..schemas.production import (
     NsfwInstructionsResponse, PlanResponse, RunPayload, RunStartedResponse,
 )
 from ..services.batch import start_batch, start_edit_batch
+from ..services.journal import nsfw_journal_index
 from ..services.creative import (
     apply_nsfw_overrides, apply_tier_rules, edit_tier, guard_intensity,
     guard_intensity_of, is_edit_mode, is_edit_tier,
@@ -291,6 +292,16 @@ async def decline_image(payload: DeclineRequest, character_id: RequiredCharacter
     if not ss.SAFE_NAME.match(name):
         ss.bad_request("nom de fichier invalide")
     row = ss.journal_index(cid).get(name)
+    # AN IMAGE FROM THE EDITING PATH HAS ITS OWN JOURNAL, and it holds neither
+    # scene nor seed: it derives from a source image rather than from a plan.
+    # Refusing the whole dialog on that (404 until 21/09) closed the short loop
+    # for the entire NSFW branch, including the one gesture that DOES make
+    # sense on such an image — editing it again. The dialog now opens, with
+    # that single door (cadrage 2026-09-21-flux-nsfw, etape 3).
+    from_edit = False
+    if not row:
+        row = nsfw_journal_index(cid).get(name)
+        from_edit = bool(row)
     if not row:
         return JSONResponse(
             {"ok": False, "erreur": "image absente du journal — impossible de la "
@@ -302,7 +313,13 @@ async def decline_image(payload: DeclineRequest, character_id: RequiredCharacter
     if payload.dry:
         available = {}
         for mode in lb.MODES_DECLINAISON:
-            if mode == "ton":
+            if from_edit:
+                # No scene, no seed : `jobs_declinaison` has nothing to rebuild
+                # from. Asked anyway, it would answer « aucune scène
+                # correspondante », which reads like a missing scene rather
+                # than like an image of another kind.
+                available[mode] = [] if mode == "ton" else 0
+            elif mode == "ton":
                 available[mode] = [t for t in creative.get("tones", [])
                                    if t["key"] != (row.get("ton") or None)]
             else:
@@ -336,7 +353,8 @@ async def decline_image(payload: DeclineRequest, character_id: RequiredCharacter
             "edition_verrouillee": bool(edit and edit.get("requires") == "armed"
                                         and not tool["available"]),
             "edition_raison": tool["reason"],
-            "suivant_instruction": bool(is_edit_tier(following))})
+            "suivant_instruction": bool(is_edit_tier(following)),
+            "origine_edition": from_edit})
 
     # From here down there is NO `await` until the batch is started. That is what
     # keeps two concurrent requests from both passing the STATE test and
@@ -359,6 +377,12 @@ async def decline_image(payload: DeclineRequest, character_id: RequiredCharacter
         return start_edit_from_image(name, payload, edit["level"], cid)
     if mode not in lb.MODES_DECLINAISON:
         return JSONResponse({"ok": False, "erreur": "mode inconnu"}, status_code=400)
+    if from_edit:
+        return JSONResponse(
+            {"ok": False, "erreur": "cette image vient de l'édition : elle n'a ni "
+                                    "scène ni seed à rejouer. La seule reprise "
+                                    "possible est de l'éditer à nouveau."},
+            status_code=400)
     if mode == "intensite":
         # the slider has locks: a declension must not go around them
         err = guard_intensity(level + 1, cid, confirm=payload.confirm_intensity,

@@ -37,6 +37,9 @@ type DryRun = ActionLike & {
   edition_label?: string
   edition_verrouillee?: boolean
   edition_raison?: string
+  /* The image comes from the editing path: no scene, no seed, so nothing to
+     rebuild. Only `modes.editer` can be true. */
+  origine_edition?: boolean
 }
 
 type Launched = ActionLike & { libelle?: string; total?: number }
@@ -199,28 +202,41 @@ export function DeclineDialog({
             {dry.ton ? ` · ton ${dry.ton}` : ''}
           </div>
 
-          <ModeButton
-            mode="lumiere"
-            label="Autre lumière"
-            available={modes.lumiere}
-            suffix={modes.lumiere ? `${modes.lumiere} variante(s)` : 'aucune variante'}
-          />
-          <ModeButton
-            mode="seeds"
-            label="Même scène, 3 autres tirages"
-            available={modes.seeds}
-            suffix="3 images"
-          />
-
-          {dry.suivant_verrouille ? (
-            <ArmingNotice reason={dry.edition_raison} />
+          {/* An image born of EDITING has no scene and no seed: the three
+              gestures that rebuild a job have nothing to rebuild from. They
+              DISAPPEAR rather than sit there greyed — same rule as the tiles —
+              and one sentence says why, so the box is not just emptier. */}
+          {dry.origine_edition ? (
+            <p className="tiny mt-[2px] mb-[12px]">
+              Cette image vient de l’édition : elle n’a ni scène ni seed à rejouer.
+              La seule reprise possible est de l’éditer à nouveau.
+            </p>
           ) : (
-            <ModeButton
-              mode="intensite"
-              label={dry.niveau_suivant ? `Monter en ${dry.niveau_suivant}` : "Monter d'un cran"}
-              available={modes.intensite}
-              suffix={modes.intensite ? '1 image' : 'niveau max'}
-            />
+            <>
+              <ModeButton
+                mode="lumiere"
+                label="Autre lumière"
+                available={modes.lumiere}
+                suffix={modes.lumiere ? `${modes.lumiere} variante(s)` : 'aucune variante'}
+              />
+              <ModeButton
+                mode="seeds"
+                label="Même scène, 3 autres tirages"
+                available={modes.seeds}
+                suffix="3 images"
+              />
+
+              {dry.suivant_verrouille ? (
+                <ArmingNotice reason={dry.edition_raison} />
+              ) : (
+                <ModeButton
+                  mode="intensite"
+                  label={dry.niveau_suivant ? `Monter en ${dry.niveau_suivant}` : "Monter d'un cran"}
+                  available={modes.intensite}
+                  suffix={modes.intensite ? '1 image' : 'niveau max'}
+                />
+              )}
+            </>
           )}
 
           {/* « Éditer » does not go up a tier: it starts from THIS image,
