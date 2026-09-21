@@ -118,7 +118,10 @@ Le palier natif lui-même n'existe pas encore : il faut un cran déclarant
 21/09 (portée par le monde). C'est le chantier suivant d'IT-3e, et il n'a
 plus de question ouverte devant lui.
 
-Reste aussi à déclarer `nsfw_flux_lora_v1.safetensors` au manifeste
-(invariant 12) le jour où un graphe ou un pack livré en dépend : aujourd'hui
-il n'est nommé que par une donnée de personnage, et le fichier vient de
-CivitAI sans URL relevée.
+`nsfw_flux_lora_v1.safetensors` est déclaré au manifeste le jour même, en
+`provenance` et non en `url` : la page est sur CivitAI RED, la même section
+adulte que le LoRA de réalisme du pack, et l'API de téléchargement rend 403
+sans jeton. C'est donc un geste humain, exactement ce que la forme
+`provenance` de l'amendement du 09/09 prévoit. L'entrée anticipe : le fichier
+n'est aujourd'hui nommé que par une donnée de personnage, pas par un graphe
+committé, mais le palier natif en fera une dépendance du pack.
