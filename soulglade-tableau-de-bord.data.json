@@ -1137,6 +1137,10 @@
       {
         "t": "Le code dit pack et monde, plus univers",
         "d": "(11 septembre 2026) Relevé à la séance de cadrage global. Le renommage J8.1 a déplacé les dossiers, pas le vocabulaire : PACKS/<id>/universe.json, AUTOMATION/universe.py et plus de 400 occurrences nomment encore « univers » ce qui est un pack. Le README est aligné. À faire avec la passe « le code repasse en anglais », qui touche les mêmes fichiers."
+      },
+      {
+        "t": "Choisir un LoRA depuis l'éditeur de scène, et le chercher chez CivitAI",
+        "d": "(21 septembre 2026) Idée de Pierre le jour où le premier LoRA de pack a été câblé. Deux points à trancher avant d'écrire : un LoRA est un asset de PACK et une scène une donnée de monde, laisser la scène nommer le modèle ferait porter le graphe par la donnée (invariant 7) ; un téléchargement au fil de l'eau contourne le manifeste, qui dit ce qu'une installation doit porter (invariant 12). Autre face de « atelier d'entraînement intégré » du 10/09 : fabriquer le sien, ou aller le chercher."
       }
     ]
   },
