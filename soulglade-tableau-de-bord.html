@@ -870,7 +870,7 @@ const D = {
         {
           "s": "faire",
           "t": "Scène NSFW native, en plus de l'édition",
-          "d": "Modèle tranché le 21/09 : la famille du pack (Flux dev) plus un LoRA, Qwen reste l'éditeur. L'emplacement existe dans le graphe, éteint, et sa force n'est laissée passer qu'au palier qui la déclare. Deux LoRA Flux.1-dev sont déjà là : reste la mesure au banc, puis le palier lui-même.",
+          "d": "Modèle et force tranchés le 21/09 : `nsfw_flux_lora_v1` à 0.4 sur le checkpoint Flux du pack, retenu à l'œil et mesuré deux fois. À demi-force il ne coûte rien à l'identité et franchit le portillon du gabarit. Restent le cran qui déclare `lora_adulte` et la banque de scènes du monde.",
           "it": "IT-3e"
         },
         {
@@ -1308,6 +1308,11 @@ const D = {
       "e": "tranche",
       "t": "Le NSFW natif reste dans la famille du pack, plus un LoRA",
       "d": "Décidé le 21/09. Le palier natif se fabrique avec le checkpoint du pack (Flux dev) et un LoRA, jamais avec un second checkpoint : c'est la seule forme qui garde le verrou PuLID-Flux et des mesures comparables. Qwen ne sort pas de son rôle, il édite une image déjà produite. Les pistes krea-dev et Qwen natif sont fermées par la décision, sans mesure."
+    },
+    {
+      "e": "tranche",
+      "t": "Le LoRA adulte est `nsfw_flux_lora_v1`, à force 0.4",
+      "d": "Décidé le 21/09. Deux candidats Flux.1-dev départagés à l'œil, les chiffres les séparant de 0.020, soit le bruit du banc. La force 0.4 bat 0.8 sur tous les axes et cette fois au-dessus du bruit : +0.030 d'identité contre l'ancre, +0.040 contre le gabarit, dont elle franchit le portillon. Le revers est livré avec : la force ne passe qu'au palier déclarant `lora_adulte`."
     }
   ],
   "horizon": {
