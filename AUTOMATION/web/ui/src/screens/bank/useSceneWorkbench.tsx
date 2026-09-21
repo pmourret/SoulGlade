@@ -12,7 +12,7 @@
 import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 
 import { useConfirm } from '../../chrome/ConfirmContext'
-import { composePrompt, useScenes, type SceneDraft } from '../../state/ScenesStoreContext'
+import { composePrompt, useScenes, type Scene, type SceneDraft } from '../../state/ScenesStoreContext'
 
 /** Accent- and case-insensitive enough for a bank of a few dozen scenes. */
 const fold = (text: string) =>
@@ -163,6 +163,19 @@ export function useSceneWorkbench() {
     setInspectorMode('character')
   }, [addScene])
 
+  /* A scene taken from the world's catalog (21/09) — the scene is BUILT by
+     the caller (`sceneFromPlace`, which knows the place, the world and the
+     native level), and opened here under the same rule as `add`: created,
+     unfiltered, open. */
+  const addFrom = useCallback(
+    (scene: Scene) => {
+      setFilter('')
+      setSelectedUid(addScene(scene))
+      setInspectorMode('character')
+    },
+    [addScene],
+  )
+
   /* Same "opens what it creates" rule as `add` (design pass écran 7, §B1) —
      a variant of a scene is iterated on immediately, not left to find in a
      grid of twenty. The filter clears too: a duplicate born hidden behind
@@ -214,6 +227,7 @@ export function useSceneWorkbench() {
     hasNextScene,
     close,
     add,
+    addFrom,
     duplicate,
     remove,
     onListKeyDown,

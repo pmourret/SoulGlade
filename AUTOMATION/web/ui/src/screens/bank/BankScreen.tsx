@@ -53,7 +53,9 @@ import { SceneListPanel, type ScenePreview } from './SceneList'
 import { TonesView } from './tones/TonesView'
 import { DocumentPane, SceneInspector } from './SceneInspector'
 import { useSceneWorkbench } from './useSceneWorkbench'
+import { useWorldCatalogue } from './useWorldCatalogue'
 import { WorldBanner } from './WorldBanner'
+import { WorldCatalogueDialog } from './WorldCatalogueDialog'
 
 /* What « Enregistrer » saves, per sub-view — said in its HOVER tooltip, not as
    permanent text (2026-09-01: a title + a ".bak" reassurance sat in the chrome
@@ -125,6 +127,11 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, drafts, searchParams])
 
+  // « + Depuis le monde » (21/09): the places of the character's world that
+  // its bank does not hold yet, ordinary ones and — armed only — adult ones.
+  const [catalogueOpen, setCatalogueOpen] = useState(false)
+  const catalogue = useWorldCatalogue(catalogueOpen ? (world?.id ?? null) : null)
+
   // Monde | Personnage (ADR-0015) — the catalog of the CHARACTER's world,
   // loaded once and shared by every scene the Banque opens.
   const worldPlaces = useWorldPlaces(world?.id ?? null)
@@ -161,6 +168,24 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
 
   return (
     <div className="screen" id="scenes">
+      {catalogueOpen && world && (
+        <WorldCatalogueDialog
+          worldLabel={world.label}
+          ordinary={catalogue.ordinaryMissing}
+          adult={catalogue.adultMissing}
+          adultAllowed={catalogue.adultAllowed}
+          adultNotice={catalogue.adultNotice}
+          nativeLevel={catalogue.nativeLevel}
+          loading={catalogue.loading}
+          error={catalogue.error}
+          onPick={(place, adult) => {
+            bench.addFrom(catalogue.toScene(place, adult))
+            setCatalogueOpen(false)
+            toast(`« ${place.label || place.id} » ajouté — enregistre la banque pour le garder`)
+          }}
+          onClose={() => setCatalogueOpen(false)}
+        />
+      )}
       {/* `pb-[24px]`: the shared `.wrap` class reserves 120px at the bottom for
           `ProduceScreen`/`WizardScreen`'s own fixed launch bar — this screen no
           longer has one, so that clearance is now dead scroll space, overridden
@@ -290,9 +315,20 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                         ? `${bench.shown.length} sur ${drafts.length}`
                         : `${drafts.length} scènes`}
                     </span>
-                    <button className="btn primary sm" id="btnAddScene" onClick={bench.add}>
-                      + Ajouter une scène
-                    </button>
+                    <div className="flex items-center gap-[6px]">
+                      {world && (
+                        <button
+                          className="btn sm"
+                          id="btnAddFromWorld"
+                          onClick={() => setCatalogueOpen(true)}
+                        >
+                          + Depuis le monde
+                        </button>
+                      )}
+                      <button className="btn primary sm" id="btnAddScene" onClick={bench.add}>
+                        + Ajouter une scène
+                      </button>
+                    </div>
                   </div>
                 </div>
 
