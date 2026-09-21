@@ -1517,6 +1517,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/worlds/{world_id}/places-adulte": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Catalogue adulte d'un monde
+         * @description Le catalogue adulte, vide si le monde n'en porte pas — ce qui est le
+         *     cas nominal. Même forme de réponse que le catalogue ordinaire : c'est le
+         *     même objet, rangé ailleurs.
+         */
+        get: operations["get_places_adulte_api_worlds__world_id__places_adulte_get"];
+        put?: never;
+        /**
+         * Enregistrer le catalogue adulte d'un monde
+         * @description Remplace tout le catalogue adulte. MÊME VALIDATION que l'ordinaire —
+         *     `validate_places`, sans variante : ids uniques et non vides, prompt non
+         *     vide, et surtout aucune clé de personnage. Un lieu adulte qui habillerait
+         *     le personnage serait la même faute qu'ailleurs, parce que la nudité est
+         *     la garde-robe du personnage à son palier natif, pas une livraison du
+         *     monde (ADR-0014).
+         *
+         *     Une liste vide retire le fichier : un monde cesse alors de porter une
+         *     branche adulte, ce qui est un état légitime et pas une coquille.
+         */
+        post: operations["save_places_adulte_api_worlds__world_id__places_adulte_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1904,6 +1938,8 @@ export interface components {
             tones: components["schemas"]["CreativeTone"][];
             /** Intensity */
             intensity: components["schemas"]["IntensityTier"][];
+            /** Niveau Natif */
+            niveau_natif?: number | null;
         };
         /** CreativeTone */
         CreativeTone: {
@@ -6665,6 +6701,90 @@ export interface operations {
         };
     };
     save_places_api_worlds__world_id__places_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SavePlacesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Catalogue refusé */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacesRejected"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_places_adulte_api_worlds__world_id__places_adulte_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacesResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_places_adulte_api_worlds__world_id__places_adulte_post: {
         parameters: {
             query?: never;
             header?: never;

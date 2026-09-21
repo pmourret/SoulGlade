@@ -214,6 +214,28 @@ try:
     attend(ValueError, lambda: worlds.places_adulte("habille2"),
            "un lieu adulte qui habille : refuse comme les autres, la nudite "
            "est la garde-robe du PERSONNAGE a son palier, pas celle du monde")
+
+    # --- ecriture : l'aller-retour, et le fichier qui disparait quand la
+    # branche se vide. Un monde sans lieu adulte ne garde pas de coquille.
+    worlds.save_places_adulte("sobre", [{"id": "a1", "label": "Chambre",
+                                         "intention": "boudoir",
+                                         "prompt": "une chambre au matin"}])
+    verifie(worlds.adulte_path("sobre").exists(),
+            "save_places_adulte cree le fichier a cote")
+    verifie([p["id"] for p in worlds.places_adulte("sobre")] == ["a1"],
+            "et ce qu'on relit est ce qu'on a ecrit")
+    verifie([p["id"] for p in worlds.places("sobre")] == ["s1"],
+            "le catalogue ordinaire n'a pas bouge d'un lieu")
+    worlds.save_places_adulte("sobre", [])
+    verifie(not worlds.adulte_path("sobre").exists(),
+            "une liste vide RETIRE le fichier : la branche adulte cesse "
+            "d'exister au lieu de laisser une coquille")
+    verifie(worlds.places_adulte("sobre") == [],
+            "et la lecture rend [] comme avant, sans rien casser")
+    attend(worlds.UnknownWorldError,
+           lambda: worlds.save_places_adulte("jamais-vu", []),
+           "ecrire le catalogue d'un monde inconnu : refuse plutot que de "
+           "creer un monde par surprise")
 finally:
     worlds.WORLDS_DIR = _vrai
     shutil.rmtree(_tmp, ignore_errors=True)

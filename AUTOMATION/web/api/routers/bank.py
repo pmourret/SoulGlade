@@ -182,9 +182,19 @@ async def get_creative_taxonomy(character_id: RequiredCharacterId):
                       "scenes": source_count if edits else
                                 sum(1 for s in data["scenes"]
                                     if lb.scene_visible(s, scene_level))})
+    # THE NATIVE LEVEL IS SAID, NEVER GUESSED. The Banque needs it to know
+    # which wardrobe level a scene taken from the world's ADULT catalogue
+    # must carry — and an interface that deduced it (« the highest tier », «
+    # the one that does not export ») would drift the day a pack declares its
+    # tiers differently. The tier that declares `lora_adulte` is the one, and
+    # `None` is a legitimate answer: a character whose pack has no native
+    # tier simply has no adult catalogue to pull from.
+    natif = next((p["level"] for p in creative.get("intensity", [])
+                  if p.get("lora_adulte")), None)
     return {"intentions": creative.get("intentions", []),
             "tones": creative.get("tones", []),
-            "intensity": tiers}
+            "intensity": tiers,
+            "niveau_natif": natif}
 
 
 # --------------------------------------------------------------- scene composer

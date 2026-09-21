@@ -144,6 +144,10 @@ class CreativeResponse(BaseModel):
     intentions: list[CreativeIntention]
     tones: list[CreativeTone]
     intensity: list[IntensityTier]
+    # Niveau du palier qui declare `lora_adulte`, ou None quand le personnage
+    # n'en a pas. C'est la tenue de CE niveau qu'une scene tiree du catalogue
+    # adulte du monde doit porter ; l'interface ne la deduit jamais.
+    niveau_natif: Optional[int] = None
 
 
 # ----------------------------------------------------------------- /api/compose

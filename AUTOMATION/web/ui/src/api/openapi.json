@@ -3428,6 +3428,114 @@
           }
         }
       }
+    },
+    "/api/worlds/{world_id}/places-adulte": {
+      "get": {
+        "summary": "Catalogue adulte d'un monde",
+        "description": "Le catalogue adulte, vide si le monde n'en porte pas — ce qui est le\ncas nominal. Même forme de réponse que le catalogue ordinaire : c'est le\nmême objet, rangé ailleurs.",
+        "operationId": "get_places_adulte_api_worlds__world_id__places_adulte_get",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Enregistrer le catalogue adulte d'un monde",
+        "description": "Remplace tout le catalogue adulte. MÊME VALIDATION que l'ordinaire —\n`validate_places`, sans variante : ids uniques et non vides, prompt non\nvide, et surtout aucune clé de personnage. Un lieu adulte qui habillerait\nle personnage serait la même faute qu'ailleurs, parce que la nudité est\nla garde-robe du personnage à son palier natif, pas une livraison du\nmonde (ADR-0014).\n\nUne liste vide retire le fichier : un monde cesse alors de porter une\nbranche adulte, ce qui est un état légitime et pas une coquille.",
+        "operationId": "save_places_adulte_api_worlds__world_id__places_adulte_post",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePlacesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Catalogue refusé",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacesRejected"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4247,6 +4355,17 @@
             },
             "type": "array",
             "title": "Intensity"
+          },
+          "niveau_natif": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Niveau Natif"
           }
         },
         "type": "object",

@@ -106,3 +106,48 @@ async def save_places(world_id: str, payload: SavePlacesRequest):
     ss.push_log(f"WORLDS/{world_id}.json : catalogue enregistré "
                f"({len(payload.places)} lieu(x))")
     return {"ok": True}
+
+
+# ------------------------------------------------------- catalogue adulte
+# DEUX ROUTES JUMELLES, PAS UN DRAPEAU SUR LES PREMIERES. Un `?adulte=1` sur
+# les routes ci-dessus aurait fait dependre d'un booleen de requete le fichier
+# ecrit — et un booleen absent ecrit le mauvais. Deux chemins nommes rendent
+# l'intention lisible dans le journal du serveur comme dans l'onglet reseau,
+# et le catalogue adulte d'un monde reste un objet distinct (decision du
+# 21/09, cadrage 2026-09-21-flux-nsfw arbitrage 3).
+@router.get("/api/worlds/{world_id}/places-adulte", response_model=PlacesResponse,
+            summary="Catalogue adulte d'un monde")
+async def get_places_adulte(world_id: str):
+    """Le catalogue adulte, vide si le monde n'en porte pas — ce qui est le
+    cas nominal. Même forme de réponse que le catalogue ordinaire : c'est le
+    même objet, rangé ailleurs."""
+    w = worlds.load_world(world_id)
+    return {"world": world_id, "label": w.get("label", world_id),
+            "places": worlds.places_adulte(world_id)}
+
+
+@router.post("/api/worlds/{world_id}/places-adulte", response_model=ActionResponse,
+             response_model_exclude_unset=True,
+             responses={400: {"model": PlacesRejected,
+                              "description": "Catalogue refusé"}},
+             summary="Enregistrer le catalogue adulte d'un monde")
+async def save_places_adulte(world_id: str, payload: SavePlacesRequest):
+    """Remplace tout le catalogue adulte. MÊME VALIDATION que l'ordinaire —
+    `validate_places`, sans variante : ids uniques et non vides, prompt non
+    vide, et surtout aucune clé de personnage. Un lieu adulte qui habillerait
+    le personnage serait la même faute qu'ailleurs, parce que la nudité est
+    la garde-robe du personnage à son palier natif, pas une livraison du
+    monde (ADR-0014).
+
+    Une liste vide retire le fichier : un monde cesse alors de porter une
+    branche adulte, ce qui est un état légitime et pas une coquille."""
+    worlds.load_world(world_id)             # UnknownWorldError -> 400
+    problems = validate_places(payload.places)
+    if problems:
+        ss.push_log(f"WORLDS/{world_id}.adulte.json REFUSE — {problems[0]}")
+        return JSONResponse({"ok": False, "erreur": problems[0],
+                             "problemes": problems}, status_code=400)
+    worlds.save_places_adulte(world_id, payload.places)
+    ss.push_log(f"WORLDS/{world_id}.adulte.json : catalogue adulte enregistré "
+                f"({len(payload.places)} lieu(x))")
+    return {"ok": True}

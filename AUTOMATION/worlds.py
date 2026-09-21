@@ -386,6 +386,31 @@ def save_places(wid, new_places):
                     encoding="utf-8")
 
 
+def save_places_adulte(wid, new_places):
+    """Jumelle de `save_places` pour `WORLDS/<wid>.adulte.json`.
+
+    Meme contrat : elle ecrit, elle ne valide pas — la forme est verifiee par
+    `api/services/worlds.validate_places`, la MEME fonction que pour le
+    catalogue ordinaire, parce que les regles sont les memes.
+
+    UNE LISTE VIDE RETIRE LE FICHIER. Un monde sans branche adulte ne garde
+    pas un fichier vide a cote de lui : `places_adulte()` rend deja [] quand
+    il n'existe pas, et laisser une coquille ferait croire a une branche la
+    ou il n'y en a plus. Le monde doit exister — ce n'est pas ici qu'on cree
+    un monde par surprise.
+    """
+    load_world(wid)                       # leve si le monde n'existe pas
+    path = adulte_path(wid)
+    entries = list(new_places)
+    if not entries:
+        path.unlink(missing_ok=True)
+        return
+    data = _read_json(path) if path.exists() else {}
+    data[CLE_PLACES_ADULTE] = entries
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+
+
 def merge_scene(wid, place_id, overlay):
     """La fusion vivante d'ADR-0015 : le CADRE du lieu (`label`/`intention`/
     `prompt`), toujours relu depuis le catalogue actuel, jamais fiable depuis
