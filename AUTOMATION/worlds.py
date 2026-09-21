@@ -272,12 +272,14 @@ CLE_PLACES = "places"
 # sous-systeme (invariant 9), et c'est `scene_band` qui masque ensuite la
 # scene hors de sa bande.
 #
-# DANS UN FICHIER A COTE, ET PAS DANS LE MONDE. `WORLDS/<id>.json` est
-# VERSIONNE, et le depot est public : y ecrire des scenes explicites les
-# publierait. La regle des donnees de CLAUDE.md range deja les reglages NSFW
-# hors du depot, comme CHARACTERS/. Le catalogue adulte vit donc dans
-# `WORLDS/<id>.adulte.json`, git-ignore, qui voyage avec le monde le jour ou
-# il se vend et n'existe simplement pas pour les mondes livres d'origine.
+# DANS UN FICHIER A COTE, ET PAS DANS LE MONDE : `WORLDS/<id>.adulte.json`.
+# La raison n'est PAS la publication -- ce depot est le depot de dev, il est
+# prive, et le public se fera ailleurs (Pierre, 21/09). C'est une propriete
+# de produit : un monde vendu peut porter une branche adulte ou ne pas en
+# porter, et le vendeur livre alors le monde SEUL. Deux fichiers rendent ce
+# choix lisible et separable ; une cle de plus dans le monde ne le rendrait
+# pas. Un monde livre d'origine n'a pas ce fichier, et `places_adulte()`
+# rend [] sans que personne ait a le savoir.
 SUFFIXE_ADULTE = ".adulte.json"
 
 

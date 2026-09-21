@@ -76,12 +76,3 @@ node_modules/
 /DOCS/analyse/~$*
 /DOCS/cadrage/cadrage-global-soulglade.md
 
-# ---------------------------------------------------------------------------
-# Catalogue ADULTE d'un monde (21/09/2026). Le monde porte la banque de scenes
-# NSFW (decision du jour), mais WORLDS/<id>.json est VERSIONNE et ce depot est
-# public : le catalogue vit donc dans un fichier a cote, jamais dans le monde
-# lui-meme. Meme regle que CHARACTERS/ et que les reglages NSFW (CLAUDE.md,
-# section Donnees). Un monde vendu emporte ce fichier ; un monde livre
-# d'origine n'en a pas.
-# ---------------------------------------------------------------------------
-/WORLDS/*.adulte.json

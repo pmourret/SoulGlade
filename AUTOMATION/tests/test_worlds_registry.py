@@ -151,6 +151,17 @@ for wid in REELS:
                         + (f" — trouve : {', '.join(intrus)}" if intrus else ""))
     verifie(worlds.places(wid) is not None,
             f"{wid} : places() charge sans lever")
+    # Le catalogue adulte d'un monde reel, s'il en a un, passe la MEME
+    # validation : c'est la seule chose qui garantit qu'un lieu livre n'habille
+    # personne, adulte ou non.
+    adultes = worlds.places_adulte(wid)
+    intrus_a = sorted({k for s in adultes if isinstance(s, dict)
+                       for k in worlds.CHARACTER_ONLY_SCENE_KEYS if k in s})
+    verifie(not intrus_a,
+            f"{wid} : catalogue adulte ({len(adultes)} lieu(x)) sans reglage "
+            f"de personnage" + (f" — trouve : {', '.join(intrus_a)}" if intrus_a else ""))
+    verifie(all(p.get("id") and p.get("prompt") for p in adultes),
+            f"{wid} : chaque lieu adulte a un id et un prompt")
 
 _vrai = worlds.WORLDS_DIR
 _tmp = Path(tempfile.mkdtemp(prefix="worlds_dressing_"))
@@ -180,8 +191,8 @@ try:
     verifie(worlds.places_adulte("sobre") == [],
             "un monde sans fichier adulte a cote rend [] : c'est le cas nominal")
     verifie(not worlds.adulte_path("sobre").exists(),
-            "et ce fichier n'existe pas : le catalogue adulte ne vit JAMAIS "
-            "dans WORLDS/<id>.json, qui est versionne et public")
+            "et son fichier n'existe pas : un monde sans branche adulte se "
+            "livre seul, c'est tout l'interet des deux fichiers")
 
     (_tmp / "adulte.json").write_text(json.dumps(
         {"id": "adulte", "label": "Adulte", "compatible_families": ["flux"],
