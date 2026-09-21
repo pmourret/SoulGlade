@@ -13,7 +13,14 @@
    `?character=` to every call (it is the only caller in the app), but the
    route ignores it — the catalog belongs to the world, not to whoever is
    looking at it. Editing here affects every character composing in this
-   world, not just the one currently claimed. */
+   world, not just the one currently claimed.
+
+   TWO CATALOGS, ONE HOOK (21/09). A world can also carry an ADULT catalog,
+   in its own file and behind its own pair of routes. `adulte: true` points
+   this hook at them; everything else — the whole-catalog replace, the error
+   handling, the reload after save — is identical, because the two catalogs
+   ARE the same object stored elsewhere. Copying the hook for the second one
+   would be the very duplication this file exists to avoid. */
 import { useCallback, useEffect, useState } from 'react'
 
 import { errorOf, type Schema } from '../../api/client'
@@ -24,11 +31,13 @@ type PlacesResponse = Schema<'PlacesResponse'>
 
 type SaveResult = { ok: boolean; erreur?: string }
 
-export function useWorldPlaces(worldId: string | null) {
+export function useWorldPlaces(worldId: string | null, options?: { adulte?: boolean }) {
   const api = useApi()
+  const adulte = options?.adulte ?? false
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [label, setLabel] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const route = adulte ? 'places-adulte' : 'places'
 
   const load = useCallback(async () => {
     if (!worldId) {
@@ -38,7 +47,9 @@ export function useWorldPlaces(worldId: string | null) {
     }
     let response: (PlacesResponse & { ok?: boolean; erreur?: string }) | null = null
     try {
-      response = await api.get<PlacesResponse>(`/api/worlds/${encodeURIComponent(worldId)}/places`)
+      response = await api.get<PlacesResponse>(
+        `/api/worlds/${encodeURIComponent(worldId)}/${route}`,
+      )
     } catch {
       response = null
     }
@@ -49,7 +60,7 @@ export function useWorldPlaces(worldId: string | null) {
       setPlaces(response!.places)
       setLabel(response!.label)
     }
-  }, [api, worldId])
+  }, [api, route, worldId])
 
   useEffect(() => {
     void load()
@@ -61,7 +72,7 @@ export function useWorldPlaces(worldId: string | null) {
     async (next: Place[]): Promise<SaveResult> => {
       if (!worldId) return { ok: false, erreur: 'aucun monde' }
       const response = await api.post<{ ok?: boolean; erreur?: string }>(
-        `/api/worlds/${encodeURIComponent(worldId)}/places`,
+        `/api/worlds/${encodeURIComponent(worldId)}/${route}`,
         { places: next },
       )
       const failure = errorOf(response)
@@ -69,7 +80,7 @@ export function useWorldPlaces(worldId: string | null) {
       await load()
       return { ok: true }
     },
-    [api, load, worldId],
+    [api, load, route, worldId],
   )
 
   return { places, label, error, load, save }
