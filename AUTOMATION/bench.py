@@ -83,6 +83,15 @@ CFG_AXES = {
     # Checkpoint du LoRA (epoques d'un meme entrainement), ouvert le 14/09 :
     # meme mot declencheur d'un fichier a l'autre, donc un seul changement.
     "lora_name": ("identity", "lora", "name"),
+    # LoRA de PACK pour le palier adulte natif, ouvert le 21/09. Distinct des
+    # deux axes ci-dessus, qui portent le LoRA d'IDENTITE du personnage : ici
+    # c'est le LoRA de rendu adulte, et c'est sa force qu'il faut departager
+    # (cadrage 2026-09-21-scene-nsfw-native-le-modele). Le banc ne passe pas
+    # par la couche politique, donc il lit la force telle que config.json la
+    # porte : c'est ce qui en fait un instrument de mesure, et la raison pour
+    # laquelle la garde vit dans `apply_tier_rules` et pas dans le runner.
+    "nsfw_lora_strength": ("nsfw", "lora", "strength"),
+    "nsfw_lora_name": ("nsfw", "lora", "name"),
 }
 JOB_AXES = {
     "sampler": "sampler_name",

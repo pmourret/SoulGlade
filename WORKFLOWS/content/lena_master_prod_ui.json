@@ -1,6 +1,6 @@
 {
-  "last_node_id": 61,
-  "last_link_id": 80,
+  "last_node_id": 62,
+  "last_link_id": 81,
   "nodes": [
     {
       "id": 1,
@@ -2653,7 +2653,7 @@
         {
           "name": "model",
           "type": "MODEL",
-          "link": 2
+          "link": 81
         }
       ],
       "outputs": [
@@ -2672,6 +2672,45 @@
         "Realistic_Adult_Flux_10-000001.safetensors",
         1.0
       ]
+    },
+    {
+      "id": 62,
+      "type": "LoraLoaderModelOnly",
+      "title": "LoRA pack - contenu adulte",
+      "pos": [
+        1240.0,
+        1560.0
+      ],
+      "size": [
+        340,
+        110
+      ],
+      "flags": {},
+      "order": 61,
+      "mode": 4,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 2
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            81
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "Realistic_Adult_Flux_10-000001.safetensors",
+        0.0
+      ]
     }
   ],
   "links": [
@@ -2687,7 +2726,7 @@
       2,
       11,
       0,
-      61,
+      62,
       0,
       "MODEL"
     ],
@@ -3288,6 +3327,14 @@
       61,
       0,
       12,
+      0,
+      "MODEL"
+    ],
+    [
+      81,
+      62,
+      0,
+      61,
       0,
       "MODEL"
     ]

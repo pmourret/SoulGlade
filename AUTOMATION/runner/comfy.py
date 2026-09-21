@@ -68,6 +68,36 @@ def wait_prompt(url, prompt_id, timeout=900):
 
 
 # ---------------------------------------------------------------- graphe ComfyUI
+# LoRA de PACK, distinct du LoRA d'identite du personnage : le palier NSFW
+# natif se fabrique avec le checkpoint du pack plus un LoRA, jamais avec un
+# second checkpoint (decision du 21/09,
+# DOCS/cadrage/2026-09-21-scene-nsfw-native-le-modele.md). Meme type de noeud
+# que le LoRA personnage, un titre different pour que les deux roles se
+# resolvent sans ambiguite.
+ROLE_LORA_PACK = ("LoraLoaderModelOnly", "LoRA pack")
+
+
+def lora_pack_actif(roles, cfg):
+    """(nom, force) du LoRA de pack REELLEMENT applique, ou None.
+
+    TROIS CONDITIONS, et le meme patron que `identity.lora_actif` : le graphe
+    doit porter le role, le personnage doit nommer un LoRA adulte
+    (`config.json / nsfw / lora`), et sa force doit etre non nulle.
+
+    LA FORCE EST LA GARDE. La couche politique
+    (`services/creative.apply_tier_rules`) la remet a zero pour tout palier
+    qui ne declare pas `lora_adulte` : c'est ce qui rend le nu involontaire en
+    SFW impossible autrement qu'en editant a la main la configuration d'un
+    palier. Le runner, lui, ne connait pas les paliers (CLAUDE.md, invariant
+    2) — il ne lit que ce que la politique lui laisse.
+    """
+    if not roles.get("pack_lora"):
+        return None
+    lora = ((cfg.get("nsfw") or {}).get("lora")) or {}
+    nom, force = lora.get("name"), float(lora.get("strength") or 0.0)
+    return (nom, force) if nom and force else None
+
+
 class WorkflowRunner:
     def __init__(self, cfg, character_id, *, universe_id=None,
                  style_name=None, base_portrait=False):
@@ -173,6 +203,10 @@ class WorkflowRunner:
             "pose_loader": ("ControlNetLoader", None),
             "pose_apply": ("ControlNetApplyAdvanced", None),
             "pose_preview": ("PreviewImage", "QC - squelette reellement envoye"),
+            # LoRA du pack pour le palier adulte natif, bypasse par defaut dans
+            # le graphe comme la pose. Optionnel : un graphe qui ne le porte pas
+            # rend None, et `lora_pack_actif` refuse alors de l'allumer.
+            "pack_lora": ROLE_LORA_PACK,
         }.items():
             try:
                 r[key] = f(self.ui, typ, title)
@@ -230,6 +264,14 @@ class WorkflowRunner:
         # MEME reponse pour marquer l'image DERIVED (base.image.lora_identite).
         if identity.lora_actif(self.roles, cfg):
             node_modes[self.roles["character_lora"]["id"]] = 0
+
+        # LoRA de pack : meme mecanisme, meme raison. Bypasse par defaut dans
+        # le graphe, donc invisible tant que rien ne l'allume — et ce qui
+        # l'allume est une force non nulle que seule la couche politique laisse
+        # passer au palier qui la declare.
+        pack = lora_pack_actif(self.roles, cfg)
+        if pack:
+            node_modes[self.roles["pack_lora"]["id"]] = 0
 
         api = ui_to_api.convert(self.ui, self.obj, active_groups=self.active_groups,
                                 node_modes=node_modes)
@@ -332,6 +374,10 @@ class WorkflowRunner:
         # il n'y a encore aucune reference a verrouiller (5b-ii).
         if not self.base_portrait:
             self.identity.apply(api, self.roles, cfg, job)
+        if pack:
+            nom, force = pack
+            knobs = api[str(self.roles["pack_lora"]["id"])]["inputs"]
+            knobs["lora_name"], knobs["strength_model"] = nom, force
         return api
 
     def queue(self, api):

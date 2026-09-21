@@ -147,6 +147,21 @@ def apply_tier_rules(configuration, requested_level, character):
                if is_edit_tier(tier) else tier)
     configuration["_espace"] = ("nsfw" if written and not written.get("export", True)
                                 else "sfw")
+
+    # THE ADULT LORA SURVIVES ONLY AT THE TIER THAT DECLARES IT (21/09). The
+    # pack's native adult tier is made of the pack's own checkpoint plus a
+    # LoRA; the same wiring that makes it possible is what makes accidental
+    # nudity possible in SFW, so the two are decided together (cadrage
+    # 2026-09-21-scene-nsfw-native-le-modele). Here is the gate: any tier
+    # without `lora_adulte` gets the strength forced to zero, and
+    # `runner.comfy.lora_pack_actif` then leaves the graph node bypassed —
+    # whatever `config.json / nsfw / lora` says. A configuration alone can
+    # never undress an image; a tier must ask for it.
+    if not (written and written.get("lora_adulte")):
+        nsfw = dict(configuration.get("nsfw") or {})
+        if nsfw.get("lora"):
+            nsfw["lora"] = dict(nsfw["lora"], strength=0.0)
+            configuration["nsfw"] = nsfw
     return configuration
 
 

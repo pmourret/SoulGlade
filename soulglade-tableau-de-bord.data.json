@@ -623,7 +623,7 @@
         {
           "s": "faire",
           "t": "Scène NSFW native, en plus de l'édition",
-          "d": "Modèle tranché le 21/09 : la famille du pack (Flux dev) plus un LoRA, Qwen reste l'éditeur. Deux LoRA Flux.1-dev sont déjà sur la machine. Reste à donner au graphe un emplacement de LoRA de pack allumé par le seul palier natif, qui est aussi la garde anti-nu involontaire en SFW.",
+          "d": "Modèle tranché le 21/09 : la famille du pack (Flux dev) plus un LoRA, Qwen reste l'éditeur. L'emplacement existe dans le graphe, éteint, et sa force n'est laissée passer qu'au palier qui la déclare. Deux LoRA Flux.1-dev sont déjà là : reste la mesure au banc, puis le palier lui-même.",
           "it": "IT-3e"
         },
         {

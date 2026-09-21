@@ -28,7 +28,7 @@ sys.path.insert(0, str(AUTOMATION))
 import identity   # noqa: E402
 import ui_to_api  # noqa: E402
 import universe   # noqa: E402
-from runner.comfy import ROLES_LATENT_PAR_FAMILLE  # noqa: E402
+from runner.comfy import ROLE_LORA_PACK, ROLES_LATENT_PAR_FAMILLE  # noqa: E402
 
 KO = 0
 
@@ -77,6 +77,23 @@ for pack_id in ("instagram-influenceur", "rpg-personnage"):
             verifie(True, f"role d'identite {role!r} resolu")
         except LookupError as e:
             verifie(False, f"role d'identite {role!r} : {e}")
+
+    # LoRA DE PACK (21/09) : optionnel, un pack a le droit de ne pas en porter,
+    # et `runner.comfy.lora_pack_actif` refuse alors de l'allumer. Mais celui
+    # qui le porte doit le porter ETEINT — c'est la moitie graphe de la garde
+    # anti-nu involontaire en SFW, l'autre moitie etant la force remise a zero
+    # par `apply_tier_rules`. Un jour ou ce noeud serait sauvegarde actif, tout
+    # le pack produirait avec, sans qu'aucun test ne l'ait vu.
+    try:
+        n = ui_to_api.find_node(ui, *ROLE_LORA_PACK)
+    except LookupError:
+        n = None
+    if pack_id == "instagram-influenceur":
+        verifie(n is not None,
+                f"role 'pack_lora' ({ROLE_LORA_PACK[1]}) present dans le graphe Flux")
+    if n is not None:
+        verifie(n.get("mode") == 4,
+                f"et bypasse par defaut (mode {n.get('mode')!r}, 4 attendu)")
 
     # Le checkpoint de base : role OPTIONNEL du runner, mais indispensable des
     # qu'un pack declare plusieurs styles de sortie avec swap de checkpoint.
