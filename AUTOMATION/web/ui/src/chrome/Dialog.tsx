@@ -76,6 +76,14 @@ export function Dialog({
     }
   }, [open, initialFocus])
 
+  /* Most callers close a box by UNMOUNTING it (`{x && <Box open … />}`), not
+     by flipping `open` — the branch above never runs then, and focus fell to
+     <body> (measured on the bank's world catalogue, 21/09: Escape, then Tab
+     restarted from the top of the page). Unmount restores it too. Not nulled
+     here: StrictMode's dev remount runs this cleanup once before the box is
+     really gone. */
+  useEffect(() => () => opener.current?.focus(), [])
+
   useEffect(() => {
     const element = ref.current
     if (!element) return

@@ -96,7 +96,7 @@ export function CatalogueSection({
         ))}
         <button
           type="button"
-          className="rounded-card border-2 border-dashed border-line px-[13px] py-[10px]
+          className="rounded-card border-2 border-dashed border-line bg-transparent px-[13px] py-[10px]
                      text-left text-acc cursor-pointer hover:border-line2"
           onClick={editor.add}
         >

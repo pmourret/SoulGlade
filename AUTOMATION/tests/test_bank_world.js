@@ -127,6 +127,12 @@ async function ouvrir(nav, { arme }) {
        'pas meme une section grisee');
   const texte = await q.textContent('#worldCatalogueBox');
   dire(!/adulte/i.test(texte), 'et pas un mot qui l inviterait a armer');
+  /* Trouve a l'audit du 21/09 : fermee par Echap, la boite rendait le focus a
+     <body> (Dialog demonte sans restaurer), et Tab repartait du haut de page. */
+  await q.keyboard.press('Escape');
+  await q.waitForSelector('#worldCatalogueBox', { state: 'detached' }).catch(() => {});
+  dire(await q.evaluate(() => document.activeElement?.id === 'btnAddFromWorld'),
+       'Echap rend le focus au bouton qui a ouvert la boite');
   await q.close();
 
   console.log('\n[4] rien n a ete ecrit sur le disque');

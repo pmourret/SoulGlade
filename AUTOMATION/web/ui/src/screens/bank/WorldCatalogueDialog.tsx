@@ -65,6 +65,10 @@ export function WorldCatalogueDialog({
     <Dialog
       id="worldCatalogueBox"
       open
+      /* The picks arrive after the box opens: until then the only focusable
+         thing is « Fermer », where Enter would close what was just opened.
+         Changing the selector re-runs the focus once the list is there. */
+      initialFocus={loading ? undefined : '[data-pick-place]'}
       onDismiss={onClose}
       className="w-[min(520px,calc(100vw-32px))] max-w-[min(520px,calc(100vw-32px))]"
       cardClassName="w-[min(520px,100%)]! p-[20px]!"
