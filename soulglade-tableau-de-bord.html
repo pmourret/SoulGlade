@@ -862,7 +862,7 @@ const D = {
         {
           "s": "faire",
           "t": "Scène NSFW native, en plus de l'édition",
-          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. Le pipeline et la banque de scènes sont tranchés ; reste le modèle, cadré le 21/09 avec son revers. Quatre candidats, dont le renoncement, départagés au banc puis à l'œil avant toute ligne de graphe.",
+          "d": "Modèle tranché le 21/09 : la famille du pack (Flux dev) plus un LoRA, Qwen reste l'éditeur. Deux LoRA Flux.1-dev sont déjà sur la machine. Reste à donner au graphe un emplacement de LoRA de pack allumé par le seul palier natif, qui est aussi la garde anti-nu involontaire en SFW.",
           "it": "IT-3e"
         },
         {
@@ -1295,6 +1295,11 @@ const D = {
       "e": "tranche",
       "t": "Les données existantes sont des jeux d'essai",
       "d": "Décidé le 21/09. Le projet est en phase de développement : `PROD/`, la base et les personnages sont des données de test, écrasables et régénérables. Devant le choix entre migrer prudemment et simplifier puis régénérer, la simplification gagne, et le code de compatibilité part avec. L'objectif que ça sert : une V1 entièrement fonctionnelle et indépendante du personnage."
+    },
+    {
+      "e": "tranche",
+      "t": "Le NSFW natif reste dans la famille du pack, plus un LoRA",
+      "d": "Décidé le 21/09. Le palier natif se fabrique avec le checkpoint du pack (Flux dev) et un LoRA, jamais avec un second checkpoint : c'est la seule forme qui garde le verrou PuLID-Flux et des mesures comparables. Qwen ne sort pas de son rôle, il édite une image déjà produite. Les pistes krea-dev et Qwen natif sont fermées par la décision, sans mesure."
     }
   ],
   "horizon": {

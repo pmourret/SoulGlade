@@ -176,6 +176,47 @@ ne se départage pas sur 0.01.
    planche.
 5. **Écrire le verdict** dans `DOCS/recherche/`, y compris si c'est D.
 
+## Arbitrage de Pierre, le 21/09
+
+**Candidat A.** Le NSFW natif reste dans la famille du modèle du pack — ici
+Flux dev — plus un LoRA. Qwen ne sort pas de son rôle : il édite une image
+déjà produite, et rien d'autre.
+
+Les candidats B (`flux1-krea-dev`) et C (`Qwen-Rapid-AIO` en natif) sont
+donc **fermés**. Pas mesurés, pas départagés : écartés par la décision, et
+c'est légitime — B changeait le checkpoint du pack, C perdait le verrou.
+Les rouvrir demanderait de rouvrir cette page.
+
+## Ce que la machine porte déjà
+
+Relevé le 21/09 en lisant l'en-tête `safetensors` de 60 fichiers, pas leur
+nom : la famille d'un LoRA est dans ses tenseurs et ses métadonnées.
+
+| Fichier | Architecture déclarée | Taille | Ce que c'est |
+|---|---|---|---|
+| `anatomy_fineart_nudity_by_caith` | `Flux.1-dev/lora` | 135 Mo | nu / anatomie, titre `anatomy_h_7000` |
+| `standingdoggylora` | `flux-1-dev/lora`, dim 32 | 145 Mo | acte explicite, mot déclencheur `st4ndingd0ggy` |
+| `Realistic_Adult_Flux_10-000001` | Flux (diffusers) | 90 Mo | LoRA de réalisme déjà chargé en production |
+
+Le reste du dossier est SDXL/Pony (l'écosystème NSFW local d'avant Flux),
+WAN ou LTX. **Conséquence : le candidat A se teste aujourd'hui, sans rien
+télécharger.** CivitAI reste la source pour élargir le choix une fois que
+le banc saura comparer deux LoRA.
+
+## Ce qui manque pour lancer la mesure
+
+Un seul point, et il est de câblage : le graphe de production **n'a pas de
+place pour un LoRA de pack**. Il en charge un en dur (le réalisme) et
+accueille celui du personnage par le rôle `character_lora`
+(`identity.injecter_lora`). Il faut un troisième emplacement, allumé par le
+palier natif et par lui seul — c'est aussi ce qui **ferme la porte du nu
+involontaire en SFW**, donc la garde demandée plus haut et le câblage sont
+le même travail.
+
+Tant qu'il n'existe pas, aucune mesure honnête n'est possible : détourner
+`identity.lora` pour y mettre le LoRA NSFW retirerait à Léna son LoRA
+d'identité et son mot déclencheur, et comparerait deux choses à la fois.
+
 ## Critère de sortie
 
 Ce cadrage se ferme quand :
