@@ -34,6 +34,7 @@ AUTOMATION = HERE.parent
 OFM = AUTOMATION.parent
 sys.path.insert(0, str(AUTOMATION))
 sys.path.insert(0, str(AUTOMATION / "web"))
+sys.path.insert(0, str(AUTOMATION / "web"))
 
 import base                                            # noqa: E402
 import nsfw_batch                                      # noqa: E402
@@ -52,6 +53,11 @@ PALIERS = [
     {"level": 3, "key": "nsfw", "label": "NSFW", "pipeline": "edit",
      "base_level": 0, "wardrobe": "loungewear", "export": False,
      "requires": "armed"},
+    # Palier NATIF (21/09) : il GENERE du contenu adulte sur le checkpoint du
+    # pack, donc `produce`, non exportable, arme, et il declare le LoRA.
+    {"level": 4, "key": "natif", "label": "Natif", "pipeline": "produce",
+     "wardrobe": "nude", "export": False, "requires": "armed",
+     "lora_adulte": True},
 ]
 
 
@@ -199,6 +205,45 @@ def main():
             base.FICHIER = vraie
             for suffixe in ("", "-wal", "-shm"):
                 Path(str(ancienne) + suffixe).unlink(missing_ok=True)
+        print()
+        print("[7] l'interface annonce la MEME destination que le runner")
+        import asyncio
+        from api.routers import bank   # nsfw_batch est deja importe plus haut
+        vrais = (nsfw_batch.edit_tool_state, bank.ss.scenes_data, bank.ss.cfg,
+                 nsfw_batch.sources_disponibles)
+        bank.ss.scenes_data = lambda c: {"scenes": []}
+        bank.ss.cfg = lambda c: config()
+        nsfw_batch.sources_disponibles = lambda cfg, c: []
+        try:
+            # L'ARMEMENT POUR TOUS, LE GRAPHE POUR CELUI QUI EDITE. Un pack
+            # sans graphe d'edition doit quand meme pouvoir exposer le cran
+            # natif, qui genere sur son propre checkpoint.
+            for arme, graphe, attendus in ((True, True, {0, 2, 3, 4}),
+                                           (True, False, {0, 2, 4}),
+                                           (False, True, {0, 2})):
+                nsfw_batch.edit_tool_state = (
+                    lambda c, a=arme, g=graphe: {"armed": a, "has_graph": g,
+                                                 "available": a and g,
+                                                 "pack": "x", "reason": ""})
+                rendu = asyncio.run(bank.get_creative_taxonomy(character_id=CID))
+                niveaux = {p["level"] for p in rendu["intensity"]}
+                verifie(niveaux == attendus,
+                        f"arme={arme} graphe={graphe} -> crans {sorted(niveaux)} "
+                        f"(attendu {sorted(attendus)})")
+            nsfw_batch.edit_tool_state = lambda c: {
+                "armed": True, "has_graph": True, "available": True,
+                "pack": "x", "reason": ""}
+            rendu = asyncio.run(bank.get_creative_taxonomy(character_id=CID))
+            dest = {p["level"]: p["destination"] for p in rendu["intensity"]}
+            verifie(dest[0].endswith(CID.upper()),
+                    f"le cran exportable annonce l'arbre ordinaire ({dest[0]})")
+            for niveau in (2, 3, 4):
+                verifie(dest[niveau].endswith("_NSFW"),
+                        f"le cran {niveau}, non exportable, annonce _NSFW "
+                        f"({dest[niveau]})")
+        finally:
+            (nsfw_batch.edit_tool_state, bank.ss.scenes_data, bank.ss.cfg,
+             nsfw_batch.sources_disponibles) = vrais
     finally:
         for d in DIRS:
             shutil.rmtree(d, ignore_errors=True)

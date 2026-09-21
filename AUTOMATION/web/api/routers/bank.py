@@ -144,7 +144,14 @@ async def get_creative_taxonomy(character_id: RequiredCharacterId):
         # is rebuilt from this list, so it has nothing to filter — and nothing
         # to filter by character name (CLAUDE.md §8.7). `guard_intensity`
         # remains the server lock: hiding does not replace the guard.
-        if requires == "armed" and not tool["available"]:
+        # ARMING FOR EVERY TIER, THE GRAPH ONLY FOR THE ONE THAT EDITS. The
+        # condition used to be `tool["available"]`, which bundles the arming
+        # AND the pack's edit graph. That is right for the notch that edits;
+        # it is wrong for a notch that GENERATES adult content on the pack's
+        # own checkpoint (21/09) — such a tier needs no edit graph, and a pack
+        # that has none could never expose one.
+        if requires == "armed" and not (tool["available"] if edits
+                                        else tool["armed"]):
             continue
         # The notch that edits does not choose a scene: announcing a scene count
         # there was misleading (it showed « 16 », the base level's count, while
@@ -160,7 +167,15 @@ async def get_creative_taxonomy(character_id: RequiredCharacterId):
                       # while writing elsewhere. The disk truth is
                       # nsfw_batch.out_root / the character's tree; that is what
                       # we display.
-                      "destination": (f"PROD/{cid.upper()}/_NSFW" if edits
+                      # THE SAME RULE AS THE RUNNER'S, not a second one: the
+                      # space follows the TIER since 21/09, so any tier that
+                      # does not export writes under `_NSFW/`, whether it
+                      # edits or generates. Deriving it from `edits` alone made
+                      # « Suggestif » announce PROD/<CID> while the runner
+                      # wrote to PROD/<CID>/_NSFW — the very drift the comment
+                      # below warns about, in its other direction.
+                      "destination": (f"PROD/{cid.upper()}/_NSFW"
+                                      if edits or not p.get("export", True)
                                       else f"PROD/{cid.upper()}"),
                       "besoin_instruction": edits,
                       "unite": "image" if edits else "scène",
