@@ -97,6 +97,11 @@ repo et skills en **français**.
    et suit le même gel.
 9. Le NSFW ne construit jamais de sous-système propre — il recompose les
    outils existants.
+   **Précisé le 2026-09-21** — une destination distincte n'est pas un
+   sous-système. La branche exporte par le même code, les mêmes formats et les
+   mêmes tailles, vers `PROD/EXPORT_NSFW/` plutôt que vers l'arbre qu'on
+   synchronise avec une plateforme. Ce qui est interdit est un second chemin
+   de code, pas un second dossier.
 10. Jamais un fichier de graphe par personnage, production ou édition ; un
     `config.json` ne porte aucun chemin de graphe.
 11. Toute exposition MCP reste **lecture et validation seulement** — jamais de
@@ -118,6 +123,16 @@ repo et skills en **français**.
   versionné** : aucune route ni test ne suppose ces données présentes.
 - Un personnage est **entièrement fictif et généré**, jamais basé sur une
   personne réelle.
+- **Décidé le 2026-09-21 : ce sont des jeux d'essai.** Le projet est en
+  phase de développement, et `PROD/`, la base et les personnages sont
+  écrasables et régénérables. Entre migrer prudemment et simplifier puis
+  régénérer, la simplification gagne, et le code de compatibilité part
+  avec elle : pas de repli pour d'anciennes lignes, pas de script de
+  migration défensif. Ce qui reste demandé avant d'agir : une
+  destruction large et irréversible (un dossier de production, un LoRA
+  entraîné). Ne s'applique **pas** au code — les invariants et la suite
+  de non-régression restent la priorité 1. Ce que ça sert : une V1
+  entièrement fonctionnelle et **indépendante du personnage**.
 
 ## Frontend
 
@@ -130,6 +145,16 @@ repo et skills en **français**.
 ## Méthode
 
 - Jamais de commit sans lancer les tests du module touché.
+- Deux sous-agents portent la vérification, en tâche de fond pendant
+  que le travail continue : `verificateur` (tests du module, wf_check,
+  `--check` du tableau de bord) et `gardien-invariants` (le diff relu
+  contre les 12 invariants). Réflexe avant un commit d'ampleur ou à la
+  fin d'un chantier multi-fichier — ils rapportent, ils ne corrigent
+  jamais.
+- Une édition de graphe ComfyUI demandée explicitement passe par le
+  sous-agent `editeur-workflow` : 40 à 140 Ko de JSON tiennent dans son
+  contexte, pas dans la conversation. Il applique le skill
+  `workflow-comfyui` et rend un verdict, jamais le graphe.
 - Toute route généralisée vient avec un test qui aurait détecté un mélange de
   données entre deux personnages.
 - Petits commits thématiques, jamais un big-bang.

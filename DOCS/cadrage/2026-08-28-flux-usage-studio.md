@@ -177,21 +177,46 @@ Le runner **lit** le graphe au lancement. Il ne l’écrit pas pendant un job.
 
 ## 5. NSFW — une branche, pas un monde
 
-Réglage **off par défaut** à la création. Armement explicite, visible, réversible. Pas d’onglet parallèle, pas de génération NSFW automatique, pas d’entrée dans le wizard.
+**Amendé le 2026-09-21** (`2026-09-21-flux-nsfw.md`). La version d'août
+décrivait un flux — sélectionner une image SFW, la passer à l'outil de
+modification live — qui n'a jamais été celui du code : le NSFW est un
+**palier du curseur d'intensité**, pas un outil à part, et il a deux portes
+d'entrée, pas une. Le reste du principe tient sans changement : réglage off
+par défaut à la création, armement explicite, visible, réversible, pas
+d'onglet parallèle, pas de génération automatique, pas d'entrée dans le
+wizard.
+
+L'armement a **une seule porte** : l'écran Application, jamais au milieu d'un
+geste de production. Un palier qui demande l'armement et ne l'a pas n'apparaît
+pas dans le curseur — absent, pas grisé.
 
 ```mermaid
 flowchart TD
-  SFW["Image SFW existante"] --> SEL["L'utilisateur la sélectionne"]
-  SEL --> ARM{"Personnage NSFW armé ?"}
-  ARM -->|Non| STOP["Refus explicite dans l'UI"]
-  ARM -->|Oui| LIVE["Outil de modification live"]
-  LIVE --> RET["Retouche éventuelle"]
-  RET --> REV["Retour Revue"]
+  ARM["Application : armer ce personnage"] --> PROD["Produire : curseur d'intensité"]
+  PROD --> NAT["Banque NSFW : une scène native"]
+  PROD --> SRC["Grille de sources : reprendre une image validée"]
+  REV["Revue : déclinaison « éditer en NSFW »"] --> SRC
+  NAT --> RUN["Même cœur d'exécution, même QC, mêmes mesures"]
+  SRC --> RUN
+  RUN --> ESP["Espace NSFW — déduit du palier, jamais du pipeline"]
+  ESP --> TRI["Revue, espace NSFW : même boucle courte qu'en SFW"]
+  TRI --> EXP["Export dédié, hors chemin Meta"]
+  ESP --> ID["Gabarit, jeu d'entraînement, stats de scène"]
 ```
 
-Même flux plus tard pour la vidéo, une fois la vidéo SFW branchée.
+Deux axes qu'il ne faut pas confondre, et que la version d'août confondait :
 
----
+| Axe | Ce qu'il dit | Qui le décide |
+|---|---|---|
+| Palier d'intensité | ce que l'image montre, et si elle est publiable | l'utilisateur, au curseur |
+| Espace SFW/NSFW | où elle est rangée, et par quelle sortie elle part | déduit du palier |
+
+La voie native et la voie d'édition sont deux façons d'alimenter le **même**
+palier : partir d'une scène de la banque NSFW, ou reprendre une image déjà
+validée. Aucune des deux n'a de cœur d'exécution, de graphe ou d'écran à elle
+(invariants 2 et 9).
+
+Même flux plus tard pour la vidéo, une fois la vidéo SFW branchée.
 
 ## 6. Coulisses — ce que l’utilisateur ne gère pas
 

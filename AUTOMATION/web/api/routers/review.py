@@ -81,8 +81,12 @@ async def get_gallery(character_id: RequiredCharacterId, bucket: str = "OK",
     d = ss.bucket_dir(bucket, space, cid)
     files = sorted(d.glob("*.png"), key=lambda f: f.stat().st_mtime,
                    reverse=True) if d.exists() else []
-    index = (nsfw_journal_index(cid) if space == "nsfw"
-             else ss.journal_index(cid))
+    # The NSFW space has had two origins since 21/09: the editing path, which
+    # keeps its own journal, and a generating tier that does not export, whose
+    # row lives in the production journal. Reading only one of the two left the
+    # card without a scene, without a seed and without a prompt.
+    index = ({**ss.journal_index(cid), **nsfw_journal_index(cid)}
+             if space == "nsfw" else ss.journal_index(cid))
     # What we know about THIS character's images, from the database — the only
     # store with a (character_id, fichier) key. `PROD/mesures.json` has no
     # character field at all, and two characters of one world inherit the same
@@ -302,12 +306,13 @@ async def sort_image(payload: SortRequest, character_id: RequiredCharacterId):
     exported = ""
     if action == "valider":
         exported = export_image(src, origin, space, cid)
-    elif space == "sfw" and dest_bucket != "OK":
+    elif dest_bucket != "OK":
         # Taking an image out of OK must ALSO take it out of publication.
         # Without that the export folder accumulates rejected images: seen on
         # 25/08/2026, 11 JPEGs whose PNG was in REJET. Only the « annuler »
-        # button cleaned up; a normal rejection did not.
-        removed = remove_export(name, cid)
+        # button cleaned up; a normal rejection did not. Both spaces since
+        # 21/09: the NSFW branch publishes too, into its own tree.
+        removed = remove_export(name, cid, space)
         if removed:
             ss.push_log(f"{name} sort de l'export ({removed} fichier(s) retire(s))")
     if dest_bucket != bucket:
@@ -347,7 +352,7 @@ async def delete_image(payload: DeleteRequest, character_id: RequiredCharacterId
                             status_code=404)
     path.unlink()
     ss.oublier_vignette(name, bucket, space, cid)
-    removed = remove_export(name, cid) if space == "sfw" else 0
+    removed = remove_export(name, cid, space)
     ss.push_log(f"{name} supprimée définitivement" +
                 (f" (export retiré : {removed} fichier(s))" if removed else ""))
     return {"ok": True}
@@ -461,13 +466,13 @@ async def undo_sort(character_id: RequiredCharacterId):
         shutil.move(str(src), str(back / name))
         ss.oublier_vignette(act["name"], act["to"], space, cid)
     if act.get("export"):
-        for f in ss.export_dir(cid).rglob(act["export"]):
+        for f in ss.export_dir(cid, space).rglob(act["export"]):
             f.unlink(missing_ok=True)
     # Undoing a rejection must PUT the image back into publication: the
     # rejection had deleted the JPEG, and the undo left it deleted. The image
     # came back into OK without its export, with nothing to say so.
     redone = ""
-    if act["from"] == "OK" and space == "sfw":
+    if act["from"] == "OK":
         target = back / name
         if target.exists():
             redone = export_image(target, act.get("journal", act["name"]), space, cid)

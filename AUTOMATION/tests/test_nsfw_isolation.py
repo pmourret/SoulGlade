@@ -235,7 +235,7 @@ try:
         with base.ouvrir() as cx:
             r = cx.execute("SELECT espace FROM image WHERE fichier = ?", (nom,)).fetchone()
         verifie(r is not None and r["espace"] == "nsfw",
-                f"image NSFW mesuree -> espace 'nsfw', jamais le defaut 'lena' "
+                f"image NSFW mesuree -> espace 'nsfw', jamais le defaut 'sfw' "
                 f"({r['espace'] if r else 'ligne absente'})")
 
         # Le defaut ne bouge pas pour la branche SFW, qui ne passe rien.
@@ -244,7 +244,7 @@ try:
         with base.ouvrir() as cx:
             r2 = cx.execute("SELECT espace FROM image WHERE fichier = ?",
                             ("sfw_probe.png",)).fetchone()
-        verifie(r2["espace"] == "lena",
+        verifie(r2["espace"] == "sfw",
                 f"branche SFW inchangee : espace par defaut ({r2['espace']})")
 
         lb.ecrire_nsfw_en_base(

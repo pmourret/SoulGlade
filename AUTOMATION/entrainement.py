@@ -251,7 +251,7 @@ def candidats(cx, character_id):
     lignes = [dict(r) for r in cx.execute(
         "SELECT i.id AS id, i.fichier AS fichier, i.scene AS scene, "
         "       i.intention AS intention, i.ton AS ton, i.format AS format, "
-        "       i.prompt AS prompt, "
+        "       i.prompt AS prompt, i.espace AS espace, "
         "       i.lora_identite AS lora_identite, e.vec AS vec, "
         "       j.anatomie AS anatomie, j.mains_juge AS mains_juge "
         "FROM reference_member m "
@@ -277,15 +277,22 @@ def fichiers_sur_disque(character_id):
 
     `_BATCH` (planches de contact) et `_BENCH` (sorties de banc) sont exclus :
     ce ne sont pas des images de production, et un homonyme y ferait exporter
-    la mauvaise. `_NSFW` aussi — la file est SFW par construction
-    (`construire_jeu` filtre `espace = 'lena'`), et un nom identique des deux
-    cotes prendrait au hasard de l'ordre de parcours.
+    la mauvaise.
+
+    `_NSFW` NE L'EST PLUS (21/09). Il l'etait parce que la file etait SFW par
+    construction — `construire_jeu` filtrait l'espace — et ce filtre a disparu
+    avec l'arbitrage 2 du cadrage 2026-09-21-flux-nsfw. Garder l'exclusion
+    laisserait la file proposer des images dont l'export ne retrouve pas le
+    fichier, soit exactement l'ecart que `exportables` signale plus bas. Le
+    risque d'homonyme entre les deux espaces est couvert depuis le meme jour :
+    `runner.nom_libre` juge l'unicite sur l'arbre du personnage, `_NSFW/`
+    compris.
     """
     racine = OFM / "PROD" / character_id.upper()
     out = {}
     if racine.exists():
         for f in racine.rglob("*.png"):
-            if {"_BATCH", "_BENCH", "_NSFW"} & set(f.parts):
+            if {"_BATCH", "_BENCH"} & set(f.parts):
                 continue
             out.setdefault(f.name, f)
     return out
@@ -657,6 +664,10 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
         "declencheur": trigger,
         "declencheur_cree": trigger_cree,
         "cohesion_de_la_file": r["cohesion"],
+        # Combien d'images de la branche adulte, en une ligne : le detail est
+        # par image plus bas, mais personne ne lit 24 entrees pour repondre a
+        # « est-ce que ce dossier contient du nu ? ».
+        "images_nsfw": sum(1 for x in r["file"] if x.get("espace") == "nsfw"),
         "diversite": {a: {"distinctes": v["distinctes"],
                           "effectives": round(v["effectives"], 3),
                           "sans": v["sans"]}
@@ -665,6 +676,13 @@ def exporter(cx, character_id, configuration=None, quand=None, avec_vision=True,
             "fichier": x["fichier"], "scene": x["scene"],
             "intention": x["intention"], "ton": x["ton"], "format": x["format"],
             "mains_juge": x["mains_juge"], "anatomie": x["anatomie"],
+            # L'ESPACE EST DIT, IMAGE PAR IMAGE. Depuis le 21/09 un jeu peut
+            # contenir du nu : le gabarit ne filtre plus l'espace, et c'est
+            # voulu (cadrage 2026-09-21-flux-nsfw, arbitrage 2). Ce qui n'est
+            # pas acceptable, c'est de l'apprendre en ouvrant les images. Le
+            # manifeste part avec le dossier, sur une machine qui n'est pas
+            # celle de Pierre.
+            "espace": x.get("espace") or "sfw",
             # Provenance (regle 6) : une image DERIVED sort d'un LoRA du
             # personnage. Entrainer v2 dessus sans le savoir, c'est la boucle
             # autophage.

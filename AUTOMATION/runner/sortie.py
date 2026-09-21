@@ -50,6 +50,17 @@ class Sink(NamedTuple):
 
 
 # ------------------------------------------------------------------- tri/export
+def espace_de(cfg):
+    """L'espace ou ce lot range ses images : 'sfw' ou 'nsfw'.
+
+    Pose par la couche politique (`services/creative.apply_tier_rules`), jamais
+    deduit ici : le runner ne connait pas les paliers d'intensite (CLAUDE.md
+    §8.2), il ne connait que la cle qu'elle lui laisse. Absente — la CLI, un
+    banc, un appel direct — vaut SFW, le comportement d'avant le 21/09.
+    """
+    return "nsfw" if cfg.get("_espace") == "nsfw" else "sfw"
+
+
 def nom_libre(stem, racine, ext=".png"):
     """Nom libre dans TOUS les dossiers de tri, pas seulement celui d'arrivee.
 
@@ -59,8 +70,16 @@ def nom_libre(stem, racine, ext=".png"):
     indexes par nom, un doublon y melange deux images.
     Constate le 24/08/2026 : selfie_voiture_20260823_01.png existait a la fois
     dans OK et dans REJET, avec deux seeds et deux scores differents.
+
+    LES DEUX ESPACES, pas seulement les dossiers de tri (21/09). Depuis qu'un
+    palier non exportable GENERE sous `_NSFW/`, la meme scene produite le meme
+    jour aux deux paliers donne deux fois le meme radical : un nom unique par
+    espace laisserait deux images differentes le porter, et `PROD/mesures.json`
+    comme les deux journaux sont indexes par nom.
     """
-    dossiers = [d for d in racine.glob("*") if d.is_dir()] or [racine]
+    dossiers = [d for d in racine.glob("*") if d.is_dir()]
+    dossiers += [d for d in (racine / "_NSFW").glob("*") if d.is_dir()]
+    dossiers = dossiers or [racine]
     nom, n = f"{stem}{ext}", 1
     while any((d / nom).exists() for d in dossiers):
         n += 1
@@ -81,6 +100,11 @@ def sort_and_export(src, job, verdict, score, cfg, batch_id, character_id, sink=
     `sink` (J8.5) : range sous `sink.dest_root` au lieu de `PROD/<CID>/`, et
     n'exporte JAMAIS (un banc ne publie pas automatiquement) quel que soit
     `cfg["export"]["enabled"]`.
+
+    L'espace vient de `cfg` (21/09) : un palier qui n'exporte pas range sous
+    `_NSFW/`, meme quand il GENERE. Avant, seule la voie d'edition ecrivait la,
+    et une image Suggestif atterrissait dans l'arbre SFW en se disant
+    non publiable. Le banc garde son propre arbre : `sink` passe avant tout.
     """
     day = datetime.now().strftime("%Y%m%d")
     suffix = f"_{job['index']:02d}"
@@ -88,10 +112,18 @@ def sort_and_export(src, job, verdict, score, cfg, batch_id, character_id, sink=
     label = (job["scene"] if job["scene"].startswith(job["category"])
              else f"{job['category']}_{job['scene']}")
     stem = f"{label}_{day}{suffix}"
-    racine_tri = sink.dest_root if sink else OFM / "PROD" / character_id.upper()
+    if sink:
+        racine_tri = sink.dest_root
+    else:
+        racine_tri = OFM / "PROD" / character_id.upper()
+        if espace_de(cfg) == "nsfw":
+            racine_tri = racine_tri / "_NSFW"
     dest_dir = racine_tri / verdict
     dest_dir.mkdir(parents=True, exist_ok=True)
-    dest = dest_dir / nom_libre(stem, racine_tri)
+    # l'unicite se juge sur l'arbre du PERSONNAGE, pas sur celui de l'espace :
+    # `nom_libre` descend dans `_NSFW/` depuis le meme point
+    dest = dest_dir / nom_libre(stem, sink.dest_root if sink
+                                else OFM / "PROD" / character_id.upper())
     shutil.move(str(src), str(dest))
 
     export_path = ""
@@ -123,9 +155,14 @@ JOURNAL_COLS = ["date", "batch", "character", "scene", "categorie", "intensite",
                 "fichier", "export", "duree_s", "prompt"]
 
 
-def ecrire_en_base(rows, character_id):
+def ecrire_en_base(rows, character_id, espace="sfw"):
     """Double ecriture : le CSV reste lisible hors outil, la base devient la
-    source de verite en lecture. Ne doit jamais faire echouer un batch."""
+    source de verite en lecture. Ne doit jamais faire echouer un batch.
+
+    `espace` : celui du lot (21/09), pas 'sfw' en dur. La colonne doit dire ou
+    le fichier est reellement range, sinon la Revue cherche l'image dans un
+    arbre et la base la declare dans l'autre.
+    """
     try:
         import base
         with base.ouvrir() as cx:
@@ -136,7 +173,7 @@ def ecrire_en_base(rows, character_id):
                            (d["batch"], character_id, d["date"]))
                 iid = base.enregistrer_image(
                     cx, d["fichier"], character_id=character_id, batch_id=d["batch"],
-                    espace="lena", bucket=d["verdict"], scene=d["scene"],
+                    espace=espace, bucket=d["verdict"], scene=d["scene"],
                     intention=d["categorie"], ton=d["ton"] or None,
                     intensite=int(d["intensite"]) if str(d["intensite"]).isdigit() else None,
                     format=d["format"], variante=d["variante"] or None,
@@ -199,7 +236,7 @@ def ecrire_nsfw_en_base(rows, character_id):
         _best_effort("base : ecriture NSFW impossible", e)
 
 
-def append_log(rows, character_id):
+def append_log(rows, character_id, espace="sfw"):
     path = OFM / "PROD" / "journal_batch.csv"
     path.parent.mkdir(parents=True, exist_ok=True)
     new = not path.exists()
@@ -208,7 +245,7 @@ def append_log(rows, character_id):
         if new:
             wr.writerow(JOURNAL_COLS)
         wr.writerows(rows)
-    ecrire_en_base(rows, character_id=character_id)
+    ecrire_en_base(rows, character_id=character_id, espace=espace)
     return path
 
 
@@ -327,13 +364,13 @@ def ranger_mesures(nom, identite, reel, character_id, embedding=None,
                    espace=None):
     """`espace` EST OBLIGATOIRE DES QU'ON N'EST PAS EN SFW (20/09).
 
-    La colonne vaut `DEFAULT 'lena'` au schema : une ligne creee sans espace
+    La colonne vaut `DEFAULT 'sfw'` au schema : une ligne creee sans espace
     explicite atterrit dans l'espace SFW. Tant que cette fonction n'etait
     appelee que par la branche SFW, le defaut disait vrai. Depuis que la
     boucle d'edition mesure elle aussi (meme chaine de validation), il ment —
     et il ment la ou ca coute le plus cher : `base.construire_jeu` filtre
-    `i.espace = 'lena'` pour batir le gabarit d'identite, donc une image NSFW
-    mal estampillee entre dans la reference du personnage.
+    l'espace SFW pour batir le gabarit d'identite, donc une image NSFW mal
+    estampillee entre dans la reference du personnage.
 
     `None` laisse le defaut, c'est-a-dire le SFW : le comportement de la
     branche SFW ne change pas d'un iota.
@@ -492,7 +529,8 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
                                            apres_expression=apres,
                                            expression=params_expr,
                                            character_id=character_id,
-                                           lora_identite=lora_id)
+                                           lora_identite=lora_id,
+                                           espace=espace_de(cfg))
                         if params_expr:
                             import expression as _ex
                             log(f"   expression ({job.get('tone') or '—'}) : "
@@ -552,5 +590,5 @@ def execute_jobs(jobs, cfg, checker, batch_id, character_id, runner=None,
         if not any(racine.iterdir()):
             racine.rmdir()
     if rows and not sink:
-        append_log(rows, character_id=character_id)
+        append_log(rows, character_id=character_id, espace=espace_de(cfg))
     return rows, stats

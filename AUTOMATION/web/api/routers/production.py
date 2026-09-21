@@ -40,7 +40,7 @@ from ..schemas.production import (
 )
 from ..services.batch import start_batch, start_edit_batch
 from ..services.creative import (
-    apply_export_rule, apply_nsfw_overrides, edit_tier, guard_intensity,
+    apply_nsfw_overrides, apply_tier_rules, edit_tier, guard_intensity,
     guard_intensity_of, is_edit_mode, is_edit_tier,
     payload_at_generation_level, valid_sources,
 )
@@ -263,7 +263,7 @@ def start_edit_from_image(name, payload, level, character):
             status_code=400)
     configuration = ss.cfg(character)
     configuration["_intensity"] = level
-    apply_export_rule(configuration, level, character)
+    apply_tier_rules(configuration, level, character)
     batch_id = start_edit_batch([name], (payload.edit_instruction or "").strip(),
                                 configuration, not payload.no_qc, level, character)
     return {"ok": True, "batch_id": batch_id, "total": 1,
@@ -381,7 +381,7 @@ async def decline_image(payload: DeclineRequest, character_id: RequiredCharacter
         # same wiring as /api/run: this is what triggers the chaining
         configuration["_intensity"] = level + 1
         configuration["_edit_instruction"] = (payload.edit_instruction or "").strip()
-        apply_export_rule(configuration, level + 1, cid)
+        apply_tier_rules(configuration, level + 1, cid)
     batch_id = start_batch(jobs, configuration, not payload.no_qc,
                            header=f"déclinaison « {DECLENSION_LABELS[mode]} » depuis {name}",
                            character=cid)
@@ -428,7 +428,7 @@ async def run_batch(payload: RunPayload, character_id: RequiredCharacterId):
         apply_nsfw_overrides(configuration, payload)
         level = int(payload.intensity or 0)
         configuration["_intensity"] = level
-        apply_export_rule(configuration, level, cid)
+        apply_tier_rules(configuration, level, cid)
         batch_id = start_edit_batch(
             sources, (payload.edit_instruction or "").strip(),
             configuration, not payload.no_qc, level, cid)
@@ -449,7 +449,7 @@ async def run_batch(payload: RunPayload, character_id: RequiredCharacterId):
     # reads it back to wire the chaining
     configuration["_intensity"] = int(payload.intensity or 0)
     configuration["_edit_instruction"] = (payload.edit_instruction or "").strip()
-    apply_export_rule(configuration, configuration["_intensity"], cid)
+    apply_tier_rules(configuration, configuration["_intensity"], cid)
     batch_id = start_batch(jobs, configuration, not payload.no_qc, character=cid)
     return {"ok": True, "batch_id": batch_id, "total": len(jobs)}
 

@@ -1,5 +1,5 @@
 {
-  "maj": "20 septembre 2026",
+  "maj": "21 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -508,6 +508,11 @@
           "s": "dette",
           "t": "Seuil qc.threshold_high non recalibré",
           "d": "valeur provisoire depuis J1, acceptable en l'état"
+        },
+        {
+          "s": "faire",
+          "t": "L'étalon de réalisme est fait d'images de Léna",
+          "d": "`INPUTS/REALISME` porte six images dont quatre de Léna, et c'est l'étalon de toutes les bandes. Le dossier est hors dépôt : un tiers démarre sans étalon et se rabat sur ses propres jugements. À trancher, un corpus neutre livré avec le produit ou pas de corpus du tout."
         }
       ]
     },
@@ -571,6 +576,11 @@
           "s": "fait",
           "t": "Les mesures d'une image appartiennent à un personnage",
           "d": "La Revue lit ses mesures en base, qui porte la clé (character_id, fichier), et ne retombe sur `mesures.json` que pour les noms qu'aucun personnage ne revendique. Deux images homonymes affichent chacune les siennes ; le corpus de réalisme reste commun, il est de plateforme."
+        },
+        {
+          "s": "faire",
+          "t": "Le repli legacy des mesures peut disparaître",
+          "d": "`mesures.par_personnage` retombe sur `mesures.json` pour les noms que la base ne connaît à personne, et `base.fichiers_connus` n'existe que pour ça. Les données sont des jeux d'essai (décision du 21/09) : re-mesurer, supprimer la branche, une lecture et une seule source."
         }
       ]
     },
@@ -613,7 +623,7 @@
         {
           "s": "faire",
           "t": "Scène NSFW native, en plus de l'édition",
-          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. La question ouverte est le modèle, pas le pipeline. Son revers se décide avec elle : ouvrir la voie native ouvre celle du nu involontaire en SFW.",
+          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. Ses scènes vivent dans une banque séparée, décidée le 21/09. Restent le modèle, et son revers : ouvrir la voie native ouvre celle du nu involontaire en SFW.",
           "it": "IT-3e"
         },
         {
@@ -621,6 +631,23 @@
           "it": "IT-3e",
           "t": "Le NSFW passe la même chaîne de validation que le SFW",
           "d": "La boucle d'édition s'arrêtait au score d'identité : réalisme, mains, embedding et score de gabarit n'étaient jamais mesurés à la production. Même chaîne désormais, même ordre. `espace` est explicite, sans quoi une image NSFW entrait dans le gabarit d'identité."
+        },
+        {
+          "s": "faire",
+          "it": "IT-3e",
+          "t": "L'espace se déduit du palier",
+          "d": "Le palier « suggestif » n'exporte pas et se range pourtant en SFW, gabarit et stats compris. L'axe se déduira du palier, avec la migration des lignes existantes et la fin de « lena » comme nom d'espace."
+        },
+        {
+          "s": "fait",
+          "it": "IT-3e",
+          "t": "Un chemin d'export propre à la branche",
+          "d": "Une image NSFW validée sort dans `PROD/EXPORT_NSFW/`, un arbre frère de celui qu'on synchronise vers une plateforme, jamais rangé dessous. Même geste, mêmes formats. L'espace cesse aussi d'être un critère d'identité : les trois filtres sont ouverts, et le jeu d'entraînement dit son espace."
+        },
+        {
+          "s": "faire",
+          "t": "La boucle courte s'arrête à la première image NSFW",
+          "d": "En espace NSFW la Revue trie et rien d'autre : la déclinaison y est refusée et l'export absent. Produire, juger, repartir de l'image ne se referme pas. Hors définition de fin d'IT-3e."
         }
       ]
     },
@@ -784,6 +811,11 @@
           "it": "IT-0",
           "t": "Décider du sort de ce tableau de bord",
           "d": "remplacer le fil conducteur, ou le générer comme lui"
+        },
+        {
+          "s": "faire",
+          "t": "Le nom de Léna subsiste aux points d'entrée",
+          "d": "`entrainement.py` prend « lena » par défaut en ligne de commande, et le serveur MCP est entièrement codé dessus. Le cœur est agnostique, ces deux frontières ne le sont pas : une V1 indépendante du personnage ne peut pas les garder."
         }
       ]
     },
@@ -814,6 +846,21 @@
   ],
   "lecture": "Ce fichier est la source de vérité de l'état du projet : découpage en EPIC, statut de chaque travail, séquence des itérations. Il remplace ROADMAP.md, BACKLOG.md et la roadmap de finition. Le POURQUOI ne vit pas ici : cadrage stratégique dans PROJET.md, invariants dans CLAUDE.md, décisions dans DOCS/adr/, chantiers dans DOCS/cadrage/, fins de phase dans DOCS/retros/. La page HTML est une sortie de build, jamais éditée à la main.",
   "decisions": [
+    {
+      "e": "tranche",
+      "t": "L'espace SFW/NSFW suit le palier, pas le pipeline",
+      "d": "Décidé le 21/09. Aujourd'hui seule l'édition écrit dans l'espace NSFW : le palier « suggestif », déclaré non exportable, atterrit donc dans l'arbre SFW, entre dans le gabarit d'identité et compte dans les stats de ses scènes. Un palier qui n'exporte pas range désormais du côté NSFW, quel que soit son pipeline. Les lignes existantes se migrent, et `espace` cesse d'écrire « lena » pour du SFW."
+    },
+    {
+      "e": "tranche",
+      "t": "Une image NSFW s'exporte, nourrit l'identité et compte dans les mesures",
+      "d": "Décidé le 21/09, ce que la définition de fin d'IT-3e laissait ouvert. Sortie par un chemin d'export propre à la branche, jamais par celui de Meta. Les trois filtres `espace = 'lena'` de la base s'ouvrent : gabarit, stats de scène, dérive. Conséquence portée avec la décision : un jeu d'entraînement peut contenir du nu et son manifeste doit le dire."
+    },
+    {
+      "e": "tranche",
+      "t": "La voie NSFW native prend ses scènes dans une banque séparée",
+      "d": "Décidé le 21/09. Séparation de données, pas de sous-système : `scene_band` masque déjà une scène hors de sa bande de niveaux, le cœur et le curseur restent communs. Reste à trancher avant le code : la couche qui porte cette banque, le monde ou le personnage. Le modèle de la voie native reste la question ouverte du 10/09."
+    },
     {
       "e": "tranche",
       "t": "Le NSFW passe la même chaîne de validation que le SFW",
@@ -1003,6 +1050,11 @@
       "e": "tranche",
       "t": "L'ancre de Léna est le visage de septembre, plus celui de juillet",
       "d": "Décidé le 20/09. Les quatre images publiées de juillet ne s'accordent ni avec l'ancre gelée du 24/07 (0.50 à 0.65) ni entre elles (0.605 en leave-one-out) : elles ne font pas une référence mesurable. Le visage produit depuis le 22/08 fait foi, cohérent à 0.931, et c'est lui que le gabarit et le LoRA portent. Reposer l'ancre dessus est une dette assumée, pas un chantier de la séquence en cours."
+    },
+    {
+      "e": "tranche",
+      "t": "Les données existantes sont des jeux d'essai",
+      "d": "Décidé le 21/09. Le projet est en phase de développement : `PROD/`, la base et les personnages sont des données de test, écrasables et régénérables. Devant le choix entre migrer prudemment et simplifier puis régénérer, la simplification gagne, et le code de compatibilité part avec. L'objectif que ça sert : une V1 entièrement fonctionnelle et indépendante du personnage."
     }
   ],
   "horizon": {

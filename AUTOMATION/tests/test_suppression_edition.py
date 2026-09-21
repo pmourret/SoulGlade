@@ -144,7 +144,7 @@ with db.ouvrir() as cx:
         ("lena", "scene_01_edit.png")).fetchone()
 verifie(ligne is not None, "la copie a sa ligne en base — pas seulement sur le disque")
 if ligne is not None:
-    verifie(ligne["bucket"] == "A_REVOIR" and ligne["espace"] == "lena",
+    verifie(ligne["bucket"] == "A_REVOIR" and ligne["espace"] == "sfw",
             f"la ligne porte le bucket et l'espace de la copie "
             f"({ligne['bucket']} / {ligne['espace']})")
     verifie(ligne["source"] == "scene_01.png",

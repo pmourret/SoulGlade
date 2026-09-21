@@ -35,6 +35,11 @@ HERE = Path(__file__).resolve().parent
 OFM = HERE.parent
 FICHIER = OFM / "PROD" / "soulglade.db"
 
+# Espace d'une ligne dont l'appelant ne dit rien. Double du `DEFAULT` du schema,
+# et c'est voulu : le schema ne s'applique qu'aux bases neuves, celui-ci a
+# toutes les autres (voir `enregistrer_image`).
+ESPACE_DEFAUT = "sfw"
+
 SCHEMA = """
 PRAGMA journal_mode = WAL;
 PRAGMA foreign_keys = ON;
@@ -49,15 +54,17 @@ CREATE TABLE IF NOT EXISTS batch (
 );
 
 -- character_id : axe personnage (J2), obligatoire, plus aucun defaut
--- (2026-09-01). Distinct de `espace`, qui reste l'axe SFW/NSFW — celui-ci
--- garde 'lena' comme valeur historique de sa branche SFW (vocabulaire de la
--- base, pas un personnage), a ne pas confondre pour autant (voir ADR a venir).
+-- (2026-09-01). Distinct de `espace`, l'axe SFW/NSFW. Celui-ci a longtemps
+-- ecrit 'lena' pour sa branche SFW : un nom de personnage pour un axe qui n'en
+-- est pas un, et la confusion exacte qui faisait servir les images de Lena aux
+-- autres personnages. Valeur canonique 'sfw' depuis le 21/09 ; migration des
+-- lignes existantes : AUTOMATION/tests/migrer_espace_par_palier.py.
 CREATE TABLE IF NOT EXISTS image (
   id           INTEGER PRIMARY KEY,
   character_id TEXT NOT NULL,
   fichier      TEXT NOT NULL,
   batch_id     TEXT,
-  espace       TEXT DEFAULT 'lena',   -- lena | nsfw
+  espace       TEXT DEFAULT 'sfw',    -- sfw | nsfw (voir ESPACE_DEFAUT)
   bucket       TEXT,
   scene        TEXT,
   intention    TEXT,
@@ -264,9 +271,17 @@ def enregistrer_image(cx, fichier, character_id, **champs):
                 "intensite", "format", "seed", "variante", "prompt", "cree_le",
                 "duree_s", "export", "source", "role", "lora_identite")
     vals = {k: champs.get(k) for k in colonnes}
-    cx.execute("INSERT INTO image (character_id, fichier) VALUES (?, ?) "
-               "ON CONFLICT(character_id, fichier) DO NOTHING",
-               (character_id, fichier))
+    # `espace` est NOMME des l'insertion, jamais laisse au defaut de la table.
+    # `CREATE TABLE IF NOT EXISTS` ne touche pas une table deja creee : sur
+    # toute base d'avant le 21/09 la colonne garde `DEFAULT 'lena'` pour
+    # toujours, et une ligne creee sans espace y tomberait dans une valeur
+    # qu'aucun filtre ne reconnait plus. Le defaut vit donc ici, en Python, ou
+    # il s'applique a toutes les bases. L'UPDATE qui suit garde son COALESCE :
+    # `espace=None` veut dire « ne touche pas », et re-mesurer une image NSFW
+    # ne doit pas la rapatrier en SFW.
+    cx.execute("INSERT INTO image (character_id, fichier, espace) "
+               "VALUES (?, ?, ?) ON CONFLICT(character_id, fichier) DO NOTHING",
+               (character_id, fichier, vals["espace"] or ESPACE_DEFAUT))
     sets = ", ".join(f"{k} = COALESCE(?, {k})" for k in colonnes)
     cx.execute(f"UPDATE image SET {sets} WHERE character_id = ? AND fichier = ?",
                [vals[k] for k in colonnes] + [character_id, fichier])
@@ -441,6 +456,10 @@ def stats_par_scene(cx, character_id):
 
     `character_id` obligatoire (J2, CLAUDE.md §11) : sans lui, deux personnages
     partageant une scene de meme id verraient leurs stats melangees.
+
+    TOUS ESPACES depuis le 21/09 : une scene produite en branche adulte compte
+    dans ses propres badges. Le filtre `espace = 'sfw'` faisait qu'un palier
+    non exportable produisait sans que sa scene le sache.
     """
     q = """
       SELECT i.scene AS scene, COUNT(*) AS n,
@@ -449,7 +468,6 @@ def stats_par_scene(cx, character_id):
       FROM image i
       LEFT JOIN score s ON s.image_id = i.id AND s.genre = 'identite'
       WHERE i.character_id = ? AND i.scene IS NOT NULL AND i.role IS NULL
-            AND i.espace = 'lena'
       GROUP BY i.scene
     """
     return {r["scene"]: {"n": r["n"], "ok": r["ok"] or 0,
@@ -520,12 +538,14 @@ def derive_par_scene(cx, character_id, genre="identite", mini=3):
 
     C'est ce que la base rend possible et que le CSV ne rendait pas : suivre la
     derive lente d'une scene dans le temps sans relire une seule image.
+
+    TOUS ESPACES depuis le 21/09, comme `stats_par_scene` : une derive ne se
+    suit pas sur la moitie de la production.
     """
     q = """
       SELECT i.scene AS scene, i.cree_le AS date, s.valeur AS v
       FROM image i JOIN score s ON s.image_id = i.id AND s.genre = ?
       WHERE i.character_id = ? AND i.scene IS NOT NULL AND i.role IS NULL
-            AND i.espace = 'lena'
       ORDER BY i.scene, i.cree_le
     """
     par = {}
@@ -585,6 +605,15 @@ def construire_jeu(cx, character_id, base_embedding, seuil_haut, libelle=None,
        rien dire : melanger deux modeles est la meme faute que melanger deux
        personnages, en moins visible.
 
+    CE QUI N'EST PAS UN GARDE-FOU : l'espace SFW/NSFW. Le filtre
+    `i.espace = 'sfw'` a disparu le 21/09 (cadrage 2026-09-21-flux-nsfw,
+    arbitrage 2). Une image de la branche adulte montre le meme visage, sous
+    la meme identite, et elle passe la meme chaine de mesures depuis le 20/09 :
+    l'ecarter du gabarit ne protegeait rien et retirait de l'instrument une
+    partie de la production qu'il est cense couvrir. Ce qui filtre reste ce qui
+    a toujours vraiment filtre : le portillon, le role et le modele
+    d'embedding.
+
     `seuil_gabarit` se lit dans CHARACTERS/<nom>/config.json (qc.threshold_gabarit,
     invariant 4). ABSENT = amorcage : jamais de valeur par defaut ici, le seuil
     se mesure par personnage (AUTOMATION/tests/calibrer_gabarit.py).
@@ -609,7 +638,7 @@ def construire_jeu(cx, character_id, base_embedding, seuil_haut, libelle=None,
     for r in cx.execute(
             "SELECT i.id AS id, e.vec AS vec FROM image i "
             "JOIN embedding e ON e.image_id = i.id "
-            "WHERE i.character_id = ? AND i.espace = 'lena' AND i.role IS NULL "
+            "WHERE i.character_id = ? AND i.role IS NULL "
             "AND e.modele = ?",                                  # garde-fou 7
             (character_id, modele)):
         v = np.frombuffer(r["vec"], dtype=np.float32)

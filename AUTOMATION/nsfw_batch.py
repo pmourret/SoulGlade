@@ -27,6 +27,7 @@ l'utilisateur, prise sur l'ecran Application (« Contenu adulte »), et se revoq
 au meme endroit. Off a la creation d'un personnage (create_character), deplace
 de config.json vers le registre en J4 (ADR-0010).
 """
+import csv
 import random
 import re
 import shutil
@@ -246,13 +247,43 @@ def buckets_sources(cfg=None):
     return [b for b in permis if b in ("OK", "A_REVOIR")]
 
 
+def sorties_d_edition(character_id):
+    """Noms des fichiers que la voie d'edition a elle-meme produits.
+
+    Lu dans son propre journal (`journal_nsfw.csv`), qui les porte tous : c'est
+    la seule chose qui distingue, dans l'arbre `_NSFW`, une image GENEREE a un
+    palier non exportable d'une image EDITEE. Le disque, lui, les range cote a
+    cote depuis le 21/09.
+    """
+    chemin = journal_path(character_id)
+    if not chemin.exists():
+        return set()
+    with open(chemin, encoding="utf-8", newline="") as f:
+        return {r["fichier"] for r in csv.DictReader(f, delimiter=";")
+                if r.get("fichier")}
+
+
 def sources_disponibles(cfg, character_id):
-    """Images SFW editables de CE personnage, les plus recentes d'abord."""
-    out = []
+    """Images editables de CE personnage, les plus recentes d'abord.
+
+    LES DEUX ARBRES DEPUIS LE 21/09. L'espace suit le palier : une image
+    produite au palier « Suggestif » est rangee sous `_NSFW/` alors qu'elle a
+    ete GENEREE, et c'est meme la meilleure source d'edition qui soit. Ne
+    balayer que l'arbre SFW l'aurait rendue non editable du jour ou elle a
+    demenage — une capacite perdue sans que personne l'ait decidee.
+
+    Ce qui reste exclu : les sorties de la voie d'edition elle-meme. Editer une
+    image deja editee est une capacite de plus, pas une consequence d'un
+    rangement (ADR-0003 : la branche reprend une image VALIDEE, elle ne
+    s'empile pas sur elle-meme).
+    """
+    out, deja = [], sorties_d_edition(character_id)
+    racine = OFM / "PROD" / character_id.upper()
     for bucket in buckets_sources(cfg):
-        d = OFM / "PROD" / character_id.upper() / bucket
-        if d.exists():
-            out += [(f, bucket) for f in d.glob("*.png")]
+        for d in (racine / bucket, racine / "_NSFW" / bucket):
+            if d.exists():
+                out += [(f, bucket) for f in d.glob("*.png")
+                        if f.name not in deja]
     out.sort(key=lambda t: t[0].stat().st_mtime, reverse=True)
     return out
 
@@ -261,16 +292,22 @@ def resoudre_source(nom, cfg, character_id):
     """Chemin d'une image source par son nom, DANS l'arbre de ce personnage.
     None si elle n'y est pas editable.
 
-    Un nom de fichier est unique sur tous les dossiers de tri d'un personnage
-    (`lb.nom_libre` balaye PROD/<CID>/), donc chercher par nom y est sans
+    Un nom de fichier est unique sur tous les dossiers de tri d'un personnage,
+    les deux espaces compris (`lb.nom_libre`), donc chercher par nom y est sans
     ambiguite — mais seulement la : deux personnages peuvent porter le meme
     nom de fichier, d'ou l'arbre en parametre. Rendre None plutot que lever :
     l'image a pu etre retriee entre la selection et le lancement.
+
+    Meme perimetre que `sources_disponibles`, et pour la meme raison : les deux
+    arbres depuis le 21/09, sauf ce que la voie d'edition a produit.
     """
+    if nom in sorties_d_edition(character_id):
+        return None
+    racine = OFM / "PROD" / character_id.upper()
     for bucket in buckets_sources(cfg):
-        p = OFM / "PROD" / character_id.upper() / bucket / nom
-        if p.exists():
-            return p
+        for p in (racine / bucket / nom, racine / "_NSFW" / bucket / nom):
+            if p.exists():
+                return p
     return None
 
 

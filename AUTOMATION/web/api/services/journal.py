@@ -93,16 +93,21 @@ def export_image(src, journal_name, space, character_id):
     journal with the final name returned an empty row, hence
     `categorie = divers` and `format = 4:5` by default — the export went to the
     wrong folder and a 9:16 image ended up resized to 1080x1350.
+
+    THE NSFW BRANCH EXPORTS TOO, since 21/09 (cadrage 2026-09-21-flux-nsfw,
+    arbitrage 2). One line here used to refuse it outright, which left the
+    whole branch without an exit: an image could be produced, measured and
+    validated, and still lead nowhere. It now goes out through its own tree
+    (`ss.export_dir(..., space)`), never the one a publishing tool syncs.
+    Nothing else changes: same journal row, same sizes, same quality.
     """
-    if ss.space_id(space) == "nsfw":       # the NSFW branch never exports
-        return ""
     row = ss.journal_index(character_id).get(journal_name, {})
     configuration = ss.cfg(character_id)
     fmt = row.get("format") or "4:5"
     category = row.get("categorie") or "divers"
     try:
         from PIL import Image
-        exp_dir = ss.export_dir(character_id) / category
+        exp_dir = ss.export_dir(character_id, space) / category
         exp_dir.mkdir(parents=True, exist_ok=True)
         out = exp_dir / (Path(src).stem + "." + configuration["export"]["format"])
         im = Image.open(src).convert("RGB")
@@ -127,7 +132,8 @@ def apply_overwrite_side_effects(image_path, name, bucket, space, character_id):
       - the realism MEASUREMENTS were about the OLD pixels: erased
         (`mes.demesurer`), the image becomes "unmeasured" again. The human
         judgment (`flag`) is a different field entirely and stays untouched;
-      - the publishable export (OK/sfw only) is redone from the new bytes.
+      - the publishable export (OK bucket, either space) is redone from the
+        new bytes, into the tree of ITS space.
 
     `image_path` is the ALREADY-RESOLVED, already-overwritten file — this
     never re-derives `bucket_dir` itself, both callers already have it.
@@ -138,21 +144,25 @@ def apply_overwrite_side_effects(image_path, name, bucket, space, character_id):
     """
     ss.oublier_vignette(name, bucket, space, character_id)
     mes.demesurer(name, character_id)
-    if bucket == "OK" and space == "sfw":
+    if bucket == "OK":
         return export_image(image_path, name, space, character_id)
     return ""
 
 
-def remove_export(name, character_id):
+def remove_export(name, character_id, space="sfw"):
     """Takes an image out of publication. Returns how many files were removed.
 
     Sweeps the character's export folder ONLY: an `rglob` over the whole
     PROD/EXPORT/ deleted another character's homonymous export along with this
     one (two characters can produce the same file name — `nom_libre` only
     guarantees uniqueness inside one PROD/<CID>/ tree).
+
+    `space` picks the tree, because there are two since 21/09 and they are
+    siblings, not nested: sweeping the SFW one for an NSFW image would find
+    nothing and leave the file published.
     """
     removed = 0
-    for f in ss.export_dir(character_id).rglob(Path(name).stem + ".*"):
+    for f in ss.export_dir(character_id, space).rglob(Path(name).stem + ".*"):
         f.unlink(missing_ok=True)
         removed += 1
     return removed

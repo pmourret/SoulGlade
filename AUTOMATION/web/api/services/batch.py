@@ -104,8 +104,12 @@ def run_batch_blocking(jobs, configuration, batch_id, use_qc, character):
                 sc = f" ({r['score']:.3f})" if r.get("score") else ""
                 ss.push_log(f"{kw['index']}/{kw['total']} {job['scene']} : "
                             f"{r['verdict']}{sc} — {r['duree']:.0f}s")
+                # the batch's space, never a hardcoded 'sfw': since 21/09 a
+                # tier that does not export GENERATES into the NSFW space, and
+                # the « recent » panel points at the tree holding the image
                 ss.STATE["recent"].append({"bucket": r["verdict"], "name": r["fichier"],
-                                           "scene": job["scene"], "space": "sfw",
+                                           "scene": job["scene"],
+                                           "space": lb.espace_de(configuration),
                                            "score": r.get("score")})
                 del ss.STATE["recent"][:-24]
 

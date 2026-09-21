@@ -112,23 +112,41 @@ def apply_nsfw_overrides(configuration, payload):
     return kept
 
 
-def apply_export_rule(configuration, requested_level, character):
-    """Cuts the export off when the REQUESTED tier does not export.
+def apply_tier_rules(configuration, requested_level, character):
+    """Translates the REQUESTED tier into configuration: what it may export,
+    and which space it writes into.
 
-    `sort_and_export` only knows `cfg["export"]["enabled"]` — and that is right:
-    the runner has no business knowing about intensity tiers. So it is up to the
-    caller to translate the tier's rule into configuration.
+    `sort_and_export` only knows `cfg["export"]["enabled"]` and `cfg["_espace"]`
+    — and that is right: the runner has no business knowing about intensity
+    tiers. So it is up to the caller to translate the tier's rules into
+    configuration.
 
-    Two cases fixed on 24/08/2026, both seen in production:
+    Two export cases fixed on 24/08/2026, both seen in production:
       - level 2 (Suggestif, export false): the images went into PROD/EXPORT all
         the same;
       - level 3: the INTERMEDIATE pass is generated in Soft, whose export is
         allowed. An NSFW request therefore silently dropped a Soft image into
         the publication folder.
+
+    THE SPACE FOLLOWS THE TIER, NOT THE PIPELINE (21/09). Until then only the
+    editing pipeline wrote into the NSFW space, so Suggestif — non-exportable
+    but generating — landed in the SFW tree, entered the identity reference and
+    counted in its scenes' statistics. The tier said « do not publish this »
+    while the space said « ordinary production », about the same image.
+
+    The space is that of the tier the RUNNER WRITES AT, which is not always the
+    requested one: at the tier that edits, the generation pass runs at
+    `base_level` and the image it files is of that tier. The intermediate Soft
+    image of a chained NSFW request therefore stays SFW, exactly as before.
     """
-    tier = lb.by_level(lb.load_creative(character), requested_level)
+    creative = lb.load_creative(character)
+    tier = lb.by_level(creative, requested_level)
     if tier and not tier.get("export", True):
         configuration["export"] = dict(configuration["export"], enabled=False)
+    written = (lb.by_level(creative, tier.get("base_level", requested_level))
+               if is_edit_tier(tier) else tier)
+    configuration["_espace"] = ("nsfw" if written and not written.get("export", True)
+                                else "sfw")
     return configuration
 
 

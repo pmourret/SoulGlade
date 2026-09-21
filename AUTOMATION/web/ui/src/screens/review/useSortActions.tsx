@@ -130,12 +130,12 @@ export function useSortActions({
       const item = shown[at]
       if (!item) return
       if (action === 'decliner') {
-        /* /api/decline only knows the SFW journal; the button is already hidden
-           in NSFW, this guard covers the D shortcut. */
-        if (item.space === 'nsfw') {
-          toast("déclinaison indisponible ici — passe par l'espace NSFW")
-          return
-        }
+        /* No guard by space since 21/09: the NSFW space also holds images that
+           WERE generated — a non-exporting tier — and those have a scene, a
+           seed and a journal row, so they decline like any other. The one that
+           cannot is the one the editing path produced, and the server already
+           says so by name (« image absente du journal »), where a guard here
+           could only send the user to the space they are already in. */
         setDeclineFor(item)
         return
       }

@@ -178,6 +178,9 @@ tierces ».
 
 - **Tout écran.** Le NSFW a déjà son armement sur l'écran Application ; ce
   chantier ne touche pas l'interface.
+  **Rouvert le 2026-09-21** : le flux d'usage a son propre cadrage,
+  `2026-09-21-flux-nsfw.md`. Cette exclusion ne vaut plus que pour ce
+  fichier-ci.
 - **La publication assistée par API**, reportée après V1 par `PROJET.md` pour
   des raisons qui n'ont pas bougé — maintenance des jetons tiers,
   incompatibilité Meta, responsabilité.

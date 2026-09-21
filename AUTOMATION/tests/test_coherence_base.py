@@ -91,7 +91,7 @@ def sur_le_disque():
         racine = OFM / "PROD" / cid.upper()
         if not racine.exists():
             continue
-        for espace, base_dir in (("lena", racine), ("nsfw", racine / "_NSFW")):
+        for espace, base_dir in (("sfw", racine), ("nsfw", racine / "_NSFW")):
             if not base_dir.exists():
                 continue
             for d in base_dir.iterdir():
@@ -162,7 +162,7 @@ def main():
 
     espaces = [n for n, (e, b) in disque.items()
                if n in images and images[n]["espace"] != e]
-    verifie(not espaces, "l'espace (lena / nsfw) de la base suit celui du disque"
+    verifie(not espaces, "l'espace (sfw / nsfw) de la base suit celui du disque"
             + (f" — {detail(espaces, 5)}" if espaces else ""))
 
     # =========================================================== [2] les journaux

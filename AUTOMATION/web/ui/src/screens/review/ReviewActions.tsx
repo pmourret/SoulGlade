@@ -39,11 +39,9 @@ export function GalleryActions({ src, onAct }: { src: string; onAct: (action: st
 
 export function ReviewActions({
   bucket,
-  space,
   onAct,
 }: {
   bucket?: string
-  space?: string
   onAct: (action: string) => void
 }) {
   const button = (action: string, label: string, key?: string, wide = false, primary = false) => (
@@ -55,13 +53,14 @@ export function ReviewActions({
       {label} {key && <span className="kbd">{key}</span>}
     </button>
   )
-  // decline restarts from the SFW journal: no meaning for an NSFW image
-  const decline =
-    space === 'nsfw' ? null : (
-      <button className="btn col-span-full" data-a="decliner" onClick={() => onAct('decliner')}>
-        <span aria-hidden="true">⟳</span> Décliner <span className="kbd">D</span>
-      </button>
-    )
+  /* Offered whatever the space since 21/09: the NSFW space also holds
+     generated images, which have a scene and a seed to start again from. The
+     server refuses by name the one that has neither. */
+  const decline = (
+    <button className="btn col-span-full" data-a="decliner" onClick={() => onAct('decliner')}>
+      <span aria-hidden="true">⟳</span> Décliner <span className="kbd">D</span>
+    </button>
+  )
   const skip = button('skip', 'Suivante', '→', true)
 
   if (bucket === 'OK')

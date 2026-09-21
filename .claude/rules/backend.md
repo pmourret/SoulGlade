@@ -139,6 +139,15 @@ une main cassée ne déforme pas un visage, et l'instrument de mesure veut
 couvrir toute la production. **Gabarit et file d'entraînement sont deux
 objets** ; les confondre ferait apprendre des mains cassées à un LoRA.
 
+**Le gabarit ne filtre plus l'espace** (21/09). `construire_jeu` écartait
+les images de la branche adulte (`i.espace = 'sfw'`) : elles montrent le même
+visage et passent la même chaîne de mesures depuis le 20/09, les écarter
+retirait de l'instrument une part de la production qu'il doit couvrir. Ce qui
+filtre reste le portillon, le rôle, le modèle d'embedding et le personnage.
+Même ouverture pour `stats_par_scene` et `derive_par_scene`, et le manifeste
+d'un jeu exporté déclare donc l'espace de chaque image
+(`DOCS/cadrage/2026-09-21-flux-nsfw.md`, arbitrage 2).
+
 **L'ancre n'est pas le gabarit.** L'ancre (base gelée) dit *qui est* le
 personnage : elle ne bouge jamais et reste le juge de la santé du jeu.
 Le gabarit (centroïde du jeu actif) dit *contre quoi* on mesure : il est

@@ -297,7 +297,7 @@ export function FullFrame(props: {
           {props.trade === 'galerie' ? (
             <GalleryActions src={props.src} onAct={props.onAct} />
           ) : (
-            <ReviewActions bucket={item.bucket} space={item.space} onAct={props.onAct} />
+            <ReviewActions bucket={item.bucket} onAct={props.onAct} />
           )}
         </div>
 

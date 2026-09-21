@@ -354,12 +354,12 @@ def space_id(valeur):
 def espace_db(space):
     """Valeur ecrite dans la colonne `image.espace` (base.py).
 
-    La base garde son vocabulaire historique — 'lena' y designe le SFW, et
-    trois requetes de base.py filtrent dessus. Migrer la valeur serait un
-    chantier a part, sans effet visible ; la conversion vit donc ICI, au seul
-    point de contact entre le vocabulaire des routes et celui de la base.
+    La base a longtemps garde son vocabulaire a elle, 'lena' pour le SFW. Le
+    21/09 l'a aligne sur celui des routes : les deux disent 'sfw'. La fonction
+    reste le seul point de contact entre les deux, pour que le jour ou ils
+    divergent a nouveau se voie ici et nulle part ailleurs.
     """
-    return "nsfw" if space_id(space) == "nsfw" else "lena"
+    return space_id(space)
 
 
 def bucket_dir(bucket, space, character_id):
@@ -385,16 +385,28 @@ def bucket_dir(bucket, space, character_id):
     return racine / bucket
 
 
-def export_dir(character_id):
-    """Dossier de publication d'un personnage : PROD/EXPORT/<cid>/<categorie>/.
+def export_dir(character_id, space="sfw"):
+    """Dossier de publication d'un personnage, par espace.
+
+        PROD/EXPORT/<cid>/<categorie>/          SFW
+        PROD/EXPORT_NSFW/<cid>/<categorie>/     NSFW
 
     Meme disposition que celle que le runner ecrit deja (runner/sortie.py,
     sort_and_export) : la route de tri ecrivait PROD/EXPORT/<categorie>/ sans
     personnage, ce qui melangeait deux dispositions dans le meme arbre.
+
+    DEUX ARBRES, PAS UN SOUS-DOSSIER (21/09,
+    DOCS/cadrage/2026-09-21-flux-nsfw.md, arbitrage 2). `PROD/EXPORT/` est
+    l'arbre qu'on synchronise vers une plateforme de publication, et
+    `PROJET.md` declare le contenu adulte incompatible avec Meta : range sous
+    le meme personnage, la branche partirait avec au premier glisser-deposer.
+    Format, tailles et qualite restent ceux de l'export normal — c'est une
+    destination, pas un sous-systeme (invariant 9).
     """
     if not _CHARACTER_RE.match(character_id or ""):
         bad_request(f"character_id invalide : {character_id!r}")
-    return OFM / "PROD" / "EXPORT" / character_id
+    racine = "EXPORT_NSFW" if space_id(space) == "nsfw" else "EXPORT"
+    return OFM / "PROD" / racine / character_id
 
 
 def undo_disponible(character_id):

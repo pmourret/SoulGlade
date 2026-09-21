@@ -241,6 +241,12 @@ try:
         verifie(all("lora_identite" in x for x in m["images"]),
                 "et la provenance de chaque image : une DERIVED reste "
                 "identifiable des annees plus tard")
+        # Depuis le 21/09 le gabarit ne filtre plus l'espace : un jeu peut
+        # contenir du nu, et le dossier part sur une machine tierce.
+        verifie(all(x.get("espace") for x in m["images"])
+                and "images_nsfw" in m,
+                "le manifeste dit l'espace de chaque image, et combien viennent "
+                "de la branche adulte")
 
         print("\n[8b] chaque image emporte sa legende, et sa source")
         txts = {p.stem for p in res["dossier_images"].glob("*.txt")}
