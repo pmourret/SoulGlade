@@ -112,7 +112,7 @@
       "quoi": "La branche fabrique des images qui ne sortent nulle part : l'export est refusé en dur, le gabarit l'ignore (construire_jeu filtre espace = lena), la file d'entraînement aussi. Et elle affiche le plus mauvais taux du dépôt, 77 % de « ia » contre 56 %, sans qu'aucune mesure dise pourquoi. La semaine d'IT-4 en produit sans le publier : ce qui la bloque est la mesure du corps et le filtre, pas l'export.",
       "dod": "Le corps a une mesure, faux positifs et faux négatifs comptés sur corpus étiqueté (ADR-0025), ou un renoncement écrit. La voie d'édition répare les mains, ou on sait pourquoi elle ne le peut pas. Le modèle de la scène native est nommé et mesuré, son revers tranché avec lui. La destination d'une image NSFW est décidée, et le filtre espace = lena aligné dessus.",
       "epics": "E9",
-      "ref": "DOCS/cadrage/2026-09-10-capacite-nsfw.md, ADR-0003 amendé le 10/09 — ordre : DOCS/cadrage/2026-09-20-semaine-de-production.md"
+      "ref": "DOCS/cadrage/ : 2026-09-10-capacite-nsfw (capacité), 2026-09-21-flux-nsfw (parcours d'usage), 2026-09-21-scene-nsfw-native-le-modele (le modèle) — ADR-0003 amendé le 10/09"
     },
     {
       "id": "IT-4",
@@ -623,7 +623,7 @@
         {
           "s": "faire",
           "t": "Scène NSFW native, en plus de l'édition",
-          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. Ses scènes vivent dans une banque séparée, décidée le 21/09. Restent le modèle, et son revers : ouvrir la voie native ouvre celle du nu involontaire en SFW.",
+          "d": "ADR-0003 amendé le 10/09 : un palier de plus sur le pipeline produce, pas un sous-système. Le pipeline et la banque de scènes sont tranchés ; reste le modèle, cadré le 21/09 avec son revers. Quatre candidats, dont le renoncement, départagés au banc puis à l'œil avant toute ligne de graphe.",
           "it": "IT-3e"
         },
         {
