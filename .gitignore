@@ -63,3 +63,15 @@ __pycache__/
 node_modules/
 /AUTOMATION/web/ui/dist/
 .claude/settings.json
+
+# ---------------------------------------------------------------------------
+# Feuilles de travail personnelles (21/09/2026). Deux fichiers qui vivent a
+# cote du depot sans en faire partie : le classeur d'analyse ou Pierre juge
+# les sorties du banc a l'oeil (binaire, plusieurs Mo, reecrit a chaque
+# session, et Excel y pose son fichier de verrou ~$), et le cadrage global
+# non date, brouillon de travail que les cadrages dates de DOCS/cadrage/
+# remplacent un par un.
+# ---------------------------------------------------------------------------
+/DOCS/analyse/Analyse_hand_detailer.xlsx
+/DOCS/analyse/~$*
+/DOCS/cadrage/cadrage-global-soulglade.md
