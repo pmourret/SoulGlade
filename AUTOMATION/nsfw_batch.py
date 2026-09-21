@@ -263,6 +263,20 @@ def sorties_d_edition(character_id):
                 if r.get("fichier")}
 
 
+def espace_du_chemin(chemin):
+    """'sfw' ou 'nsfw', lu dans l'ARBORESCENCE et non devine par l'appelant.
+
+    Une image vit sous `PROD/<CID>/<bucket>/` ou sous
+    `PROD/<CID>/_NSFW/<bucket>/`, et depuis le 21/09 les deux peuvent servir
+    de source d'edition. Tout ce qui rend une de ces images doit donc dire
+    d'ou elle vient : `/img` cherche dans l'arbre que `space` designe, et le
+    client retombe sur 'sfw' quand la cle manque. Le bucket voyageait deja
+    avec le nom pour cette raison exacte ; l'espace lui manquait.
+    """
+    from pathlib import Path
+    return "nsfw" if "_NSFW" in Path(chemin).parts else "sfw"
+
+
 def sources_disponibles(cfg, character_id):
     """Images editables de CE personnage, les plus recentes d'abord.
 

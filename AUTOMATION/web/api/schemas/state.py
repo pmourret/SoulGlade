@@ -310,9 +310,17 @@ class JournalResponse(BaseModel):
 
 class NsfwSourceImage(BaseModel):
     """The bucket travels with the name: the source grid must be able to say
-    where each image comes from, and /img needs it to find it back."""
+    where each image comes from, and /img needs it to find it back.
+
+    THE SPACE TRAVELS TOO since 21/09, and this model is where it was lost:
+    sources come from BOTH trees now, the router did send the space, and
+    Pydantic dropped it because it was not declared here — a field that no
+    schema declares does not reach the browser. The grid then fell back to
+    'sfw' and asked for a moved image in the tree it had just left, which
+    answered 404 on three thumbnails."""
     name: str
     bucket: str
+    space: str = "sfw"
 
 
 class NsfwStateResponse(BaseModel):

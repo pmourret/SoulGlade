@@ -2025,6 +2025,11 @@ export interface components {
             edition_raison?: string | null;
             /** Suivant Instruction */
             suivant_instruction: boolean;
+            /**
+             * Origine Edition
+             * @default false
+             */
+            origine_edition: boolean;
         } & {
             [key: string]: unknown;
         };
@@ -2916,12 +2921,24 @@ export interface components {
          * NsfwSourceImage
          * @description The bucket travels with the name: the source grid must be able to say
          *     where each image comes from, and /img needs it to find it back.
+         *
+         *     THE SPACE TRAVELS TOO since 21/09, and this model is where it was lost:
+         *     sources come from BOTH trees now, the router did send the space, and
+         *     Pydantic dropped it because it was not declared here — a field that no
+         *     schema declares does not reach the browser. The grid then fell back to
+         *     'sfw' and asked for a moved image in the tree it had just left, which
+         *     answered 404 on three thumbnails.
          */
         NsfwSourceImage: {
             /** Name */
             name: string;
             /** Bucket */
             bucket: string;
+            /**
+             * Space
+             * @default sfw
+             */
+            space: string;
         };
         /** NsfwStateResponse */
         NsfwStateResponse: {

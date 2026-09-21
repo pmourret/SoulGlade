@@ -34,7 +34,9 @@ export type Preview = {
 }
 
 /** One editable source image of the NSFW tier. */
-export type SourceImage = { name: string; bucket: string }
+/* `space` : les sources viennent des deux arbres depuis le 21/09, et
+   `api.image` retombe sur 'sfw' quand la cle manque. */
+export type SourceImage = { name: string; bucket: string; space?: string }
 
 /* The debounce of the plan. 220 ms is the legacy value: short enough that the
    count follows typing, long enough that a sentence does not fire one request

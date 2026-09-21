@@ -416,9 +416,14 @@ async def get_nsfw_state(character_id: RequiredCharacterId):
     for b in ("OK", "A_REVOIR", "REJET"):
         d = ss.bucket_dir(b, "nsfw", cid)
         counts[b] = len(list(d.glob("*.png"))) if d.exists() else 0
-    # the bucket travels with the name: the source grid must be able to say
-    # where each image comes from, and /img needs it to find it back
-    sources = [{"name": f.name, "bucket": b}
+    # The bucket travels with the name: the source grid must be able to say
+    # where each image comes from, and /img needs it to find it back. THE
+    # SPACE TRAVELS TOO since 21/09, for the very same reason and it was the
+    # missing half: sources now come from BOTH trees, and a client that gets
+    # no `space` falls back to 'sfw' — so every source that had moved under
+    # `_NSFW/` asked for itself in the wrong tree and answered 404.
+    sources = [{"name": f.name, "bucket": b,
+                "space": nsfw_batch.espace_du_chemin(f)}
                for f, b in nsfw_batch.sources_disponibles(configuration, cid)[:120]]
     return {"armed": tool["armed"], "outil": tool,
             "nom": lb.load_character(cid).get("name") or cid,

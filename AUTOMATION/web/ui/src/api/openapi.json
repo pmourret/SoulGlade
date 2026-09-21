@@ -4475,6 +4475,11 @@
           "suivant_instruction": {
             "type": "boolean",
             "title": "Suivant Instruction"
+          },
+          "origine_edition": {
+            "type": "boolean",
+            "title": "Origine Edition",
+            "default": false
           }
         },
         "additionalProperties": true,
@@ -6184,6 +6189,11 @@
           "bucket": {
             "type": "string",
             "title": "Bucket"
+          },
+          "space": {
+            "type": "string",
+            "title": "Space",
+            "default": "sfw"
           }
         },
         "type": "object",
@@ -6192,7 +6202,7 @@
           "bucket"
         ],
         "title": "NsfwSourceImage",
-        "description": "The bucket travels with the name: the source grid must be able to say\nwhere each image comes from, and /img needs it to find it back."
+        "description": "The bucket travels with the name: the source grid must be able to say\nwhere each image comes from, and /img needs it to find it back.\n\nTHE SPACE TRAVELS TOO since 21/09, and this model is where it was lost:\nsources come from BOTH trees now, the router did send the space, and\nPydantic dropped it because it was not declared here — a field that no\nschema declares does not reach the browser. The grid then fell back to\n'sfw' and asked for a moved image in the tree it had just left, which\nanswered 404 on three thumbnails."
       },
       "NsfwStateResponse": {
         "properties": {

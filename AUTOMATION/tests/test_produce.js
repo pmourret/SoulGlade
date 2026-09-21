@@ -48,7 +48,21 @@ const PANNEAU = '#gearPanel[data-open]';
   const page = await nav.newPage({ viewport: { width: 1700, height: 1050 } });
   const erreurs = [];
   page.on('pageerror', e => erreurs.push('pageerror: ' + e.message));
-  page.on('console', m => { if (m.type() === 'error') erreurs.push('console: ' + m.text()); });
+  // « Failed to load resource » ne dit pas QUELLE ressource : le navigateur
+  // ne met jamais l'URL dans ce message-la. On ecarte donc ce texte generique
+  // et on ecoute les reponses, qui la portent -- sinon un echec ici annonce
+  // « 3 erreur(s) » et laisse chercher.
+  page.on('console', m => {
+    if (m.type() === 'error' && !/Failed to load resource/.test(m.text()))
+      erreurs.push('console: ' + m.text());
+  });
+  const rates = [];
+  page.on('response', r => {
+    if (r.status() >= 400) {
+      rates.push(r.url());
+      erreurs.push(`HTTP ${r.status()} : ${r.url()}`);
+    }
+  });
   let plans = 0;
   page.on('request', r => { if (r.url().includes('/api/plan')) plans++; });
 
@@ -519,6 +533,21 @@ const PANNEAU = '#gearPanel[data-open]';
        `les dossiers sont intacts : ${JSON.stringify(fin)}`);
 
   console.log('\n[18] aucune erreur JS sur tout le parcours');
+  for (const url of rates) {
+    const nom = decodeURIComponent((url.match(/name=([^&]+)/) || [])[1] || '');
+    if (!nom) continue;
+    const ou = await page.evaluate((n) => {
+      const vus = [];
+      document.querySelectorAll('*').forEach((el) => {
+        const bg = getComputedStyle(el).backgroundImage || '';
+        const src = (el.getAttribute && el.getAttribute('src')) || '';
+        if ((bg + src).includes(n))
+          vus.push(el.tagName.toLowerCase() + (el.id ? '#' + el.id : ''));
+      });
+      return vus.slice(0, 3);
+    }, nom);
+    console.log(`      reclamee par : ${ou.length ? ou.join(', ') : '(plus dans le DOM)'} - ${nom}`);
+  }
   dire(erreurs.length === 0, `${erreurs.length} erreur(s)`);
   erreurs.forEach(e => console.log('      ' + e.slice(0, 150)));
 
