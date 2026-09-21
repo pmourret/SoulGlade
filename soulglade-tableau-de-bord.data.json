@@ -1140,7 +1140,7 @@
       },
       {
         "t": "Choisir un LoRA depuis l'éditeur de scène, et le chercher chez CivitAI",
-        "d": "(21 septembre 2026) Idée de Pierre le jour où le premier LoRA de pack a été câblé. Deux points à trancher avant d'écrire : un LoRA est un asset de PACK et une scène une donnée de monde, laisser la scène nommer le modèle ferait porter le graphe par la donnée (invariant 7) ; un téléchargement au fil de l'eau contourne le manifeste, qui dit ce qu'une installation doit porter (invariant 12). Autre face de « atelier d'entraînement intégré » du 10/09 : fabriquer le sien, ou aller le chercher."
+        "d": "(21 septembre 2026) Idée de Pierre le jour où le premier LoRA de pack a été câblé. À trancher : la couche. Un LoRA est un asset de pack, une scène une donnée de monde, et laisser la scène nommer le modèle ferait porter le graphe par la donnée (invariant 7). Le manifeste n'est pas concerné, il déclare ce que les scènes LIVRÉES demandent ; un LoRA cherché en phase créative est une donnée de l'utilisateur, comme son LoRA d'identité. Le coût : une scène ainsi modifiée ne rend plus ailleurs."
       }
     ]
   },
