@@ -95,16 +95,21 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(!(await vu('#charGrid')), 'elle ne rejoue pas la grille de choix');
   const fiche = await page.textContent('#fiche');
   dire(fiche.includes('Abyssiaelle'), 'le nom du personnage');
-  ['Type de personnage', 'Style de sortie', 'Monde', 'Pack', 'Base gelée', 'Contenus actifs']
+  ['Type de personnage', 'Style de sortie', 'Monde', 'Pack', 'Famille de modèle',
+   'Base gelée', 'Contenus', 'Contenu adulte']
     .forEach(k => dire(fiche.includes(k), `ligne « ${k} »`));
-  dire(fiche.includes('figés à la création'),
-       'elle dit que les trois axes humains sont figes');
+  // La regle de chaque section est portee par la section elle-meme depuis le
+  // 23/09 (design-pass ecran 2) : « figée à la création » qualifie la section
+  // Creation, la ou la phrase disait « figés » des trois axes.
+  dire(fiche.includes('figée à la création'),
+       'la section Creation porte sa regle : ce qui est fige');
   dire(fiche.includes('déduit'), "elle dit que le pack n'est pas choisi mais deduit");
   dire(fiche.includes('rpg-personnage'), 'le type reel du personnage, pas un exemple');
 
   console.log('\n[6] elle N ARME RIEN : le geste vit ailleurs (ADR-0010)');
   dire(fiche.includes('Contenu adulte'), "elle LIT l'etat du contenu adulte");
-  dire(fiche.includes('désactivé'), 'Abyssiaelle est desarmee — etat lu, pas suppose');
+  dire((await page.textContent('#ficheAdulte')).trim() === 'Désactivé',
+       'Abyssiaelle est desarmee — etat lu, pas suppose');
   dire(fiche.includes('Application'), "elle dit ou le geste se prend : l'ecran Application");
   const armants = await page.$$eval('#fiche button, #fiche input',
     e => e.filter(x => /armer|activer|désactiver/i.test(x.textContent + x.value)).length);
@@ -133,8 +138,12 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(!ficheLena.includes('rpg-personnage'), "rien du personnage precedent n'est reste");
 
   console.log('\n[9] l etat adulte est celui de CE personnage');
-  dire(/État\s*:\s*activé/.test(ficheLena.replace(/\s+/g, ' ')),
+  // Comparaison EXACTE du noeud, jamais une sous-chaine : « Désactivé »
+  // contient « activé », donc un includes serait faux dans les deux sens.
+  dire((await page.textContent('#ficheAdulte')).trim().startsWith('Activé'),
        'Léna est armee — la lecture suit le personnage, pas un reglage global');
+  dire(ficheLena.includes('ADULTE ARMÉ'),
+       'et la pastille du passeport le dit aussi');
 
   console.log('\n[10] le sas reste atteignable, et marque le personnage courant');
   await page.goto(BASE + '/characters?character=lena', { waitUntil: 'networkidle' });

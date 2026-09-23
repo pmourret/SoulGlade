@@ -36,7 +36,7 @@ import { ProduceScreen } from '../screens/produce/ProduceScreen'
 import { ApplicationScreen } from '../screens/ApplicationScreen'
 import { CharactersScreen } from '../screens/CharactersScreen'
 import { WizardScreen } from '../screens/wizard/WizardScreen'
-import { CharacterSheetScreen } from '../screens/CharacterSheetScreen'
+import { CharacterSheetScreen } from '../screens/character-sheet/CharacterSheetScreen'
 import { JournalScreen } from '../screens/JournalScreen'
 import { PATHS } from './routes'
 

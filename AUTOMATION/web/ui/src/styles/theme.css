@@ -91,6 +91,9 @@
   --color-verdict-none: var(--none);
 
   /* banner families */
+  --color-ok-bg: var(--ok-bg);
+  --color-ok-line: var(--ok-line);
+  --color-ok-txt: var(--ok-txt);
   --color-warn-bg: var(--warn-bg);
   --color-warn-line: var(--warn-line);
   --color-warn-txt: var(--warn-txt);

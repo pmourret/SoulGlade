@@ -89,6 +89,12 @@
   --bad-lift:#e59a94;
   --warn-bg:#2a2213; --warn-line:#5a4722; --warn-txt:#ecd39e;   /* txt/bg = 10.76 */
   --danger-bg:#2a1716; --danger-line:#5a2a27; --danger-txt:#f2b8b3; /* txt/bg = 9.96 */
+  /* Troisieme famille de bandeau, ajoutee le 23/09/2026 avec la pastille
+     « base gelee presente » de la fiche : avertissement et danger avaient la
+     leur, le verdict FAVORABLE n'en avait pas, et une pastille verte se
+     peignait donc en hex en dur. Meme forme que ses deux soeurs.
+     txt/bg = 9.96. */
+  --ok-bg:#1f2a21; --ok-line:#2f4a34; --ok-txt:#b9dcbf;
   --mes-bg:#07180b; --mes-line:#133c1f;
 
   /* Liaison visuelle des 3 fragments du recapitulatif de scene (bank/
