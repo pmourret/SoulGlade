@@ -89,6 +89,42 @@ côtés, ce qui est plus rare qu'une AUC.
   épaules, donc les deux distances sont égales par construction. Le rapport
   valait 0,00 sur les 30 images. Retiré, pas interprété.
 
+## Le format est le levier du cadre, pas le prompt (23/09)
+
+Vingt images de plus, mêmes scènes, même cran, même prompt : seul le format
+change. C'est le levier que le matin avait laissé non testé, après avoir
+constaté qu'une mention « full body » dans le prompt ne décide pas du cadrage.
+
+| format | n | hanches dans le champ | buste médian |
+|---|---|---|---|
+| 4:5 | 30 | 10 (33 %) | 1,15 |
+| **2:3** | 10 | **7 (70 %)** | 1,63 |
+| 9:16 | 10 | 6 (60 %) | 1,53 |
+
+**Le format double le taux de hanches visibles là où le prompt ne l'avait pas
+bougé.** Une mesure du corps a donc son format, comme une mesure d'identité a
+sa distance : c'est une condition de production, pas un réglage d'instrument.
+2:3 est retenu pour les séries à mesurer ; 9:16 ne fait pas mieux et cadre
+plus serré en largeur.
+
+### La mesure a un domaine de validité, et il se lit dans les mêmes points
+
+Deux images de la nouvelle série sortent à `buste` = 4,94 et 6,33, contre une
+bande de 0,82 à 1,83 partout ailleurs. Regardées : ce sont des **profils**.
+De côté, la largeur d'épaules se projette presque à rien (`epaules_tete` 0,53
+et 0,41 quand l'étalon vit entre 1,03 et 2,48), et le rapport explose sans
+qu'aucune anatomie soit fausse.
+
+C'est exactement le faux positif que cette fiche annonçait, et il est
+détectable avec les points déjà en main : sous un `epaules_tete` d'environ
+0,9, la pose est trop de profil pour que le buste veuille dire quelque chose.
+La mesure doit donc avoir **trois états**, comme la garde de l'espace : non
+jugeable, correct, suspect. Sur ces 50 images, la garde écarterait 6 vues.
+
+Elle ne change rien aux chiffres ci-dessus — aucune image étiquetée avec
+hanches visibles n'était de profil, l'AUC reste 0,85 avec ou sans elle. Elle
+est justifiée par les deux aberrantes, pas par le corpus étiqueté.
+
 ## Suite
 
 Le corpus, encore. Vingt images natives de plus, cadrées large pour que les
