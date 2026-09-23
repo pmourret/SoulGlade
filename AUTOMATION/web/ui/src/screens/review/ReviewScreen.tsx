@@ -66,6 +66,18 @@ const REVIEW_BUCKETS = [
   { key: 'ARCHIVE', label: 'Archivées' },
 ]
 
+/* How many images the space holds in the CURRENT bucket (23/09). Producing at
+   a non-exporting tier files into the NSFW space while the Review opens on
+   SFW: thirty images landed next door and nothing said so — the screen simply
+   looked empty. Silent on zero and on an absent count: a « 0 » next to every
+   label would be noise on the day nothing has been produced, and the segment
+   must stay readable. Part of the label, not an `aria-hidden` decoration, so
+   the button announces « NSFW 30 ». */
+function SpaceCount({ n }: { n: number | undefined }) {
+  if (!n) return null
+  return <span className="tiny">{n}</span>
+}
+
 export function ReviewScreen({ trade }: { trade: Trade }) {
   const api = useApi()
   const toast = useToast()
@@ -180,6 +192,13 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   }, [state?.batch_id, state?.running, reload])
 
   const buckets = state ? (space === 'nsfw' ? state.nsfw_counts : state.counts) : null
+  /* Both trees for the CURRENT folder — `/api/state` already counts them, one
+     map per space, and the landing logic below reads them too. No route, no
+     second source. */
+  const spaceCounts = {
+    sfw: state?.counts?.[bucket],
+    nsfw: state?.nsfw_counts?.[bucket],
+  }
 
   /* LANDING FOLDER OF THE REVUE. It used to be `A_REVOIR`, full stop. On a tree
      where nothing was ever sorted into it — the normal case once a batch has
@@ -297,7 +316,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
               onClick={() => setSpace('sfw')}
               onKeyDown={(event) => spaceRoving.onKeyDown(event, 'sfw', (id) => setSpace(id as Space))}
             >
-              SFW
+              SFW <SpaceCount n={spaceCounts.sfw} />
             </button>
             <button
               ref={spaceRoving.registerRef('nsfw')}
@@ -310,7 +329,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
               onClick={() => setSpace('nsfw')}
               onKeyDown={(event) => spaceRoving.onKeyDown(event, 'nsfw', (id) => setSpace(id as Space))}
             >
-              NSFW
+              NSFW <SpaceCount n={spaceCounts.nsfw} />
             </button>
           </div>
 

@@ -559,6 +559,23 @@ const volsDeDonnees = [];
   dire(vue === cible, `la vignette visee est bien la sienne (${cible})`);
 
   console.log('\n[12] l espace SFW/NSFW est un axe a part du personnage');
+  /* Le compte sur chaque bouton (23/09) : produire a un cran non exportable
+     range dans l'espace NSFW alors que l'ecran ouvre sur SFW -- trente images
+     etaient tombees a cote sans que rien ne le dise. Il vient de /api/state,
+     deja compte par espace et par dossier : il doit donc EGALER ce que
+     l'espace d'en face affiche vraiment. */
+  const etat = await (await fetch(BASE + '/api/state?character=lena')).json();
+  // La Galerie n'offre pas le selecteur de dossier : le sien est OK, dit par
+  // son onglet (REVIEW_BUCKETS, ReviewScreen.tsx).
+  const dossier = await page.$eval('#bucketSel button.on', e => e.dataset.b).catch(() => 'OK');
+  const lus = await page.$$eval('#spaceSel button',
+                                e => Object.fromEntries(e.map(x => [x.dataset.sp,
+                                                                    (x.textContent.match(/\d+/) || [null])[0]])));
+  const attendu = { sfw: etat.counts?.[dossier], nsfw: etat.nsfw_counts?.[dossier] };
+  dire(String(lus.sfw ?? '') === String(attendu.sfw || ''),
+       `le compte SFW du segment dit le dossier ${dossier} (${lus.sfw} / ${attendu.sfw})`);
+  dire(String(lus.nsfw ?? '') === String(attendu.nsfw || ''),
+       `le compte NSFW aussi, sans changer d'espace (${lus.nsfw} / ${attendu.nsfw})`);
   await page.click('#spaceSel [data-sp="nsfw"]');
   await page.waitForTimeout(1200);
   const srcsN = await page.$$eval('[data-tile] img', e => e.map(x => x.getAttribute('src')));
