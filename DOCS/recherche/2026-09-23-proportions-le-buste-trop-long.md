@@ -1,4 +1,11 @@
-# Proportions : le buste trop long pour ses épaules
+# Proportions : une piste ouverte le matin, refermée le soir
+
+**Verdict : non retenue.** Le rapport du buste aux épaules sépare à 0,85 sur
+quatre défauts, et à 0,60 — le hasard — dès que le corpus double. Ce qui reste
+de la journée n'est pas une mesure, ce sont trois faits : l'axe anatomie a
+enfin des positifs, le format commande le cadre là où le prompt ne le fait
+pas, et une étiquette qui mélange quatre défauts ne peut être séparée par
+aucune mesure. Lire la fiche dans l'ordre, elle raconte les deux passes.
 
 Sonde du 2026-09-23, sur le premier corpus du cran natif. Elle rouvre une
 piste fermée le 08/09 : les proportions du corps étaient passées en R&D
@@ -125,13 +132,48 @@ Elle ne change rien aux chiffres ci-dessus — aucune image étiquetée avec
 hanches visibles n'était de profil, l'AUC reste 0,85 avec ou sans elle. Elle
 est justifiée par les deux aberrantes, pas par le corpus étiqueté.
 
+## Le corpus doublé fait tomber le signal (23/09, seconde passe)
+
+Pierre a étiqueté les vingt images de plus. L'axe anatomie compte désormais
+**13 « ko » et 21 « ok »** sur les 50 images du cran natif, et 22 d'entre
+elles ont les hanches dans le champ, contre 9 hier.
+
+| | hier (5 ok / 4 ko) | aujourd'hui (11 ok / 8 ko) |
+|---|---|---|
+| `buste`, médianes | 1,13 contre 1,66 | 1,18 contre 1,52 |
+| `buste`, AUC | **0,85** | **0,60** |
+| `epaules_tete`, AUC | 0,75 | 0,64 |
+
+**Le signal n'a pas survécu au corpus.** À une vingtaine d'images l'erreur-type
+tombe vers 0,13 : 0,60 ne se distingue plus du hasard. Le meilleur seuil
+essayé (1,4) attrape 5 défauts sur 8 en criant sur 3 images correctes sur 11 —
+inutilisable.
+
+C'est le mode d'échec que ce projet connaît déjà : une AUC élevée sur quatre
+positifs est une promesse, pas une mesure. La bonne nouvelle est que ça a
+coûté une journée et vingt images, pas une livraison.
+
+**Et l'échec dit quelque chose d'utile.** Les treize « ko » ne portent pas le
+même défaut : buste étroit, jonction bras-épaule fondue dans les cheveux,
+poitrine asymétrique, mains fusionnées. Une étiquette qui mélange quatre
+défauts ne peut pas être séparée par une mesure qui n'en vise qu'un — quel
+que soit le corpus. **Ce qui manque n'est pas une mesure de plus, c'est le
+vocabulaire qui dit lequel.** C'était déjà la conclusion de la sonde du
+20/09 sur les onze « ia » sans défaut nommé ; elle revient par une autre
+porte, et elle rejoint le constat de Pierre du 23/09 sur la Revue, trop
+grossière pour ce qu'on lui demande de dire.
+
 ## Suite
 
-Le corpus, encore. Vingt images natives de plus, cadrées large pour que les
-hanches soient dans le champ, et `buste` aura une vingtaine de positifs au
-lieu de quatre. C'est à ce moment-là qu'un seuil se calibre, et pas avant —
-la leçon du flou de fond (livré, mesuré le lendemain, reverté) vaut ici
-aussi.
+**Fait le jour même, et c'est ce qui a fait tomber le signal** (section
+ci-dessus). La piste « mesurer le buste et seuiller » est donc refermée en
+l'état : pas de renoncement écrit sur l'axe anatomie, mais plus rien à
+calibrer tant que les étiquettes mélangent quatre défauts sous un seul mot.
+
+Ce qui passe devant : le **vocabulaire des défauts** dans la Revue. Une
+étiquette par défaut nommé, sur une image, et chaque mesure candidate se
+valide alors contre le défaut qu'elle vise — au lieu d'être jugée sur un
+« ko » qui peut vouloir dire quatre choses.
 
 ## Reproduire
 
