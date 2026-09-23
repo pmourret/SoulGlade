@@ -858,8 +858,9 @@ const D = {
         {
           "s": "dette",
           "t": "Le corps n'est mesuré nulle part",
-          "d": "Toutes les mesures portent sur le visage ou sur le fond. L'axe anatomie, déjà étiqueté, ne donne rien à séparer : 24 « ok », 1 « na », zéro « ko » sur le corpus NSFW. Reste la texture de peau du corps, jamais mesurée, et le vocabulaire des 11 rejets sans défaut nommé.",
-          "it": "IT-3e"
+          "d": "L'axe anatomie sépare enfin : 6 « ko » sur 16 jugeables au cran natif contre 1 sur 92 en SFW, et le défaut est le haut du corps. Un candidat calculable : le buste rapporté aux épaules, 1,66 sur les rejetées, 1,13 sur les gardées, 1,18 à 1,46 sur de vraies photos. Une direction, pas un seuil.",
+          "it": "IT-3e",
+          "ref": "DOCS/recherche/2026-09-23-proportions-le-buste-trop-long.md"
         },
         {
           "s": "fait",
@@ -1389,6 +1390,10 @@ const D = {
       {
         "t": "Le code dit pack et monde, plus univers",
         "d": "(11 septembre 2026) Relevé à la séance de cadrage global. Le renommage J8.1 a déplacé les dossiers, pas le vocabulaire : PACKS/<id>/universe.json, AUTOMATION/universe.py et plus de 400 occurrences nomment encore « univers » ce qui est un pack. Le README est aligné. À faire avec la passe « le code repasse en anglais », qui touche les mêmes fichiers."
+      },
+      {
+        "t": "Les compteurs s'auto-ajustent par un LLM local",
+        "d": "(23 septembre 2026) Relevé en sortant la première mesure du corps. Les mesures sont des outils de plateforme qui se règlent sur chaque personnage : aujourd'hui un humain calibre chaque seuil, personnage par personnage. L'idée est qu'un modèle local propose l'ajustement à partir du corpus étiqueté de ce personnage. Attend qu'une mesure du corps existe et soit calibrée à la main d'abord."
       }
     ]
   },
