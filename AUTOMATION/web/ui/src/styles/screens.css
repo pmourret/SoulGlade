@@ -8,12 +8,24 @@
 /* -------------------------------------------------------- view selector */
 .viewsel{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 
-/* -------------------------------------------------- segmented control */
-.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--line);
+/* -------------------------------------------------- segmented control
+   NO ACCENT FILL on the active option (design-pass screen-3b §S5, and it is
+   now the rule for every `.seg` of the studio). A full accent plate made a
+   two-or-three-way choice the loudest object of whatever screen it sat on —
+   on Produire the render quality shouted over the scene grid, which is the
+   subject. The active option is told by its GROUND (`--panel3`, the
+   current-element token of the graphite set), its text (`--dim` → `--txt`)
+   and its weight: three signals, none of them a hue, so the state is never
+   carried by colour alone.
+
+   The group's own ground drops from `--panel2` to `--bg` for one measurable
+   reason: `--panel3` (#2a2a2a) on `--panel2` (#252525) is 1.06:1, which is
+   no boundary at all. On `--bg` (#141414) the plate reads. */
+.seg{display:inline-flex;background:var(--bg);border:1px solid var(--line);
      border-radius:8px;overflow:hidden}
 .seg button{background:none;border:0;padding:8px 15px;cursor:pointer;
             color:var(--dim);font-size:13.5px}
-.seg button.on{background:var(--acc);color:var(--on-acc);font-weight:600}
+.seg button.on{background:var(--panel3);color:var(--txt);font-weight:600}
 .seg button:disabled{opacity:.35;cursor:not-allowed}
 /* The ring sits INSIDE the control: an outline-offset would fall on the
    neighbouring segment, which shares the border. */
@@ -78,14 +90,19 @@ details.adv summary:focus-visible{outline:2px solid var(--focus);outline-offset:
    `.on` RESTORED 2026-09-04 (user report: picking a tone showed nothing).
    The React split of the legacy `components.css` had dropped it — Produire
    kept writing `on` on the selected tone, and nothing painted it. This is
-   the rule `components.css` always had; nothing new invented here. */
-.chips{display:flex;gap:9px;flex-wrap:wrap}
-.chip-t{font-family:inherit;color:inherit;
-        background:var(--panel2);border:1px solid var(--line);border-radius:20px;
-        padding:8px 16px;cursor:pointer;font-size:13.5px;user-select:none}
-.chip-t:hover{border-color:var(--line2)}
-.chip-t.on{background:var(--txt);border-color:var(--txt);
-           color:var(--bg);font-weight:600}
+   the rule `components.css` always had; nothing new invented here.
+
+   COMPACT since the design-pass screen-3b (§S2.3): 26 px tall, radius 5,
+   `--line2` at rest, `--pri`/`--on-pri` when picked. The 20 px radius and the
+   8/16 padding came from a full-width row of tones; they now live in a 248 px
+   panel where four of them no longer fitted on two lines. */
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip-t{font-family:inherit;color:var(--dim);
+        background:transparent;border:1px solid var(--line2);border-radius:5px;
+        height:26px;padding:0 10px;cursor:pointer;font-size:12.5px;user-select:none}
+.chip-t:hover{border-color:var(--dim2);color:var(--txt)}
+.chip-t.on{background:var(--pri);border-color:var(--pri);
+           color:var(--on-pri);font-weight:600}
 
 /* -------------------------------------------------------- empty states */
 .empty{text-align:center;color:var(--dim);padding:60px 20px}

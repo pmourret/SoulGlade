@@ -1,16 +1,21 @@
-/* The generation settings panel, opened by the gear of the launch bar AND by the
-   rail. Two buttons, ONE state — not a second settings surface that could drift
-   from this one.
+/* The generation settings — the « Réglages » tab of the inspector since the
+   design-pass screen-3b (§S4). It used to be a floating card anchored to the
+   bottom-right corner, opened by a gear in the launch bar and by a second one
+   in the tool rail; both are gone, and a panel that is simply THERE needs
+   neither an open state nor an Escape to close it.
 
    The « mesuré » badge lights when the value is the one from config.json, and a
    counter in the panel head says how far one has moved from the validated
    values. That is the whole point: one sees at a glance how far one has gone.
+   A setting that HAS moved now says so three times over — its value in the
+   warning family, its field outlined, and the measured value printed next to
+   it — because folding that into one grey badge made a deviation something one
+   had to look for.
 
    Ported from `renderReglages` / `majAffichage` in `static/create.js`. */
-import { useMemo, useRef } from 'react'
+import { useMemo } from 'react'
 
 import { BY_ID, PRESETS, SECTIONS, fmtVal, type Setting } from './settings'
-import { useOverlayPanel } from './useOverlayPanel'
 
 /** Every control's value, by setting id. Booleans for switches, strings for the
     rest — a numeric field must be able to be EMPTY, which a number cannot say. */
@@ -109,29 +114,73 @@ const ROW_HEAD = 'mb-[6px] flex items-center gap-[8px]'
 const HELP = 'mt-[6px] mb-0 text-[12.5px] leading-[1.6] text-dim'
 /* A field of the panel repaints what `chrome.css` gives every input, except its
    border colour and its radius — that is the whole of the old `.rg select,
-   .rg input[type=number]`. */
-const FIELD = 'w-full rounded-[8px] border border-line2 bg-panel2 px-[10px] py-[8px]'
-/* The slider, thumb included. `appearance-none` on the track AND on the thumb:
-   without it the browser paints its own control and ignores the rest. */
+   .rg input[type=number]`. A field moved away from its measured value outlines
+   itself in the warning family (§S4): the value alone changed colour, which a
+   `<select>` cannot show at all. */
+const FIELD = 'w-full rounded-[8px] border bg-panel2 px-[10px] py-[8px]'
+const FIELD_REF = 'border-line2'
+const FIELD_OFF = 'border-warn! text-warn-txt'
+/* The slider is a TRANSPARENT range over a painted track: `input[type=range]`
+   can draw neither a fill that stops at the value nor a mark at a second one,
+   and the design-pass asks for both (§S4). The wrapper below carries the 3 px
+   track, the fill, and the `--ok` tick at the measured value; the input keeps
+   being the control, so the value, the arrows and the screen reader are
+   untouched. `appearance-none` on the track AND on the thumb: without it the
+   browser paints its own control over ours. */
 const SLIDER =
-  'mx-0 my-[2px] h-[4px] w-full appearance-none rounded-[3px] bg-line2 [outline:none] ' +
-  '[&::-webkit-slider-thumb]:h-[16px] [&::-webkit-slider-thumb]:w-[16px] ' +
+  'relative z-[1] mx-0 my-0 block h-[16px] w-full appearance-none bg-transparent [outline:none] ' +
+  '[&::-webkit-slider-runnable-track]:h-[16px] [&::-webkit-slider-runnable-track]:bg-transparent ' +
+  '[&::-webkit-slider-thumb]:h-[14px] [&::-webkit-slider-thumb]:w-[14px] ' +
   '[&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:cursor-pointer ' +
   '[&::-webkit-slider-thumb]:rounded-[50%] [&::-webkit-slider-thumb]:border-2 ' +
-  '[&::-webkit-slider-thumb]:border-panel [&::-webkit-slider-thumb]:bg-acc ' +
+  '[&::-webkit-slider-thumb]:border-panel [&::-webkit-slider-thumb]:bg-txt ' +
   '[&::-webkit-slider-thumb]:shadow-[0_1px_4px_#0008] ' +
+  '[&::-moz-range-track]:h-[16px] [&::-moz-range-track]:bg-transparent ' +
   '[&::-moz-range-thumb]:h-[14px] [&::-moz-range-thumb]:w-[14px] ' +
   '[&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:rounded-[50%] ' +
   '[&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-panel ' +
-  '[&::-moz-range-thumb]:bg-acc'
+  '[&::-moz-range-thumb]:bg-txt'
 
 const sameAsReference = (item: Setting, value: SettingValues[string], reference: unknown) =>
   item.type === 'bool'
     ? Boolean(reference) === Boolean(value)
     : Math.abs(Number(reference) - Number(value)) < 1e-9
 
+/** How many settings sit away from their measured value, in total and per
+    section. Pure, and exported because the inspector's own tab shows the total
+    on a badge without mounting the panel (.claude/rules/frontend.md — a pure
+    computation is a function, shared by two and owned by neither; it lives
+    here with `referenceOf`, which it needs). */
+export function deviationCount(
+  values: SettingValues,
+  presetRef: Record<string, unknown>,
+  nsfwRef: Record<string, unknown>,
+): { total: number; bySection: Record<string, number> } {
+  let total = 0
+  const bySection: Record<string, number> = {}
+  SECTIONS.forEach((section) =>
+    section.items.forEach((item) => {
+      const reference = referenceOf(item, presetRef, nsfwRef)
+      if (reference === '' || reference === undefined) return
+      if (!sameAsReference(item, values[item.id], reference)) {
+        total += 1
+        bySection[section.titre] = (bySection[section.titre] ?? 0) + 1
+      }
+    }),
+  )
+  return { total, bySection }
+}
+
+/** Where the value sits on its own [min,max] range, as a percentage — used to
+    place the fill and the measured tick under a slider. */
+const ratio = (item: Setting, value: number): number => {
+  const min = Number(item.min ?? 0)
+  const max = Number(item.max ?? 1)
+  if (!Number.isFinite(value) || max === min) return 0
+  return Math.min(100, Math.max(0, ((value - min) / (max - min)) * 100))
+}
+
 export function SettingsPanel({
-  open,
   values,
   presetRef,
   nsfwRef,
@@ -139,9 +188,7 @@ export function SettingsPanel({
   nsfwLevel,
   onChange,
   onReset,
-  onClose,
 }: {
-  open: boolean
   values: SettingValues
   presetRef: Record<string, unknown>
   nsfwRef: Record<string, unknown>
@@ -154,60 +201,38 @@ export function SettingsPanel({
   nsfwLevel: boolean
   onChange: (id: string, value: string | boolean) => void
   onReset: () => void
-  /** screen-3-produire: Escape closes the panel, same rule as any overlay
-      (cadrage). Opened from two places (launch bar AND rail gear) — see
-      useOverlayPanel, focus returns to whichever actually opened it. */
-  onClose: () => void
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  /* Scoped to #gearBody: the header's "Valeurs mesurées" reset button comes
-     first in DOM order but is chrome, not a setting — the deliverable asks
-     for "le premier réglage" specifically. */
-  useOverlayPanel(open, onClose, containerRef, '#gearBody :is(input,select,textarea,button):not([disabled])')
-
   /* Deviation count, globally and per section. A folded section must say it
      hides a deviation, otherwise folding hides the very information the counter
      exists to give. */
-  const { total, bySection } = useMemo(() => {
-    let count = 0
-    const per: Record<string, number> = {}
-    SECTIONS.forEach((section) =>
-      section.items.forEach((item) => {
-        const reference = referenceOf(item, presetRef, nsfwRef)
-        if (reference === '' || reference === undefined) return
-        if (!sameAsReference(item, values[item.id], reference)) {
-          count += 1
-          per[section.titre] = (per[section.titre] ?? 0) + 1
-        }
-      }),
-    )
-    return { total: count, bySection: per }
-  }, [values, presetRef, nsfwRef])
+  const { total, bySection } = useMemo(
+    () => deviationCount(values, presetRef, nsfwRef),
+    [values, presetRef, nsfwRef],
+  )
 
   return (
-    <div
-      ref={containerRef}
-      className={`fixed right-[20px] bottom-[96px] z-[8] w-[min(620px,calc(100vw-40px))]
-                  max-h-[calc(100vh-190px)] overflow-auto rounded-[12px] border border-line2
-                  bg-panel p-[18px] shadow-elev ${open ? 'block' : 'hidden'}`}
-      id="gearPanel"
-      data-open={open ? '1' : undefined}
-    >
-      <div className="mb-[10px] flex items-center gap-[12px]">
-        <h3 className="m-0 text-[13px] font-semibold uppercase tracking-[.9px] text-dim">
-          Réglages
-        </h3>
-        <div className="flex-1" />
-        <span className="tiny" id="gearDiff">
-          {total ? `${total} réglage${total > 1 ? 's' : ''} hors valeur mesurée` : ''}
+    <div id="gearPanel">
+      {/* The head states the deviation as a SENTENCE and offers the way back
+          on the same line (§S4). It used to be a bare count next to a button
+          labelled « Valeurs mesurées », which read as the name of a mode
+          rather than of a gesture. */}
+      <div className="mb-[14px] flex items-baseline gap-[10px] text-[12.5px]">
+        <span className={total ? 'text-warn-txt' : 'text-dim2'} id="gearDiff">
+          {total
+            ? `${total} réglage${total > 1 ? 's' : ''} modifié${total > 1 ? 's' : ''} pour ce lancement`
+            : ''}
         </span>
+        <div className="flex-1" />
+        {/* Always offered, never only when a deviation exists: it also puts
+            the quality preset back to « Réalisme », which can be off while
+            every individual setting happens to match. */}
         <button
-          className="btn sm"
+          type="button"
+          className="link flex-none text-[12.5px]"
           id="btnReset"
-          title="Remet chaque réglage à la valeur mesurée du projet"
           onClick={onReset}
         >
-          Valeurs mesurées
+          Revenir aux valeurs mesurées
         </button>
       </div>
       <p className="mt-0 mb-[18px] text-[12.5px] leading-[1.6] text-dim">
@@ -229,6 +254,7 @@ export function SettingsPanel({
               onChange={onChange}
             />
           ))
+          const deviations = bySection[section.titre] ?? 0
           if (!section.replie) {
             return (
               <section
@@ -237,12 +263,14 @@ export function SettingsPanel({
                 data-niveau={section.niveau ?? ''}
                 key={section.titre}
               >
-                <h4 className={`${SECTION_TITLE} mt-0 mb-[12px]`}>{section.titre}</h4>
+                <div className="mt-0 mb-[12px] flex items-baseline gap-[10px]">
+                  <h4 className={`${SECTION_TITLE} m-0`}>{section.titre}</h4>
+                  <SectionDeviations titre={section.titre} n={deviations} />
+                </div>
                 {body}
               </section>
             )
           }
-          const deviations = bySection[section.titre] ?? 0
           return (
             <section
               className={SECTION}
@@ -261,12 +289,7 @@ export function SettingsPanel({
                              [[open]>&]:before:content-['▾']"
                 >
                   <h4 className={`${SECTION_TITLE} m-0 inline`}>{section.titre}</h4>
-                  <span
-                    className={`text-[11px] ${deviations ? 'text-acc' : 'text-dim2'}`}
-                    data-sec={section.titre}
-                  >
-                    {deviations ? `${deviations} hors mesuré` : ''}
-                  </span>
+                  <SectionDeviations titre={section.titre} n={deviations} />
                 </summary>
                 {body}
               </details>
@@ -275,6 +298,18 @@ export function SettingsPanel({
         })}
       </div>
     </div>
+  )
+}
+
+/* « N modifié(s) » next to a section title — and nothing at all when the
+   section is untouched. A folded section MUST say it hides a deviation,
+   otherwise folding hides the very information the counter exists to give;
+   the same marker is written on an open section so the two read alike. */
+function SectionDeviations({ titre, n }: { titre: string; n: number }) {
+  return (
+    <span className={`text-[11px] ${n ? 'text-warn-txt' : 'text-dim2'}`} data-sec={titre}>
+      {n ? `${n} modifié${n > 1 ? 's' : ''}` : ''}
+    </span>
   )
 }
 
@@ -302,8 +337,15 @@ function SettingRow({
     (item.id === 'noqc' && nsfwLevel) ||
     (item.dest === 'preset' && false)
   const classes = `${ROW}${inert ? ' opacity-[.42]' : ''}`
-  // a setting moved away from its measured value names itself in the accent
-  const title = `text-[13.5px] font-semibold ${!measured && hasReference ? 'text-acc' : ''}`
+  /* A setting moved away from its measured value says so in the WARNING
+     family, not in the accent (§S4). The accent is the studio's « this is
+     selected » colour — on a panel where a dozen rows can be off at once it
+     read as decoration, and it carried no more meaning than the grey badge
+     next to it. A deviation is a warning: it is a choice one is answerable
+     for, which is exactly what `--warn-txt` says everywhere else. */
+  const off = hasReference && !measured
+  const title = `text-[13.5px] font-semibold ${off ? 'text-warn-txt' : ''}`
+  const field = `${FIELD} ${off ? FIELD_OFF : FIELD_REF}`
 
   if (item.type === 'bool') {
     return (
@@ -340,7 +382,7 @@ function SettingRow({
           <b className={title}>{item.label}</b>
         </div>
         <select
-          className={`${FIELD}${inert ? ' pointer-events-none' : ''}`}
+          className={`${field}${inert ? ' pointer-events-none' : ''}`}
           id={item.id}
           value={String(value)}
           onChange={(e) => onChange(item.id, e.target.value)}
@@ -363,7 +405,7 @@ function SettingRow({
           <b className={title}>{item.label}</b>
         </div>
         <input
-          className={`${FIELD}${inert ? ' pointer-events-none' : ''}`}
+          className={`${field}${inert ? ' pointer-events-none' : ''}`}
           type="number"
           id={item.id}
           min={item.min}
@@ -382,7 +424,10 @@ function SettingRow({
       <div className={ROW_HEAD}>
         <b className={title}>{item.label}</b>
         <span className="flex-1" />
-        <span className="text-[13px] font-semibold tabular-nums text-acc" id={`v_${item.id}`}>
+        <span
+          className={`text-[13px] font-semibold tabular-nums ${off ? 'text-warn-txt' : 'text-txt'}`}
+          id={`v_${item.id}`}
+        >
           {fmtVal(item, value as string)}
         </span>
         {/* `tabIndex={0}` + `data-hint-text` (design pass écran 3, §A3) —
@@ -408,19 +453,46 @@ function SettingRow({
             ? `valeur mesurée du projet : ${fmtVal(item, reference as number)}`
             : "ce réglage n'a jamais été mesuré : sa valeur est un point de départ"}
         >
-          {hasReference ? 'mesuré' : 'jamais mesuré'}
+          {/* §S4: a deviated setting prints the value it left, right here.
+              It was only in the hint bubble, which meant one had to hover the
+              badge to learn what « hors valeur mesurée » was measured AT. At
+              rest the word stands alone, which is what the fumigation reads. */}
+          {hasReference ? (off ? `mesuré ${fmtVal(item, reference as number)}` : 'mesuré') : 'jamais mesuré'}
         </span>
       </div>
-      <input
-        className={`${SLIDER}${inert ? ' pointer-events-none' : ''}`}
-        type="range"
-        id={item.id}
-        min={item.min}
-        max={item.max}
-        step={item.pas}
-        value={String(value)}
-        onChange={(e) => onChange(item.id, e.target.value)}
-      />
+      {/* The painted track sits UNDER a transparent range (see SLIDER): the
+          fill stops at the value, and the `--ok` tick marks the measured one —
+          neither of which a native range can draw. `aria-hidden`: the input
+          above already announces its value, min and max. */}
+      <div className="relative my-[2px] h-[16px]">
+        <div
+          className="pointer-events-none absolute inset-x-0 top-[6.5px] h-[3px] rounded-[2px] bg-line2"
+          aria-hidden="true"
+        >
+          <div
+            className={`h-full rounded-[2px] ${off ? 'bg-warn' : 'bg-dim2'}`}
+            style={{ width: `${ratio(item, Number(value))}%` }}
+          />
+        </div>
+        {hasReference && (
+          <span
+            className="pointer-events-none absolute top-[3px] h-[10px] w-[2px] -translate-x-1/2
+                       rounded-[1px] bg-ok"
+            style={{ left: `${ratio(item, Number(reference))}%` }}
+            aria-hidden="true"
+          />
+        )}
+        <input
+          className={`${SLIDER}${inert ? ' pointer-events-none' : ''}`}
+          type="range"
+          id={item.id}
+          min={item.min}
+          max={item.max}
+          step={item.pas}
+          value={String(value)}
+          onChange={(e) => onChange(item.id, e.target.value)}
+        />
+      </div>
       <div className="mt-[3px] flex justify-between text-[11px] text-dim2">
         <span>{item.bas}</span>
         <span>{item.haut}</span>

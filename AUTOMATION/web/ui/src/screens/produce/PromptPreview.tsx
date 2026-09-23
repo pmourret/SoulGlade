@@ -14,11 +14,15 @@
    THE AMENDMENT FIELD IS NEVER RE-CREATED. Typing in it changes the prompt,
    hence the preview, hence the payload — repainting it would make the caret jump
    on every keystroke. It is a controlled input of its own here, and only the
-   COMPUTED parts (fragments, echoes, header) follow the plan. */
-import { useRef } from 'react'
+   COMPUTED parts (fragments, echoes, header) follow the plan.
 
+   IT IS THE « Prompt » TAB OF THE INSPECTOR since the design-pass screen-3b
+   (§S4). It used to open above the launch bar, covering the bottom of the
+   scene grid — which is why the old fumigation had to CLOSE it in order to
+   tick a second scene. There is nothing left to close, and nothing left to
+   cover: it simply sits in the third column, updating while scenes are
+   ticked next to it. */
 import type { Preview } from './useProduceState'
-import { useOverlayPanel } from './useOverlayPanel'
 
 /** The four short, per-fragment amendments — screen-3-produire §B4. Same
     single-scene rule as `override` (the free-text scene rewrite): the
@@ -44,7 +48,6 @@ export function PromptPreview({
   onOverride,
   amendments,
   onAmendmentChange,
-  onClose,
 }: {
   preview: Preview | null
   singleScene: boolean
@@ -52,41 +55,24 @@ export function PromptPreview({
   onOverride: (value: string) => void
   amendments: SceneAmendments
   onAmendmentChange: (field: keyof SceneAmendments, value: string) => void
-  onClose: () => void
 }) {
-  const containerRef = useRef<HTMLDivElement | null>(null)
-  /* Tied to `preview` (not a constant `true`): the panel can mount before a
-     plan has ever loaded, and the container this focuses into does not
-     exist yet at that instant — re-running when content actually appears
-     gives it a real target. `:not([disabled])` on the amendment field: with
-     several scenes ticked it is disabled, and the deliverable's own request
-     ("le champ d'amendement... le premier réglage") assumes it is usable —
-     falls through to the generic first-focusable (the fermer link) rather
-     than focusing nothing. */
-  useOverlayPanel(Boolean(preview), onClose, containerRef, '#sceneOverride:not([disabled])')
-
-  if (!preview) return null
+  /* No plan yet — nothing has been ticked, or it is still in flight. The tab
+     says so rather than showing an empty frame that looks broken. */
+  if (!preview)
+    return (
+      <p className="tiny m-0 text-dim" id="apercuVide">
+        coche une scène pour voir le prompt qui partira
+      </p>
+    )
   return (
-    /* It opens ABOVE the launch bar and takes its width — it is its extension.
-       `overflow-x-hidden` is a belt, not the fix: the real defect was the text
-       column without `min-w-0`. VERTICAL scrolling stays: the full prompt often
-       goes past 52vh. */
-    <div
-      ref={containerRef}
-      className="m-0 mb-[10px] max-h-[52vh] max-w-none overflow-x-hidden overflow-y-auto"
-      id="apercuPanel"
-    >
-      <div className="rounded-[12px] border border-line2 bg-panel px-[18px] py-[14px] shadow-elev">
-        <div className="mb-[10px] flex items-baseline gap-[12px]">
-          <b className="text-[14px]">Prompt envoyé</b>
+    <div className="overflow-x-hidden" id="apercuPanel">
+      <div>
+        <div className="mb-[10px]">
+          <b className="block text-[14px]">Prompt envoyé</b>
           <span className="tiny" id="apMeta">
             {preview.total_car} caractères · {preview.scene}
             {preview.n_jobs > 1 ? ` · ${preview.n_jobs} images, aperçu de la première` : ''}
           </span>
-          <span className="flex-1" />
-          <button className="link" id="apFermer" onClick={onClose}>
-            fermer
-          </button>
         </div>
 
         <div id="apFrags">
@@ -95,8 +81,11 @@ export function PromptPreview({
             const own = fragment.source === 'scène'
             return (
               <div
+                /* `--panel2` and no longer `#1e2630`: a blue-tinted leftover
+                   of the pre-graphite palette, and a hard value outside
+                   `tokens.css` (frontend.md). */
                 className={`flex items-baseline gap-[12px] border-t border-t-line py-[5px] ${
-                  own ? 'mx-[-18px] bg-[#1e2630] px-[18px]' : ''
+                  own ? 'mx-[-12px] bg-panel2 px-[12px]' : ''
                 }`}
                 key={index}
                 data-fragment
@@ -199,7 +188,10 @@ export function PromptPreview({
           <span className="tiny mb-[8px] block">
             amender un fragment précis pour ce lancement
           </span>
-          <div className="grid grid-cols-2 gap-[10px]">
+          {/* One column, not two: the panel is 340 px wide now instead of the
+              full width of the launch bar, and two 145 px fields showed about
+              four characters of « leaning on the doorframe ». */}
+          <div className="grid grid-cols-1 gap-[8px]">
             {AMENDMENT_FIELDS.map(([field, label, placeholder]) => (
               <label className="f" key={field}>
                 <span>{label}</span>

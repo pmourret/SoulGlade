@@ -1,18 +1,23 @@
-/* The batch-finished acknowledgment — screen-3-produire design pass §S,
-   trimmed further 2026-09-04 (user report: a persistent card kept
-   reporting a batch long after it was done, sitting right above the
-   prompt bar). What used to be a permanent 3-batch history of chips is now
-   a single TOAST fired the instant a batch finishes — the studio's own way
-   of ACKNOWLEDGING something just happened, never its way of reporting it
-   forever (chrome/ToastContext.tsx's own contract). The header's status
-   line already shows "production N/M · ~T" while a batch runs and survives
-   scrolling (§S, same design pass); this component only had to cover the
-   moment it STOPS running.
+/* The batch-finished acknowledgment, and nothing else.
 
-   What remains here is the technical log, collapsed by default — a quiet
-   trail for anyone who wants it, never competing for attention the way a
-   card of chips did. */
-import { useEffect, useRef, useState } from 'react'
+   IT RENDERS NOTHING. What is left is one effect: the instant a batch stops
+   running, a toast says what came out of it and offers the way to sort it.
+   The studio's own way of ACKNOWLEDGING something just happened, never its
+   way of reporting it forever (chrome/ToastContext.tsx's own contract) — the
+   header's status line already carries « production N/M · ~T » while a batch
+   runs, and survives scrolling.
+
+   THE TECHNICAL LOG LEFT THIS SCREEN (design-pass screen-3b, §S6). It was a
+   folded `<details>` sitting permanently above the launch bar of a working
+   screen, for a trail one consults after the fact — and the Journal module
+   (Application → Journal) already exists to read it, with a search and the
+   whole history rather than the last forty lines. One place, not two.
+
+   A component that renders null and only runs an effect is deliberate: this
+   is a SIDE EFFECT of being on Produire, not a piece of its layout, and
+   folding it into ProduceScreen would put a batch-watching ref in the middle
+   of a composition file. */
+import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { useToast } from '../../chrome/ToastContext'
@@ -32,7 +37,6 @@ type Recent = { bucket: string; name: string; scene?: string; space?: string; sc
 export function QueueRail({ state }: { state: SystemState | null }) {
   const navigate = useNavigate()
   const toast = useToast()
-  const [logOpen, setLogOpen] = useState(false)
   const wasRunning = useRef(false)
   const lastAcked = useRef<string | null>(null)
 
@@ -63,24 +67,5 @@ export function QueueRail({ state }: { state: SystemState | null }) {
     )
   }, [state, toast, navigate])
 
-  if (!state) return null
-
-  return (
-    <div className="mb-[14px]" id="queueRail">
-      <details
-        className="adv mt-[6px]! [border:0]! p-0!"
-        open={logOpen}
-        onToggle={(e) => setLogOpen((e.target as HTMLDetailsElement).open)}
-      >
-        <summary>journal technique</summary>
-        <pre
-          className="mt-[10px] mb-0 max-h-[190px] overflow-auto whitespace-pre-wrap
-                     rounded-[8px] border border-line bg-[#0e1014] p-[11px]
-                     text-[12px] text-dim
-                     empty:before:italic empty:before:text-dim2
-                     empty:before:content-['aucune_action_enregistrée_dans_cette_session']"
-        >{(state.log ?? []).slice(-40).join('\n')}</pre>
-      </details>
-    </div>
-  )
+  return null
 }

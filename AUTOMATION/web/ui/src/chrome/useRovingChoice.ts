@@ -11,7 +11,8 @@
    yet.
 
    FOCUS FOLLOWS `activeId`, NEVER THE KEY PRESS ITSELF (found live,
-   screen-3-produire audit): IntensityBar's `onPick` can open a confirmation
+   screen-3-produire audit): the intensity list's `onPick` (ProduceSidebar)
+   can open a confirmation
    dialog and never actually change the level if the user cancels it — an
    eager `.focus()` on the "next" button right after `onKeyDown` left focus
    on a button `aria-checked="false"`, visibly disconnected from the real

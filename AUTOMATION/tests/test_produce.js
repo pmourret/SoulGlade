@@ -21,8 +21,9 @@
         and the amendment is only offered on ONE selected scene.
      5. THE SETTINGS PANEL is declarative: every control says what it does, the
         « mesuré » badge follows config.json, and a preset FILLS the panel
-        instead of bypassing it. Two buttons open it — the launch bar gear and
-        the rail one — and they share ONE state.
+        instead of bypassing it. Since the design-pass screen-3b it is a TAB
+        of the inspector, not a floating card: nothing opens it and nothing
+        closes it, so there is no shared open state left to check.
      6. NOTHING IS LAUNCHED. The test never clicks « Générer »: it checks the
         guard, not the production. That is what makes it runnable against real
         data with no GPU.
@@ -41,7 +42,14 @@ const CARTE = '#sceneGrid [data-scene-card]';
 // Same grid, minus the "+" tile (NewSceneCard) — it always stays, search or
 // sort or not, so a count/order/content check on the REAL scenes excludes it.
 const CARTE_REELLE = '#sceneGrid [data-scene-card]:not([data-new])';
-const PANNEAU = '#gearPanel[data-open]';
+/* Le panneau de reglages n'a plus d'etat ouvert/ferme : c'est le contenu de
+   l'onglet Réglages, que Radix demonte quand un autre onglet est actif. Sa
+   presence dans le DOM EST son etat. Les declencheurs se ciblent par
+   `data-tab` et jamais par un `id` : un `id` pose sur un Tabs.Trigger casse
+   l'`aria-controls` et le groupe de focus de Radix (piege documente sur
+   SceneComposer.tsx). */
+const PANNEAU = '#gearPanel';
+const ONGLET = k => `[data-tab="${k}"]`;
 
 (async () => {
   const nav = await chromium.launch();
@@ -92,13 +100,14 @@ const PANNEAU = '#gearPanel[data-open]';
   dire(await inerte(), '« Générer » reste inerte : aucune scène cochée');
   dire((await texte('#sumT')).includes('sélectionne au moins une scène'),
        'la barre dit ce qui manque desormais — pas « choisis une intention », deja fait');
-  // §fix 2026-09-04 (retour utilisateur) : QueueRail ne porte plus de carte
-  // de compte-rendu qui restait affichee indefiniment une fois le lot
-  // termine — un lot fini se signale desormais par un TOAST (une seule
-  // fois, chrome/ToastContext.tsx), et ce composant ne garde que le journal
-  // technique, replie par defaut.
-  dire(await vu('#queueRail'), 'le journal technique est la (replie)');
-  dire(!(await vu('#queueRail [open]')), 'replie par defaut — pas de contenu qui deborde au repos');
+  // §fix 2026-09-04 : QueueRail ne porte plus de carte de compte-rendu qui
+  // restait affichee indefiniment une fois le lot termine — un lot fini se
+  // signale par un TOAST (une seule fois, chrome/ToastContext.tsx).
+  // §S6 (design-pass ecran 3b, 23/09) : le journal technique quitte l'ecran
+  // de travail a son tour. Il y vivait replie en permanence au-dessus de la
+  // barre de lancement, pour une trace qu'on consulte apres coup — et le
+  // module Journal la porte deja en entier, avec sa recherche.
+  dire(!(await vu('#queueRail')), "le journal technique n'encombre plus l'ecran de travail");
   dire(!(await vu('#queueHistory')), "l'ancienne bande de compte-rendu a disparu");
   // §audit-ux-ui 2026-09-04 : le Stop d'un lot vit desormais dans le bandeau
   // (chrome/Header.tsx), pas dans une carte de la grille — absent tant que
@@ -106,16 +115,21 @@ const PANNEAU = '#gearPanel[data-open]';
   dire(!(await vu('#btnHeaderStopBatch')), "l'Arreter du bandeau n'apparait que si un lot tourne");
 
   console.log('\n[1b] la selection se voit vraiment (design pass ecran 3, retour utilisateur)');
-  // §fix 2026-09-04 : ROW_ON perdait border-acc/bg-panel2 face aux
-  // transparents de la chaine de base (meme ordre-de-feuille-generee que
-  // SceneCard.tsx/IntensityBar.tsx) — verifie sur la COULEUR REELLE, pas
-  // seulement aria-checked, qui restait vrai pendant que rien ne se voyait.
+  // §fix 2026-09-04 : ROW_ON perdait ses couleurs face aux transparents de la
+  // chaine de base (ordre de la feuille GENEREE, pas de la chaine de classes)
+  // — verifie sur le rendu REEL, pas seulement aria-checked, qui restait vrai
+  // pendant que rien ne se voyait.
+  // §S2 (ecran 3b) : la ligne active porte un fond --panel3 et un filet
+  // `inset 2px 0 0 var(--acc)`, plus une bordure. On mesure les deux.
   const accentAttendu = await page.evaluate(() =>
     getComputedStyle(document.documentElement).getPropertyValue('--acc').trim());
-  const intentBorder = await page.$eval('#railIntent button[aria-checked="true"]',
-    e => getComputedStyle(e).borderColor);
-  dire(intentBorder !== 'rgba(0, 0, 0, 0)' && intentBorder.length > 0,
-       `l'intention choisie porte un contour visible (${intentBorder}, --acc = ${accentAttendu})`);
+  const intentOn = await page.$eval('#railIntent button[aria-checked="true"]',
+    e => ({ bg: getComputedStyle(e).backgroundColor, ombre: getComputedStyle(e).boxShadow }));
+  const intentOff = await page.$eval('#railIntent button[aria-checked="false"]',
+    e => getComputedStyle(e).backgroundColor).catch(() => null);
+  dire(intentOn.bg !== intentOff && /inset/.test(intentOn.ombre),
+       `l'intention choisie se voit (fond ${intentOn.bg} contre ${intentOff}, `
+       + `filet ${intentOn.ombre}, --acc = ${accentAttendu})`);
   // §fix 2026-09-04 : .chip-t.on n'existait plus dans screens.css depuis la
   // scission React (trou documente sur place, jamais comble) — un ton
   // choisi restait indiscernable des autres.
@@ -283,7 +297,7 @@ const PANNEAU = '#gearPanel[data-open]';
   }
 
   console.log('\n[7] PIEGE §5.6-2 : /api/plan est rejoue a la frappe, mais debounce');
-  await page.click('#btnApercu');
+  await page.click(ONGLET('prompt'));
   await page.waitForSelector('#apercuPanel');
   await page.waitForTimeout(600);
   dire(await vu('#sceneOverride'), "le champ d'amendement est la (une seule scène cochée)");
@@ -322,35 +336,26 @@ const PANNEAU = '#gearPanel[data-open]';
   dire(/\d+ caractères/.test(await texte('#apMeta')), `l'en-tete compte : « ${await texte('#apMeta')} »`);
 
   console.log('\n[9] l amendement demande UNE scène, et le dit sinon');
-  /* Le panneau d'apercu se pose AU-DESSUS de la barre de lancement et recouvre
-     le bas de la grille : on le referme pour cocher, comme le ferait quelqu'un
-     qui defile. Ce n'est pas un contournement — c'est le geste reel. */
+  /* L'apercu se posait AU-DESSUS de la barre de lancement et recouvrait le bas
+     de la grille : il fallait le FERMER pour cocher une seconde scène. Depuis
+     le design-pass ecran 3b (§S4) c'est un onglet du panneau de droite, qui ne
+     recouvre plus rien — et cette section verifie exactement ce que la refonte
+     achète : on coche pendant qu'on lit. */
   const combien = await page.$$eval(CARTE, e => e.length);
   if (combien > 2){
-    await page.click('#apFermer');
-    await page.waitForTimeout(300);
     await page.click(CARTE + ':nth-child(2)');
     await page.waitForTimeout(1000);
-    await page.click('#btnApercu');
-    await page.waitForSelector('#apercuPanel');
-    await page.waitForTimeout(700);
+    dire(await vu('#apercuPanel'),
+         "l'apercu reste lisible pendant qu'on coche — il ne recouvre plus la grille");
     dire(await page.isDisabled('#sceneOverride'), 'avec deux scènes, le champ est inerte');
     dire((await texte('#apAmdLbl')).includes('une seule scène'), 'et la raison est ecrite');
-    await page.click('#apFermer');
-    await page.waitForTimeout(300);
     await page.click(CARTE + ':nth-child(2)');
     await page.waitForTimeout(1000);
-    await page.click('#btnApercu');
-    await page.waitForSelector('#apercuPanel');
-    await page.waitForTimeout(700);
     dire(!(await page.isDisabled('#sceneOverride')), 'revenir a une seule le rearme');
   }
-  await page.click('#apFermer');
-  await page.waitForTimeout(300);
-  dire(!(await vu('#apercuPanel')), "l'apercu se ferme");
 
   console.log('\n[10] LE PANNEAU DE REGLAGES : declaratif, et il dit ce qu il coute');
-  await page.click('#btnGear');
+  await page.click(ONGLET('settings'));
   await page.waitForSelector(PANNEAU);
   const sections = await page.$$eval('#gearBody [data-rgs] h4', e => e.map(x => x.textContent));
   dire(sections.length >= 4, `${sections.length} sections : ${sections.join(' · ')}`);
@@ -410,22 +415,31 @@ const PANNEAU = '#gearPanel[data-open]';
   await page.click('#qual button[data-q="rapide"]');
   await page.waitForTimeout(600);
   dire(!(await refiner()), '« Rapide » la coupe — et ca se VOIT dans le panneau');
-  dire((await texte('#gearDiff')).includes('hors valeur mesurée'),
+  // §S4 : le compteur est une PHRASE (« N réglages modifiés pour ce
+  // lancement »), plus un compte seche a cote d'un bouton dont le libelle
+  // (« Valeurs mesurées ») se lisait comme le nom d'un mode, pas d'un geste.
+  dire((await texte('#gearDiff')).includes('modifié'),
        `le compteur d ecarts le signale : « ${await texte('#gearDiff')} »`);
+  const badge = await texte(ONGLET('settings'));
+  dire(/\d/.test(badge), `et l onglet le porte aussi en pastille : « ${badge.trim()} »`);
   await page.click('#btnReset');
   await page.waitForTimeout(500);
-  dire(await refiner(), '« Valeurs mesurées » remet tout en place');
+  dire(await refiner(), '« Revenir aux valeurs mesurées » remet tout en place');
   dire((await texte('#gearDiff')) === '', 'et le compteur repart a zero');
 
-  console.log('\n[13] UN SEUL point d entree vers le panneau de reglages (rail d outils retire)');
-  dire(await vu(PANNEAU), 'le panneau est ouvert');
-  await page.click('#btnGear');
+  console.log('\n[13] les reglages sont un ONGLET, plus une surimpression');
+  // §S4 (ecran 3b) : le panneau flottant ancre en bas a droite, ses deux
+  // boutons d'ouverture et l'etat partage qu'ils demandaient ont disparu
+  // ensemble. Un panneau qui est simplement LA n'a ni ouverture ni Echap.
+  dire(await vu(PANNEAU), 'le panneau de reglages est le contenu de son onglet');
+  dire(!(await vu('#btnGear')), "l'engrenage de la barre de lancement a disparu");
+  dire(!(await vu('#btnApercu')), "le bouton Prompt aussi — c'est un onglet");
+  await page.click(ONGLET('scene'));
   await page.waitForTimeout(300);
-  dire(!(await vu(PANNEAU)), "l'engrenage de la barre le referme");
+  dire(!(await vu(PANNEAU)), 'passer sur Scène remplace vraiment le contenu du panneau');
+  dire(await vu('#developScene'), 'et rend la scène pointee');
   // §audit-ux-ui 2026-09-04 : le rail d'outils (Poses/Editeur d'image, plus
-  // sa propre entree vers ce meme panneau) est retire de Produire — son
-  // propre rail d'intention et le ⚙ de la barre de lancement couvraient
-  // deja tout ce qu'il offrait ici. Ne reste qu'UN point d'entree.
+  // sa propre entree vers ce meme panneau) est retire de Produire.
   dire(!(await vu('#toolRail')), "le rail d'outils n'existe plus sur cet ecran");
   dire(!(await vu('#railGear')), 'et son entree vers le panneau avec lui');
 
@@ -466,8 +480,8 @@ const PANNEAU = '#gearPanel[data-open]';
     dire(await inerte(), '« Éditer » est inerte tant que rien n est coche');
     dire(await page.isDisabled('#qual button[data-q="rapide"]'),
          "les prereglages qui coupent la repasse sont inertes ici");
-    // le panneau a ete referme en [11] : on le rouvre pour lire ses sections
-    await page.click('#btnGear');
+    // l'onglet actif est reste sur Scène en [13] : on revient aux Réglages
+    await page.click(ONGLET('settings'));
     await page.waitForSelector(PANNEAU);
     dire(await vu('#gearBody [data-rgs][data-niveau="edit"]'),
          'la section NSFW du panneau apparait a ce cran');
@@ -475,13 +489,18 @@ const PANNEAU = '#gearPanel[data-open]';
          "« Sans contrôle d'identité » est inerte ici : le cran s'appuie sur le verdict");
     dire(((await page.getAttribute('#noqc', 'title')) || '').includes('NSFW'),
          'et il DIT pourquoi');
-    await page.click('#btnGear');
-    await page.waitForTimeout(250);
   } else {
     console.log("      (aucun cran d'edition : personnage desarme ou pack sans graphe)");
   }
 
   console.log('\n[15] LE PANNEAU DE DROITE bascule sur l instruction d edition (design pass ecran 3, §S)');
+  // §S4 : au cran qui EDITE les onglets sont Instruction · Réglages — il n'y
+  // a ni scène a pointer ni prompt a prevoir. On verifie que « Scène » et
+  // « Prompt » ont bien disparu, puis on ouvre l'instruction.
+  dire(!(await vu(ONGLET('scene'))), "l'onglet Scène n'existe pas a ce cran");
+  dire(!(await vu(ONGLET('prompt'))), "l'onglet Prompt non plus");
+  await page.click(ONGLET('instruction'));
+  await page.waitForTimeout(300);
   dire(!(await vu('#inspector')), "l'inspecteur n'existe plus sur ce cran — EditStep le remplace");
   dire(await vu('#stepEdit'), "le panneau d'instruction est la, a droite");
   dire((await texte('#stepEdit h2')).includes("Instruction d'édition"), 'et dit ce qu il est');
@@ -510,6 +529,9 @@ const PANNEAU = '#gearPanel[data-open]';
   // depuis la grille de scènes, pas depuis le cran d'edition.
   await page.click('#intSel button[data-lv="0"]');
   await page.waitForTimeout(600);
+  // revenir au cran de generation redonne l'onglet Scène, qui porte le ✎
+  await page.click(ONGLET('scene'));
+  await page.waitForTimeout(300);
   const carteAEditer = await page.$(CARTE_REELLE);
   if (carteAEditer){
     const idAEditer = await carteAEditer.$eval('b', e => e.textContent);

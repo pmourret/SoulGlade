@@ -74,22 +74,26 @@ export function EditStep({
           : 'var(--bad)'
 
   return (
-    <div
-      className={
-        number != null
-          ? 'mb-[30px]'
-          : 'sticky top-[12px] max-h-[calc(100vh-150px)] overflow-auto max-[1100px]:static max-[1100px]:max-h-none'
-      }
-      id="stepEdit"
-    >
-      <h2 className="flex items-baseline gap-[10px]">
+    /* No sticky/overflow wrapper any more (design-pass screen-3b): as the
+       inspector's « Instruction » tab it is the tab panel that owns the
+       column height and the scrolling. `number` still marks the ONE case
+       where this is a step of a short sequence rather than the whole panel. */
+    <div className={number != null ? 'mb-[30px]' : undefined} id="stepEdit">
+      {/* Title and sub-line STACKED, not side by side. As a tab of the 340 px
+          inspector the old baseline row broke « Instruction d'édition » over
+          two lines AND wrapped its hint next to it, for four lines of heading
+          above a one-line field (seen in the capture, audit of the 23/09).
+          Stacked it is two. */}
+      <h2 className="block">
         {number != null && (
           <>
             <i className="not-italic text-acc" data-num>{number}</i> ·{' '}
           </>
         )}
-        Instruction d'édition{' '}
-        <span className="tiny normal-case tracking-normal">— en anglais, court et concret</span>
+        Instruction d'édition
+        <span className="tiny mt-[2px] block normal-case tracking-normal">
+          en anglais, court et concret
+        </span>
       </h2>
 
       {/* `produce.css` also carried a `details.preamb` rule resetting the top

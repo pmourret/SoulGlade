@@ -1,5 +1,15 @@
 /* Chrome state of the studio: collapsed tool rail, focus mode.
 
+   THE GEAR HALF IS GONE TOO (23/09/2026, design-pass screen-3b §S4). It held
+   `gearOpen` / `toggleGear` / `closeGear` because TWO buttons opened the
+   generation settings — the gear of the launch bar and the one of the tool
+   rail — and a second settings surface could have drifted from the first.
+   The settings are now a TAB of Produire's inspector: they are never opened
+   and never closed, so there is no shared open state left to hold. Produire
+   was the only live reader; the rail's own button pointed at a panel that no
+   longer floats, on a rail that no longer mounts anywhere (`RAIL_ON` is
+   empty), and went with it.
+
    THE NAVBAR HALF IS GONE (23/09/2026, design-pass screen-0-chrome §S1). This
    module used to hold a second, symmetric pair — `navCollapsed` / `toggleNav`,
    the `studio.nav-mince` key, and an `iconsOnly` derived from « collapsed by
@@ -56,15 +66,6 @@ type ChromeContextValue = {
   identityMenuOpen: boolean
   openIdentityMenu: () => void
   closeIdentityMenu: () => void
-  /* The generation settings panel. It lives here because TWO buttons open it —
-     the gear of the launch bar and the one of the tool rail — and they must
-     share ONE state: a second settings surface could drift from this one. */
-  gearOpen: boolean
-  toggleGear: () => void
-  /* Escape must CLOSE, never toggle: gated by `gearOpen` at the call site
-     (useOverlayPanel), but a plain toggle could still reopen it if two
-     events overlapped. Twin of closeIdentityMenu, same file. */
-  closeGear: () => void
   railCollapsed: boolean
   focus: boolean
   /** True under the narrow bound, where the sub-bar and the identity card
@@ -87,12 +88,8 @@ export function ChromeProvider({ children }: { children: ReactNode }) {
   const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
   const [identityMenuOpen, setIdentityMenuOpen] = useState(false)
 
-  const [gearOpen, setGearOpen] = useState(false)
-
   const openIdentityMenu = useCallback(() => setIdentityMenuOpen(true), [])
   const closeIdentityMenu = useCallback(() => setIdentityMenuOpen(false), [])
-  const toggleGear = useCallback(() => setGearOpen((current) => !current), [])
-  const closeGear = useCallback(() => setGearOpen(false), [])
 
   useEffect(() => {
     const query = window.matchMedia(NARROW)
@@ -139,9 +136,6 @@ export function ChromeProvider({ children }: { children: ReactNode }) {
       identityMenuOpen,
       openIdentityMenu,
       closeIdentityMenu,
-      gearOpen,
-      toggleGear,
-      closeGear,
       railCollapsed,
       focus,
       narrow,
@@ -152,9 +146,6 @@ export function ChromeProvider({ children }: { children: ReactNode }) {
       identityMenuOpen,
       openIdentityMenu,
       closeIdentityMenu,
-      gearOpen,
-      toggleGear,
-      closeGear,
       railCollapsed,
       focus,
       narrow,

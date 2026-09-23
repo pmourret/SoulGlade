@@ -104,18 +104,17 @@ export function SceneDevelopPanel({
   const affines = meta?.tones ?? []
 
   return (
-    <aside
-      className="sticky top-[12px] flex max-h-[calc(100vh-150px)] flex-col gap-[16px]
-                 overflow-auto max-[1100px]:static max-[1100px]:max-h-none"
-      aria-label="Développement"
-    >
+    /* A plain block since the design-pass screen-3b: it is the content of the
+       inspector's « Scène » tab, which owns the column, the scrolling and the
+       landmark. It used to be the sticky `<aside>` itself. */
+    <div className="flex flex-col gap-[14px]">
       {/* Condensed "last image" — a single line + a small thumbnail, in place
           of Inspector's full hero shot: the panel's room now goes to the
           pointed scene below. */}
       <div className="flex items-center gap-[10px]">
         <button
           type="button"
-          className="relative h-[56px] w-[44px] flex-none overflow-hidden rounded-[6px]
+          className="relative h-[45px] w-[36px] flex-none overflow-hidden rounded-[5px]
                      border border-line bg-panel2 p-0 disabled:cursor-default"
           disabled={!last || !lastThumb}
           onClick={() => last && openLightbox(api.image(last))}
@@ -142,62 +141,30 @@ export function SceneDevelopPanel({
 
       <div className="border-t border-t-line" />
 
-      {/* The pointed scene's detail — the panel's real estate now goes here. */}
+      {/* The pointed scene's detail — the panel's real estate now goes here.
+          Order from the design-pass screen-3b §S4: who it is, what it looks
+          like, then what is known about it. The preview moved ABOVE the
+          figures: one recognises a scene by its image, and reading three
+          lines of statistics to find out which one is on screen was the wrong
+          way round. */}
       {scene ? (
-        <div className="flex flex-col gap-[10px]" id="developScene">
-          <h2 className="text-[13px] font-semibold">{scene.id}</h2>
-
+        <div className="flex flex-col gap-[12px]" id="developScene">
           <div>
-            <div className="mb-[4px] flex items-center gap-[6px] text-[12.5px]">
-              <span className="h-[7px] w-[7px] flex-none rounded-[50%]" style={{ background: dot }} />
-              {stats ? (
-                <span>
-                  {stats.avg != null ? stats.avg.toFixed(3) : '—'} · {stats.ok ?? 0}/{stats.n} validée
-                  {stats.n > 1 ? 's' : ''}
-                </span>
-              ) : (
-                <span className="text-dim2">jamais produite</span>
-              )}
-            </div>
-            {stats && stats.ok != null && stats.n > 0 && (
-              <div className="h-[5px] w-full overflow-hidden rounded-[3px] bg-line2" aria-hidden="true">
-                <div
-                  className="h-full rounded-[3px]"
-                  style={{ width: `${Math.round((100 * stats.ok) / stats.n)}%`, background: dot }}
-                />
-              </div>
-            )}
+            {/* `normal-case` + `tracking-normal` + an explicit colour: the
+                studio's `h2` rule (base.css) uppercases, letter-spaces and
+                greys SECTION TITLES, and this heading carries an IDENTIFIER.
+                Measured on screen: the panel read « CAFE_TERRASSE » while the
+                card two columns left read « cafe_terrasse » — the same id in
+                two spellings, on a screen whose whole job is matching one
+                against the other. */}
+            <h2 className="m-0 truncate text-[13.5px] font-semibold normal-case
+                           tracking-normal text-txt">
+              {scene.id}
+            </h2>
+            <span className="text-[11.5px] text-dim2">
+              {scene.format || '4:5'} · {scene.count || 1} img
+            </span>
           </div>
-
-          {affines.length > 0 && (
-            <div className="text-[12.5px]">
-              <div className="mb-[4px] text-dim">tons affins</div>
-              <div className="flex flex-wrap gap-[5px]">
-                {affines.map((t) => (
-                  <span
-                    key={t}
-                    className={`rounded-[10px] border px-[7px] py-px text-[11px] ${
-                      t === tone ? 'border-acc text-acc' : 'border-line text-dim'
-                    }`}
-                  >
-                    {t}
-                  </span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {meta?.pose && (
-            <div className="text-[12.5px]">
-              <span
-                className="rounded-[8px] bg-panel2 px-[7px] py-px text-[11px] font-bold text-[#9fd8ff]"
-                tabIndex={0}
-                data-hint-text={`pose imposée : ${meta.pose}`}
-              >
-                <span aria-hidden="true">⛓ </span>pose
-              </span>
-            </div>
-          )}
 
           {preview && (
             <div
@@ -206,6 +173,78 @@ export function SceneDevelopPanel({
               aria-hidden="true"
             />
           )}
+
+          {/* Label / value, as a description list: the panel answers « what do
+              we know about this scene », which is a set of named facts, not a
+              paragraph. */}
+          <dl className="m-0 grid grid-cols-[76px_minmax(0,1fr)] gap-x-[10px] gap-y-[9px] text-[12.5px]">
+            <dt className="text-dim">score</dt>
+            <dd className="m-0">
+              <div className="mb-[4px] flex items-center gap-[6px]">
+                <span
+                  className="h-[7px] w-[7px] flex-none rounded-[50%]"
+                  style={{ background: dot }}
+                  aria-hidden="true"
+                />
+                {stats ? (
+                  <span className="tabular-nums">
+                    {stats.avg != null ? stats.avg.toFixed(3) : '—'} · {stats.ok ?? 0}/{stats.n}{' '}
+                    validée{stats.n > 1 ? 's' : ''}
+                  </span>
+                ) : (
+                  <span className="text-dim2">jamais produite</span>
+                )}
+              </div>
+              {stats && stats.ok != null && stats.n > 0 && (
+                <div
+                  className="h-[4px] w-full overflow-hidden rounded-[2px] bg-line2"
+                  aria-hidden="true"
+                >
+                  <div
+                    className="h-full rounded-[2px]"
+                    style={{ width: `${Math.round((100 * stats.ok) / stats.n)}%`, background: dot }}
+                  />
+                </div>
+              )}
+            </dd>
+
+            {affines.length > 0 && (
+              <>
+                <dt className="text-dim">tons affins</dt>
+                <dd className="m-0 flex flex-wrap gap-[5px]">
+                  {affines.map((t) => (
+                    <span
+                      key={t}
+                      className={`rounded-[4px] border px-[6px] py-px text-[11px] ${
+                        t === tone ? 'border-acc text-acc' : 'border-line text-dim'
+                      }`}
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </dd>
+              </>
+            )}
+
+            {meta?.pose && (
+              <>
+                <dt className="text-dim">pose</dt>
+                {/* `tabIndex` + `data-hint-text` (design pass écran 7, §A2):
+                    a plain `title` only reaches a mouse. The « ⛓ » glyph is
+                    gone (screen-3b §S3) — it announced itself literally and
+                    the word « imposée » says it better. */}
+                <dd className="m-0">
+                  <span
+                    className="rounded-[4px] bg-panel2 px-[6px] py-px text-[11px] text-dim"
+                    tabIndex={0}
+                    data-hint-text={`pose imposée : ${meta.pose}`}
+                  >
+                    imposée
+                  </span>
+                </dd>
+              </>
+            )}
+          </dl>
 
           <div className="flex gap-[8px]">
             <button
@@ -219,18 +258,17 @@ export function SceneDevelopPanel({
             <button
               type="button"
               id="developEdit"
-              className="btn sm"
-              aria-label={`éditer la scène ${scene.id} dans les Ateliers`}
+              className="btn sm flex-none"
               data-hint-text="Ouvrir cette scène dans les Ateliers, pré-sélectionnée"
               onClick={() => onEdit(scene.id)}
             >
-              ✎
+              Éditer
             </button>
           </div>
         </div>
       ) : (
         <p className="tiny m-0 text-dim">survole ou choisis une scène pour voir son détail</p>
       )}
-    </aside>
+    </div>
   )
 }

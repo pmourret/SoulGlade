@@ -225,7 +225,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   }, [buckets])
 
   /* Four roving radiogroups (a11y audit, design-pass screen-5) — same
-     gabarit as produce/IntensityBar.tsx: arrows move AND pick immediately,
+     gabarit as produce/ProduceSidebar.tsx: arrows move AND pick immediately,
      one Tab stop per group. `data-sp`/`data-b`/`data-f`/`data-v` and the
      `'on'` class are unchanged, additive only. */
   const spaceRoving = useRovingChoice(['sfw', 'nsfw'], space)

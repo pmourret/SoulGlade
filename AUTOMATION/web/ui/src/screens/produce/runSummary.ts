@@ -24,10 +24,21 @@
    launch — an intention/scene/instruction still missing is the more
    actionable thing to say first.
 
+   IT ALSO SAYS WHAT KIND of message it is (`tone`, design-pass screen-3b
+   §S5), because the launch bar paints a blocker in the warning family and a
+   tier refusal in the danger one. That classification is the SAME ladder of
+   branches as the text — deriving it a second time in the bar would be a
+   copy that drifts the day a branch moves. « info » is not a blocker: « choisis
+   une intention » is the next step of a normal walk, not a fault.
+
    Pure function: it reads, it formats, it decides nothing. */
 import { mmss } from '../../chrome/Header'
 import type { Creative } from '../../state/TaxonomyContext'
 import type { IntensityTier, PlanResponse } from './useProduceState'
+
+/** How the launch bar should paint `sumT`: a step to take, something in the
+    way, or the tier's own refusal. */
+export type SummaryTone = 'info' | 'warn' | 'bad'
 
 /** The message for the two operational blockers, shared by both branches —
     `null` when neither applies, so the caller falls through to its own
@@ -70,21 +81,25 @@ export function runSummary({
   comfy: boolean
   /** Whether a batch is already in flight — `state.running` (optimistic). */
   running: boolean
-}): { sumN: string; sumT: string } {
+}): { sumN: string; sumT: string; tone: SummaryTone } {
   if (editing) {
     const total = plan?.total ?? 0
-    const blocked = !picked.size
-      ? 'coche au moins une image source'
-      : !instructionText
-        ? "écris l'instruction d'édition"
-        : operationalBlock(comfy, running)
+    const sumN = total ? `${total} ${total > 1 ? 'images' : 'image'}` : '—'
+    if (!picked.size)
+      return { sumN, sumT: 'coche au moins une image source', tone: 'info' }
+    if (!instructionText)
+      return { sumN, sumT: "écris l'instruction d'édition", tone: 'info' }
+    const stopped = operationalBlock(comfy, running)
+    if (stopped) return { sumN, sumT: stopped, tone: 'warn' }
     return {
-      sumN: total ? `${total} ${total > 1 ? 'images' : 'image'}` : '—',
-      sumT: blocked ?? `${total} édition${total > 1 ? 's' : ''} · environ ${mmss(total * 82)}`,
+      sumN,
+      sumT: `${total} édition${total > 1 ? 's' : ''} · environ ${mmss(total * 82)}`,
+      tone: 'info',
     }
   }
-  if (!intent) return { sumN: '—', sumT: 'choisis une intention' }
-  if (!selected.size) return { sumN: '—', sumT: 'sélectionne au moins une scène' }
+  if (!intent) return { sumN: '—', sumT: 'choisis une intention', tone: 'info' }
+  if (!selected.size)
+    return { sumN: '—', sumT: 'sélectionne au moins une scène', tone: 'info' }
   /* A scene added but not yet saved exists in the bank draft (so in the grid)
      but NOT in scenes.json, which /api/plan reads. Without this message the
      plan came back to zero and the button stayed disabled without a word. */
@@ -95,21 +110,24 @@ export function runSummary({
         unsaved.join(', ') +
         (unsaved.length > 1 ? ' ne sont pas enregistrées' : " n'est pas enregistrée") +
         ' — écran Ateliers, bouton Enregistrer',
+      tone: 'warn',
     }
-  if (plan?.erreur) return { sumN: '—', sumT: plan.erreur }
+  if (plan?.erreur) return { sumN: '—', sumT: plan.erreur, tone: 'bad' }
   const total = plan?.total ?? 0
   /* Unlike the branches above, the plan DID resolve here — the count is
      real, only the launch itself is blocked. Blanking it to "—" would throw
      away information the operator already has a right to see. */
   const blocked = operationalBlock(comfy, running)
-  if (blocked) return { sumN: total ? `${total} ${total > 1 ? 'images' : 'image'}` : '—', sumT: blocked }
+  const sumN = total ? `${total} ${total > 1 ? 'images' : 'image'}` : '—'
+  if (blocked) return { sumN, sumT: blocked, tone: 'warn' }
   const unit = quality === 'realisme' ? (bank?.avg_duration ?? 55) : quality === 'rapide' ? 32 : 22
   const toneLabel = (creative?.tones ?? []).find((t) => t.key === tone)
   return {
-    sumN: total ? `${total} ${total > 1 ? 'images' : 'image'}` : '—',
+    sumN,
     sumT:
       `${selected.size} scène${selected.size > 1 ? 's' : ''} · ` +
       `${tier ? tier.label : ''}${toneLabel ? ` · ${toneLabel.label}` : ''} · ` +
       `environ ${mmss(total * unit)}`,
+    tone: 'info',
   }
 }

@@ -4,19 +4,21 @@
    Named after the screen's folder, not the bank's `SceneCard` — the two show
    a scene for two different trades: this one is PICKED for a run, the bank's
    is OPENED for editing. */
+import { Icon } from '../../chrome/Icon'
 import { useConfig } from '../../state/ConfigContext'
 import type { Scene } from '../../state/ScenesStoreContext'
 
-/* The scene card, and the state that is NOT selection. The border colour is out
-   of the base chain on purpose: two utilities setting the same property are
-   decided by their order in the GENERATED sheet, not by their order in the class
-   string, so a conditional appended after `border-line` would never win. Each
-   state names its own — and a hover that repaints the border belongs to the
-   state that has one to repaint. */
+/* The scene card, and the state that is NOT selection.
+
+   SELECTION IS AN OUTLINE, NOT A BORDER (design-pass screen-3b, §S3): drawn
+   INSIDE the card with `outline-offset:-2px`, it costs no layout, so a grid
+   of `minmax(200px,1fr)` cards does not reflow by 2 px when one is ticked.
+   The idle card keeps a plain 1 px line. */
 const CARD =
-  'relative block w-full cursor-pointer overflow-hidden rounded-card border-2 bg-panel' +
-  ' [transition:border-color_.12s]'
-const CARD_IDLE = 'border-line hover:border-line2'
+  'group relative block w-full cursor-pointer overflow-hidden rounded-card border border-line' +
+  ' bg-panel [transition:outline-color_.12s]'
+const CARD_ON = 'outline-2 outline-acc [outline-offset:-2px]'
+const CARD_IDLE = 'hover:border-line2'
 
 export function SceneCard({
   scene,
@@ -67,7 +69,11 @@ export function SceneCard({
        screen-reader semantics (same reasoning already applied to the
        Revue's tiles, `review/Tile.tsx`, whose selection checkbox sits next
        to its thumbnail button for the same reason). */
-    <div className={`${CARD} ${selected ? 'border-acc' : CARD_IDLE}`} data-scene-card data-on={selected ? '1' : undefined}>
+    <div
+      className={`${CARD} ${selected ? CARD_ON : CARD_IDLE}`}
+      data-scene-card
+      data-on={selected ? '1' : undefined}
+    >
       <button
         type="button"
         className="block w-full cursor-pointer bg-transparent p-0 text-left [border:0]"
@@ -87,32 +93,33 @@ export function SceneCard({
         data-void={preview ? undefined : '1'}
         style={preview ? { backgroundImage: `url('${imageUrl({ ...preview, thumb: true })}')` } : undefined}
       >
-        {suits && (
-          <div
-            className="absolute top-[8px] left-[8px] rounded-[10px] bg-scrim px-[7px] py-px
-                       text-[10.5px] font-bold text-acc"
-          >
-            ce ton
-          </div>
-        )}
-        {meta?.pose && (
-          /* imposed pose (ControlNet). `tabIndex={0}` + `data-hint-text`
-             (design pass écran 7, §A2) — same contract as the Banque's own
-             pose badge (`SceneComposer.tsx`): a plain `title` only reaches a
-             mouse, this reaches the keyboard and a screen reader too.
-             Stacked BELOW the selection circle rather than sharing its
-             corner — the two used to overlap on a scene that is both
-             pose-locked and ticked, found while giving §B3's edit button
-             the bottom-right corner. */
-          <div
-            className="absolute top-[34px] right-[8px] rounded-[10px] bg-scrim px-[7px] py-px
-                       text-[10.5px] font-bold text-[#9fd8ff]"
-            tabIndex={0}
-            data-hint-text={`pose imposée : ${meta.pose}`}
-          >
-            <span aria-hidden="true">⛓ </span>pose
-          </div>
-        )}
+        {/* « ce ton » and « pose imposée » are text labels on the scrim,
+            STACKED in the top-left corner (design-pass screen-3b, §S3): the
+            top-right is the checkbox's, and the two used to fight for it on a
+            scene that is both pose-locked and ticked. The « ⛓ » glyph is
+            gone — a screen reader read it literally, and the word says it. */}
+        <div className="absolute top-[8px] left-[8px] flex flex-col items-start gap-[4px]">
+          {suits && (
+            <span
+              className="rounded-[4px] bg-scrim px-[6px] py-px text-[10.5px] font-semibold text-acc"
+            >
+              ce ton
+            </span>
+          )}
+          {meta?.pose && (
+            /* `tabIndex={0}` + `data-hint-text` (design pass écran 7, §A2) —
+               same contract as the Banque's own pose badge
+               (`SceneComposer.tsx`): a plain `title` only reaches a mouse,
+               this reaches the keyboard and a screen reader too. */
+            <span
+              className="rounded-[4px] bg-scrim px-[6px] py-px text-[10.5px] font-semibold text-dim"
+              tabIndex={0}
+              data-hint-text={`pose imposée : ${meta.pose}`}
+            >
+              pose imposée
+            </span>
+          )}
+        </div>
         {/* a scene added and not yet saved exists in the grid but NOT in
             scenes.json, which /api/plan reads */
         !meta && (
@@ -124,15 +131,19 @@ export function SceneCard({
             non enregistrée
           </div>
         )}
+        {/* A SQUARE box, 20 px (design-pass screen-3b, §S3): a circle reads as
+            a radio, and ticking scenes is a multiple choice. `#ffffff66` is a
+            veil over a photograph, not an identity colour — the one raw value
+            `DESIGN.md` lists for this purpose. */}
         <div
-          className={`absolute top-[8px] right-[8px] flex h-[22px] w-[22px] items-center
-                      justify-center rounded-[50%] border-[1.5px] text-[13px] ${
+          className={`absolute top-[8px] right-[8px] flex h-[20px] w-[20px] items-center
+                      justify-center rounded-[4px] border ${
                         selected
-                          ? 'border-acc bg-acc font-bold text-on-acc'
-                          : 'border-[#ffffff55] bg-scrim text-transparent'
+                          ? 'border-acc bg-acc text-on-acc'
+                          : 'border-[#ffffff66] bg-scrim text-transparent'
                       }`}
         >
-          ✓
+          {selected && <Icon name="check" className="h-[14px] w-[14px]" />}
         </div>
       </div>
       <div className="px-[11px] py-[9px] pr-[34px]">
@@ -142,9 +153,17 @@ export function SceneCard({
            (audit-ux-ui, end of chantier): 30px still let the tags line
            touch the button by ~2px on a real card (`extérieur · jour ·
            assise`) — 34px clears it. */}
-        <b className="block truncate text-[13px] font-semibold">{scene.id}</b>
+        {/* Name on the left, format on the right (design-pass screen-3b §S3):
+            the format is a constant-width fact and belongs on an edge, the
+            name is what one reads and gets the rest of the line. */}
+        <div className="flex items-baseline gap-[8px]">
+          <b className="min-w-0 flex-1 truncate text-[13px] font-semibold">{scene.id}</b>
+          <span className="flex-none text-[11px] tabular-nums text-dim2">
+            {scene.format || '4:5'}
+          </span>
+        </div>
         <span className="text-[11.5px] text-dim">
-          {scene.format || '4:5'} · {scene.count || 1} img
+          {scene.count || 1} img
           {(scene.variants ?? []).length ? ` +${(scene.variants ?? []).length} var.` : ''}
         </span>
         <div className="mt-[5px] flex items-center gap-[6px] text-[11.5px]">
@@ -184,9 +203,30 @@ export function SceneCard({
              root cause — see chrome/Header.tsx) — harmless here on a single
              text glyph, but the same contract gap, fixed for the same
              reason. */
+          /* Visible on hover or focus of the card, NEVER `display:none`
+             (design-pass screen-3b §S3, frontend.md): it stays in the tab
+             order and keeps its accessible name.
+
+             VERIFIED AT THE KEYBOARD, not assumed: 22 tabs reach this button,
+             `:focus-visible` and the card's `:focus-within` both match, and
+             the opacity settles at 1 — a keyboard user sees what they focus.
+             The `!` on the three variants is belt, not fix: two utilities
+             writing the same property are decided by their order in the
+             GENERATED sheet, a trap this folder has hit four times
+             (IntensityBar, IntentRail, the header's buttons, the drawer's own
+             display), and `opacity-0` sits in the same chain as its three
+             overrides. Marking them removes the question.
+
+             A NOTE FOR THE NEXT MEASUREMENT: reading `getComputedStyle`
+             immediately after the focus returns the INTERPOLATED value of the
+             120 ms transition, which is still ~0. It reads exactly like a
+             focus ring painted on an invisible control, and it is not. Wait
+             for the transition before believing the number. */
           className="absolute bottom-[8px] right-[8px] z-[1] flex h-[24px] w-[24px]
                      items-center justify-center rounded-[50%] border border-line2
-                     bg-scrim p-0 text-[12px] text-txt hover:bg-panel2"
+                     bg-scrim p-0 text-[12px] text-txt opacity-0 [transition:opacity_.12s]
+                     group-hover:opacity-100! group-focus-within:opacity-100!
+                     focus-visible:opacity-100! hover:bg-panel2"
           aria-label={`éditer la scène ${scene.id} dans les Ateliers`}
           data-hint-text="Ouvrir cette scène dans les Ateliers, pré-sélectionnée"
           onClick={(event) => {
@@ -209,15 +249,15 @@ export function NewSceneCard({ onClick }: { onClick: () => void }) {
   return (
     <button
       type="button"
-      className={`${CARD} ${CARD_IDLE} flex min-h-[150px] items-center
-                  justify-center border-dashed text-center`}
+      className={`${CARD} ${CARD_IDLE} flex min-h-[150px] items-center justify-center
+                  border-dashed border-line2 text-center`}
       data-scene-card
       data-new
       onClick={onClick}
     >
       <div className="px-[11px] py-[9px]">
-        <b className="block truncate text-[20px] font-semibold">+</b>
-        <span className="text-[11.5px] text-dim">créer une scène</span>
+        <b className="block truncate text-[20px] font-semibold text-dim">+</b>
+        <span className="text-[11.5px] text-dim">Créer une scène</span>
       </div>
     </button>
   )
