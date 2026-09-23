@@ -46,19 +46,46 @@ prend la médiane de l'écart-type local 7×7, le même estimateur que
 | tout | 41 | 4,02 | 49 | 4,90 | **0,36** |
 | *`texture_visage`, tout* | 41 | 4,78 | 48 | 4,60 | *0,54* |
 
-Deux faits, et une réserve qui pèse plus lourd que les deux :
+**Cette sonde est nulle et non avenue, et c'est le fait à retenir.** Les
+masques ont été superposés aux images et regardés le 23/09 : la boîte couleur
+peau attrape les **cheveux auburn** et un **pull rouge** aussi bien que la
+peau. Elle mesurait la chevelure, pas le corps. Le 0,36 ne dit rien, dans un
+sens comme dans l'autre. `texture_visage`, lui, reste au hasard (0,54), comme
+le 20/09.
 
-- **Le signal existe, mais à l'envers de l'hypothèse.** On attendait une peau
-  « trop lisse » ; ce sont les images « ia » qui portent *plus* de variance
-  locale. Sur l'ensemble (41 contre 49, erreur-type ≈ 0,06), 0,36 sort du
-  hasard d'environ deux erreurs-types. Côté NSFW seul (7 contre 20, erreur-type
-  ≈ 0,13), rien n'est distinguable.
-- `texture_visage` reste au hasard (0,54), comme le 20/09.
-- **Réserve : le masque n'a pas été regardé.** La boîte couleur peau attrape
-  aussi un vêtement beige, du bois ou un mur chaud. Les valeurs les plus hautes
-  (8 à 9,6) sont toutes sur `cafe_terrasse`, une scène à fond texturé. La
-  sonde mesure peut-être la scène plus que la peau. Avant d'en tirer quoi que
-  ce soit, il faut superposer les masques aux images et les regarder.
+Leçon de méthode, la même que l'audit UX du 21/09 : un chiffre qui n'a pas
+été regardé n'est pas une mesure. Trois heures de tableau auraient survécu à
+une relecture de code ; elles n'ont pas survécu à une image.
+
+### A bis. La même mesure dans une boîte de partie du corps (23/09)
+
+NudeNet (section suivante) ne sert pas qu'à garder l'espace : il **localise
+les parties du corps**, donc il donne à une mesure de texture la boîte que
+`texture_visage` reçoit du détecteur de visage. Même estimateur, même
+resserrement de 18 %, dans la boîte du ventre ou de la poitrine.
+
+| région | espace | n ok | méd. ok | n ia | méd. ia | AUC |
+|---|---|---|---|---|---|---|
+| exposée ou couverte | NSFW | 5 | 2,96 | 19 | 2,27 | 0,81 |
+| exposée ou couverte | SFW | 16 | 3,05 | 17 | 4,03 | 0,30 |
+| **peau exposée seule** | NSFW | 3 | 2,96 | 16 | 2,26 | 0,85 |
+
+Ce que ça apprend, et ce que ça n'apprend pas :
+
+- **Les deux espaces vont en sens contraire**, et la raison est lisible : une
+  boîte « couverte » mesure du tissu. Côté SFW la mesure est donc une texture
+  de vêtement, pas de peau — 65 des 90 images n'ont aucune peau visible à
+  mesurer. **Une mesure de peau du corps est structurellement une mesure de la
+  branche adulte.**
+- Sur cette branche, le sens est enfin celui de l'intuition : les images
+  convaincantes sont **plus** texturées que les « ia » (2,96 contre 2,26).
+  Mais **à 3 contre 16, ce n'est pas un résultat, c'est une piste** :
+  l'erreur-type d'une AUC à ces effectifs vaut ≈ 0,15.
+- **L'étalon ne confirme pas.** L'image de référence du corps (celle que
+  Pierre a choisie pour ça, `KI_b4a7ad85…`) vaut 1,98 — *en dessous* des deux
+  médianes de production. Une photographie réelle y est moins texturée que nos
+  images. Une seule image ne fait pas une bande, et c'est précisément ce qui
+  manque : le corpus de réalisme n'a **qu'un** étalon de corps.
 
 ### B. Détecteurs dédiés
 
@@ -166,8 +193,11 @@ Ce que ça établit :
    d'aujourd'hui elle ne trouverait rien, et c'est le bon résultat : une garde
    se juge sur ses fausses alertes tant qu'aucun incident n'est arrivé.
    Décidé le 23/09 : elle **signale en Revue**, elle ne bloque pas.
-3. **Les classes « covered » n'ont pas été sondées.** Elles distingueraient
-   peut-être la lingerie de l'habillé, donc le cran suggestif du cran 0.
+3. **Les classes « covered » situent le vêtement**, donc le cran suggestif
+   face au cran 0 — et elles donnent surtout la boîte de corps de la section
+   A bis. NudeNet est autant un **localisateur de parties du corps** qu'un
+   détecteur de nudité, et c'est à ce titre qu'il débloque la mesure de
+   texture.
 
 ## Ordre de travail proposé
 
@@ -181,9 +211,11 @@ Ce que ça établit :
 2. **Vocabulaire des « ia » sans défaut**, avec le VLM local qui propose et
    Pierre qui tranche. Ce sont 11 images côté NSFW, plus les natives à venir.
    C'est le préalable à toute mesure de *qualité* du corps.
-3. **Texture de peau du corps** : regarder d'abord les masques. Si le signal
-   inversé survit à un masque propre (peau seulement, sans fond ni tissu), le
-   remesurer sur les images natives quand il y en aura une vingtaine.
+3. **Texture de peau du corps** : les masques ont été regardés, la v1 est
+   morte, et la v2 (boîte de partie du corps) tient sur 3 images « ok ». Il
+   faut du corpus, pas du code : une vingtaine d'images natives jugées, et la
+   même mesure les tranchera ou pas. Deuxième manque, séparé : le corpus de
+   réalisme n'a qu'un seul étalon de corps, et il va dans l'autre sens.
 4. **HADM** : remis à plus tard. On ne le rouvre que si le vocabulaire fait
    apparaître des défauts de structure (membres, doigts du pied, jonctions),
    ce que l'axe anatomie dit absent aujourd'hui.
@@ -196,7 +228,14 @@ a `ultralytics` et `cv2`). Jointure `image` × `jugement` sur
 `_gris` et `_ecart_type_local` de `qc_realisme`. Le masque est le suivant :
 personne (conf. 0,35) moins visage dilaté 25 px, érodé 9 px, puis
 Cr ∈ ]135, 180[ et Cb ∈ ]85, 135[. Si le masque garde moins de 2 000 pixels,
-l'image est ignorée. AUC : paires (ok, ia), demi-point aux égalités.
+l'image est ignorée. AUC : paires (ok, ia), demi-point aux égalités. Les
+masques ont été relus en surimpression rouge sur l'image — c'est cette planche
+qui a tué la sonde.
+
+Sonde A bis : boîte prise chez NudeNet au-dessus de 0,3, dans l'ordre ventre
+exposé, ventre couvert, poitrine exposée, poitrine couverte ; puis
+`qc_realisme.texture_visage(img, boite)` telle quelle. Les lignes de
+`role = reference` sont exclues de la production.
 
 Sonde NudeNet : `NudeDetector()` par défaut (320n), score retenu = maximum des
 classes « exposed » par image. L'attente est « nu » pour l'espace NSFW au cran 3
