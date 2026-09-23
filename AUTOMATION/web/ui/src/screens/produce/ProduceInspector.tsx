@@ -196,7 +196,8 @@ export function ProduceInspector({
           {narrow && (
             <button
               type="button"
-              className="flex-none bg-transparent px-[10px] text-[16px] text-dim hover:text-txt"
+              className="flex-none border-0 bg-transparent px-[10px] text-[16px] text-dim
+                         hover:text-txt"
               aria-label="Fermer l'inspecteur"
               onClick={onClose}
             >

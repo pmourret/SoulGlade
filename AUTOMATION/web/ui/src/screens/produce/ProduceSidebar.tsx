@@ -33,11 +33,19 @@ export type Intention = {
 const TITLE =
   'mb-[8px] text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim'
 
-/* `bg-transparent`: a bare row <button> with no background class falls back
-   to the browser's own light button face (found live on the header's
-   shutdown buttons, chrome/Header.tsx — the root cause here too). */
+/* `bg-transparent` AND `border-0`, and the second is not optional. A bare
+   <button> with no `background` falls back to the browser's own light button
+   face (found live on the header's shutdown buttons, chrome/Header.tsx), and
+   one with no `border` falls back to its `2px outset` frame. `IntentRail.tsx`
+   carried BOTH halves; this file was written with only the first, and the
+   result was measured at 2560 px (user report 2026-09-23): every row of
+   Intensité, Intention and « à peupler » rendered
+   `2px outset rgb(0,0,0)`. Two costs, not one: the list read as a stack of
+   separate buttons instead of one group, and the ONLY mark of the selected
+   row — its `--panel3` ground — was competing with five identical frames. A
+   row of a radiogroup is a line, not a box. */
 const ROW =
-  'flex h-[30px] w-full items-center gap-[8px] rounded-[6px] bg-transparent' +
+  'flex h-[30px] w-full items-center gap-[8px] rounded-[6px] border-0 bg-transparent' +
   ' px-[9px] text-left text-[13px] [transition:background-color_.12s]' +
   ' focus-visible:outline-2 focus-visible:outline-[var(--focus)] focus-visible:outline-offset-[-2px]'
 /* `!` on the ground: `ROW` already names `bg-transparent`, and two utilities

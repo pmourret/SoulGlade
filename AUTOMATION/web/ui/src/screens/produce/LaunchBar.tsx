@@ -102,8 +102,12 @@ export function LaunchBar({
       </div>
       <button
         type="button"
-        className="flex h-[36px] flex-none items-center gap-[9px] rounded-[7px] bg-pri
-                   px-[16px] text-[13.5px] font-semibold text-on-pri hover:bg-pri-h
+        /* `border-0`: a <button> that declares no border inherits the
+           browser's `2px outset` frame. Same omission measured on the
+           sidebar rows at 2560 px (user report 2026-09-23) — here it drew a
+           UA frame around the studio's primary button. */
+        className="flex h-[36px] flex-none items-center gap-[9px] rounded-[7px] border-0
+                   bg-pri px-[16px] text-[13.5px] font-semibold text-on-pri hover:bg-pri-h
                    disabled:cursor-not-allowed disabled:opacity-40"
         id="btnRun"
         disabled={runDisabled}
