@@ -75,6 +75,15 @@ Confondre les deux premiers ferait taire la garde sur un portrait serré tout
 en laissant croire qu'elle a jugé. Même chose pour la mesure de texture du
 corps : elle n'a rien à mesurer sur 6 de ces 20 images.
 
+**Vérification, et sa limite.** Le lieu a reçu son cadrage (« standing full
+body, three-quarter angle ») et les dix images ont été refaites : exposition
+au-dessus de 0,4 sur **6 sur 10** contre 2 avant, boîte de corps sur **7 sur
+10** contre 4, identité médiane 0,756. Les trois muettes ont été regardées :
+toujours des bustes. **Le prompt infléchit le cadre, il ne le décide pas** —
+même conclusion que `2026-09-09-fond-le-prompt-n-est-pas-le-levier.md` sur le
+fond. Ce qui ne change rien à la garde : c'est une raison de plus pour qu'elle
+dise « non jugeable » plutôt que « rien vu ».
+
 ## Étapes
 
 **1. La mesure.** Un module `AUTOMATION/qc_exposition.py` : il rend le score
