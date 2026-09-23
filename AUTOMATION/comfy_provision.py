@@ -203,6 +203,38 @@ def ensure_custom_nodes(manifest, root, log=_say):
     return changed
 
 
+# ------------------------------------------------------------ paquets Python
+def _package_manquant(entry):
+    """Le paquet est-il absent de l'interpreteur de ComfyUI ?
+
+    Teste par un import dans CET interpreteur, jamais dans celui qui execute ce
+    fichier : un test lance depuis le venv de developpement dirait « absent »
+    d'un paquet parfaitement installe la ou il sert (meme piege que cv2, voir
+    `.claude/rules/frontend.md`).
+    """
+    code = subprocess.run([str(env_config.comfyui_python()), "-c", f"import {entry['import']}"],
+                          capture_output=True).returncode
+    return code != 0
+
+
+def ensure_python_packages(manifest, log=_say):
+    """Paquets Python que le studio pose DANS l'interpreteur de ComfyUI.
+
+    Ni nœud, ni modele : `nudenet` n'a rien a ranger sous `models/` et ne
+    s'installe pas par un `requirements.txt` de nœud. Sans cette section il
+    serait la dependance implicite que l'ADR-0022 interdit -- celle qui ne se
+    decouvre qu'en production, sur la machine de quelqu'un d'autre.
+    """
+    installed = []
+    for entry in manifest.get("python_packages", []):
+        if not _package_manquant(entry):
+            continue
+        log(f"pip install {entry['pip']} (interpreteur ComfyUI)...")
+        _run([str(env_config.comfyui_python()), "-m", "pip", "install", entry["pip"]], log=log)
+        installed.append(entry["pip"])
+    return installed
+
+
 # ---------------------------------------------------------------------- modeles
 def obtention(entry):
     """Comment ce fichier s'obtient, en une ligne destinee a un humain.
@@ -268,11 +300,14 @@ def ensure_all(log=_say, root=None, manifest=None):
     root = root or env_config.comfyui_root()
     ensure_core(manifest, root, log)
     changed_nodes = ensure_custom_nodes(manifest, root, log)
+    packages = ensure_python_packages(manifest, log)
     downloaded_models = ensure_models(manifest, root, log)
-    if changed_nodes or downloaded_models:
+    if changed_nodes or downloaded_models or packages:
         log(f"provisioning : {len(changed_nodes)} nœud(s) mis a jour, "
+            f"{len(packages)} paquet(s) Python pose(s), "
             f"{len(downloaded_models)} modele(s) telecharge(s).")
-    return {"custom_nodes": changed_nodes, "models": downloaded_models}
+    return {"custom_nodes": changed_nodes, "python_packages": packages,
+            "models": downloaded_models}
 
 
 def _main(argv):
@@ -290,7 +325,10 @@ def _main(argv):
                           if not (root / "custom_nodes" / e["id"]).exists()]
         missing_models = [e for e in manifest["models"]
                            if e.get("dest") and not (root / "models" / e["dest"] / e["filename"]).exists()]
+        missing_pkgs = [e["pip"] for e in manifest.get("python_packages", [])
+                        if _package_manquant(e)]
         print(f"custom nodes manquants : {missing_nodes or 'aucun'}")
+        print(f"paquets Python         : {missing_pkgs or 'aucun manquant'}")
         if not missing_models:
             print("modeles manquants      : aucun")
             return 0

@@ -118,6 +118,9 @@
       "note": "Introduit par WORKFLOWS/platform/hands_judge_ui.json pour SaveText|pysssss : Florence2Run n'est pas un OUTPUT_NODE, sa sortie caption n'atteint /history que via un noeud de sortie en aval. Son root_dir=output resout vers $output/**/*.txt sans modifier user/text_file_dirs.json."
     }
   ],
+  "python_packages": [
+    {"import": "nudenet", "pip": "nudenet==3.4.2", "packs": ["platform"], "note": "Detecteur de parties du corps exposees (YOLOv8 ONNX, licence MIT, modele 320n livre avec le paquet, 0,04 s par image sur CPU). Se pose dans l'interpreteur de ComfyUI et non dans ComfyUI : ni nœud, ni fichier a ranger sous models/, d'ou cette section. Mesure du corps d'IT-3e -- sonde du 2026-09-21 dans DOCS/recherche/2026-09-21-mesurer-le-corps-ce-qui-est-possible.md. Installe le 21/09 sans deplacer aucune version en place (onnxruntime 1.27, opencv 4.13, numpy 2.4)."}
+  ],
   "models": [
     {"filename": "flux1-dev-fp8.safetensors", "dest": "checkpoints", "url": "https://huggingface.co/lllyasviel/flux1_dev/resolve/main/flux1-dev-fp8.safetensors", "packs": ["instagram-influenceur"]},
     {"filename": "pulid_flux_v0.9.1.safetensors", "dest": "pulid", "url": "https://huggingface.co/guozinan/PuLID/resolve/main/pulid_flux_v0.9.1.safetensors", "packs": ["instagram-influenceur"]},

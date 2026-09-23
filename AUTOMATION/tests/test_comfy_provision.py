@@ -99,6 +99,26 @@ verifie("non renseignee" in cp.obtention({"filename": "vide.safetensors"}),
         "obtention() le dit plutot que de rendre du vide")
 
 
+# Paquets Python poses dans l'interpreteur de ComfyUI (21/09/2026) : une
+# troisieme sorte de dependance, qui n'est ni un nœud ni un fichier sous
+# models/. Meme exigence que les deux autres -- elle se declare, sinon elle se
+# decouvre en production (ADR-0022).
+paquets = manifest.get("python_packages", [])
+verifie(all(p.get("import") and p.get("pip") for p in paquets),
+        f"chaque paquet Python declare son import et sa ligne pip ({len(paquets)} entree(s))")
+verifie(all("==" in p["pip"] for p in paquets),
+        "chaque paquet Python est epingle a une version, comme un commit de nœud")
+# Le test tourne sous n'importe quel interpreteur ; c'est la fonction qui doit
+# aller interroger celui de ComfyUI, pas celui-ci.
+verifie(cp._package_manquant({"import": "zzz_paquet_qui_n_existe_pas"}),
+        "_package_manquant() voit l'absence")
+verifie(not cp._package_manquant({"import": "json"}),
+        "_package_manquant() voit la presence")
+faux_manifeste = {"python_packages": []}
+verifie(cp.ensure_python_packages(faux_manifeste, log=refuse_appel) == [],
+        "aucun paquet declare -> aucun appel pip")
+
+
 # ------------------------------------------------- 2. ensure_core() : absent
 with tempfile.TemporaryDirectory() as tmp:
     root_vide = Path(tmp)
