@@ -60,6 +60,11 @@
   --color-bg: var(--bg);
   --color-panel: var(--panel);
   --color-panel2: var(--panel2);
+  /* `--panel3` (current/active element) and `--sub` (the module sub-bar's
+     ground) joined the neutral scale with the chrome refonte of 23/09/2026 —
+     the category/module bars need a step above `--panel2` and one below it. */
+  --color-panel3: var(--panel3);
+  --color-sub: var(--sub);
   --color-line: var(--line);
   --color-line2: var(--line2);
   --color-txt: var(--txt);
@@ -70,6 +75,12 @@
   --color-acc: var(--acc);
   --color-acc-d: var(--acc-d);
   --color-on-acc: var(--on-acc);
+
+  /* The NEUTRAL primary button (23/09/2026). It used to paint a flat of
+     `--acc`; `--acc` now marks selection and current location only. */
+  --color-pri: var(--pri);
+  --color-pri-h: var(--pri-h);
+  --color-on-pri: var(--on-pri);
 
   /* verdicts / states. `--none` is tokenised for completeness; no rule used it
      at migration time (the « none » pill paints itself from --line2). */

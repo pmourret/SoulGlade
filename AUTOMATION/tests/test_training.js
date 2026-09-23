@@ -49,9 +49,14 @@ const ECRAN = `${BASE}/training?character=lena`;
   dire(await page.isVisible('#training'), "l'ecran Entrainement est monte");
   dire(await page.evaluate(() => location.pathname) === '/training',
        'le chemin est /training');
-  const allume = await page.$$eval('.tabs .nav-item.on', els => els.map(e => e.dataset.s));
-  dire(allume.length === 1 && allume[0] === 'training',
-       `une seule entree allumee, et c'est training (${allume.join(',') || 'aucune'})`);
+  // Deux grains depuis le 23/09 : la categorie en en-tete, le module en
+  // sous-barre. Entrainement vit dans Atelier.
+  const allume = await page.$$eval('.tabs .cat.on', els => els.map(e => e.dataset.s));
+  dire(allume.length === 1 && allume[0] === 'atelier',
+       `une seule categorie allumee, et c'est atelier (${allume.join(',') || 'aucune'})`);
+  const mod = await page.$$eval('.modbar .mod.on', els => els.map(e => e.dataset.m));
+  dire(mod.length === 1 && mod[0] === 'training',
+       `un seul module allume, et c'est training (${mod.join(',') || 'aucun'})`);
 
   console.log('\n[2] les nombres a l ecran sont ceux que la route a rendus');
   const json = await page.evaluate(async () =>

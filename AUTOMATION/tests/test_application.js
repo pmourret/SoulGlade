@@ -57,8 +57,12 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.goto(BASE + '/app?character=lena', { waitUntil: 'networkidle' });
   dire(await vu('#appli'), "l'ecran est monte");
   dire(await page.evaluate(() => location.pathname) === '/app', 'chemin /app');
-  const allume = await page.$$eval('.tabs .nav-item.on', e => e.map(x => x.dataset.s));
-  dire(allume.join(',') === 'application', `l'entree Application est allumee (${allume})`);
+  // Application est SORTIE des categories le 23/09 : elle est un bouton de la
+  // zone d'etat, pas un lieu ou l'on travaille. Aucune categorie ne s'allume.
+  const allume = await page.$$eval('.tabs .cat.on', e => e.map(x => x.dataset.s));
+  dire(allume.length === 0, `aucune categorie allumee (${allume.join(',') || 'aucune'})`);
+  dire(await page.getAttribute('#btnApplication', 'aria-current') === 'page',
+       "le bouton Application de l'en-tete porte aria-current");
 
   console.log('\n[2] les deux surfaces de sonde montrent LE MEME etat');
   /* `--no-comfy` veut dire « ne le demarre pas », pas « fais comme s'il etait
@@ -232,13 +236,30 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(await page.isDisabled('#btnAppearanceReset'),
        'Reinitialiser est inerte : rien n est encore personnalise');
 
+  /* LA TEINTE SEULE NE PEUT RIEN REPEINDRE, et c'est le contrat, pas un bug :
+     l'intensite par defaut est 0, donc le chroma est nul, donc toutes les
+     teintes rendent le meme gris (deriveTheme.ts, DEFAULT_NEUTRAL_INTENSITY).
+
+     Jusqu'au 23/09 cette assertion passait quand meme, pour une raison qui
+     n'etait pas la roue : les hex de plateforme portaient une petite teinte
+     bleue que la derivation ne savait pas reproduire, donc PASSER en mode
+     personnalise changeait --bg a lui seul. La refonte graphite a rendu les
+     neutres achromatiques, la derivation retombe dessus a l'octet pres, et
+     l'ecart qu'on mesurait a disparu. On bouge donc l'INTENSITE, qui a un
+     effet a toute teinte, puis la teinte. */
   const roueFond = page.getByRole('slider', { name: 'Teinte du fond' });
   await roueFond.focus();
   for (let i = 0; i < 30; i++) await page.keyboard.press('ArrowRight');
   await page.waitForTimeout(150);
+  dire(await cssVar('--bg') === bgAvant,
+       'a intensite 0, tourner la teinte ne repeint rien : le chroma est nul');
+
+  await page.fill('#appearanceIntensity', '0.05');
+  await page.dispatchEvent('#appearanceIntensity', 'change');
+  await page.waitForTimeout(150);
   const bgEnDirect = await cssVar('--bg');
   dire(bgEnDirect !== bgAvant && bgEnDirect !== '',
-       `la roue de fond repeint --bg en direct (${bgAvant} -> ${bgEnDirect}), avant tout Enregistrer`);
+       `monter l'intensite repeint --bg en direct (${bgAvant} -> ${bgEnDirect}), avant tout Enregistrer`);
 
   // 220° (defaut) -> ~140° : a 5° du verdict OK (145°, garde-fou du document)
   const roueAccent = page.getByRole('slider', { name: "Teinte de l'accent" });

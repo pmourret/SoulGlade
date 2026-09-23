@@ -73,6 +73,15 @@ catch { console.log('  IGNORE — playwright absent (voir l en-tete du fichier)'
 const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 const SCENES = BASE + '/bank/scenes?character=lena';
 
+/* Aller a un module depuis n'importe ou (contrat de navigation du 23/09) : les
+   modules d'une categorie fermee ne sont pas dans le DOM, il faut d'abord
+   ouvrir sa categorie. Survole, clique l'item du menu. */
+async function allerA(page, categorie, module) {
+  await page.hover(`.tabs [data-s="${categorie}"]`);
+  await page.waitForSelector(`.cat-wrap:has([data-s="${categorie}"]) .catmenu.on`);
+  await page.click(`.catmenu.on [data-m="${module}"]`);
+}
+
 (async () => {
   const nav = await chromium.launch();
   const page = await nav.newPage({ viewport: { width: 1500, height: 950 } });
@@ -127,8 +136,10 @@ const SCENES = BASE + '/bank/scenes?character=lena';
   dire(!(await vu('#bankPoses')), 'la sous-vue Poses ne l est pas — une route, pas un attribut');
   const onglets = await page.$$eval('#bankView [data-vue]', e => e.map(x => x.dataset.vue));
   dire(onglets.join(',') === 'scenes,poses,tones', 'les trois sous-vues sont offertes');
-  const allume = await page.$$eval('.tabs .nav-item.on', e => e.map(x => x.dataset.s));
-  dire(allume.join(',') === 'bank', "l'entree Ateliers de la navbar est allumee");
+  const allume = await page.$$eval('.tabs .cat.on', e => e.map(x => x.dataset.s));
+  dire(allume.join(',') === 'atelier', "la categorie Atelier est allumee");
+  const mod = await page.$$eval('.modbar .mod.on', e => e.map(x => x.dataset.m));
+  dire(mod.join(',') === 'bank', "et le module Ateliers dans la sous-barre");
 
   console.log('\n[1bis] pas de barre fixe en bas : reglages + enregistrement vivent en haut, a cote du switch (01/09/2026)');
   dire(!(await vu('.launch')), "la banque n'a plus de barre de lancement fixe au bas de l'ecran");
@@ -457,10 +468,11 @@ const SCENES = BASE + '/bank/scenes?character=lena';
   dire(await vu('#btnDirtySave'), 'et il porte l enregistrement');
 
   console.log('\n[9] il survit a la navigation — l ecran demonte, pas la saisie');
-  await page.click('.tabs [data-s="application"]');
+  // Application a quitte les categories : c'est le bouton de la zone d'etat.
+  await page.click('#btnApplication');
   await page.waitForTimeout(400);
   dire(await vu('#dirtyBar'), "le bandeau suit sur l'ecran Application");
-  await page.click('.tabs [data-s="bank"]');
+  await allerA(page, 'atelier', 'bank');
   await page.waitForTimeout(500);
   await page.waitForSelector(CARTE);
   await (await carteDe(idEdite)).click();

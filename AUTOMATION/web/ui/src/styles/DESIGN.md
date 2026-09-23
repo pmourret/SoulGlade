@@ -72,10 +72,19 @@ persisté tant que le bouton n'est pas actionné.
 
 ### Jetonné
 
-- **Palette** — fonds (`--bg`, `--panel`, `--panel2`), lignes (`--line`,
-  `--line2`), textes (`--txt`, `--dim`, `--dim2`), accent (`--acc`, `--acc-d`,
-  `--on-acc` = texte posé sur un aplat clair), verdicts (`--ok`, `--warn`,
-  `--bad`, `--high`, `--none`).
+- **Palette** — fonds (`--bg`, `--sub`, `--panel`, `--panel2`, `--panel3`),
+  lignes (`--line`, `--line2`), textes (`--txt`, `--dim`, `--dim2`), accent
+  (`--acc`, `--acc-d`, `--on-acc` = texte posé sur un aplat clair), verdicts
+  (`--ok`, `--warn`, `--bad`, `--bad-lift`, `--high`, `--none`).
+  *Élargie le 23/09/2026 :* `--sub` (fond de la sous-barre de modules) et
+  `--panel3` (élément courant, fond d'avatar) complètent l'échelle neutre que
+  le chrome à catégories demande ; `--bad-lift` est `--bad` remonté pour le
+  petit texte des sondes.
+- **Bouton principal** *(23/09/2026)* — `--pri` / `--pri-h` (survol) /
+  `--on-pri`. `.btn.primary` peignait un aplat de `--acc` : ça posait la
+  couleur la plus forte de l'interface sur un **contrôle** alors que la seule
+  couleur de l'écran doit être l'image produite. `--acc` ne marque plus que la
+  sélection, l'emplacement courant et l'avatar.
 - **Familles de bandeau** — avertissement (`--warn-bg` / `--warn-line` /
   `--warn-txt`), danger (`--danger-bg` / `--danger-line` / `--danger-txt`),
   pastille « mesuré » (`--mes-bg` / `--mes-line`).
@@ -126,53 +135,172 @@ persisté tant que le bouton n'est pas actionné.
 
 Les valeurs de `tokens.css` sont vérifiées au ratio WCAG **contre les fonds où
 elles servent réellement** — `--warn` porte du texte de 9,5 px sur `--warn-bg`,
-`--dim` porte `#panneBar span` sur `--danger-bg`, etc. Tout texte est à 4,5:1 ou
-mieux. Une nouvelle palette d'univers doit refaire ce contrôle : un jeu de
-couleurs cohérent à l'œil peut très bien passer sous le seuil.
+`--dim` porte `#panneBar span` sur `--danger-bg`, etc. Une nouvelle palette
+d'univers doit refaire ce contrôle : un jeu de couleurs cohérent à l'œil peut
+très bien passer sous le seuil.
+
+*Rejoué le 23/09/2026* sur la palette graphite, contre les cinq fonds
+(`--bg` / `--sub` / `--panel` / `--panel2` / `--panel3`) :
+
+| | `--bg` | `--panel` | `--panel2` | `--panel3` | `--sub` |
+|---|---|---|---|---|---|
+| `--txt` | 15,04 | 13,91 | 12,51 | 11,71 | 14,49 |
+| `--dim` | 7,57 | 7,00 | 6,30 | 5,90 | 7,29 |
+| `--dim2` | 5,48 | 5,07 | 4,56 | **4,27** | 5,28 |
+
+Tout texte est à 4,5:1 ou mieux, **à une exception nommée** : `--dim2` sur
+`--panel3` tombe à 4,27. `--panel3` ne porte pas de texte secondaire — c'est le
+fond de l'avatar (initiale en `--acc`) et de l'élément courant d'un menu. Ne
+pas y poser de `--dim2` sans remonter le jeton.
+
+Non textuel, seuil 3:1 : `--acc` va de 6,28 à 8,06, `--focus` de 8,57 à 11,00,
+et le pouce de barre de défilement (`--sb`, repassé au gris neutre) mesure
+3,83 / 3,54 / 3,19 contre `--bg` / `--panel` / `--panel2` — les ratios d'avant
+(3,93 / 3,60 / 3,16) à la teinte près. `--bad-lift` (7,61 sur `--panel`) est
+`--bad` remonté pour le petit texte des sondes, où le rouge de verdict lisait
+plus terne que le `--warn` voisin et inversait l'alarme.
 
 ### Header
 
-Depuis le 29/08/2026 le header ne porte plus la navigation : les cinq
-destinations sont passées dans la **navbar latérale** (ci-dessous). Il ne garde
-que ce qui répond à « où suis-je » — **`Soulglade · <personnage>`** et la
-sonde ComfyUI.
+**48 px depuis le 23/09/2026** (était 56). Le header a **repris la
+navigation** : les destinations que le 29/08 avait envoyées dans une navbar
+latérale reviennent sous forme de **trois catégories** (ci-dessous), et ce qui
+part en échange est tout ce qui identifiait le personnage une deuxième fois.
+De gauche à droite : la marque + un filet, la carte d'identité, la pastille
+« ADULTE ARMÉ » si le personnage l'est, les catégories centrées, la zone
+d'état.
+
+`brand-id` et les deux `brand-tag` (type, monde) **ne sont plus dans le
+header** : ils forment la première ligne du menu d'identité (`.idmenu-head`),
+où on les lit quand on se demande sur qui on travaille, au lieu de les porter
+en permanence dans chaque capture d'écran.
 
 Le header n'hérite pas de `--font` : ses zones ont des tailles propres
-(16 / 13 px). Quand la largeur manque, l'identité se replie **du plus contextuel
-au plus identifiant** (`screens.css`) : le monde sous 1100 px, le type sous
-1000 px, puis sous 820 px l'identifiant technique **et le nom de
-l'application** — savoir chez QUI on est prime alors sur savoir dans quel outil,
-la navbar restant à l'écran pour le dire. Le **nom du personnage** ne disparaît
-jamais.
+(13 / 13,5 / 12,5 px). Sous 1100 px il se replie **du plus contextuel au plus
+identifiant** : la marque disparaît, puis la deuxième ligne de la carte
+d'identité (« type · monde »), puis deux sondes sur trois — VRAM reste, c'est
+celle dont une génération manque. Le **nom du personnage** ne disparaît jamais,
+et les catégories et modules **gardent leurs libellés** : pas de hamburger.
 
-## La navbar latérale
+La zone d'état porte, dans cet ordre : le lot en cours et son « Arrêter »
+(`#btnHeaderStopBatch`), la sonde ComfyUI (`#dot` + `#stTxt`), les trois sondes
+machine, le bouton Application, et **un** bouton ⏻ qui ouvre un menu de deux
+items (`#btnHeaderComfyStop`, `#btnHeaderAppStop`). Ces deux-là étaient deux
+boutons icône côte à côte : deux glyphes d'alimentation identiques que seul
+l'`aria-label` distinguait.
 
-`.sidenav` (208 px, dans `.shell`, avant le rail) porte les **cinq
-destinations**. `.tabs` reste la classe du conteneur : `.tabs button[data-s=…]`
-est le **contrat** de navigation (`nav.js`, `review.js`, quatre fumigations) —
-seuls le libellé et l'emplacement ont changé. Le bouton de repli vit **hors** de
-`.tabs`, qui contient exactement cinq `data-s`.
+## Catégories et sous-barre de modules
 
-*(`.sidenav` et pas `.nav` : `.nav` était déjà pris par les flèches
-précédent/suivant de la Revue, dans `screens.css`, qui charge après.)*
+*Remplace « La navbar latérale » le 23/09/2026 (`DOCS/design-pass/
+screen-0-chrome.md`, option 2a).* La navbar de 208 px listait huit
+destinations à plat : elle donnait le même poids à « produire une image » et à
+« éditer un monde », et dépensait un cinquième d'un écran de 1024 px à dire où
+l'on **pourrait** aller plutôt qu'à montrer ce qu'on fait. Les deux barres qui
+la remplacent tiennent dans du chrome qui existait déjà, pour **0 px** de
+largeur.
 
-| État | Navbar |
+| Barre | Où | Contenu |
+|---|---|---|
+| `.tabs` (`CategoryBar.tsx`) | dans le header, centrée | les **trois catégories** |
+| `.modbar` (`ModuleBar.tsx`) | sous le header, 34 px | les **modules de la catégorie ouverte** |
+
+Trois catégories, dans cet ordre : **Production** (Produire, Revue, Galerie),
+**Atelier** (Ateliers, Entraînement), **Référentiel** (Fiche, Mondes).
+**Application en est sortie** : c'est un réglage de chrome, pas un lieu où l'on
+travaille, et la lister à côté de « Produire » lui donnait le même poids. Elle
+est un bouton icône de la zone d'état ; ses routes `/app` et `/app/journal`
+existent toujours et l'allument par `aria-current`, aucune catégorie ne
+s'éclairant alors.
+
+### Le contrat de navigation, à deux grains
+
+`.tabs` **garde son nom** — c'est le contrat — mais change de grain, et
+`data-s` avec lui :
+
+    data-s  sur une CATÉGORIE  -> `production` | `atelier` | `referentiel`
+    data-m  sur un MODULE      -> la ScreenKey (sept valeurs)
+
+Les sept modules **ne sont pas dans le DOM en même temps** : seuls ceux de la
+catégorie ouverte le sont, plus ceux du menu déroulant ouvert. Une fumigation
+qui veut les sept ouvre les trois menus (voir `test_journal.js` [2]).
+
+La table `DESTINATIONS` d'`app/routes.ts` reste la seule source : chaque entrée
+porte sa `category`, `activeCategory(pathname)` **dérive** la catégorie ouverte
+de `isDestinationActive`, et rien n'est stocké dans un state parallèle — deux
+sources de « où suis-je » divergent dès la première navigation qui ne passe pas
+par la barre (lien profond, bouton retour, saut depuis l'inspecteur).
+
+### Le pointeur et le clavier ne font pas la même chose
+
+C'est délibéré, et c'est ce qui permet au bouton de catégorie d'être à la fois
+un menu et une destination :
+
+| Geste | Effet |
 |---|---|
-| personnage chargé | **208 px, libellés visibles** |
-| `body.nav-mince` (préférence retenue) | 58 px, icônes seules |
-| `body.focus` (mode de travail) | 58 px, icônes seules, header masqué |
-| sous 1100 px | 58 px — imposé, pas une préférence |
-| sas (`body.no-character`) | **absente** : entrer dans le studio, c'est choisir un personnage |
-| éditeur photo ouvert (`body.editing`) | **présente**, mais sous le voile de la modale — l'éditeur porte sa propre sortie depuis le 30/08/2026 |
+| survol d'une catégorie inactive | ouvre son menu (220 px) |
+| clic | ouvre son **premier module** |
+| Entrée / Espace / ↓ | ouvre le menu et y pose le focus |
+| Échap | ferme, focus rendu au déclencheur |
 
-En mode icônes les libellés sont retirés **visuellement** (`clip-path`), jamais
-par `display:none` : ils restent le nom accessible du bouton. `studio.js` y pose
-alors une infobulle portant ce libellé — c'est le seul moment où une bulle sur
-une destination apprend quelque chose, et donc la seule exception à la liste
-fermée des infobulles.
+Le gestionnaire clavier appelle `preventDefault()` : c'est ce qui empêche le
+navigateur de synthétiser le clic qui, sinon, naviguerait. Une catégorie
+**active** n'ouvre pas de menu au survol — ses modules sont déjà dans la
+sous-barre juste en dessous.
 
-Sous 1100 px : **pas de hamburger, aucune destination repliée**, les cinq
-restent atteignables en icônes.
+### Ce que chaque barre marque, et pourquoi pas la même chose
+
+- catégorie active : `--txt`, 600, `inset 0 -2px 0 var(--acc)` ;
+- module actif : `--txt`, 600, `inset 0 -2px 0 var(--txt)`.
+
+L'accent marque déjà la catégorie ; le reprendre une ligne plus bas dessinerait
+**un seul signal deux fois**, et « où suis-je » se lirait comme deux réponses
+en concurrence. Dans les deux cas c'est une **forme et une position**, pas
+seulement une teinte (le statut n'est jamais porté par la couleur seule).
+
+### Le compteur A_REVOIR
+
+`#nTri` est un **id**, donc exactement un nœud le porte. Il vit sur le module
+Revue tant que Production est ouverte, et **monte sur la catégorie Production**
+sinon : un compteur dit qu'un travail **attend**, ce dont on a le plus besoin
+justement quand on regarde ailleurs. À zéro il n'est pas rendu.
+
+### États
+
+| État | Catégories | Sous-barre |
+|---|---|---|
+| personnage chargé | visibles | visible |
+| sas (`.no-character`) | **absentes** | **absente** |
+| `body.focus` | header masqué, donc absentes | **reste**, et prend le mini-état (`#dot`, `3/8`) et la sortie |
+| sous 1100 px | visibles, libellés compris | visible, libellés compris |
+| éditeur photo (`body.editing`) | présentes, sous le voile de la modale | idem |
+
+**Le mode focus est la raison pour laquelle `#btnFocus` vit dans la
+sous-barre** et non dans le header ni dans le menu d'identité : le header
+disparaît en focus, donc un bouton posé là serait atteignable pour **entrer**
+dans le mode et absent pour en **sortir**.
+
+### Ce qui est parti avec la navbar
+
+Le repli. `#btnNavPli`, `#pliLab`, la clé `studio.nav-mince`, la classe
+`.icons-only` et le `navCollapsed` / `toggleNav` de `ChromeContext` n'ont plus
+de sujet : une barre qui ne coûte pas de largeur n'a rien à replier. Les
+sections [8] et [9] de `test_journal.js` les testaient ; il en reste
+l'assertion de repli **SPA**, qui n'a jamais porté sur la navbar. Le repli du
+**rail** (`studio.rail-mince`, `#btnRailPli`) est un autre geste et n'a pas
+bougé.
+
+`--nav` est **conservé, à `0px` partout**. `.launch` est `position:fixed` et
+s'écarte de `calc(var(--nav) + var(--rail))` : le jeton reste la couture, à
+zéro, pour que la barre de lancement garde une règle au lieu d'en gagner une
+seconde.
+
+### Le filet de progression
+
+2 px sous la sous-barre, pleine largeur, `index/total` en `--txt` sur
+`--panel`, **visible seulement pendant un lot** : une gouttière vide permanente
+serait du chrome qui ne veut rien dire la plupart du temps. Sa transition de
+0,5 s est neutralisée par le bloc `prefers-reduced-motion` de `base.css`, qui
+couvre déjà toutes les transitions du studio.
 
 ## Deux modèles de largeur
 
@@ -199,10 +327,12 @@ servie, au-delà on afficherait un fichier remonté au-dessus de sa résolution.
 
 `.rail` (200 px, hors de `<main>`, dans `.shell`) porte les **outils du pack**
 — lus dans `PACKS/<pack>/tools.json` via `/api/universe/tools` — et les
-raccourcis d'atelier. Les **cinq destinations de la navbar restent le chrome** :
-aucune n'est recopiée dans le rail. Les deux colonnes se lisent côte à côte et
-ne se confondent pas — la navbar dit **où aller** dans l'application, le rail
-dit **quoi faire** sur l'écran courant.
+raccourcis d'atelier. Les **modules restent le chrome** : aucun n'est recopié
+dans le rail. Les deux surfaces se lisent sans se confondre — les catégories et
+leur sous-barre disent **où aller** dans l'application, le rail dit **quoi
+faire** sur l'écran courant. *(Écrit « les cinq destinations de la navbar »
+jusqu'au 23/09/2026, quand la navbar latérale a cédé la place aux catégories ;
+la distinction, elle, n'a pas bougé.)*
 
 | | Dans le rail | Jamais dans le rail |
 |---|---|---|
@@ -328,15 +458,20 @@ deux colonnes) > `.cr-main` / `.cr-side` (collante) ; dans la colonne :
 (`.edWrap`), `#lightbox`.
 **Bandeaux d'état** (haut d'écran, `flex:none`) — `#panneBar` (panne de
 chargement), `#dirtyBar` (modifications non enregistrées).
-**Chrome** — `.idwrap` / `.idmenu` (zone identité de l'en-tête : personnage
-chargé + menu changer de perso / registre / nouveau), `.brand-av` (pastille
-d'initiale, 32 px), `.brand-app` (nom de l'application), `.status` +
-`.status-lab` (zone santé ComfyUI), `.intbar` (curseur d'intensité).
-`body.no-character` réduit le chrome au sas.
-**Navbar** *(29/08/2026)* — `.sidenav` > `.tabs` (les cinq destinations,
-en colonne) / `.nav-ic` (icône SVG) / `.nav-lab` (libellé) / `.nav-foot` >
-`.nav-chrome` (`#btnFocus`, `#btnNavPli`). États : `body.nav-mince`,
-`body.focus`.
+**Chrome** *(refondu le 23/09/2026)* — `.brand` > `.brand-app` + `.brand-rule` ;
+`.idwrap` > `#btnId` (le bouton EST toute la carte) > `.idcard` >
+`.brand-av` (pastille d'initiale, 26 px, bordée d'accent) + `.idcard-txt`
+(nom + « type · monde ») ; `.idmenu` > `.idmenu-head` (`.brand-id` + deux
+`.brand-tag`) + changer de perso / fiche / nouveau ; `.adult-pill` ;
+`.status` > `.run-lab` / `.run-n` / `.run-eta` / `.hd-btn` / `.dot` + `#stTxt` /
+`.sondes-hd` > `.sonde-hd` > `.sonde-hd-lab` / `.hd-ic` (Application, ⏻) >
+`.pwrwrap` > `.pwrmenu` ; `.intbar` (curseur d'intensité).
+`.no-character` réduit le chrome au sas.
+**Catégories et modules** *(23/09/2026)* — `.tabs` > `.cat-wrap` > `.cat`
+(`data-s`, `.on`, `.cat-chev`, `.n` = `#nTri`) + `.catmenu` > `.catmenu-lab` +
+liens `data-m` ; `.modbar` > `.mods` > `.mod` (`data-m`, `.on`, `.mod-ic`,
+`.n`) + `.modbar-end` > `.mini` + `.modbar-btn` (`#btnFocus`) ; `.prog` (filet
+de progression). État : `.focus`.
 **Rail d'outils** *(29/08/2026)* — `.shell` (rail + `<main>` côte à côte) >
 `.rail` > `.rail-grp` / `.rail-lab` / `.rail-it` (états `.on` / `:disabled`) /
 `.rail-foot` (⚙, collé en bas) / `.rail-msg` (+ `.rail-ko` en panne).

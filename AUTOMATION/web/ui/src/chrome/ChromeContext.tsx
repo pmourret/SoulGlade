@@ -1,25 +1,25 @@
-/* Chrome state of the studio: collapsed navbar, collapsed tool rail, focus mode.
+/* Chrome state of the studio: collapsed tool rail, focus mode.
 
-   Ported from `static/studio.js`, including the distinction that module exists
-   for — two INDEPENDENT settings:
+   THE NAVBAR HALF IS GONE (23/09/2026, design-pass screen-0-chrome §S1). This
+   module used to hold a second, symmetric pair — `navCollapsed` / `toggleNav`,
+   the `studio.nav-mince` key, and an `iconsOnly` derived from « collapsed by
+   preference, by focus, or by width ». The side navbar it described no longer
+   exists: the categories live in the header and their modules in a 34 px
+   sub-bar, and a bar that costs no width has nothing to collapse. The RAIL's
+   collapse stays, because the rail stays.
 
-     - « réduire » is a durable preference. One can want icons permanently,
-       without being in the middle of a work session.
-     - « focus » is a work mode. It hides the header and forces icons for as
-       long as it lasts, WITHOUT overwriting the preference — leaving it gives
-       the navbar back exactly as it was.
+   « focus » remains a work MODE, not a preference: it hides the header for as
+   long as it lasts and is deliberately NOT persisted — finding the studio next
+   morning with its header gone, without remembering asking for it, reads as a
+   breakdown, not a setting.
 
-   Mixing them meant entering then leaving focus unfolded a navbar that had been
-   deliberately collapsed.
-
-   PERSISTENCE. The same two localStorage keys as the legacy frontend, same
-   values ('1'/'0'), so a preference set before this migration survives it. Focus
-   is deliberately NOT persisted: finding the studio next morning with its header
-   gone, without remembering asking for it, reads as a breakdown, not a setting.
+   PERSISTENCE. `studio.rail-mince` keeps the legacy key and values ('1'/'0'),
+   so a preference set before the React migration still survives it.
 
    Reads and writes are guarded: localStorage throws for real in a private
    window, with third-party cookies blocked, or during a thumbnail capture. A
-   lost comfort setting must give a NORMAL chrome, never a studio stuck in focus. */
+   lost comfort setting must give a NORMAL chrome, never a studio stuck in
+   focus. */
 import {
   createContext,
   useCallback,
@@ -30,7 +30,6 @@ import {
   type ReactNode,
 } from 'react'
 
-const NAV_KEY = 'studio.nav-mince'
 const RAIL_KEY = 'studio.rail-mince'
 
 function readFlag(key: string): boolean {
@@ -66,24 +65,23 @@ type ChromeContextValue = {
      (useOverlayPanel), but a plain toggle could still reopen it if two
      events overlapped. Twin of closeIdentityMenu, same file. */
   closeGear: () => void
-  navCollapsed: boolean
   railCollapsed: boolean
   focus: boolean
-  /** True when the navbar shows icons only, whatever the reason (width included). */
-  iconsOnly: boolean
-  toggleNav: () => void
+  /** True under the narrow bound, where the sub-bar and the identity card
+      shrink. Read from the SAME 1100 px value as the stylesheet. */
+  narrow: boolean
   toggleRail: () => void
   toggleFocus: () => void
 }
 
 const Ctx = createContext<ChromeContextValue | null>(null)
 
-/* Below this width the layout imposes icons on its own. `matchMedia` reads the
-   SAME bound as the stylesheet instead of duplicating it in a comparison. */
+/* Below this width the chrome sheds what is contextual — the brand, the probe
+   labels, the identity card's second line. `matchMedia` reads the SAME bound as
+   the stylesheet instead of duplicating it in a comparison. */
 const NARROW = '(max-width:1100px)'
 
 export function ChromeProvider({ children }: { children: ReactNode }) {
-  const [navCollapsed, setNavCollapsed] = useState(() => readFlag(NAV_KEY))
   const [railCollapsed, setRailCollapsed] = useState(() => readFlag(RAIL_KEY))
   const [focus, setFocus] = useState(false)
   const [narrow, setNarrow] = useState(() => window.matchMedia(NARROW).matches)
@@ -101,13 +99,6 @@ export function ChromeProvider({ children }: { children: ReactNode }) {
     const onChange = () => setNarrow(query.matches)
     query.addEventListener('change', onChange)
     return () => query.removeEventListener('change', onChange)
-  }, [])
-
-  const toggleNav = useCallback(() => {
-    setNavCollapsed((current) => {
-      writeFlag(NAV_KEY, !current)
-      return !current
-    })
   }, [])
 
   const toggleRail = useCallback(() => {
@@ -151,11 +142,9 @@ export function ChromeProvider({ children }: { children: ReactNode }) {
       gearOpen,
       toggleGear,
       closeGear,
-      navCollapsed,
       railCollapsed,
       focus,
-      iconsOnly: navCollapsed || focus || narrow,
-      toggleNav,
+      narrow,
       toggleRail,
       toggleFocus,
     }),
@@ -166,11 +155,9 @@ export function ChromeProvider({ children }: { children: ReactNode }) {
       gearOpen,
       toggleGear,
       closeGear,
-      navCollapsed,
       railCollapsed,
       focus,
       narrow,
-      toggleNav,
       toggleRail,
       toggleFocus,
     ],

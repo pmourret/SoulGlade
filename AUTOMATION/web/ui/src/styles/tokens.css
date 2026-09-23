@@ -1,103 +1,141 @@
-/* tokens.css — la SEULE couche d'identite visuelle (J3 etape 3).
+/* tokens.css — la SEULE couche d'identite visuelle.
    Un pack redefinit sa forme ; base.css / chrome.css / screens.css n'en
    dependent que par var(), jamais par une valeur en dur qui encoderait un
    choix de style. Voir DESIGN.md pour le contrat : ce qui est jetonne, ce
    qui reste brut, et l'inventaire des composants.
 
+   Refonte UX/UI etape 1, 23/09/2026 (DOCS/design-pass/screen-0-chrome.md).
+   La palette « Chambre noire » — froide, bleutee, base 15 px — laisse la
+   place a un GRAPHITE QUASI ACHROMATIQUE en base 14 px : un poste de
+   travail facon Lightroom ou Resolve, ou la seule couleur de l'ecran est
+   l'image produite. Ce qui change, et pourquoi :
+
+     - les fonds et les lignes perdent leur teinte bleue. Une image jugee
+       sur un fond colore est jugee contre cette couleur ;
+     - `--pri` / `--on-pri` arrivent : le bouton principal devient NEUTRE.
+       Il peignait un aplat d'accent, ce qui mettait la couleur la plus
+       forte de l'interface sur un controle, pas sur le travail ;
+     - `--acc` ne peint plus aucun aplat de bouton. Il ne marque plus que
+       la selection, l'emplacement courant et l'avatar ;
+     - `--panel3` (element courant) et `--sub` (fond de la sous-barre de
+       modules) completent l'echelle neutre, que le chrome a catégories
+       demande.
+
    Phase 0b (03/09/2026, DOCS/design-pass/phase-0b-theme-utilisateur.md) a
    DETACHE la couleur du pack : un pack ne fixe plus que `--r` (rayon des
    cartes), bascule a l'EXECUTION via l'attribut `data-pack` pose sur <html>
-   par `chrome/usePackTheme.ts`. Neutre (fond/ligne/texte) et accent restent
-   les valeurs de PLATEFORME ci-dessous — inchangees par ce chantier — pour
-   tout personnage qui n'a rien personnalise. Un personnage AVEC une
-   `appearance` (`character.json`) les fait recalculer en OKLCH et les pose
-   en inline sur <html>, `chrome/useCharacterTheme.ts` : ce chemin ne
-   s'active QUE si au moins un champ est renseigne (jamais au repos) --
-   sinon la valeur "plateforme, intensite 0" recalculee (chroma pur zero)
-   ne retomberait pas exactement sur les hex ci-dessous, qui portent une
-   toute petite teinte des l'origine (methode Phase 0). Pas de difference
-   visible tant que rien n'est touche, PARCE QUE rien n'est touche.
-   L'ancienne Phase 0 (`DOCS/design-pass/.old/phase-0-tokens/`) faisait
-   varier neutre+accent+focus+barres par pack ; ce mecanisme est remplace,
-   pas superpose — un bloc `[data-pack]` ne doit plus jamais redeclarer de
-   couleur. Verdicts, bandeaux, profondeur, typographie, --maxw restent
-   IDENTIQUES pour tout le monde, pack et personnage confondus — signal de
-   securite, pas une ambiance.
+   par `chrome/usePackTheme.ts`. Neutre et accent restent les valeurs de
+   PLATEFORME ci-dessous pour tout personnage qui n'a rien personnalise. Un
+   personnage AVEC une `appearance` (`character.json`) les fait recalculer
+   en OKLCH et poser en inline sur <html>, `chrome/useCharacterTheme.ts`.
 
-   Contrastes verifies au ratio WCAG contre les fonds reellement utilises
-   (--bg pour le corps, --panel pour les cartes, les fonds de bandeau pour
-   leur propre texte) : tout texte est a 4.5:1 ou mieux a la valeur de
-   plateforme. Un personnage qui personnalise revalide `--on-acc`/`--focus`
-   a la volee (`chrome/theme/deriveTheme.ts`), jamais figes ici. */
+   CE QUI A CHANGE DANS CE CHEMIN. Les hex neutres ci-dessous sont
+   desormais ACHROMATIQUES au sens strict (r = v = b), donc exactement ce
+   que `deriveTheme.ts` calcule a chroma 0 : la valeur « au repos » retombe
+   sur le graphite au lieu de porter la petite teinte residuelle de la
+   methode Phase 0. Le garde-fou « ne jamais activer ce chemin a vide »
+   reste en place dans `useCharacterTheme.ts` — il ne compense plus un
+   ecart, il evite un travail inutile.
+
+   Verdicts, bandeaux, profondeur, typographie, --maxw restent IDENTIQUES
+   pour tout le monde, pack et personnage confondus — signal de securite,
+   pas une ambiance.
+
+   CONTRASTES, revalides le 23/09/2026 contre les fonds reellement utilises
+   (--bg, --panel, --panel2, --panel3, --sub) :
+     --txt   15.04 / 13.91 / 12.51 / 11.71 / 14.49
+     --dim    7.57 /  7.00 /  6.30 /  5.90 /  7.29
+     --dim2   5.48 /  5.07 /  4.56 /  4.27 /  5.28
+   Tout texte est a 4.5:1 ou mieux, A UNE EXCEPTION NOMMEE : --dim2 sur
+   --panel3 tombe a 4.27. --panel3 ne porte pas de texte secondaire — c'est
+   le fond de l'avatar (initiale en --acc) et de l'element courant. Ne pas
+   y poser de --dim2 sans remonter ce jeton. */
 :root{
-  /* --- palette : fonds, lignes, textes -- valeur de PLATEFORME, seule
-     valeur vue par un personnage sans `appearance` (Phase 0b) --- */
-  --bg:#0b1015; --panel:#14191e; --panel2:#20252a;
-  --line:#2a3138; --line2:#474e55;
-  --txt:#dfe5ec; --dim:#9299a1; --dim2:#889099;
-  /* accent + texte pose SUR un aplat d'accent (ou de warn/ok clair) --
-     IDEM : valeur de plateforme */
+  /* --- palette : fonds, lignes, textes. Achromatiques (r = v = b), ce qui
+     est ce que la derivation OKLCH rend a chroma 0. --- */
+  --bg:#141414;        /* plan de travail, derriere les images */
+  --panel:#1c1c1c;     /* chrome, panneaux */
+  --panel2:#252525;    /* survol, controle leve */
+  --panel3:#2a2a2a;    /* element courant / actif */
+  --sub:#181818;       /* fond de la sous-barre de modules */
+  --line:#2b2b2b; --line2:#3a3a3a;
+  --txt:#e8e8e8; --dim:#a6a6a6; --dim2:#8c8c8c;
+
+  /* Bouton principal, NEUTRE : il ne prend plus l'accent. Un aplat d'accent
+     sur un controle mettait la couleur la plus forte de l'ecran sur le
+     bouton plutot que sur l'image. Un bouton principal deja clair ne peut
+     pas s'eclairer en s'assombrissant : le survol monte au blanc pur
+     plutot que de descendre comme le faisait --acc-d.
+     --on-pri sur --pri = 15.04, sur --pri-h = 18.42. */
+  --pri:#e8e8e8; --pri-h:#ffffff; --on-pri:#141414;
+
+  /* Accent : la seule teinte du chrome, et la seule chose qu'un personnage
+     personnalise. Il marque la SELECTION, l'emplacement courant et
+     l'avatar ; jamais un aplat de bouton. Verifie >=3:1 (indicateur non
+     textuel) contre les cinq fonds : 8.06 / 7.46 / 6.71 / 6.28 / 7.77. */
   --acc:#90b0c4; --acc-d:#607f91; --on-acc:#050a0d;
 
-  /* --- verdicts / bandeaux / mesure : IDENTIQUES dans les 3 habillages.
-     Un verdict QC ou une erreur doit se lire pareil quel que soit le pack
-     actif -- c'est un signal de securite, pas une ambiance (decision
-     transverse 1, phase-0-tokens/README.md). Jamais redeclares dans un
-     bloc [data-pack]. */
-  --ok:#639564; --warn:#b5943f; --bad:#cc6660; --high:#42a878; --none:var(--dim2);
-  --warn-bg:#1d1503; --warn-line:#42330a; --warn-txt:#e5d3a8;
-  --danger-bg:#270d0b; --danger-line:#642724; --danger-txt:#f9bdb7;
+  /* --- verdicts / bandeaux / mesure : IDENTIQUES pour tous. Un verdict QC
+     ou une erreur doit se lire pareil quel que soit le pack actif : c'est
+     un signal de securite, pas une ambiance. Jamais redeclares dans un
+     bloc [data-pack]. Retintes avec la palette graphite — ils etaient
+     accordes a un fond bleu et tiraient au vert-de-gris sur du neutre.
+     Contre --panel : ok 6.12, warn 7.10, bad 5.04. */
+  --ok:#6fa877; --warn:#c9a24a; --bad:#d0706a; --high:#42a878; --none:var(--dim2);
+  /* --bad, lifted. A probe reading at its ceiling is SMALL TEXT on --panel,
+     where --bad lands at 5.04 — legible, but it reads as dull rather than as
+     an alarm next to a --warn value that is brighter than it. Same hue, same
+     meaning, raised for small type only. Ratio 7.61 contre --panel. */
+  --bad-lift:#e59a94;
+  --warn-bg:#2a2213; --warn-line:#5a4722; --warn-txt:#ecd39e;   /* txt/bg = 10.76 */
+  --danger-bg:#2a1716; --danger-line:#5a2a27; --danger-txt:#f2b8b3; /* txt/bg = 9.96 */
   --mes-bg:#07180b; --mes-line:#133c1f;
 
   /* Liaison visuelle des 3 fragments du recapitulatif de scene (bank/
      composer/SceneComposer.tsx, design pass ecran 7 §V4) : decor=--acc,
      lumiere/pose ci-dessous. Wayfinding d'interface, pas une ambiance de
-     personnage -- IDEM dans les 3 habillages, jamais redeclare par pack,
-     meme regle que les verdicts ci-dessus. Contraste verifie >=6:1 contre
-     --panel2 (methode identique a --acc). */
+     personnage — jamais redeclare par pack, meme regle que les verdicts. */
   --frag-light:#8bab93; --frag-pose:#a99bc7;
 
-  /* --- profondeur : IDEM, primitives neutres, pas une ambiance de palette --- */
+  /* --- profondeur : primitives neutres, pas une ambiance de palette --- */
   --elev:0 14px 38px #00000099;
   --scrim:#0b0d10cc;
 
   /* Anneau de :focus-visible. Distinct de --acc (sinon invisible en
-     outline-offset negatif sur une surface accentuee) -- verifie >=3:1
-     contre --bg et --panel2. Depuis Phase 0b varie PAR PERSONNAGE, pas par
-     pack : DOIT rester assorti a l'accent actif pour continuer a se voir
-     dessus, `deriveTheme.ts` le recalcule (+40° de teinte, L remonte par
-     pas de 0.02 jusqu'a 3:1) a chaque personnalisation. */
+     outline-offset negatif sur une surface accentuee) — verifie >=3:1
+     contre tous les fonds : 11.00 / 10.17 / 9.15 / 8.57 / 10.60. Varie PAR
+     PERSONNAGE : il DOIT rester assorti a l'accent actif pour continuer a
+     se voir dessus, `deriveTheme.ts` le recalcule (+40° de teinte, L
+     remontee par pas de 0.02 jusqu'a 3:1) a chaque personnalisation. */
   --focus:#8fcfff;
 
-  /* Barres de defilement -- IDEM depuis Phase 0b : ni le pack ni le
-     personnage ne les fait plus varier (l'ancienne Phase 0 les assortissait
-     par pack ; le mecanisme de personnalisation de Phase 0b n'inclut QUE
-     les 12 tokens de `deriveTheme.ts`, --sb/--sb-h n'en font pas partie).
-     Valeur de plateforme fixe. Le pouce reste un COMPOSANT D'INTERFACE
-     (WCAG 1.4.11, seuil 3:1 contre les 3 fonds ou il apparait). */
-  --sb:#6b747d; --sb-h:#8d96a0; --sb-l:10px;
+  /* Barres de defilement — passees au GRIS NEUTRE avec le reste de la
+     palette : bleutees, elles etaient la derniere trace de « Chambre
+     noire » sur un fond graphite. Ni le pack ni le personnage ne les fait
+     varier. Le pouce reste un COMPOSANT D'INTERFACE (WCAG 1.4.11, seuil
+     3:1 contre les 3 fonds ou il apparait) : mesure 3.83 / 3.54 / 3.19,
+     soit les ratios d'avant (3.93 / 3.60 / 3.16) a la teinte pres. */
+  --sb:#727272; --sb-h:#949494; --sb-l:10px;
 
-  /* --- typographie : IDEM. Un vrai changement de famille impliquerait
-     d'embarquer des fichiers de police (hors contrat tokens-only, en
-     tension avec la contrainte de portabilite) -- point laisse ouvert par
-     le design pass, pas tranche ici. */
-  --font:15px/1.55 system-ui,'Segoe UI',Roboto,sans-serif;
+  /* --- typographie. Base 14 px : une densite de poste de travail, pas de
+     page de lecture. Un vrai changement de famille impliquerait d'embarquer
+     des fichiers de police (hors contrat tokens-only, en tension avec la
+     portabilite) — point laisse ouvert par le design pass. */
+  --font:14px/1.45 system-ui,'Segoe UI',Roboto,sans-serif;
   --font-mono:12px ui-monospace,monospace;
 
   /* --- forme --- */
-  --r:10px;            /* rayon des cartes -- varie par pack */
-  --maxw:1180px;       /* largeur max du contenu centre -- JAMAIS par pack (layout, pas ambiance) */
+  --r:8px;             /* rayon des cartes — varie par pack */
+  --maxw:1180px;       /* largeur max du contenu centre — JAMAIS par pack (layout, pas ambiance) */
 }
 *{box-sizing:border-box}
 
-/* --- Lena / instagram-influenceur. Phase 0b (DOCS/design-pass/
-   phase-0b-theme-utilisateur.md) a retire toute couleur des blocs de pack :
-   un pack ne fixe plus que la FORME. --- */
+/* --- Lena / instagram-influenceur. Un pack ne fixe que la FORME. --- */
 :root[data-pack="instagram-influenceur"]{
-  --r:12px;
+  --r:8px;
 }
 
 /* --- Abyssiaelle / rpg-personnage. Meme regle : forme seule. --- */
 :root[data-pack="rpg-personnage"]{
-  --r:6px;
+  --r:4px;
 }

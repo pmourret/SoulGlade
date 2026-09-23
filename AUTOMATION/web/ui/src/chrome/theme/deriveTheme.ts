@@ -1,6 +1,6 @@
 /* Exact derivation table of DOCS/design-pass/phase-0b-theme-utilisateur.md
    ("Dérivation exacte"): a character's `appearance` (hue + intensity of the
-   neutral scale, hue of the accent) -> the 12 CSS custom properties
+   neutral scale, hue of the accent) -> the 14 CSS custom properties
    `useCharacterTheme.ts` sets inline on <html>. Pure functions, no DOM. */
 import { bestOnColor, contrastRatio, hueDistance, oklchToHex } from './oklch'
 
@@ -17,15 +17,27 @@ export const DEFAULT_NEUTRAL_HUE = 220
 export const DEFAULT_NEUTRAL_INTENSITY = 0
 export const DEFAULT_ACCENT_HUE = 220
 
+/* Lightnesses RECALIBRATED on the graphite ramp of the 23/09/2026 chrome
+   refonte (screen-0-chrome §T). They are the measured OKLCH L of the hex
+   values `tokens.css` now ships, so intensity 0 — chroma 0, perfectly
+   achromatic — reproduces that file EXACTLY rather than landing near it.
+   Before the refonte the shipped neutrals carried a faint blue tint from
+   Phase 0's own method, and this table could not reach them at any chroma.
+
+   `--panel3` and `--sub` joined the ramp with the category/module bars. They
+   are chrome surfaces sitting immediately beside `--panel`: left out of the
+   derivation, a character who tints the neutral would get a tinted header and
+   an untinted sub-bar butting against it. */
 const NEUTRAL_L: Record<string, number> = {
-  '--bg': 0.15, '--panel': 0.20, '--panel2': 0.25,
-  '--line': 0.32, '--line2': 0.44,
-  '--dim2': 0.62, '--dim': 0.67, '--txt': 0.90,
+  '--bg': 0.1913, '--sub': 0.2090, '--panel': 0.2264, '--panel2': 0.2645,
+  '--panel3': 0.2850, '--line': 0.2891, '--line2': 0.3485,
+  '--dim2': 0.6401, '--dim': 0.7252, '--txt': 0.9310,
 }
 // factor 1 for surfaces/lines, 0.35 for text roles — keeps text close to
 // neutral even at the intensity ceiling (document, §"Pourquoi une intensité").
 const NEUTRAL_CHROMA_FACTOR: Record<string, number> = {
-  '--bg': 1, '--panel': 1, '--panel2': 1, '--line': 1, '--line2': 1,
+  '--bg': 1, '--sub': 1, '--panel': 1, '--panel2': 1, '--panel3': 1,
+  '--line': 1, '--line2': 1,
   '--dim2': 0.35, '--dim': 0.35, '--txt': 0.35,
 }
 
@@ -56,7 +68,7 @@ const VERDICT_WARN_DISTANCE = 12
 
 export type ThemeTokens = Record<string, string>
 
-/** The 8 neutral + 4 accent-derived tokens for a fully-specified appearance
+/** The 10 neutral + 4 accent-derived tokens for a fully-specified appearance
     (all three inputs already resolved to real numbers — no defaulting here,
     see `computeThemeTokens` for that). */
 export function deriveTokens(neutralHue: number, neutralIntensity: number, accentHue: number): ThemeTokens {
@@ -92,9 +104,11 @@ export function deriveTokens(neutralHue: number, neutralIntensity: number, accen
     absent — used for a PARTIAL customization (e.g. only the accent hue was
     ever set). Full absence is handled by the caller, which should skip this
     entirely (see `useCharacterTheme.ts`): defaulting all three here would
-    compute a "neutral, intensity 0" gray that does not byte-match the
-    hand-picked platform hex in tokens.css (chroma 0 is perfectly achromatic;
-    the shipped defaults carry a faint tint from Phase 0's own method). */
+    compute a "neutral, intensity 0" gray. Since the graphite refonte of
+    23/09/2026 that gray DOES byte-match the platform hex in tokens.css (both
+    are achromatic), so the skip is no longer a correctness requirement — it
+    stays because deriving and setting 14 inline properties that equal the
+    stylesheet is work with no effect. */
 export function computeThemeTokens(appearance: Appearance): ThemeTokens {
   const neutralHue = appearance.neutralHue ?? DEFAULT_NEUTRAL_HUE
   const neutralIntensity = appearance.neutralIntensity ?? DEFAULT_NEUTRAL_INTENSITY
@@ -118,6 +132,7 @@ export function warnNearVerdict(accentHue: number): string | null {
     ever set inline — used to clear them all when a character has nothing
     customized (Phase 0b, "aucune différence visible avec aujourd'hui"). */
 export const THEME_TOKEN_NAMES: readonly string[] = [
-  '--bg', '--panel', '--panel2', '--line', '--line2', '--txt', '--dim', '--dim2',
+  '--bg', '--sub', '--panel', '--panel2', '--panel3', '--line', '--line2',
+  '--txt', '--dim', '--dim2',
   '--acc', '--acc-d', '--on-acc', '--focus',
 ]

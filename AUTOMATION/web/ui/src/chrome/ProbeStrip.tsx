@@ -1,7 +1,11 @@
-/* The banner probes: an icon and a value, the rest in the tooltip.
+/* The banner probes: a LABEL and a value, the rest in the tooltip.
 
-   Ported from `peindreBandeau` in `static/sondes.js`. A 56 px banner has no room
-   for one label per probe, and three labels there would be noise.
+   Ported from `peindreBandeau` in `static/sondes.js`, where each probe was an
+   icon and a figure. The icons went on 23/09/2026 (design-pass
+   screen-0-chrome §S2.5): a 15 px outline of a memory stick and one of a
+   graphics card are the same small grey rectangle at a glance, so the only way
+   to tell 62 % of RAM from 62 % of VRAM was to hover. Three words of 10.5 px
+   cost the same width and say it outright.
 
    WHAT IS KNOWN, and where it comes from — the three probes have different
    sources, so different lifetimes:
@@ -17,7 +21,6 @@
    is down that one wants to know whether something is holding the VRAM. So we
    show what we know, and nothing more. */
 import { useComfyStats, type ComfyStats } from '../state/ComfyStatsContext'
-import { Icon } from './Icon'
 
 /* The `gpu` field is `Optional[Any]` in the Pydantic model, so the generated
    schema types it as unknown. This is the narrow shape the UI actually READS —
@@ -64,11 +67,13 @@ function known(stats: ComfyStats | null) {
 }
 
 /* `tabIndex=0` because the tooltip shows on focus too — a reading that exists
-   only on hover would be lost to keyboard navigation. */
-function Probe({ icon, value, hint, level }: { icon: string; value: string; hint: string; level: string }) {
+   only on hover would be lost to keyboard navigation. The label is the probe's
+   name, the figure is its reading: the threshold colours the FIGURE only, so
+   colour never carries the information alone. */
+function Probe({ label, value, hint, level }: { label: string; value: string; hint: string; level: string }) {
   return (
     <span className={`sonde-hd${level ? ' ' + level : ''}`} tabIndex={0} data-hint-text={hint}>
-      <Icon name={icon} className="sonde-hd-ic" />
+      <span className="sonde-hd-lab">{label}</span>
       <b>{value}</b>
     </span>
   )
@@ -82,7 +87,7 @@ export function ProbeStrip() {
     <div className="sondes-hd" id="sondesHd">
       {ram && (
         <Probe
-          icon="ram"
+          label="RAM"
           value={`${percent(ram.utilisee, ram.total)} %`}
           hint={`Mémoire vive — ${gb(ram.utilisee)} / ${gb(ram.total)} Go utilisés`}
           level={memoryLevel(percent(ram.utilisee, ram.total))}
@@ -90,7 +95,7 @@ export function ProbeStrip() {
       )}
       {vram && (
         <Probe
-          icon="vram"
+          label="VRAM"
           value={`${percent(vram.utilisee, vram.total)} %`}
           hint={
             `Mémoire de la carte (VRAM) — ${gb(vram.utilisee)} / ${gb(vram.total)} Go utilisés · ` +
@@ -105,7 +110,7 @@ export function ProbeStrip() {
           The Application screen, itself, SAYS why it is missing. */}
       {gpu?.temperature != null && (
         <Probe
-          icon="temp"
+          label="GPU"
           value={`${Math.round(gpu.temperature)} °C`}
           hint={
             `Température du GPU — ${gpu.nom || 'carte graphique'}` +

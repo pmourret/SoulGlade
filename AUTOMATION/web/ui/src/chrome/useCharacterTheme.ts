@@ -4,18 +4,18 @@
    `:root`-not-`.app` reasoning (portals must resolve the same palette).
 
    Where `usePackTheme` toggles a single attribute and lets `tokens.css` do
-   the rest, this hook computes the 12 color tokens itself
+   the rest, this hook computes the 14 color tokens itself
    (`theme/deriveTheme.ts`, OKLCH) — a pack declares one static skin, a
    character's appearance is arbitrary numbers with no CSS rule to match.
 
    NOTHING SET IS THE CONTRACT for a character with no `appearance`: this
    clears every token it might have set rather than deriving a "neutral,
-   intensity 0" default, which would NOT byte-match the hand-picked platform
-   hex already on bare `:root` in tokens.css (chroma 0 is perfectly
-   achromatic; the shipped defaults carry a faint tint from Phase 0's own
-   method) — see the comment on `computeThemeTokens`. Skipping entirely is
-   what makes "no personalization -> no visible difference from today"
-   actually hold, rather than merely aim for. */
+   intensity 0" default. Since the graphite refonte of 23/09/2026 that
+   default WOULD byte-match the platform hex on bare `:root` — both are
+   achromatic, where the old palette carried a faint blue tint the derivation
+   could not reach. The skip therefore no longer papers over a mismatch; it
+   stays because setting 14 inline properties that equal the stylesheet is
+   work with no effect. */
 import { useEffect } from 'react'
 
 import { computeThemeTokens, THEME_TOKEN_NAMES } from './theme/deriveTheme'

@@ -1,19 +1,28 @@
-/* The permanent banner: who is loaded, and whether the machine can produce.
+/* The permanent banner, 48 px (design-pass screen-0-chrome §S2, 23/09/2026).
+   Left to right: the brand, the identity card, the adult-armed pill, the three
+   categories centred, and the status zone.
 
-   The five destinations left this bar for the side navbar; what stays is what
-   answers « where am I » — the application, the character, and the state of
-   ComfyUI followed by the machine probes.
+   IT WENT FROM 56 TO 48 PX AND GAINED THE NAVIGATION. The side navbar's 208 px
+   of width bought a list of eight destinations; the categories buy the same
+   answer to « where can I go » inside a bar that already existed, and the 8 px
+   saved go to the sub-bar below. What LEFT the banner in exchange is everything
+   that identified the character a second time — `brand-id` and the two
+   `brand-tag` (type, world) moved into the identity menu's first line, where
+   they are read when one asks « who am I working on », not carried permanently.
 
    The identity badge is the INITIAL, never the frozen base portrait: no route
    serves those bytes (the file lives outside PROD/, on the ComfyUI input side)
    and inventing one that reads that folder without a character_id bound would
    reopen the leak the isolation of 29/08/2026 closed. Deferred, not forgotten. */
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 
 import { errorOf, type ActionLike } from '../api/client'
 import { useApi } from '../api/useApi'
+import { APPLICATION, isDestinationActive } from '../app/routes'
 import { initialOf, useCharacter } from '../character/CharacterContext'
 import { useSystemState } from '../state/SystemStateContext'
+import { CategoryBar } from './CategoryBar'
 import { Icon } from './Icon'
 import { IdentityMenu } from './IdentityMenu'
 import { ProbeStrip } from './ProbeStrip'
@@ -27,85 +36,156 @@ const APP = 'Soulglade'
 export const mmss = (seconds: number | null | undefined): string =>
   seconds == null ? '' : seconds < 90 ? `${Math.round(seconds)} s` : `${Math.round(seconds / 60)} min`
 
-function Brand() {
-  const { claimed, sheet } = useCharacter()
-
-  /* The application name is present in BOTH states. It used to disappear as
-     soon as a character loaded, because painting the brand replaced everything:
-     one no longer knew which tool one was in, only whose. */
-  if (!claimed) {
-    return (
-      <div className="brand" id="brand">
-        <span className="brand-app">{APP}</span>
-      </div>
-    )
-  }
-
-  /* Falls back immediately on the raw id, enriched (name, type, world) as soon
-     as /api/character answers. A failed call leaves the fallback — never a
-     broken screen, and the failure itself is said by the fault banner. */
-  const shown = sheet ?? { id: claimed, name: claimed, type: null, world: null }
-  const world = (shown as { world?: { label?: string } | null }).world
-
+/* The application name, then a 20 px rule. It is the stable decor: it names the
+   tool, it does not compete with the character. On the gate it stands alone and
+   in `--txt`, because it is then the only thing the banner has to say. */
+function Brand({ alone = false }: { alone?: boolean }) {
   return (
-    <div className="brand" id="brand">
+    <div className={`brand${alone ? ' alone' : ''}`} id="brand">
       <span className="brand-app">{APP}</span>
-      {/* a VISUAL separator, hence aria-hidden — a screen reader already has
-          the breathing of the markup */}
-      <span className="brand-sep" aria-hidden="true">
-        ·
-      </span>
-      <span className="brand-av" aria-hidden="true">
-        {initialOf(shown)}
-      </span>
-      <i>{shown.name || shown.id}</i>
-      <code className="brand-id">{shown.id}</code>
-      {shown.type && <span className="brand-tag">{shown.type}</span>}
-      {world?.label && <span className="brand-tag">{world.label}</span>}
+      {!alone && <span className="brand-rule" aria-hidden="true" />}
     </div>
   )
 }
 
-/* Quick-access shutdown, icon-only. Same confirmation, same consequence as
-   the Application screen's own buttons (`useProcessControls`) — this is the
-   « I'm done, cut it now » path for someone who does not want to leave
-   Produire to reach it. Danger colours only on hover/focus: at rest it
-   reads as a neutral chrome control, not a permanent warning sign next to
-   probes one glances at all day. */
-function ShutdownButton({
-  id,
-  label,
-  hint,
-  onClick,
-}: {
-  id: string
-  label: string
-  hint: string
-  onClick: () => void
-}) {
+/* The identity card inside the menu trigger: avatar, name, and the one line
+   that situates the character. Falls back immediately on the raw id, enriched
+   as soon as /api/character answers — a failed call leaves the fallback rather
+   than a broken banner, and the failure itself is said by the fault banner. */
+function IdentityCard() {
+  const { claimed, sheet } = useCharacter()
+  const shown = sheet ?? { id: claimed, name: claimed, type: null, world: null }
+  const world = (shown as { world?: { label?: string } | null }).world
+
   return (
-    <button
-      type="button"
-      id={id}
-      /* `[border:0] p-0 bg-transparent`: without this reset a bare <button>
-         falls back to the browser's own UA chrome (Chromium: ~1px 6px
-         padding, a 2px outset border, a light face) — found live (audit,
-         2026-09-04): that padding alone left only 8px of content width in a
-         24px box, and the flex layout SHRANK the icon's SVG down to fit,
-         rendering it all but invisible. `border border-transparent` (not
-         `border-0`) so the hover border adds no layout shift — same
-         zero-shift idiom already used for `.btn`'s own hover state. */
-      className="flex h-[24px] w-[24px] flex-none items-center justify-center
-                 rounded-[6px] border border-transparent bg-transparent p-0
-                 text-dim hover:border-danger-line hover:bg-danger-bg
-                 hover:text-danger-txt
-                 focus-visible:outline-2 focus-visible:outline-[var(--focus)]"
-      aria-label={label}
-      data-hint-text={hint}
-      onClick={onClick}
-    >
-      <Icon name="power" className="h-[15px] w-[15px]" />
-    </button>
+    <span className="idcard">
+      <span className="brand-av" aria-hidden="true">
+        {initialOf(shown)}
+      </span>
+      <span className="idcard-txt">
+        <i>{shown.name || shown.id}</i>
+        <small>
+          {[shown.type, world?.label].filter(Boolean).join(' · ') || shown.id}
+        </small>
+      </span>
+    </span>
+  )
+}
+
+/* ADULT CONTENT ARMED — TEXT, never a colour alone (.claude/rules/frontend.md:
+   status is never carried by colour by itself). Reads `sheet.nsfw`, already
+   exposed by /api/character; this chantier changes nothing server-side. It is
+   shown only when the flag is on: a permanent « SFW » counterpart would put a
+   label on the normal case, which is noise. */
+function AdultPill() {
+  const { sheet } = useCharacter()
+  if (!sheet?.nsfw) return null
+  return <span className="adult-pill">ADULTE ARMÉ</span>
+}
+
+/* THE ONE power button, replacing the two icon buttons the banner used to
+   carry. Two power glyphs side by side told apart only by their aria-label was
+   a puzzle at a glance; one button that opens a two-item menu names both
+   actions in words. The item IDS are unchanged — `useProcessControls` and its
+   confirmations are untouched, only where one clicks them moved. */
+function PowerMenu() {
+  const { stopApp, stopComfy } = useProcessControls()
+  const [open, setOpen] = useState(false)
+  const wrapRef = useRef<HTMLDivElement | null>(null)
+  const buttonRef = useRef<HTMLButtonElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
+
+  const close = useCallback((giveFocusBack = false) => {
+    setOpen(false)
+    if (giveFocusBack) buttonRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+    const onClick = (event: MouseEvent) => {
+      if (event.target instanceof Node && !wrapRef.current?.contains(event.target)) close()
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') close(true)
+    }
+    document.addEventListener('click', onClick)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('click', onClick)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open, close])
+
+  useEffect(() => {
+    if (open) menuRef.current?.querySelector<HTMLElement>('button')?.focus()
+  }, [open])
+
+  const onMenuKeyDown = (event: React.KeyboardEvent) => {
+    const items = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('button') ?? [])
+    if (!items.length) return
+    const index = items.indexOf(document.activeElement as HTMLElement)
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      items[(index + 1) % items.length].focus()
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      items[(index - 1 + items.length) % items.length].focus()
+    }
+  }
+
+  return (
+    <div className="pwrwrap" ref={wrapRef}>
+      <button
+        type="button"
+        ref={buttonRef}
+        id="btnHeaderPower"
+        className={`hd-ic${open ? ' on' : ''}`}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Arrêter"
+        data-hint-text="Arrêter ComfyUI, ou le tableau de bord."
+        onClick={(event) => {
+          event.stopPropagation()
+          setOpen((current) => !current)
+        }}
+      >
+        <Icon name="power" className="hd-ic-svg" />
+      </button>
+      <div
+        className={`pwrmenu${open ? ' on' : ''}`}
+        role="menu"
+        aria-label="Arrêter"
+        ref={menuRef}
+        onKeyDown={onMenuKeyDown}
+      >
+        <button
+          type="button"
+          id="btnHeaderComfyStop"
+          role="menuitem"
+          tabIndex={-1}
+          onClick={() => {
+            close()
+            stopComfy()
+          }}
+        >
+          Arrêter ComfyUI
+          <small>coupe net, sans le temps de finir un job</small>
+        </button>
+        <button
+          type="button"
+          id="btnHeaderAppStop"
+          role="menuitem"
+          tabIndex={-1}
+          onClick={() => {
+            close()
+            stopApp()
+          }}
+        >
+          Arrêter le tableau de bord
+          <small>cette page ne répondra plus</small>
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -117,7 +197,8 @@ function StatusZone() {
   const toast = useToast()
   const { claimed } = useCharacter()
   const { state } = useSystemState()
-  const { stopApp, stopComfy, takeover } = useProcessControls()
+  const { takeover } = useProcessControls()
+  const { pathname } = useLocation()
   const [stopping, setStopping] = useState(false)
 
   /* `state` is null in two different situations, and only one of them is a
@@ -128,16 +209,13 @@ function StatusZone() {
      entry gate — the very first screen, before any character is loaded —
      look like ComfyUI was down when nothing was actually wrong (P2.3,
      05/09/2026). The dot/text pair is simply not shown pre-claim now; the
-     probes and shutdown buttons below stay, they read the machine, not a
+     probes and the power button below stay, they read the machine, not a
      character's state. */
-  const offline = state === null
-  const running = state?.running
-    ? `production ${state.index}/${state.total}` + (state.eta ? ` · ~${mmss(state.eta)}` : '')
-    : 'prêt'
-  const text = offline ? 'état indisponible' : state?.comfy ? running : 'ComfyUI hors ligne'
+  const offline = state === null || !state?.comfy
+  const text = state === null ? 'état indisponible' : state.comfy ? 'ComfyUI' : 'ComfyUI hors ligne'
 
   /* screen-3-produire §S/audit 2026-09-04: the running batch's own Stop
-     lives HERE now, not in a card buried in the scene grid's scroll — this
+     lives HERE, not in a card buried in the scene grid's scroll — this
      status line is the one place on screen that survives scrolling, so it
      is the only honest home for a control that must stay reachable while a
      batch runs. No confirmation: stopping a batch was never destructive the
@@ -152,49 +230,64 @@ function StatusZone() {
     if (failure) toast(failure || 'arrêt impossible')
   }
 
+  const onApplication = isDestinationActive(APPLICATION, pathname)
+
   return (
     <div className="status">
-      {claimed && (
+      {/* THE RUNNING BATCH, first: it is the only thing here that is about to
+          finish. « Génération » names it, the figures are tabular so they do
+          not jitter as they climb. */}
+      {state?.running && (
         <>
-          {/* a small label lifts the ambiguity of the dot (ComfyUI up or down) */}
-          <span className="status-lab">Comfy</span>
-          <span className={`dot${!offline && state?.comfy ? ' on' : ''}`} id="dot" />
-          <span id="stTxt">{text}</span>
+          <span className="run-lab">Génération</span>
+          <b className="run-n">
+            {state.index} / {state.total}
+          </b>
+          {state.eta ? <span className="run-eta">~{mmss(state.eta)}</span> : null}
+          <button
+            type="button"
+            id="btnHeaderStopBatch"
+            className="hd-btn"
+            disabled={stopping}
+            data-hint-text="Arrêter le lot en cours — les images déjà produites restent."
+            onClick={stopBatch}
+          >
+            Arrêter
+          </button>
+          <span className="status-sep" aria-hidden="true" />
         </>
       )}
-      {state?.running && (
-        <button
-          type="button"
-          id="btnHeaderStopBatch"
-          className="rounded-[6px] border border-line2 bg-transparent px-[8px] py-[2px]
-                     text-[11.5px] text-dim hover:border-danger-line hover:text-danger-txt
-                     disabled:opacity-40"
-          disabled={stopping}
-          data-hint-text="Arrêter le lot en cours — les images déjà produites restent."
-          onClick={stopBatch}
-        >
-          Arrêter
-        </button>
+
+      {claimed && (
+        <>
+          {/* A DIAMOND, not a red disc, when ComfyUI is down: the shape carries
+              the difference as well as the colour, and the text beside it says
+              it in words. Status never by colour alone. */}
+          <span className={`dot${!offline ? ' on' : ''}`} id="dot" />
+          <span id="stTxt" className={offline && state !== null ? 'ko' : undefined}>
+            {text}
+          </span>
+          <span className="status-sep" aria-hidden="true" />
+        </>
       )}
-      {/* the rule that separates the state of the DASHBOARD from that of the
-          MACHINE: without it, « prêt » and « 45 % » read as one sentence.
-          Nothing to separate from when the dashboard side is hidden
-          (unclaimed) — a lone rule at the start would be a stray mark. */}
-      {claimed && <span className="status-sep" aria-hidden="true" />}
+
       <ProbeStrip />
       <span className="status-sep" aria-hidden="true" />
-      <ShutdownButton
-        id="btnHeaderComfyStop"
-        label="Arrêter ComfyUI"
-        hint="Arrêter ComfyUI — coupe net, sans le temps de finir un job."
-        onClick={stopComfy}
-      />
-      <ShutdownButton
-        id="btnHeaderAppStop"
-        label="Arrêter le tableau de bord"
-        hint="Arrêter le tableau de bord — cette page ne répondra plus."
-        onClick={stopApp}
-      />
+
+      {/* Application left the categories (§S1): it is chrome settings, not a
+          place one works. It keeps its routes, and lights here instead. */}
+      <Link
+        to={APPLICATION.path}
+        id="btnApplication"
+        className={`hd-ic${onApplication ? ' on' : ''}`}
+        aria-label={APPLICATION.label}
+        aria-current={onApplication ? 'page' : undefined}
+        data-hint-text="Application — réglages, journal, processus."
+      >
+        <Icon name="application" className="hd-ic-svg" />
+      </Link>
+
+      <PowerMenu />
       {takeover && <Takeover>{takeover}</Takeover>}
     </div>
   )
@@ -212,15 +305,18 @@ export function Header() {
   return (
     <header>
       {/* the entry gate claims no character: nothing to switch away from, so
-          the brand stands alone */}
+          the brand stands alone and there are no categories to show */}
       {claimed ? (
-        <IdentityMenu>
+        <>
           <Brand />
-        </IdentityMenu>
+          <IdentityMenu>
+            <IdentityCard />
+          </IdentityMenu>
+          <AdultPill />
+          <CategoryBar />
+        </>
       ) : (
-        <div className="idwrap">
-          <Brand />
-        </div>
+        <Brand alone />
       )}
       <StatusZone />
     </header>

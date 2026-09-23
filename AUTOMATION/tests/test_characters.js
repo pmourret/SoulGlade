@@ -48,7 +48,8 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(await page.evaluate(() => location.pathname) === '/characters',
        'la racine redirige vers /characters');
   dire(await vu('#charGrid'), 'la grille de choix est la');
-  dire(!(await vu('.sidenav')), 'la navbar est ABSENTE : aucun atelier a naviguer');
+  dire(!(await vu('.tabs')), 'les categories sont ABSENTES : aucun atelier a naviguer');
+  dire(!(await vu('.modbar')), 'la sous-barre de modules non plus');
   dire(!(await vu('#btnId')), "le menu d'identite aussi : aucun personnage revendique");
 
   console.log('\n[2] la grille liste le registre, plus une carte de creation');
@@ -71,17 +72,22 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
        'le temoin a survecu : aucun rechargement');
   dire((await page.evaluate(() => location.search)).includes('character=abyssiaelle'),
        '?character= est dans l URL (le lien reste partageable)');
-  dire(await vu('.sidenav'), 'la navbar apparait : on est entre dans l atelier');
+  dire(await vu('.tabs'), 'les categories apparaissent : on est entre dans l atelier');
+  dire(await vu('.modbar'), 'et la sous-barre avec elles');
   dire(await vu('#btnId'), "le menu d'identite aussi");
 
-  console.log('\n[4] l entree de navbar dit ce qu elle ouvre');
-  const lab = await page.textContent('.tabs [data-s="character"] .nav-lab');
+  console.log('\n[4] le module dit ce qu il ouvre');
+  await page.hover('.tabs [data-s="referentiel"]');
+  await page.waitForSelector('.cat-wrap:has([data-s="referentiel"]) .catmenu.on');
+  const lab = await page.textContent('.catmenu.on [data-m="character"] .nav-lab');
   dire(lab.trim() === 'Fiche',
-       `un personnage etant charge, elle lit « ${lab.trim()} » et non « Personnages »`);
+       `un personnage etant charge, il lit « ${lab.trim()} » et non « Personnages »`);
 
   console.log('\n[5] la FICHE lit le personnage charge');
-  await page.click('.tabs [data-s="character"]');
+  await page.click('.catmenu.on [data-m="character"]');
   await page.waitForTimeout(500);
+  dire((await page.$$eval('.tabs .cat.on', e => e.map(x => x.dataset.s))).join(',') === 'referentiel',
+       'la categorie Referentiel est allumee');
   dire(await page.evaluate(() => location.pathname) === '/character',
        'chemin /character, distinct du sas');
   dire(await vu('#fiche'), 'la fiche est peinte');

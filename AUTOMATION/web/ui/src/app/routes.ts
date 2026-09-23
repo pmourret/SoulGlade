@@ -59,14 +59,42 @@ export type ScreenKey =
   | 'worlds'
   | 'application'
 
-/* The seven destinations of the studio navbar, in their order on screen.
+/* CATEGORIES (design-pass screen-0-chrome §S1, 23/09/2026). The side navbar
+   listed eight destinations flat, which made « produire une image » and
+   « éditer un monde » look like the same kind of move. They are grouped in
+   three now: what one PRODUCES, what one PREPARES, and what one REFERS to.
 
-   `key` is written to `data-s` on the entry, exactly as the legacy frontend did:
-   the navigation contract stays an explicit attribute rather than an assumption
-   about markup. The VALUES are the new English screen keys, since the routes
-   they designate changed name in this migration. */
+   The categories live in the header; the modules of the open category live in
+   a 34 px sub-bar under it. */
+export type CategoryKey = 'production' | 'atelier' | 'referentiel'
+
+export type Category = {
+  key: CategoryKey
+  label: string
+}
+
+/* Order on screen. Production first: it is where a session starts. */
+export const CATEGORIES: Category[] = [
+  { key: 'production', label: 'Production' },
+  { key: 'atelier', label: 'Atelier' },
+  { key: 'referentiel', label: 'Référentiel' },
+]
+
+/* THE NAVIGATION CONTRACT, amended 23/09/2026.
+
+   `data-s` used to carry the ScreenKey of each of the eight flat destinations.
+   With a category bar over a sub-bar, the eight are no longer in the DOM at the
+   same time — only the open category's modules are. So the contract splits in
+   two, and each half keeps an explicit attribute rather than an assumption
+   about markup:
+
+     `data-s` on a CATEGORY  -> a CategoryKey (three values)
+     `data-m` on a MODULE    -> a ScreenKey
+
+   `.tabs` stays the container class, and now names the category bar. */
 export type Destination = {
   key: ScreenKey
+  category: CategoryKey
   label: string
   /* Label to use when a character is loaded, when the entry then opens
      something else. « Personnages » leads to the entry gate; once a character
@@ -82,22 +110,25 @@ export type Destination = {
   activePrefix?: string
 }
 
+/* The seven modules of the studio, grouped by category and in their order
+   inside it. `DESTINATIONS` keeps its name and its role — the ONE table the
+   chrome reads — only the grouping is new.
+
+   Application is NOT here: it left the categories (§S1) and became an icon
+   button in the header's status zone. It is chrome settings, not a place one
+   works; listing it beside « Produire » gave it the same weight. Its routes
+   still exist, hence `APPLICATION` just below. */
 export const DESTINATIONS: Destination[] = [
   {
-    key: 'character',
-    label: 'Personnages',
-    labelWhenClaimed: 'Fiche',
-    path: PATHS.character,
-    icon: 'character',
-  },
-  {
     key: 'produce',
+    category: 'production',
     label: 'Produire',
     path: PATHS.produce,
     icon: 'produce',
   },
   {
     key: 'review',
+    category: 'production',
     label: 'Revue',
     path: PATHS.review,
     icon: 'review',
@@ -105,39 +136,60 @@ export const DESTINATIONS: Destination[] = [
   },
   {
     key: 'gallery',
+    category: 'production',
     label: 'Galerie',
     path: PATHS.gallery,
     icon: 'gallery',
   },
   {
     key: 'bank',
+    category: 'atelier',
     label: 'Ateliers',
     path: PATHS.bankScenes,
     icon: 'bank',
     activePrefix: '/bank',
   },
-  /* After Ateliers and before Mondes: it reads the character's own images, so
-     it sits with what belongs to the character, not with what is shared. */
+  /* With Ateliers: it reads the character's own images, so it sits with what
+     one PREPARES before producing, not with what one consults. */
   {
     key: 'training',
+    category: 'atelier',
     label: 'Entraînement',
     path: PATHS.training,
     icon: 'training',
   },
   {
+    key: 'character',
+    category: 'referentiel',
+    label: 'Personnages',
+    labelWhenClaimed: 'Fiche',
+    path: PATHS.character,
+    icon: 'character',
+  },
+  {
     key: 'worlds',
+    category: 'referentiel',
     label: 'Mondes',
     path: PATHS.worlds,
     icon: 'worlds',
     activePrefix: '/worlds',
   },
-  {
-    key: 'application',
-    label: 'Application',
-    path: PATHS.application,
-    icon: 'application',
-  },
 ]
+
+/* Application, out of the categories but still a destination: the header's
+   icon button needs its path, its icon and its label, and `/app/journal` must
+   still light it.
+
+   `Omit<…, 'category'>` rather than a Destination with a category picked at
+   random: it belongs to none, and writing one anyway would be a value nothing
+   reads and everything could start trusting. `isDestinationActive` only ever
+   touches `path` and `activePrefix`, so it reads this shape unchanged. */
+export const APPLICATION: Omit<Destination, 'category'> = {
+  key: 'application',
+  label: 'Application',
+  path: PATHS.application,
+  icon: 'application',
+}
 
 /* THE shareable form of ONE image, built in ONE place: the bucket decides the
    destination — a validated one is read in the Galerie, everything else is
@@ -155,9 +207,33 @@ export function screenForImage(bucket: string | null | undefined, name: string):
    gate (/characters) as well — one path is a prefix of the other as a STRING,
    not as a route. Matching on the segment boundary is what separates them, and
    it is also what lights Application on /app/journal, its sub-screen. */
-export function isDestinationActive(destination: Destination, pathname: string): boolean {
+export function isDestinationActive(
+  destination: Pick<Destination, 'path' | 'activePrefix'>,
+  pathname: string,
+): boolean {
   const base = destination.activePrefix ?? destination.path
   return pathname === base || pathname.startsWith(base + '/')
+}
+
+/* Which category the open path belongs to, or null.
+
+   DERIVED, never stored. A category held in its own state would be a second
+   source of truth for « where am I », and the two drift the first time a screen
+   navigates without going through the bar (the inspector jumping to an image,
+   a deep link, the back button). One rule, the same `isDestinationActive` the
+   modules use.
+
+   Null on /app and /app/journal — Application is out of the categories, so
+   none is lit while it is open and its header button carries `aria-current`
+   instead. Null on the entry gate too, where there is no category bar at all. */
+export function activeCategory(pathname: string): CategoryKey | null {
+  const open = DESTINATIONS.find((destination) => isDestinationActive(destination, pathname))
+  return open?.category ?? null
+}
+
+/* The modules of one category, in their table order. */
+export function modulesOf(category: CategoryKey): Destination[] {
+  return DESTINATIONS.filter((destination) => destination.category === category)
 }
 
 /* The navbar entry « Personnages » leads to the sheet of the claimed character,

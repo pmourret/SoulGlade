@@ -1,7 +1,14 @@
-/* Two destructive process actions — stop THIS dashboard, stop ComfyUI —
-   shared by the Application screen (`ApplicationScreen.tsx`) and the
-   header's quick-access shutdown buttons (`Header.tsx`). Same verb, same
-   confirmation, same consequence, wherever the click comes from.
+/* Three consequential process actions — stop THIS dashboard, stop ComfyUI,
+   restart ComfyUI — shared by the Application screen (`ApplicationScreen.tsx`),
+   the header's power menu and the fault banner (`Header.tsx`, `FaultBar.tsx`).
+   Same verb, same confirmation, same consequence, wherever the click comes
+   from.
+
+   `restartComfy` JOINED THEM on 23/09/2026: the fault banner gained a
+   « Relancer ComfyUI » button (design-pass screen-0-chrome §S5), and the only
+   copy of that gesture lived inside the Application screen as a local handler.
+   A second copy in the banner would be a second confirmation to keep in step
+   with the first — which is the exact reason this module exists.
 
    CONSEQUENTIAL ACTIONS, SO: confirmation every time, and the confirmation
    says what actually happens. For ComfyUI a stop is NEVER clean under
@@ -100,5 +107,30 @@ export function useProcessControls() {
     refreshProbes()
   }, [confirm, post, append, toast, refreshProbes, running])
 
-  return { stopApp, stopComfy, takeover }
+  /* Not destructive the way a stop is — it comes back — but it costs 30 s to
+     2 min and kills a running batch, so it confirms like its siblings. */
+  const restartComfy = useCallback(async () => {
+    const ok = await confirm({
+      title: 'Redémarrer ComfyUI ?',
+      button: 'Redémarrer ComfyUI',
+      body: (
+        <p>
+          {running && (
+            <b>
+              Une génération est en cours sur ce tableau de bord — elle sera
+              perdue.{' '}
+            </b>
+          )}
+          Arrêt net puis relance dans une nouvelle fenêtre console. Compte 30 s à
+          2 min : le premier chargement des custom nodes est le plus long.
+        </p>
+      ),
+    })
+    if (!ok) return
+    if (!(await post('/api/app/comfy/restart'))) return
+    append("redémarrage de ComfyUI demandé — une nouvelle fenêtre va s'ouvrir")
+    toast('redémarrage de ComfyUI lancé (~30 s à 2 min)')
+  }, [confirm, post, append, toast, running])
+
+  return { stopApp, stopComfy, restartComfy, takeover }
 }

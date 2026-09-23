@@ -92,8 +92,14 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);
         these two from the UA stylesheet */
      display:inline-block;color:inherit;text-decoration:none}
 .btn:hover{border-color:var(--dim2)}
-.btn.primary{background:var(--acc);border-color:var(--acc);color:var(--on-acc);font-weight:600}
-.btn.primary:hover{background:var(--acc-d);border-color:var(--acc-d)}
+/* NEUTRE depuis la refonte du 23/09/2026 (screen-0-chrome §T). Il peignait un
+   aplat de `--acc`, ce qui posait la couleur la plus forte de l'interface sur un
+   CONTROLE alors que la seule couleur de l'ecran doit etre l'image produite.
+   `--acc` ne marque plus que la selection, l'emplacement courant et l'avatar.
+   Le survol monte au blanc pur : un bouton principal deja clair ne peut pas
+   s'eclairer en s'assombrissant, ce que faisait `--acc-d`. */
+.btn.primary{background:var(--pri);border-color:var(--pri);color:var(--on-pri);font-weight:600}
+.btn.primary:hover{background:var(--pri-h);border-color:var(--pri-h)}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 /* A destructive action is OUTLINED, never filled: it must read as available and
    as serious, not as the thing to click. The fill comes on hover, when the
@@ -114,7 +120,7 @@ h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);
    centres the pair. */
 a.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
       color:var(--txt);text-decoration:none}
-a.btn.primary{color:var(--on-acc)}
+a.btn.primary{color:var(--on-pri)}
 .btn:focus-visible,button:focus-visible,a:focus-visible{
   outline:2px solid var(--focus);outline-offset:2px}
 .link{background:none;border:0;color:var(--acc);cursor:pointer;font-size:13px;

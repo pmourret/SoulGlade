@@ -48,7 +48,15 @@ export function ApplicationScreen() {
      quick-access buttons, same confirmation, same consequence — see
      chrome/useProcessControls.tsx. Restart and unload stay local: only
      this screen offers them. */
-  const { stopApp, stopComfy, takeover: stopTakeover } = useProcessControls()
+  /* `onComfyRestart` moved into the shared hook on 23/09/2026 — the fault
+     banner calls the same gesture now, and one confirmation is easier to keep
+     honest than two. */
+  const {
+    stopApp,
+    stopComfy,
+    restartComfy: onComfyRestart,
+    takeover: stopTakeover,
+  } = useProcessControls()
 
   usePolling(refreshProbes, { intervalMs: SCREEN_PROBE_MS, pauseWhenHidden: true })
 
@@ -119,29 +127,6 @@ export function ApplicationScreen() {
     if (!ok) return
     if (!(await post('/api/app/restart'))) return
     setTakeover('Redémarrage du tableau de bord…')
-  }
-
-  const onComfyRestart = async () => {
-    const ok = await confirm({
-      title: 'Redémarrer ComfyUI ?',
-      button: 'Redémarrer ComfyUI',
-      body: (
-        <p>
-          {running && (
-            <b>
-              Une génération est en cours sur ce tableau de bord — elle sera
-              perdue.{' '}
-            </b>
-          )}
-          Arrêt net puis relance dans une nouvelle fenêtre console. Compte 30 s à
-          2 min : le premier chargement des custom nodes est le plus long.
-        </p>
-      ),
-    })
-    if (!ok) return
-    if (!(await post('/api/app/comfy/restart'))) return
-    append("redémarrage de ComfyUI demandé — une nouvelle fenêtre va s'ouvrir")
-    toast('redémarrage de ComfyUI lancé (~30 s à 2 min)')
   }
 
   /* Waiting for the restarted server: poll until it answers, then reload — the

@@ -14,12 +14,14 @@ import { Link } from 'react-router-dom'
 import { useCharacter } from '../character/CharacterContext'
 import { characterPath, PATHS } from '../app/routes'
 import { useChrome } from './ChromeContext'
+import { Icon } from './Icon'
 
 /* `children` is the brand block. The menu is positioned against `.idwrap`,
    which wraps the character card AND the trigger — so the popup opens under the
    name, not under the little chevron alone. Same markup as the legacy chrome. */
 export function IdentityMenu({ children }: { children?: ReactNode }) {
-  const { claimed, isClaimed, roster, rosterError, loadRoster, selectCharacter } = useCharacter()
+  const { claimed, isClaimed, sheet, roster, rosterError, loadRoster, selectCharacter } =
+    useCharacter()
   /* Open state lives in the chrome context, not here: the character sheet
      reopens this menu from inside the screen (F1.2 — one door to change
      character, and it is this one). */
@@ -97,12 +99,19 @@ export function IdentityMenu({ children }: { children?: ReactNode }) {
 
   return (
     <div className="idwrap" ref={wrapRef}>
-      {children}
+      {/* THE WHOLE CARD IS THE TRIGGER (23/09/2026). It used to be the card
+          plus a separate ▾ button beside it: a 12 px target for the one gesture
+          the banner exists to offer, with the name right next to it doing
+          nothing when clicked. No `aria-label` on purpose — the card's own text
+          (name, then type · world) is a better accessible name than « changer
+          de personnage », which says the verb and loses the subject; `title`
+          carries the verb. */}
       <button
         id="btnId"
+        type="button"
         ref={buttonRef}
         className={open ? 'on' : undefined}
-        aria-haspopup="true"
+        aria-haspopup="menu"
         aria-expanded={open}
         title="Changer de personnage"
         onClick={(event) => {
@@ -110,7 +119,8 @@ export function IdentityMenu({ children }: { children?: ReactNode }) {
           toggle()
         }}
       >
-        ▾
+        {children}
+        <Icon name="chevron" className="id-chev" />
       </button>
       <div
         className={`idmenu${open ? ' on' : ''}`}
@@ -120,6 +130,18 @@ export function IdentityMenu({ children }: { children?: ReactNode }) {
         ref={menuRef}
         onKeyDown={onMenuKeyDown}
       >
+        {/* FIRST LINE: what identifies the character technically. It used to
+            sit permanently in the 56 px banner (`brand-id` + two `brand-tag`),
+            where it repeated in every screenshot what the name already said.
+            Here it is one keystroke away and read when the question is asked.
+            `role="none"` — it is a caption, not a menu item. */}
+        {isClaimed && (
+          <div className="idmenu-head" role="none">
+            <code className="brand-id">{sheet?.id ?? claimed}</code>
+            {sheet?.type && <span className="brand-tag">{sheet.type}</span>}
+            {sheet?.world?.label && <span className="brand-tag">{sheet.world.label}</span>}
+          </div>
+        )}
         <div id="idSwitch" role="none">
           {rosterError ? (
             <span className="tiny">{rosterError}</span>
