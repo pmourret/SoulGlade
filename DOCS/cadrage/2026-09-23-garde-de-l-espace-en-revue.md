@@ -29,10 +29,24 @@ dont la vérité existe déjà en base.
    chaîne existante, au même endroit et de la même forme que le réalisme et
    les mains : un genre de score, enregistré par image, best-effort, qui ne
    fait jamais échouer un lot.
-3. **Le seuil n'est pas en dur** (invariant 4). Il se lit dans
-   `CHARACTERS/<id>/config.json`, section `qc`. Valeur de départ 0,4 — mesurée
-   le 21/09 : elle laisse passer le seul faux positif du corpus (un gilet
-   beige à 0,38) et garde les 17 vraies détections.
+3. **Le seuil n'est pas en dur** (invariant 4), et il est **par personnage**
+   (Pierre, 23/09). Il se lit dans `CHARACTERS/<id>/config.json`, section
+   `qc`, comme les seuils des mains et d'identité. Valeur de départ 0,4 —
+   mesurée le 21/09 : elle laisse dehors le seul faux positif du corpus (un
+   gilet beige à 0,38) et garde les 17 vraies détections.
+
+   La raison de ce choix n'est pas le risque, qui est bien le même pour tous,
+   c'est le **détecteur** : son score dépend du corps, du cadrage et du style
+   de sortie d'un personnage, donc la valeur qui sépare chez l'un n'est pas
+   celle qui sépare chez l'autre. Un seuil de plateforme se serait calibré sur
+   Léna et aurait voyagé sans être mesuré — la faute que
+   `qc.threshold_gabarit` a déjà coûtée (un seuil calibré contre l'ancre n'a
+   aucun sens contre un gabarit).
+
+   **La valeur naît à la création**, dans le `character_defaults.json` du
+   pack, à côté des seuils d'identité — jamais un repli écrit dans le code. Un
+   personnage dont la clé manque est mesuré comme les autres, et la Revue dit
+   que son seuil n'est pas réglé plutôt que d'en inventer un.
 4. **`role = reference` est hors garde.** Le corpus de réalisme
    (`INPUTS/REALISME/`) contient une référence de corps, nue et dans son droit
    (confirmée par Pierre le 23/09) : elle n'appartient à aucun personnage,
@@ -82,6 +96,5 @@ dit pourquoi ; les faux positifs sont comptés sur les images déjà en base
 
 ## Ce qui reste à trancher
 
-- **Où vit le seuil, exactement** : `qc.exposition` par personnage comme les
-  mains, ou une valeur de plateforme ? La règle dit config.json ; mais le
-  risque, lui, est le même pour tous les personnages. À confirmer à l'étape 1.
+Rien à l'ouverture. La seule question ouverte au moment de l'écriture — seuil
+par personnage ou de plateforme — est tranchée au point 3.
