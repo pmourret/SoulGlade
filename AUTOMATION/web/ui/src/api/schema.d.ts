@@ -676,6 +676,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/img/base": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Portrait de base gelée du personnage courant
+         * @description Thumbnail of the CURRENT character's frozen identity base.
+         *
+         *     ┌── WHY THIS ROUTE TAKES NO FILE NAME ────────────────────────────────────┐
+         *     │ It is the whole design, not a convenience. The name is READ from that   │
+         *     │ character's own `config.json` (`base_gelee`); the client cannot name a  │
+         *     │ file, so it cannot name someone else's.                                 │
+         *     │                                                                         │
+         *     │ `ComfyUI/input/` is a FLAT, SHARED folder — 88 files on the reference   │
+         *     │ machine, including `DEMORA_BASE.png` and `MILA_BASE.png`, bases of      │
+         *     │ characters that are not even in the registry. A `?name=` parameter here │
+         *     │ would hand every one of them to anyone who asked, which is the exact    │
+         *     │ shape of the leak closed on 29/08/2026 (`bucket_dir()` returning        │
+         *     │ PROD/LENA/ whoever asked, and `/img` with no `character`).              │
+         *     │                                                                         │
+         *     │ So: the identifier decides the path, never the client. Same rule as     │
+         *     │ `serve_image` above, applied to a folder we do not own.                 │
+         *     └─────────────────────────────────────────────────────────────────────────┘
+         *
+         *     The names are legacy and arbitrary (`OFM_LENA_BASE_00025_.png`,
+         *     `ABY_MAIN_REF.jpg`) — they are NOT derivable from the cid, which is why
+         *     the config is read rather than the name rebuilt from `frozen_name()`.
+         *
+         *     404 JSON when the character has no base, or when the file it names is
+         *     gone: `FrozenBaseBrief.present` already tells the sheet which of the two
+         *     it is, so this route does not have to.
+         */
+        get: operations["serve_frozen_base_img_base_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/img/pose": {
         parameters: {
             query?: never;
@@ -2378,9 +2422,19 @@ export interface components {
         /**
          * FrozenBaseBrief
          * @description The character's frozen identity base: present or not, and under which
-         *     name. Only whether the file is there — no route serves those bytes, and
-         *     inventing one that reads ComfyUI/input/ without a character_id bound would
-         *     reopen the leak closed on 29/08/2026.
+         *     name.
+         *
+         *     Since 23/09/2026 a route DOES serve those bytes — `GET /img/base`, for the
+         *     character sheet's portrait. It is bound to `character_id` and takes no file
+         *     name: the name is read from that character's own `config.json`, so a client
+         *     cannot ask for someone else's. That is the shape the leak of 29/08/2026
+         *     taught (the identifier decides the path, never the client), and it matters
+         *     here more than anywhere: `ComfyUI/input/` is a flat shared folder holding
+         *     the bases of characters that are not even in the registry.
+         *
+         *     This brief stays the source of truth for WHICH state to show — present,
+         *     named-but-missing, or absent — because the route answers 404 for the last
+         *     two alike.
          */
         FrozenBaseBrief: {
             /** Name */
@@ -5218,6 +5272,57 @@ export interface operations {
                 thumb?: string | null;
                 /** @description Jeton de cache, IGNORÉ par le serveur. Voir la note dans le code : il ne sert qu'à l'URL. */
                 v?: string | null;
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Octets de l'image */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/png": unknown;
+                    "image/jpeg": unknown;
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Absente de l'arbre du personnage */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImageNotFound"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serve_frozen_base_img_base_get: {
+        parameters: {
+            query?: {
                 /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
                 character?: string | null;
             };

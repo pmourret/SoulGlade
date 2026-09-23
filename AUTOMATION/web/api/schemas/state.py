@@ -84,9 +84,19 @@ class UniverseBrief(BaseModel):
 
 class FrozenBaseBrief(BaseModel):
     """The character's frozen identity base: present or not, and under which
-    name. Only whether the file is there — no route serves those bytes, and
-    inventing one that reads ComfyUI/input/ without a character_id bound would
-    reopen the leak closed on 29/08/2026."""
+    name.
+
+    Since 23/09/2026 a route DOES serve those bytes — `GET /img/base`, for the
+    character sheet's portrait. It is bound to `character_id` and takes no file
+    name: the name is read from that character's own `config.json`, so a client
+    cannot ask for someone else's. That is the shape the leak of 29/08/2026
+    taught (the identifier decides the path, never the client), and it matters
+    here more than anywhere: `ComfyUI/input/` is a flat shared folder holding
+    the bases of characters that are not even in the registry.
+
+    This brief stays the source of truth for WHICH state to show — present,
+    named-but-missing, or absent — because the route answers 404 for the last
+    two alike."""
     name: Optional[str] = None
     present: bool
 

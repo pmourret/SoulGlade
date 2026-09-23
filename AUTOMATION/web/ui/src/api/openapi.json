@@ -1504,6 +1504,72 @@
         }
       }
     },
+    "/img/base": {
+      "get": {
+        "summary": "Portrait de base gelée du personnage courant",
+        "description": "Thumbnail of the CURRENT character's frozen identity base.\n\n┌── WHY THIS ROUTE TAKES NO FILE NAME ────────────────────────────────────┐\n│ It is the whole design, not a convenience. The name is READ from that   │\n│ character's own `config.json` (`base_gelee`); the client cannot name a  │\n│ file, so it cannot name someone else's.                                 │\n│                                                                         │\n│ `ComfyUI/input/` is a FLAT, SHARED folder — 88 files on the reference   │\n│ machine, including `DEMORA_BASE.png` and `MILA_BASE.png`, bases of      │\n│ characters that are not even in the registry. A `?name=` parameter here │\n│ would hand every one of them to anyone who asked, which is the exact    │\n│ shape of the leak closed on 29/08/2026 (`bucket_dir()` returning        │\n│ PROD/LENA/ whoever asked, and `/img` with no `character`).              │\n│                                                                         │\n│ So: the identifier decides the path, never the client. Same rule as     │\n│ `serve_image` above, applied to a folder we do not own.                 │\n└─────────────────────────────────────────────────────────────────────────┘\n\nThe names are legacy and arbitrary (`OFM_LENA_BASE_00025_.png`,\n`ABY_MAIN_REF.jpg`) — they are NOT derivable from the cid, which is why\nthe config is read rather than the name rebuilt from `frozen_name()`.\n\n404 JSON when the character has no base, or when the file it names is\ngone: `FrozenBaseBrief.present` already tells the sheet which of the two\nit is, so this route does not have to.",
+        "operationId": "serve_frozen_base_img_base_get",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Octets de l'image",
+            "content": {
+              "image/png": {},
+              "image/jpeg": {}
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Absente de l'arbre du personnage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImageNotFound"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/img/pose": {
       "get": {
         "summary": "Squelette de pose",
@@ -5371,7 +5437,7 @@
           "present"
         ],
         "title": "FrozenBaseBrief",
-        "description": "The character's frozen identity base: present or not, and under which\nname. Only whether the file is there — no route serves those bytes, and\ninventing one that reads ComfyUI/input/ without a character_id bound would\nreopen the leak closed on 29/08/2026."
+        "description": "The character's frozen identity base: present or not, and under which\nname.\n\nSince 23/09/2026 a route DOES serve those bytes — `GET /img/base`, for the\ncharacter sheet's portrait. It is bound to `character_id` and takes no file\nname: the name is read from that character's own `config.json`, so a client\ncannot ask for someone else's. That is the shape the leak of 29/08/2026\ntaught (the identifier decides the path, never the client), and it matters\nhere more than anywhere: `ComfyUI/input/` is a flat shared folder holding\nthe bases of characters that are not even in the registry.\n\nThis brief stays the source of truth for WHICH state to show — present,\nnamed-but-missing, or absent — because the route answers 404 for the last\ntwo alike."
       },
       "GalleryItem": {
         "properties": {

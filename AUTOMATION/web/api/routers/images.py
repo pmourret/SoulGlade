@@ -23,12 +23,15 @@ assembly, exactly as `web.static` was registered in web/app.py.
 import asyncio
 import base64
 import io
+import logging
+import re
 from typing import Optional
 
 from fastapi import APIRouter, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 
 import env_config
+import logs
 import pose_tools
 import shared_state as ss
 
@@ -39,6 +42,8 @@ from ..schemas.images import (
     PoseExtractResponse, PosePresetSaveRequest, PosePresetSaveResponse,
     PosePresetsResponse, PoseRenderRequest, PoseSaveRequest, PoseSaveResponse,
 )
+
+LOG = logging.getLogger("images")
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -122,6 +127,81 @@ async def serve_image(
                         None, ss._faire_vignette, path, thumbnail)
         path = thumbnail
     return FileResponse(path)
+
+
+# Same alphabet as `ss.SAFE_NAME`, plus `webp`. `base_portrait.freeze()`
+# accepts png/jpg/jpeg/webp, `SAFE_NAME` only the first three — a webp base
+# would 404 for a reason that has nothing to do with the request. Widening
+# `SAFE_NAME` itself would change what `/img` accepts for no reason, so the
+# two alphabets stay separate. Neither allows a path separator, which is what
+# makes this a traversal guard and not decoration.
+_BASE_NAME = re.compile(r"^[A-Za-z0-9_.\-]+\.(png|jpg|jpeg|webp)$")
+
+
+@router.get("/img/base", response_class=FileResponse, responses=_IMAGE_RESPONSES,
+            summary="Portrait de base gelée du personnage courant")
+async def serve_frozen_base(character_id: RequiredCharacterId):
+    """Thumbnail of the CURRENT character's frozen identity base.
+
+    ┌── WHY THIS ROUTE TAKES NO FILE NAME ────────────────────────────────────┐
+    │ It is the whole design, not a convenience. The name is READ from that   │
+    │ character's own `config.json` (`base_gelee`); the client cannot name a  │
+    │ file, so it cannot name someone else's.                                 │
+    │                                                                         │
+    │ `ComfyUI/input/` is a FLAT, SHARED folder — 88 files on the reference   │
+    │ machine, including `DEMORA_BASE.png` and `MILA_BASE.png`, bases of      │
+    │ characters that are not even in the registry. A `?name=` parameter here │
+    │ would hand every one of them to anyone who asked, which is the exact    │
+    │ shape of the leak closed on 29/08/2026 (`bucket_dir()` returning        │
+    │ PROD/LENA/ whoever asked, and `/img` with no `character`).              │
+    │                                                                         │
+    │ So: the identifier decides the path, never the client. Same rule as     │
+    │ `serve_image` above, applied to a folder we do not own.                 │
+    └─────────────────────────────────────────────────────────────────────────┘
+
+    The names are legacy and arbitrary (`OFM_LENA_BASE_00025_.png`,
+    `ABY_MAIN_REF.jpg`) — they are NOT derivable from the cid, which is why
+    the config is read rather than the name rebuilt from `frozen_name()`.
+
+    404 JSON when the character has no base, or when the file it names is
+    gone: `FrozenBaseBrief.present` already tells the sheet which of the two
+    it is, so this route does not have to.
+    """
+    cid = character_id
+    name = (ss.cfg(cid) or {}).get("base_gelee") or ""
+    if not _BASE_NAME.match(name):
+        # No base declared, or a name we refuse to resolve. Same answer either
+        # way: there is nothing to serve. The sheet falls back on the initial.
+        return _not_found("aucune base gelée pour ce personnage")
+
+    source = env_config.comfyui_input() / name
+    if not source.is_file():
+        return _not_found("base gelée introuvable dans les entrées de ComfyUI")
+
+    # Thumbnail cached per character, beside the sorting ones. `base` is not a
+    # bucket name, and cannot collide with one: buckets are upper-case.
+    tdir = ss.THUMBS / cid / "base"
+    thumbnail = tdir / (source.stem + ".jpg")
+    try:
+        if not thumbnail.exists() or thumbnail.stat().st_mtime < source.stat().st_mtime:
+            tdir.mkdir(parents=True, exist_ok=True)
+            async with ss.VIGNETTES:
+                # re-test under the lock, like `serve_image`
+                if (not thumbnail.exists()
+                        or thumbnail.stat().st_mtime < source.stat().st_mtime):
+                    await asyncio.get_running_loop().run_in_executor(
+                        None, ss._faire_vignette, source, thumbnail)
+    except Exception as exc:
+        # A broad catch IN THE ROUTE THAT AWAITS IT (.claude/rules/backend.md):
+        # an exception escaping an executor under LocalOriginGuardMiddleware
+        # never delivers a response at all, and wedges the NEXT request too
+        # (incident of 2026-09-03 on /api/expression/preview). An unreadable
+        # base must degrade to « no portrait », never to a hung server.
+        ss.push_log(logs.report(LOG, exc, f"vignette de la base gelée de {cid}"),
+                    journal=False)
+        return _not_found("base gelée illisible")
+
+    return FileResponse(thumbnail)
 
 
 @router.get("/img/pose", response_class=FileResponse, responses=_IMAGE_RESPONSES,

@@ -201,9 +201,14 @@ export function useCharacter(): CharacterContextValue {
 /** Readable initial of a character, for the chrome badge.
 
     `[...str]` and not charAt: a name starting outside the BMP would be cut in
-    two half units. The chrome shows an INITIAL, never the frozen base portrait —
-    no route serves those bytes, and inventing one that reads ComfyUI/input/
-    without a character_id bound would reopen the leak closed on 29/08/2026. */
+    two half units.
+
+    THE CHROME still shows an initial and not the frozen base portrait: the
+    header badge is 26 px, where a face is a smudge and a letter is legible.
+    Since 23/09/2026 `GET /img/base` does serve those bytes (bound to the
+    character, taking no file name — see `FrozenBaseBrief`), and the character
+    SHEET uses it for its 4:5 portrait. This initial stays that portrait's
+    fallback: no base, a missing file, or a failed request. */
 export function initialOf(sheet: { name?: string | null; id?: string | null } | null): string {
   const source = String(sheet?.name || sheet?.id || '?').trim()
   return ([...source][0] || '?').toUpperCase()
