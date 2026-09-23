@@ -34,8 +34,21 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 
 /* Les crochets du DOM ont change de forme avec la migration Tailwind : une
    classe utilitaire n'est plus un nom d'etat. `.tile` -> [data-tile], `.cur` ->
-   [data-cur], `.tacts` -> [data-tacts], `.thumb` -> [data-thumb], `.acts` ->
-   [data-acts], `a.dl` -> a[data-dl], `.avis` -> [data-avis], `.triage` -> [data-triage]. */
+   [data-cur], `.thumb` -> [data-thumb], `.acts` -> [data-acts], `a.dl` ->
+   a[data-dl], `.avis` -> [data-avis], `.triage` -> [data-triage].
+
+   LA RANGEE D'ACTIONS DE LA VIGNETTE N'EXISTE PLUS (design-pass ecran 5b,
+   §S3.4) : les sept glyphes (♥ ⟳ ✕ ▣ ◉ ◌ 🗑) faisaient de vingt vignettes
+   vingt tableaux de bord, et la photographie — la seule chose qu'on vient
+   regarder — etait la plus petite part de sa propre tuile. Les gestes n'ont
+   pas disparu avec la rangee : ils ont trois chemins, le clavier sur la tuile
+   visee, la barre groupee sur une selection, et un MENU CONTEXTUEL qui les
+   nomme avec leur touche. `menuSur()` ci-dessous ouvre ce menu, et c'est par
+   lui que cette fumigation trie et RESTAURE.
+
+   Le menu est un `role="menu"` : il se ferme a Echap, rend le focus a la
+   tuile, et pendant qu'il est ouvert les touches de tri sont ignorees —
+   huitieme garde de useReviewKeys, verifiee en [8bis]. */
 
 /* GARDE DE DESTRUCTION. Cette fumigation touche des DONNEES REELLES : elle ne
    doit jamais supprimer une image qu'elle n'a pas creee elle-meme. Le filet
@@ -73,6 +86,15 @@ const volsDeDonnees = [];
   const vu = s => page.isVisible(s).catch(() => false);
   const texte = s => page.textContent(s).catch(() => '');
   const tuiles = () => page.$$eval('[data-tile]', e => e.length);
+  /* Ouvre le menu contextuel d'une tuile (clic droit) et rend son locator.
+     Le `waitForSelector` est ce qui distingue « le menu n'a pas repondu » de
+     « l'action n'existe pas dans ce dossier ». */
+  const menuSur = async (locatorTuile) => {
+    await locatorTuile.click({ button: 'right' });
+    await page.waitForSelector('#tileMenu');
+    return page.locator('#tileMenu');
+  };
+  const menuPremiereTuile = () => menuSur(page.locator('[data-tile]').first());
   const compteurs = () => page.evaluate(async () =>
     (await (await fetch('/api/state?character=lena')).json()).counts);
 
@@ -89,13 +111,34 @@ const volsDeDonnees = [];
   dire(!(await vu('#bucketSel')),
        "pas de selecteur de dossier : son dossier est dit par son onglet");
   dire(!(await vu('#btnUndo')), "pas d'annulation : rien n'y est trie");
-  const gestesG = await page.$$eval('[data-tile]:first-child [data-tacts] [data-a]', e => e.length);
-  dire(gestesG === 0, `aucun bouton de tri sous une vignette (${gestesG})`);
-  dire(await vu('[data-tile]:first-child [data-tacts] a[data-dl]'), 'un telechargement, lui, est propose');
-  dire(await vu('[data-tile]:first-child [data-tacts] [data-e]'), "et l'edition");
-  const dl = await page.getAttribute('[data-tile]:first-child [data-tacts] a[data-dl]', 'href');
+  // La vignette n'a plus de rangee d'actions : c'est le MENU qui porte les
+  // gestes, et en Galerie il n'en porte aucun qui TRIE.
+  dire(!(await vu('[data-tile] [data-tacts]')),
+       "la vignette ne porte plus de rangee de glyphes — elle est redevenue une image");
+  const menuG = await menuPremiereTuile();
+  const gestesG = await menuG.locator('[data-a]').evaluateAll(
+    e => e.map(x => x.dataset.a));
+  dire(!gestesG.some(a => ['valider', 'rejeter', 'archiver', 'revoir'].includes(a)),
+       `aucun geste de TRI dans le menu d'une image gardee (${gestesG.join(',')})`);
+  dire(await menuG.locator('a[data-dl]').isVisible(), 'un telechargement, lui, est propose');
+  dire(await menuG.locator('[data-e]').isVisible(), "et l'edition");
+  const dl = await menuG.locator('a[data-dl]').getAttribute('href');
   dire(dl.startsWith('/img?') && dl.includes('character=lena'),
        'le telechargement est un <a download> sur /img, borne au personnage');
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(250);
+  dire(!(await vu('#tileMenu')), 'Echap referme le menu');
+  dire(await page.evaluate(() => document.activeElement?.hasAttribute('data-thumb')),
+       'et rend le focus a la vignette qui l a ouvert');
+  /* On REPOSE le focus avant de continuer. C'est le menu qui a raison — il
+     doit rendre le focus a sa vignette — mais la section [4] teste Entree
+     comme geste de LECTURE depuis la grille, et Entree sur un bouton focalise
+     l'ACTIVE (garde `!target.closest('button, a')` de useReviewKeys). Sans ce
+     relachement, [4] ouvrirait la tuile 0 au lieu de la tuile visee par la
+     fleche, et c'est le filmstrip de [4ter] qui le dirait, trois sections plus
+     loin. */
+  await page.evaluate(() => document.activeElement?.blur());
+  await page.waitForTimeout(150);
 
   console.log('\n[2] PIEGE §5.6-1 : le jeton `v` est sur TOUTES les URL d image');
   const srcs = await page.$$eval('[data-tile] img', e => e.map(x => x.getAttribute('src')));
@@ -162,12 +205,24 @@ const volsDeDonnees = [];
        `un clic bascule l'etat, pas seulement une couleur (${okDepart} -> ${okApres})`);
   dire(okApres === 'false' || (await presse('[data-f="ia"]')) === 'false',
        "les deux jugements s'excluent : poser « convaincante » retire « fait IA »");
-  // REVERT : cette image est reelle, elle doit finir comme elle a commence.
-  await page.click('[data-f="ok"]');
-  await page.waitForTimeout(300);
+  /* REVERT : cette image est reelle, elle doit finir comme elle a commence.
+     ON RESTAURE L'ETAT LU, pas « un second clic ». L'ancienne version cliquait
+     deux fois sur « convaincante » et supposait que ca suffisait — vrai
+     seulement si l'image partait sans jugement ou avec celui-la. Sur une image
+     qui partait en « fait IA », les deux clics la laissaient SANS jugement :
+     la fumigation modifiait une donnee de Pierre en croyant la remettre en
+     place. Trouve le 23/09, sur la Galerie annotee du 10/09. */
+  const remettre = async (cible) => {
+    const actuel = (await presse('[data-f="ok"]')) === 'true'
+      ? 'ok' : (await presse('[data-f="ia"]')) === 'true' ? 'ia' : null;
+    if (actuel === cible) return;
+    if (actuel) { await page.click(`[data-f="${actuel}"]`); await page.waitForTimeout(300); }
+    if (cible) { await page.click(`[data-f="${cible}"]`); await page.waitForTimeout(300); }
+  };
+  await remettre(okDepart === 'true' ? 'ok' : iaDepart === 'true' ? 'ia' : null);
   dire((await presse('[data-f="ok"]')) === okDepart
        && (await presse('[data-f="ia"]')) === iaDepart,
-       'et le second clic remet l etat de depart : rien de laisse sur une image reelle');
+       'et le jugement de depart est remis exactement : rien de laisse sur une image reelle');
 
   console.log('\n[4quater] etiquettes de corpus (P4.5.1) : plein cadre, clavier, revert');
   dire(await vu('[data-tlabel="anatomie"]'), "l'axe proportions est present en plein cadre");
@@ -325,9 +380,10 @@ const volsDeDonnees = [];
     await page.waitForTimeout(400);
     const nom = await page.$eval('[data-tile]:first-child [data-thumb] img',
       e => new URL(e.src, location.origin).searchParams.get('name'));
-    const gestes = await page.$$eval('[data-tile]:first-child [data-tacts] [data-a]', e => e.map(x => x.dataset.a));
+    const menuR = await menuPremiereTuile();
+    const gestes = await menuR.locator('[data-a]').evaluateAll(e => e.map(x => x.dataset.a));
     dire(gestes.includes('valider'), `les gestes de tri sont la (${gestes.join(',')})`);
-    await page.click('[data-tile]:first-child [data-tacts] [data-a="valider"]');
+    await menuR.locator('[data-a="valider"]').click();
     await page.waitForTimeout(1600);
     const apresTri = await compteurs();
     dire(apresTri.REJET === depart.REJET - 1 && apresTri.OK === depart.OK + 1,
@@ -363,7 +419,13 @@ const volsDeDonnees = [];
   dire(cocheesApresPlage.join(',') === 'true,true,true',
        `Maj-clic etend la plage (ancre -> celle-ci), jamais un retrait (${cocheesApresPlage.join(',')})`);
   dire(await vu('#bulkBar'), 'la barre groupee apparait des le premier coche');
-  dire(!(await vu('#scoreSel')), 'et remplace la ligne de FILTRES (spaceSel/bucketSel/scoreSel)');
+  /* §S2.5 (ecran 5b) : les filtres ne DISPARAISSENT plus pendant une
+     selection. Ils restaient absents au moment precis ou on agit sur un lot,
+     donc l'ecran oubliait sur quoi il filtrait. Ils restent lisibles et
+     deviennent inertes — ce qui les sort aussi de l'ordre de tabulation. */
+  dire(await vu('#scoreSel'), 'les filtres restent LISIBLES pendant la selection');
+  dire(await page.$eval('#reviewFilters', e => e.hasAttribute('inert')),
+       'mais inertes : on ne filtre pas au milieu d un geste groupe');
   dire((await texte('#bulkCount')).includes('3 sélectionnées'), 'elle dit combien');
   dire(await vu('#viewSel [data-v="comparer"]'),
        '#viewSel, LUI, reste visible pendant la selection — sinon Comparer serait inatteignable');
@@ -398,7 +460,8 @@ const volsDeDonnees = [];
   await page.waitForTimeout(500);
   for (const nom of noms.slice(0, 2)) {
     const tuile = page.locator(`[data-tile]:has([data-thumb] img[src*="${encodeURIComponent(nom)}"])`).first();
-    await tuile.locator('[data-tacts] [data-a="valider"]').click();
+    const m = await menuSur(tuile);
+    await m.locator('[data-a="valider"]').click();
     await page.waitForTimeout(500);
   }
   const apresRestauration = await compteurs();
@@ -453,7 +516,8 @@ const volsDeDonnees = [];
   const secondeComparer = nomsComparer[1];
   const tuileComparer = page.locator(`[data-tile]:has([data-thumb] img[src*="${encodeURIComponent(secondeComparer)}"])`).first();
   if (await tuileComparer.count()) {
-    await tuileComparer.locator('[data-tacts] [data-a="valider"]').click();
+    const m = await menuSur(tuileComparer);
+    await m.locator('[data-a="valider"]').click();
     await page.waitForTimeout(500);
   }
   const apresComparer = await compteurs();
@@ -473,7 +537,8 @@ const volsDeDonnees = [];
   dire(!(await vu('dialog[open]')), 'aucune touche ne declenche la suppression');
   dire(await tuiles() === nTuiles, 'et rien n a disparu');
   if (nTuiles){
-    await page.click('[data-tile]:first-child [data-tacts] [data-suppr]');
+    const menuS = await menuPremiereTuile();
+    await menuS.locator('[data-suppr]').click();
     await page.waitForSelector('dialog[open]');
     const boite = await texte('dialog[open]');
     dire(boite.includes('Aucun retour possible'), 'la confirmation dit qu il n y a pas de retour');
@@ -481,6 +546,36 @@ const volsDeDonnees = [];
     await page.click('#cfNon');
     await page.waitForTimeout(300);
     dire(await tuiles() === nTuiles, 'annulee : rien n a ete supprime');
+  }
+
+  console.log('\n[8bis] le menu ouvert AVALE les touches de tri (8e garde de useReviewKeys)');
+  /* Le menu LISTE les touches : « Garder V », « Rejeter X ». Les lire ne doit
+     pas les declencher derriere lui — on trierait la tuile qu'on inspecte,
+     avec le menu encore pose dessus. La garde est verifiee sur les COMPTEURS,
+     pas sur une lecture du code. */
+  const avantGarde = await compteurs();
+  if (await tuiles()){
+    await menuPremiereTuile();
+    /* v, x, a — et PAS `u`. Les trois premieres agissent sur l'image visee,
+       donc la garde se prouve sur les compteurs de ce dossier. `u` dépile
+       l'annulation DU SERVEUR, qui peut porter une action anterieure au test :
+       si la garde cede, ce n'est plus le tri du test qu'on defait mais celui de
+       Pierre. Vecu le 23/09 — une image est passee de REJET a A_REVOIR, et la
+       pile etait vide ensuite, donc rien pour la remettre. Une fumigation ne
+       depile jamais ce qu'elle n'a pas empile. */
+    for (const k of ['v', 'x', 'a']) await page.keyboard.press(k);
+    await page.waitForTimeout(900);
+    dire(JSON.stringify(await compteurs()) === JSON.stringify(avantGarde),
+         'V/X/A pendant que le menu est ouvert : aucun dossier n a bouge');
+    dire(await vu('#tileMenu'), 'et le menu est toujours la — aucune touche ne l a ferme');
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(300);
+    dire(!(await vu('#tileMenu')), 'seul Echap le ferme');
+    const focusApres = await page.evaluate(() =>
+      document.activeElement && document.activeElement.hasAttribute('data-thumb'));
+    dire(focusApres, 'et le focus revient sur la vignette qui l a ouvert');
+  } else {
+    console.log('      (dossier vide : garde du menu non observable)');
   }
 
   console.log('\n[9] PIEGE §5.6-4 : /api/mesurer est rappele tant qu il reste des images');

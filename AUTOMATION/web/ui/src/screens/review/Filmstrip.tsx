@@ -54,8 +54,11 @@ export function Filmstrip({
       ref={trackRef}
       role="listbox"
       aria-label="Images du dossier"
-      className="mt-[10px] flex gap-[6px] overflow-x-auto rounded-[8px]
-                 border border-line bg-panel p-[8px]"
+      /* 84 px of bar for 64 px of thumbnail (design-pass screen-5b, §S3.3),
+         flush against the action bar above it: it is a row of the loupe now,
+         not a card floating under a stage. */
+      className="flex h-[84px] flex-none items-center gap-[6px] overflow-x-auto
+                 border-t border-t-line bg-panel px-[10px]"
       id="filmstrip"
     >
       {items.map((entry, index) => {
@@ -73,10 +76,18 @@ export function Filmstrip({
             aria-label={entry.name}
             tabIndex={roving.tabIndexFor(id)}
             type="button"
-            className={`h-[48px] w-[48px] flex-none cursor-pointer overflow-hidden
-                        rounded-[4px] border-2 p-0
+            /* The current one is outlined INSIDE, so the strip never shifts
+               by 2 px when the cursor moves along it; the others sit at .7 —
+               and the outline, not the opacity, is what says which is which
+               (opacity is not a status, frontend.md). */
+            className={`h-[64px] w-[64px] flex-none cursor-pointer overflow-hidden rounded-[4px]
+                        border-0 p-0
                         focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2
-                        ${index === safeIndex ? 'border-acc' : 'border-transparent'}`}
+                        ${
+                          index === safeIndex
+                            ? 'outline-2 outline-acc [outline-offset:-2px]'
+                            : 'opacity-70 hover:opacity-100'
+                        }`}
             onClick={() => onSelectIndex(index)}
             onKeyDown={(event) => roving.onKeyDown(event, id, (nextId) => onSelectIndex(Number(nextId)))}
           >

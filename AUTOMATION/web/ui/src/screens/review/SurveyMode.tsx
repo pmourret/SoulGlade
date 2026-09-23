@@ -4,8 +4,10 @@
    COMPARED set (not the whole original selection — see `overflowCount`)
    rejected.
 
-   Reuses `ScoreBars`/`FlagButtons` as-is (same components `FullFrame.tsx`
-   already uses) — no new score-display code. The confirmation ritual lives
+   Reuses `FlagButtons` as-is. The three realism sub-scores are NOT repeated
+   under each candidate since the design-pass screen-5b: four columns of three
+   bars was twelve bars to compare two photographs with, and the comparison is
+   made on the images. The identity score stays, next to the judgement. The confirmation ritual lives
    HERE rather than in `ReviewScreen.tsx`: it is this component that knows
    exactly which images are being compared and can name the real
    consequence, the same reasoning `DeclineDialog.tsx`/`PhotoEditor.tsx`
@@ -13,21 +15,16 @@
    (`actMany`) stays in `ReviewScreen.tsx`, reached only through `onKeep`. */
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { FlagButtons } from './FlagButtons'
-import { ScoreBars } from './ScoreBars'
 import type { GalleryItem } from './useTriage'
 
 export function SurveyMode({
   compared,
   overflowCount,
-  bands,
-  allItems,
   onFlag,
   onKeep,
 }: {
   compared: { item: GalleryItem; src: string }[]
   overflowCount: number
-  bands: Record<string, unknown>
-  allItems: GalleryItem[]
   onFlag: (item: GalleryItem, flag: string) => void
   onKeep: (kept: GalleryItem, compared: GalleryItem[]) => void
 }) {
@@ -85,14 +82,17 @@ export function SurveyMode({
               src={src}
               alt=""
             />
-            {item.nettete == null ? (
-              <div className="tiny">non mesuré</div>
-            ) : (
-              <ScoreBars item={item} bands={bands} items={allItems} flat />
-            )}
-            <div className="flex gap-[3px]" data-tacts>
-              <FlagButtons item={item} onFlag={(flag) => onFlag(item, flag)} />
+            {/* The IDENTITY score, and only it. Four columns of three realism
+                bars was twelve bars to compare two photographs with; the thing
+                being compared is the image, and the one figure that decides
+                whether a candidate is even eligible is this one. */}
+            <div className="flex items-baseline gap-[8px] text-[12.5px]">
+              <span className="flex-1 truncate text-dim">{item.scene || item.name}</span>
+              <b className="flex-none tabular-nums text-txt">
+                {item.score ? Number.parseFloat(item.score).toFixed(3) : '—'}
+              </b>
             </div>
+            <FlagButtons item={item} onFlag={(flag) => onFlag(item, flag)} />
             <button className="btn primary w-full" data-keep onClick={() => void keep(item)}>
               Garder cette version
             </button>

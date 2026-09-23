@@ -121,6 +121,17 @@ process.on('exit', nettoyer);
 
 
   let ko = 0;
+  /* La vignette n'a plus de rangee d'actions depuis le design-pass ecran 5b
+     (§S3.4) : les gestes vivent dans un MENU CONTEXTUEL, ouvert au clic droit
+     sur la tuile. `menuTuile()` l'ouvre et rend son locator ; le
+     `waitForSelector` distingue « le menu n'a pas repondu » de « l'action
+     n'existe pas dans ce dossier ». */
+  const menuTuile = async (k) => {
+    await page.click(`[data-tile][data-k="${k}"]`, { button: 'right' });
+    await page.waitForSelector('#tileMenu');
+    return page.locator('#tileMenu');
+  };
+
   const dire = (bon, quoi) => { console.log(`   ${bon ? 'ok  ' : 'ECHEC'} ${quoi}`); if (!bon) ko++; };
   const vu = s => page.isVisible(s).catch(() => false);
   const compteurs = () => page.evaluate(async () =>
@@ -153,7 +164,7 @@ process.on('exit', nettoyer);
     tiles.findIndex(t => (t.querySelector('img')?.src || '').includes(encodeURIComponent(nom))),
     SOURCE);
   dire(kSource >= 0, `elle est visible (tuile ${kSource})`);
-  await page.click(`[data-tile][data-k="${kSource}"] [data-tacts] [data-e]`);
+  await (await menuTuile(kSource)).locator('[data-e]').click();
   await page.waitForSelector('#editorBox[open]');
   await page.waitForFunction(() => {
     const c = document.querySelector('#edCanvas');
@@ -333,7 +344,7 @@ process.on('exit', nettoyer);
 
   console.log('\n[7bis] indicateur "modifications non enregistrees" + confirmation de fermeture (design-pass 7a)');
   const reouvrir = async () => {
-    await page.click(`[data-tile][data-k="${kSource}"] [data-tacts] [data-e]`);
+    await (await menuTuile(kSource)).locator('[data-e]').click();
     await page.waitForSelector('#editorBox[open]');
     await page.waitForFunction(() => {
       const c = document.querySelector('#edCanvas');
@@ -480,7 +491,7 @@ process.on('exit', nettoyer);
     return i;
   }, copie);
   dire(k >= 0, `la copie est visible en Galerie (tuile ${k})`);
-  await page.click(`[data-tile][data-k="${k}"] [data-tacts] [data-suppr]`);
+  await (await menuTuile(k)).locator('[data-suppr]').click();
   await page.waitForSelector('#armBox[open]');
   await page.click('#cfOui');
   await page.waitForTimeout(2000);

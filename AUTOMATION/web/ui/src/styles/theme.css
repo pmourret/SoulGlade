@@ -94,6 +94,8 @@
   --color-ok-bg: var(--ok-bg);
   --color-ok-line: var(--ok-line);
   --color-ok-txt: var(--ok-txt);
+  /* the target band of a realism measurement — see tokens.css */
+  --color-ok-band: var(--ok-band);
   --color-warn-bg: var(--warn-bg);
   --color-warn-line: var(--warn-line);
   --color-warn-txt: var(--warn-txt);

@@ -19,37 +19,55 @@
    the 33 % false positives of `mains` v1, and behind the 53 % of the Florence-2
    rule, both of which turned out to follow framing rather than anatomy. */
 import type { GalleryItem } from './useTriage'
-import { TACT, TACT_LABEL, TACT_IDLE } from './actionStyles'
 
 export type LabelAxis = {
   axe: 'anatomie' | 'mains'
   field: 'anatomie' | 'mains_juge'
   title: string
-  choices: { value: string; glyph: string; label: string; short: string; key: string }[]
+  choices: { value: string; label: string; short: string; key: string }[]
 }
 
 export const LABEL_AXES: LabelAxis[] = [
   {
     axe: 'anatomie',
     field: 'anatomie',
-    title: 'proportions du corps',
+    title: 'Proportions du corps',
     choices: [
-      { value: 'ok', glyph: '↕', label: 'Proportions correctes', short: 'correctes', key: 'P' },
-      { value: 'ko', glyph: '⤡', label: 'Proportions fausses', short: 'fausses', key: 'F' },
-      { value: 'na', glyph: '—', label: 'Proportions non jugeables', short: 'non jugeables', key: 'N' },
+      { value: 'ok', label: 'Proportions correctes', short: 'Correctes', key: 'P' },
+      { value: 'ko', label: 'Proportions fausses', short: 'Fausses', key: 'F' },
+      { value: 'na', label: 'Proportions non jugeables', short: 'Non jugeables', key: 'N' },
     ],
   },
   {
     axe: 'mains',
     field: 'mains_juge',
-    title: 'mains',
+    title: 'Mains',
     choices: [
-      { value: 'ok', glyph: '✓', label: 'Mains bonnes', short: 'bonnes', key: 'B' },
-      { value: 'ko', glyph: '✗', label: 'Mains mauvaises', short: 'mauvaises', key: 'M' },
-      { value: 'na', glyph: '—', label: 'Mains non jugeables', short: 'hors champ', key: 'H' },
+      { value: 'ok', label: 'Mains bonnes', short: 'Bonnes', key: 'B' },
+      { value: 'ko', label: 'Mains mauvaises', short: 'Mauvaises', key: 'M' },
+      { value: 'na', label: 'Mains non jugeables', short: 'Hors champ', key: 'H' },
     ],
   },
 ]
+
+/* TEXT, NOT GLYPHS (design-pass screen-5b, §S4.3). The three choices were
+   « ↕ ⤡ — » and « ✓ ✗ — », which a reader had to decode and a screen
+   reader announced literally. `short` already existed — it was only used in
+   the legend under the buttons, where it said in words what the buttons said
+   in symbols. Now it IS the button, and the legend goes away with the
+   duplication.
+
+   `ko` alone is painted in the danger family: it is the answer that says
+   something is wrong. `na` stays neutral on purpose — « non jugeable » is an
+   answer, not a verdict, and colouring it like the other two would read as
+   one. */
+const OPT =
+  'flex flex-1 cursor-pointer items-center justify-center gap-[5px] border-0 px-[6px]' +
+  ' py-[6px] text-[12px] whitespace-nowrap' +
+  ' focus-visible:outline-2 focus-visible:outline-[var(--focus)] focus-visible:outline-offset-[-2px]'
+const OPT_KO = 'bg-danger-bg font-semibold text-danger-txt'
+const OPT_ON = 'bg-panel3 font-semibold text-txt'
+const OPT_OFF = 'bg-transparent text-dim hover:text-txt'
 
 export function CorpusLabels({
   item,
@@ -63,38 +81,39 @@ export function CorpusLabels({
       {LABEL_AXES.map((axis) => {
         const current = item[axis.field]
         return (
-          <div className="meta" key={axis.axe}>
-            <dt className="mb-[9px]">{axis.title}</dt>
-            <div className="flex gap-[3px]" data-tlabel={axis.axe}>
-              {axis.choices.map((choice) => (
-                <button
-                  key={choice.value}
-                  data-label={`${axis.axe}:${choice.value}`}
-                  aria-label={choice.label}
-                  aria-pressed={current === choice.value}
-                  className={`${TACT} ${
-                    current === choice.value ? TACT_LABEL[choice.value] : TACT_IDLE
-                  }`}
-                  title={`${choice.label} (${choice.key})`}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    onLabel(axis, choice.value)
-                  }}
-                >
-                  {choice.glyph}
-                </button>
-              ))}
-            </div>
-            {/* No glyph repeated in the legend, unlike the realism one above: at
-                three entries the line overflowed and left the last key orphaned
-                on a second row. The glyphs are already on the buttons, 7 px up. */}
-            <div className="tiny mt-[7px]">
-              {axis.choices.map((choice, i) => (
-                <span key={choice.value}>
-                  {i > 0 && ' · '}
-                  {choice.short} <span className="kbd">{choice.key}</span>
-                </span>
-              ))}
+          <div key={axis.axe}>
+            <div className="mb-[6px] text-[11px] text-dim">{axis.title}</div>
+            <div
+              className="flex overflow-hidden rounded-[6px] border border-line2 bg-bg"
+              data-tlabel={axis.axe}
+              role="group"
+              aria-label={axis.title}
+            >
+              {axis.choices.map((choice) => {
+                const on = current === choice.value
+                return (
+                  <button
+                    key={choice.value}
+                    type="button"
+                    data-label={`${axis.axe}:${choice.value}`}
+                    aria-label={choice.label}
+                    aria-pressed={on}
+                    aria-keyshortcuts={choice.key}
+                    className={`${OPT} ${
+                      on ? (choice.value === 'ko' ? OPT_KO : OPT_ON) : OPT_OFF
+                    }`}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onLabel(axis, choice.value)
+                    }}
+                  >
+                    {choice.short}
+                    <span className="kbd" aria-hidden="true">
+                      {choice.key}
+                    </span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         )

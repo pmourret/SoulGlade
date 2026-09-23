@@ -1,6 +1,13 @@
 /* Revue AND Galerie — sorting, sub-scores, judgement, decline.
    Ported from `static/review.js`.
 
+   THREE PANELS (design-pass screen-5b, 23/09/2026). The screen used to be a
+   centred article: one row mixing four segmented controls, then the grid or
+   the full frame, which itself split into a stage and a 300 px column of five
+   bordered cards. Now the filters have a panel, the image has the middle, and
+   the readings have a panel — the same shape as Produire, on the same
+   reflexes.
+
    TWO TRADES, TWO ROUTES (migration brief, point 2). The legacy screen carried
    both in `#trier[data-metier]`, an attribute written from the route. They are
    `/review` and `/gallery` now — but they remain ONE component with one loader
@@ -23,8 +30,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 
 import { useApi } from '../../api/useApi'
+import { useChrome } from '../../chrome/ChromeContext'
 import { useLightbox } from '../../chrome/LightboxContext'
-import { useRovingChoice } from '../../chrome/useRovingChoice'
 import { useToast } from '../../chrome/ToastContext'
 import { useConfig } from '../../state/ConfigContext'
 import { useSystemState } from '../../state/SystemStateContext'
@@ -33,8 +40,13 @@ import { DeclineDialog } from './DeclineDialog'
 import { PhotoEditor } from './PhotoEditor'
 import { EmptyState } from './EmptyState'
 import { FullFrame } from './FullFrame'
+import { ReviewFilters, REVIEW_BUCKETS, SCORE_FILTERS } from './ReviewFilters'
+import { ReviewInspector } from './ReviewInspector'
+import { ReviewToolbar } from './ReviewToolbar'
 import { SurveyMode } from './SurveyMode'
 import { Tile } from './Tile'
+import { TileMenu } from './TileMenu'
+import { useOverlayPanel } from '../produce/useOverlayPanel'
 import { useReviewKeys } from './useReviewKeys'
 import { useSelection } from './useSelection'
 import { useSortActions } from './useSortActions'
@@ -45,38 +57,7 @@ import {
   type ScoreFilter,
   type Space,
   type Trade,
-  type View,
 } from './useTriage'
-
-const SCORE_FILTERS: { key: ScoreFilter; label: string }[] = [
-  { key: 'tout', label: 'Tout' },
-  { key: 'haut', label: 'Excellentes' },
-  { key: 'moyen', label: 'Correctes' },
-  { key: 'bas', label: 'Sous la bande' },
-]
-
-/* Bucket selector of the Revue trade. `OK` is NOT offered here: the kept images
-   have their destination, the Galerie. */
-const REVIEW_BUCKETS = [
-  { key: 'A_REVOIR', label: 'À revoir' },
-  { key: 'REJET', label: 'Rejetées' },
-  // SANS_VISAGE is a real QC verdict (no face detected): the runner filled that
-  // folder while nothing led to it, so its images became unfindable
-  { key: 'SANS_VISAGE', label: 'Sans visage' },
-  { key: 'ARCHIVE', label: 'Archivées' },
-]
-
-/* How many images the space holds in the CURRENT bucket (23/09). Producing at
-   a non-exporting tier files into the NSFW space while the Review opens on
-   SFW: thirty images landed next door and nothing said so — the screen simply
-   looked empty. Silent on zero and on an absent count: a « 0 » next to every
-   label would be noise on the day nothing has been produced, and the segment
-   must stay readable. Part of the label, not an `aria-hidden` decoration, so
-   the button announces « NSFW 30 ». */
-function SpaceCount({ n }: { n: number | undefined }) {
-  if (!n) return null
-  return <span className="tiny">{n}</span>
-}
 
 export function ReviewScreen({ trade }: { trade: Trade }) {
   const api = useApi()
@@ -86,6 +67,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   const { qc, qcMains } = useConfig()
   const { state, refresh: refreshCounts } = useSystemState()
   const { src: lightboxSrc, open: openLightbox } = useLightbox()
+  const { narrow } = useChrome()
 
   /* Galerie always reads the kept ones; Revue opens on the queue to judge and
      lets one walk the other folders. `A_REVOIR` here is only the value held
@@ -98,6 +80,12 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
   const [filter, setFilter] = useState<ScoreFilter>('tout')
   const [declineFor, setDeclineFor] = useState<GalleryItem | null>(null)
   const [editFor, setEditFor] = useState<GalleryItem | null>(null)
+  /** Under 1100 px the inspector is a drawer; above, this is ignored. */
+  const [inspectorOpen, setInspectorOpen] = useState(false)
+  /** The tile context menu: which tile, and where the pointer opened it. */
+  const [menu, setMenu] = useState<{ index: number; at: { x: number; y: number } | null } | null>(
+    null,
+  )
 
   useEffect(() => {
     setBucket(trade === 'galerie' ? 'OK' : 'A_REVOIR')
@@ -166,7 +154,20 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
     gridRef.current?.focus()
   }, [selection])
 
-  const editing = declineFor !== null || editFor !== null
+  /* The menu gives focus back to the tile it came from — the same contract
+     as IdentityMenu, and the reason the opener is remembered rather than
+     assumed to still be the active element. */
+  const closeMenu = useCallback(() => {
+    const index = menu?.index
+    setMenu(null)
+    if (index != null)
+      gridRef.current?.querySelector<HTMLElement>(`[data-thumb][data-k="${index}"]`)?.focus()
+  }, [menu])
+
+  /* `editing` was a prop of useReviewKeys that the handler never read: the
+     real guards are `body.editing` (posted by PhotoEditor) and `dialog[open]`
+     (posted by DeclineDialog's own confirmation). It only ever sat in the
+     dependency array, and the array is gone. */
   useReviewKeys({
     trade,
     view,
@@ -177,9 +178,9 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
     undo,
     current,
     lightboxSrc,
-    editing,
     selectedCount: selection.selected.size,
     onClearSelection: clearSelectionAndRefocus,
+    menuOpen: menu !== null,
   })
 
   /* A finished batch means new images in the folder being looked at. */
@@ -224,18 +225,6 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
     if (first) setBucket(first.key)
   }, [buckets])
 
-  /* Four roving radiogroups (a11y audit, design-pass screen-5) — same
-     gabarit as produce/ProduceSidebar.tsx: arrows move AND pick immediately,
-     one Tab stop per group. `data-sp`/`data-b`/`data-f`/`data-v` and the
-     `'on'` class are unchanged, additive only. */
-  const spaceRoving = useRovingChoice(['sfw', 'nsfw'], space)
-  const bucketIds = REVIEW_BUCKETS.map((entry) => entry.key)
-  const bucketRoving = useRovingChoice(bucketIds, bucket)
-  const filterIds = SCORE_FILTERS.map((entry) => entry.key)
-  const filterRoving = useRovingChoice(filterIds, filter)
-  const viewIds = ['revue', 'grille', 'comparer']
-  const viewRoving = useRovingChoice(viewIds, view)
-
   const onBulk = useCallback(
     async (action: string) => {
       await actMany(action, [...selection.selected])
@@ -268,207 +257,101 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
     [actMany, selection, setView],
   )
 
+  /* The inspector is a drawer under 1100 px, and `useOverlayPanel` gives it
+     the Escape and the focus contract it does not need at full width. */
+  const inspectorRef = useRef<HTMLDivElement | null>(null)
+  const closeInspector = useCallback(() => setInspectorOpen(false), [])
+  useOverlayPanel(narrow && inspectorOpen, closeInspector, inspectorRef)
+
+  const filterLabel = SCORE_FILTERS.find((entry) => entry.key === filter)?.label ?? ''
+  const position = shown.length
+    ? `${safeCursor + 1} / ${shown.length}${filter !== 'tout' ? ` · filtre : ${filterLabel}` : ''}`
+    : ''
+  const selecting = view === 'grille' && selection.selected.size > 0
+  const menuItem = menu != null ? shown[menu.index] : undefined
+
+  /* ONE display utility in the chain, never two — the drawer's own
+     `hidden`/`flex` trap, already paid for on Produire. */
+  const inspectorShell = narrow
+    ? `fixed top-0 right-0 bottom-0 z-[9] w-[min(320px,100vw)] shadow-elev ${
+        inspectorOpen ? 'flex' : 'hidden'
+      }`
+    : 'flex'
+
   return (
-    <div className="screen" id="trier" data-metier={trade}>
-      {/* The sorting screen ends on its grid: it has no launch bar to clear. */}
-      <div className="wrap pb-[24px]">
-        <div className="viewsel">
-        {view === 'grille' && selection.selected.size > 0 ? (
-          /* Bulk action bar (design-pass screen-5, §D) — replaces the FILTER
-             controls only (space/bucket/score: not meaningful mid-selection).
-             `#viewSel` stays put, right of it — Comparer (§B) must stay
-             reachable, that is the only way into it after selecting.
-             Language of ReviewActions.tsx (`.btn`, `data-a`, `.kbd`) without
-             reusing the component itself: that one is bucket-conditional and
-             built for the full-frame column. */
-          <>
-            <span className="text-[13px] font-semibold text-txt" role="status" id="bulkCount">
-              {selection.selected.size} sélectionnée{selection.selected.size > 1 ? 's' : ''}
-            </span>
-            <div className="flex gap-[9px]" id="bulkBar">
-              <button className="btn" data-a="valider" onClick={() => void onBulk('valider')}>
-                Garder
-              </button>
-              <button className="btn" data-a="rejeter" onClick={() => void onBulk('rejeter')}>
-                Rejeter
-              </button>
-              <button className="btn" data-a="archiver" onClick={() => void onBulk('archiver')}>
-                Archiver
-              </button>
-            </div>
-            <button className="link" onClick={clearSelectionAndRefocus}>
-              annuler la sélection <span className="kbd">Échap</span>
-            </button>
-          </>
-        ) : (
-          <>
-          {/* `data-sp="sfw"` is the WIRE key sent to /api/gallery and /img: SFW,
-              not the name of a character (AUDIT §5.3). */}
-          <div className="seg" id="spaceSel" role="radiogroup" aria-label="Espace">
-            <button
-              ref={spaceRoving.registerRef('sfw')}
-              role="radio"
-              aria-checked={space === 'sfw'}
-              tabIndex={spaceRoving.tabIndexFor('sfw')}
-              className={space === 'sfw' ? 'on' : undefined}
-              data-sp="sfw"
-              data-hint-text="Espace SFW — la production normale du personnage."
-              onClick={() => setSpace('sfw')}
-              onKeyDown={(event) => spaceRoving.onKeyDown(event, 'sfw', (id) => setSpace(id as Space))}
-            >
-              SFW <SpaceCount n={spaceCounts.sfw} />
-            </button>
-            <button
-              ref={spaceRoving.registerRef('nsfw')}
-              role="radio"
-              aria-checked={space === 'nsfw'}
-              tabIndex={spaceRoving.tabIndexFor('nsfw')}
-              className={space === 'nsfw' ? 'on' : undefined}
-              data-sp="nsfw"
-              data-hint-text="Espace NSFW — isolé, jamais exporté."
-              onClick={() => setSpace('nsfw')}
-              onKeyDown={(event) => spaceRoving.onKeyDown(event, 'nsfw', (id) => setSpace(id as Space))}
-            >
-              NSFW <SpaceCount n={spaceCounts.nsfw} />
-            </button>
-          </div>
+    <div className="screen grid h-full grid-rows-[minmax(0,1fr)]" id="trier" data-metier={trade}>
+      {/* ECART ASSUME sur §S6. Le cadrage replie le panneau de filtres en
+          56 px d'icones sous 1100 px. Le studio n'a pas de vocabulaire
+          d'icones pour « A revoir », « Rejetees », « Sans visage »,
+          « Archivees » ni pour les trois bandes de score, et en inventer six
+          pour une largeur serait six signes de plus a apprendre. A 1024 les
+          232 px du panneau et les 792 px qui restent au centre tiennent tous
+          les deux — quatre colonnes de vignettes —, donc le panneau garde sa
+          largeur et ses MOTS, et c'est l'inspecteur seul qui passe en tiroir.
+          Mesure : la piste declaree a 56 px pendant que le panneau en faisait
+          232 le posait SUR la grille, 176 px par-dessus (audit du 23/09). */}
+      <div
+        className="grid min-h-0 grid-cols-[232px_minmax(0,1fr)_320px]
+                   max-[1100px]:grid-cols-[232px_minmax(0,1fr)]"
+      >
+        <ReviewFilters
+          trade={trade}
+          space={space}
+          spaceCounts={spaceCounts}
+          onSpace={setSpace}
+          bucket={bucket}
+          buckets={buckets as Record<string, number> | null}
+          onBucket={(key) => {
+            setBucket(key)
+            setCursor(0)
+          }}
+          filter={filter}
+          filterCounts={counts}
+          onFilter={(key) => {
+            setFilter(key)
+            setCursor(0)
+          }}
+          qc={qc}
+          unmeasured={unmeasured}
+          measuring={measuring}
+          measureLeft={measureLeft ?? 0}
+          onMeasure={measure}
+          canUndo={Boolean(state?.undo)}
+          onUndo={undo}
+          frozen={selecting}
+        />
 
-          {/* The Galerie does not show the bucket selector at all: its folder is
-              said by its tab. */}
-          {trade === 'revue' && (
-            <div className="seg" id="bucketSel" role="radiogroup" aria-label="Dossier">
-              {REVIEW_BUCKETS.map((entry) => (
-                <button
-                  key={entry.key}
-                  ref={bucketRoving.registerRef(entry.key)}
-                  role="radio"
-                  aria-checked={bucket === entry.key}
-                  tabIndex={bucketRoving.tabIndexFor(entry.key)}
-                  className={bucket === entry.key ? 'on' : undefined}
-                  data-b={entry.key}
-                  onClick={() => {
-                    setBucket(entry.key)
-                    setCursor(0)
-                  }}
-                  onKeyDown={(event) =>
-                    bucketRoving.onKeyDown(event, entry.key, (id) => {
-                      setBucket(id)
-                      setCursor(0)
-                    })
-                  }
-                >
-                  {entry.label} <span id={`b${entry.key}`}>{buckets?.[entry.key] ?? 0}</span>
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="flex min-h-0 min-w-0 flex-col bg-bg">
+          <ReviewToolbar
+            title={view === 'revue' && current ? current.scene || current.name : 'Images'}
+            position={position}
+            view={view}
+            onView={setView}
+            selectedCount={selection.selected.size}
+            onBulk={(action) => void onBulk(action)}
+            onClearSelection={clearSelectionAndRefocus}
+            narrow={narrow}
+            onOpenInspector={() => setInspectorOpen(true)}
+          />
 
-          <div className="seg" id="scoreSel" role="radiogroup" aria-label="Filtre de score">
-            {SCORE_FILTERS.map((entry) => (
-              <button
-                key={entry.key}
-                ref={filterRoving.registerRef(entry.key)}
-                role="radio"
-                aria-checked={filter === entry.key}
-                tabIndex={filterRoving.tabIndexFor(entry.key)}
-                className={filter === entry.key ? 'on' : undefined}
-                data-f={entry.key}
-                aria-label={`${entry.label} — ${scoreFilterTitle(entry.key, qc)}`}
-                title={scoreFilterTitle(entry.key, qc)}
-                onClick={() => {
-                  setFilter(entry.key)
-                  setCursor(0)
-                }}
-                onKeyDown={(event) =>
-                  filterRoving.onKeyDown(event, entry.key, (id) => {
-                    setFilter(id as ScoreFilter)
-                    setCursor(0)
-                  })
-                }
-              >
-                {entry.label}
-                <span className="n">{counts[entry.key] || ''}</span>
-              </button>
-            ))}
-          </div>
-          </>
-        )}
-
-          <div className="flex-1" />
-
-          <div className="seg" id="viewSel" role="radiogroup" aria-label="Affichage">
-            <button
-              ref={viewRoving.registerRef('revue')}
-              role="radio"
-              aria-checked={view === 'revue'}
-              tabIndex={viewRoving.tabIndexFor('revue')}
-              className={view === 'revue' ? 'on' : undefined}
-              data-v="revue"
-              onClick={() => setView('revue')}
-              onKeyDown={(event) => viewRoving.onKeyDown(event, 'revue', (id) => setView(id as View))}
-            >
-              Revue
-            </button>
-            <button
-              ref={viewRoving.registerRef('grille')}
-              role="radio"
-              aria-checked={view === 'grille'}
-              tabIndex={viewRoving.tabIndexFor('grille')}
-              className={view === 'grille' ? 'on' : undefined}
-              data-v="grille"
-              onClick={() => setView('grille')}
-              onKeyDown={(event) => viewRoving.onKeyDown(event, 'grille', (id) => setView(id as View))}
-            >
-              Grille
-            </button>
-            {/* Comparer (design-pass screen-5, §B) — reuses the selection
-                already fed by the bulk action bar of Grille (§D), see
-                `useSelection.ts`. */}
-            <button
-              ref={viewRoving.registerRef('comparer')}
-              role="radio"
-              aria-checked={view === 'comparer'}
-              tabIndex={viewRoving.tabIndexFor('comparer')}
-              className={view === 'comparer' ? 'on' : undefined}
-              data-v="comparer"
-              onClick={() => setView('comparer')}
-              onKeyDown={(event) => viewRoving.onKeyDown(event, 'comparer', (id) => setView(id as View))}
-            >
-              Comparer
-            </button>
-          </div>
-
-          {unmeasured > 0 && (
-            <button className="btn sm" id="btnMesurer" disabled={measuring} onClick={measure}>
-              {measuring
-                ? measureLeft
-                  ? `mesure… ${measureLeft} restante(s)`
-                  : 'mesure…'
-                : `Mesurer (${unmeasured})`}
-            </button>
-          )}
-          {/* Undo has no place in the Galerie: nothing is sorted there. */}
-          {trade === 'revue' && (
-            <button className="btn sm" id="btnUndo" disabled={!state?.undo} onClick={undo}>
-              Annuler
-            </button>
-          )}
-        </div>
-
-        <div id="triageBody">
           {notFound && (
             /* A banner, not an empty screen: the folder may well have content,
                and it is the REQUEST that failed, not the load. */
-            <div className="empty mb-[16px]" data-avis>
-              <b>« {notFound} » n'est pas dans ce dossier.</b>
-              Le fichier a pu être trié ailleurs, supprimé, ou appartenir à un autre
-              personnage — la Revue et la Galerie ne montrent que l'arbre du
-              personnage ouvert.
-              <div className="mt-[16px]">
-                <button className="btn" id="btnAvisFermer" onClick={() => setNotFound(null)}>
-                  Fermer
-                </button>
+            <div
+              className="m-[16px] flex flex-none items-start gap-[12px] rounded-[8px] border
+                         border-warn-line bg-warn-bg px-[14px] py-[12px] text-[12.5px]
+                         leading-[1.5] text-warn-txt empty"
+              data-avis
+            >
+              <div className="min-w-0 flex-1 text-left">
+                <b className="block">« {notFound} » n'est pas dans ce dossier.</b>
+                Le fichier a pu être trié ailleurs, supprimé, ou appartenir à un autre
+                personnage — la Revue et la Galerie ne montrent que l'arbre du
+                personnage ouvert.
               </div>
+              <button className="btn sm flex-none" id="btnAvisFermer" onClick={() => setNotFound(null)}>
+                Fermer
+              </button>
             </div>
           )}
 
@@ -476,26 +359,33 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
             /* Comparer does not depend on `shown` (the score-filtered view) —
                it has its OWN empty state (0-1 selected), never EmptyState.tsx
                (bucket-keyed, semantically foreign to this case). */
-            <SurveyMode
-              compared={compared}
-              overflowCount={overflowCount}
-              bands={bands}
-              allItems={items}
-              onFlag={(item, flag) => void setFlag(item, flag)}
-              onKeep={(kept, comparedItems) => void onKeepInSurvey(kept, comparedItems)}
-            />
+            <div className="min-h-0 flex-1 overflow-y-auto p-[16px]">
+              <SurveyMode
+                compared={compared}
+                overflowCount={overflowCount}
+                onFlag={(item, flag) => void setFlag(item, flag)}
+                onKeep={(kept, comparedItems) => void onKeepInSurvey(kept, comparedItems)}
+              />
+            </div>
           ) : !shown.length ? (
-            <EmptyState
-              empty={!items.length}
-              bucket={bucket}
-              total={items.length}
-              onShowAll={() => setFilter('tout')}
-            />
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <EmptyState
+                empty={!items.length}
+                bucket={bucket}
+                total={items.length}
+                onShowAll={() => setFilter('tout')}
+                space={space}
+                otherCount={space === 'sfw' ? spaceCounts.nsfw : spaceCounts.sfw}
+                onSwitchSpace={() => setSpace(space === 'sfw' ? 'nsfw' : 'sfw')}
+              />
+            </div>
           ) : view === 'grille' ? (
             <div
               ref={gridRef}
               tabIndex={-1}
-              className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-[14px] outline-none"
+              className="grid min-h-0 flex-1 content-start grid-cols-[repeat(auto-fill,minmax(180px,1fr))]
+                         gap-[12px] overflow-y-auto p-[16px] outline-none
+                         [grid-auto-rows:max-content]"
             >
               {shown.map((item, index) => (
                 <Tile
@@ -503,12 +393,8 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
                   item={item}
                   index={index}
                   current={index === safeCursor}
-                  trade={trade}
                   qc={qc}
-                  bands={bands}
-                  items={items}
                   src={api.image({ ...item, thumb: true })}
-                  fullSrc={api.image(item)}
                   selected={selection.selected.has(item.name)}
                   onSelectClick={selection.onSelectClick}
                   onAim={() => setCursor(index)}
@@ -516,10 +402,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
                     setCursor(index)
                     setView('revue')
                   }}
-                  onAct={(action) => act(action, index)}
-                  onFlag={(flag) => setFlag(item, flag)}
-                  onEdit={() => setEditFor(item)}
-                  onDelete={() => deleteForever(index)}
+                  onMenu={(at) => setMenu({ index, at })}
                 />
               ))}
             </div>
@@ -528,29 +411,70 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
               <FullFrame
                 item={current}
                 index={safeCursor}
-                total={shown.length}
-                filtered={filter !== 'tout' ? items.length : null}
                 trade={trade}
-                qc={qc}
-                qcMains={qcMains}
-                bands={bands}
-                items={items}
-                references={references}
                 src={api.image(current)}
                 filmstripItems={filmstripItems}
                 onStep={step}
                 onSelectIndex={setCursor}
                 onMagnify={() => openLightbox(api.image(current))}
                 onAct={(action) => act(action)}
-                onFlag={(flag) => setFlag(current, flag)}
-                onLabel={(axis, value) => setFlag(current, value, axis.axe)}
                 onEdit={() => setEditFor(current)}
                 onDelete={() => deleteForever()}
               />
             )
           )}
         </div>
+
+        <aside
+          ref={inspectorRef}
+          className={`w-[320px] flex-none flex-col overflow-y-auto border-l border-l-line
+                      bg-panel ${inspectorShell}`}
+          id="reviewInspector"
+          aria-label="Inspecteur"
+          /* A drawer is a dialog; a column beside the grid is a complementary
+             landmark. No `aria-modal`: there is no scrim and the grid behind
+             stays reachable, deliberately — claiming modality the panel does
+             not enforce would be a promise it does not keep. */
+          role={narrow ? 'dialog' : undefined}
+        >
+          {narrow && (
+            <button
+              type="button"
+              className="flex-none self-end border-0 bg-transparent px-[12px] py-[8px]
+                         text-[16px] text-dim hover:text-txt"
+              aria-label="Fermer l'inspecteur"
+              onClick={closeInspector}
+            >
+              ×
+            </button>
+          )}
+          <ReviewInspector
+            item={current}
+            compact={view !== 'revue'}
+            qc={qc}
+            qcMains={qcMains}
+            bands={bands}
+            items={items}
+            references={references}
+            previewSrc={current ? api.image({ ...current, thumb: true }) : null}
+            onFlag={(flag) => current && setFlag(current, flag)}
+            onLabel={(axis, value) => current && setFlag(current, value, axis.axe)}
+          />
+        </aside>
       </div>
+
+      {menu && menuItem && (
+        <TileMenu
+          trade={trade}
+          bucket={menuItem.bucket}
+          at={menu.at}
+          downloadHref={api.image(menuItem)}
+          onAct={(action) => act(action, menu.index)}
+          onEdit={() => setEditFor(menuItem)}
+          onDelete={() => deleteForever(menu.index)}
+          onClose={closeMenu}
+        />
+      )}
 
       {editFor && (
         <PhotoEditor
@@ -578,15 +502,6 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
       )}
     </div>
   )
-}
-
-function scoreFilterTitle(key: ScoreFilter, qc: { ok: number; high: number }): string {
-  return {
-    tout: 'toutes les images du dossier',
-    haut: `score ≥ ${qc.high.toFixed(2)}`,
-    moyen: `score ${qc.ok.toFixed(2)} à ${qc.high.toFixed(2)}`,
-    bas: `score < ${qc.ok.toFixed(2)}, ou visage non mesuré`,
-  }[key]
 }
 
 /* Route wrappers — the ROUTER names the trade. */

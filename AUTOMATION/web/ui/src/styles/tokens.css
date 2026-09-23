@@ -95,6 +95,15 @@
      peignait donc en hex en dur. Meme forme que ses deux soeurs.
      txt/bg = 9.96. */
   --ok-bg:#1f2a21; --ok-line:#2f4a34; --ok-txt:#b9dcbf;
+  /* La BANDE CIBLE d'une mesure de realisme (design-pass ecran 5b, §S4.2) :
+     le segment de piste ou la valeur est consideree conforme, peint derriere
+     le repere. Nomme dans la famille --ok-* plutot que « --band » tout court,
+     comme ses trois soeurs : le prefixe dit de quel verdict la bande est la
+     bande, et de quelle couleur elle descend. Plus clair que --ok-bg (c'est
+     une zone a lire, pas un fond de bandeau), plus sombre que --ok-line.
+     Verdict, donc signal de securite : jamais redeclare par pack, jamais
+     derive par personnage (deriveTheme.ts ne le connait pas). */
+  --ok-band:#34423a;
   --mes-bg:#07180b; --mes-line:#133c1f;
 
   /* Liaison visuelle des 3 fragments du recapitulatif de scene (bank/

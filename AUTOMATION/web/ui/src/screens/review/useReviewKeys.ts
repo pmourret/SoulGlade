@@ -2,13 +2,28 @@
 
    EVERY GUARD HERE HAS A REASON, and none may be dropped: a text field being
    typed into, an open modal `<dialog>` (which swallows the page), the lightbox,
-   the photo editor, and the Galerie trade — where the sorting shortcuts do not
-   exist any more than their buttons do.
+   the photo editor, an open tile menu, and the Galerie trade — where the
+   sorting shortcuts do not exist any more than their buttons do.
 
    That last one is the important one. Hiding the buttons and letting the
    keyboard sort anyway would be the worst of both halves: one would sort blind,
-   with nothing on screen to say it happened. */
-import { useEffect } from 'react'
+   with nothing on screen to say it happened.
+
+   ONE LISTENER, REGISTERED ONCE, READING A REF. The handler used to be
+   re-registered on every change of its ten dependencies, and that is a real
+   defect, not a style question: a keypress that makes this screen RE-RENDER
+   can tear the listener down mid-dispatch, before it has run. Measured on the
+   23/09 — `f` (« proportions fausses ») also toggles the chrome's focus mode,
+   whose listener runs first; once the Revue started reading ChromeContext for
+   its narrow layout, that toggle re-rendered the screen, React swapped the
+   listener during the same keydown, and `f` fired the focus mode and NOTHING
+   else, silently. `n`, `p`, `b` and `m` kept working, which is exactly how
+   quiet this class of bug is.
+
+   The fix is not to chase the flush timing: the handler goes in a ref, the
+   `document` listener is posted once on mount and removed once on unmount, and
+   no re-render can take it away under a key that is already travelling. */
+import { useEffect, useRef } from 'react'
 
 import { LABEL_AXES } from './CorpusLabels'
 import type { JudgementAxis } from './useSortActions'
@@ -49,9 +64,9 @@ export function useReviewKeys({
   undo,
   current,
   lightboxSrc,
-  editing,
   selectedCount,
   onClearSelection,
+  menuOpen,
 }: {
   trade: Trade
   view: View
@@ -62,66 +77,73 @@ export function useReviewKeys({
   undo: () => Promise<void> | void
   current: GalleryItem | undefined
   lightboxSrc: string | null
-  editing: boolean
   /** Multi-select (design-pass screen-5, §D) — Échap clears it, nothing else
       here owned this key before. */
   selectedCount: number
   onClearSelection: () => void
+  /** The tile context menu is open (design-pass screen-5b, §S3.4). It LISTS
+      the sorting keys, so a key pressed while reading it must not also fire
+      the gesture behind the menu — one would sort the tile one was inspecting,
+      with the menu still covering it. The menu owns Escape itself. */
+  menuOpen: boolean
 }) {
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null
-      if (isTextEntry(target)) return
-      if (target?.isContentEditable) return
-      // an open modal <dialog> swallows the page: its keys must not percolate
-      if (document.querySelector('dialog[open]')) return
-      if (lightboxSrc) return
-      if (document.body.classList.contains('editing')) return
-      /* The filmstrip (design-pass screen-5, §A) is a `role="listbox"` with
-         its OWN ArrowLeft/Right handling (chrome/useRovingChoice.ts) that
-         already calls `onSelectIndex` -> `setCursor`. This listener is a raw
-         `document` listener, outside React's synthetic event tree: a
-         `stopPropagation()` inside the filmstrip's own `onKeyDown` would
-         NOT stop it from also firing here and calling `step()` a second
-         time for the same keypress. Same guard idiom as the four checks
-         above. */
-      if (target?.closest('[role="listbox"]')) return
+  /* The handler, rebuilt on every render — cheap — and read through a ref by
+     the one listener below. */
+  const latest = useRef<(event: KeyboardEvent) => void>(() => {})
+  latest.current = (event: KeyboardEvent) => {
+    const target = event.target as HTMLElement | null
+    if (isTextEntry(target)) return
+    if (target?.isContentEditable) return
+    // an open modal <dialog> swallows the page: its keys must not percolate
+    if (document.querySelector('dialog[open]')) return
+    if (lightboxSrc) return
+    if (document.body.classList.contains('editing')) return
+    if (menuOpen) return
+    /* The filmstrip (design-pass screen-5, §A) is a `role="listbox"` with
+       its OWN ArrowLeft/Right handling (chrome/useRovingChoice.ts) that
+       already calls `onSelectIndex` -> `setCursor`. This listener is a raw
+       `document` listener, outside React's synthetic event tree: a
+       `stopPropagation()` inside the filmstrip's own `onKeyDown` would
+       NOT stop it from also firing here and calling `step()` a second
+       time for the same keypress. Same guard idiom as the four checks
+       above. */
+    if (target?.closest('[role="listbox"]')) return
 
-      const key = event.key.toLowerCase()
-      if (key === 'escape' && selectedCount > 0) {
-        onClearSelection()
-        return
-      }
-      if (key === 'arrowright') return step(1)
-      if (key === 'arrowleft') return step(-1)
-      /* Enter on the grid = open the aimed tile full frame (the keyboard
-         equivalent of clicking the thumbnail). Not when the focus is on a
-         button: Enter would then sort AND magnify. */
-      if (key === 'enter' && view === 'grille' && !target?.closest('button, a')) {
-        setView('revue')
-        return
-      }
-      if (trade === 'galerie' && 'vrxadu'.includes(key)) return
-      if (key === 'v') void act('valider')
-      else if (key === 'r') void act('revoir')
-      else if (key === 'x') void act('rejeter')
-      else if (key === 'a') void act('archiver')
-      else if (key === 'd') void act('decliner')
-      else if (key === 'c') current && void setFlag(current, 'ok')
-      else if (key === 'i') current && void setFlag(current, 'ia')
-      /* P4.5.1 labelling, the keyboard half of `CorpusLabels` — the corpus is
-         ~100 images and nobody builds it with a mouse. Full frame ONLY, like
-         the buttons: neither a proportion nor a hand can be judged on a
-         thumbnail, and a corpus labelled from the grid would be a corpus
-         labelled blind. */
-      else if (LABEL_KEYS[key] && view === 'revue' && current)
-        void setFlag(current, LABEL_KEYS[key][1], LABEL_KEYS[key][0])
-      else if (key === 'u') void undo()
+    const key = event.key.toLowerCase()
+    if (key === 'escape' && selectedCount > 0) {
+      onClearSelection()
+      return
     }
+    if (key === 'arrowright') return step(1)
+    if (key === 'arrowleft') return step(-1)
+    /* Enter on the grid = open the aimed tile full frame (the keyboard
+       equivalent of clicking the thumbnail). Not when the focus is on a
+       button: Enter would then sort AND magnify. */
+    if (key === 'enter' && view === 'grille' && !target?.closest('button, a')) {
+      setView('revue')
+      return
+    }
+    if (trade === 'galerie' && 'vrxadu'.includes(key)) return
+    if (key === 'v') void act('valider')
+    else if (key === 'r') void act('revoir')
+    else if (key === 'x') void act('rejeter')
+    else if (key === 'a') void act('archiver')
+    else if (key === 'd') void act('decliner')
+    else if (key === 'c') current && void setFlag(current, 'ok')
+    else if (key === 'i') current && void setFlag(current, 'ia')
+    /* P4.5.1 labelling, the keyboard half of `CorpusLabels` — the corpus is
+       ~100 images and nobody builds it with a mouse. Full frame ONLY, like
+       the buttons: neither a proportion nor a hand can be judged on a
+       thumbnail, and a corpus labelled from the grid would be a corpus
+       labelled blind. */
+    else if (LABEL_KEYS[key] && view === 'revue' && current)
+      void setFlag(current, LABEL_KEYS[key][1], LABEL_KEYS[key][0])
+    else if (key === 'u') void undo()
+  }
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => latest.current(event)
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [
-    act, current, editing, lightboxSrc, setFlag, setView, step, trade, undo, view,
-    selectedCount, onClearSelection,
-  ])
+  }, [])
 }

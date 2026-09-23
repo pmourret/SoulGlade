@@ -880,10 +880,16 @@
           "d": "Passeport à gauche (portrait de la base gelée, pastilles d'état, deux actions) et panneau de cinq sections en lecture seule, chacune portant sa règle. La base gelée est servie par une route liée au personnage, sans nom de fichier en paramètre."
         },
         {
-          "s": "cours",
+          "s": "fait",
           "it": "IT-9",
           "t": "Produire : trois panneaux",
-          "d": "Panneau gauche (intensité, intention, ton), grille de scènes au centre, inspecteur à onglets Scène/Réglages/Prompt à droite, barre de lancement ancrée. Les réglages et l'aperçu quittent la surimpression ; le journal quitte l'écran. Logique de lancement inchangée."
+          "d": "Trois panneaux et une barre ancrée : intensité, intention et ton à gauche, la grille de scènes au centre, un inspecteur à onglets Scène/Réglages/Prompt à droite. Les réglages et l'aperçu quittent la surimpression, le journal quitte l'écran, Ctrl+Entrée lance."
+        },
+        {
+          "s": "cours",
+          "it": "IT-9",
+          "t": "Revue et Galerie : bibliothèque",
+          "d": "Mêmes trois panneaux : filtres à gauche, loupe ou grille au centre, inspecteur à droite. La vignette perd sa pastille de score et sa rangée de glyphes ; le tri passe par le clavier, la barre groupée ou un menu contextuel. Logique de tri et pile de gardes inchangées."
         }
       ]
     }

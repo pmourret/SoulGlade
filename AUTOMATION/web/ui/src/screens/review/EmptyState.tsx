@@ -2,7 +2,16 @@
 
    Two different silences, and they must not read alike: an EMPTY folder is
    an outcome (« Tout est trié. »), a folder hidden by the score filter is a
-   filter still on — which is why the second one offers the way out. */
+   filter still on — which is why the second one offers the way out.
+
+   AND A THIRD CASE, NEW (design-pass screen-5b, §S6): the folder is empty
+   HERE and full next door. Producing at a non-exporting tier files into the
+   NSFW space while the Revue opens on SFW, so « Tout est trié » could be
+   true of the space one is looking at and false of the work one just did.
+   The count already exists (`/api/state` returns one map per space, and the
+   space selector already prints it) — this only says it where the silence
+   is, and offers the one click across. */
+import type { Space } from './useTriage'
 
 const EMPTY_DONE: Record<string, string> = {
   A_REVOIR: 'Tout est trié.',
@@ -12,17 +21,34 @@ const EMPTY_DONE: Record<string, string> = {
   SANS_VISAGE: 'Aucune image sans visage détecté.',
 }
 
+const BUCKET_LABEL: Record<string, string> = {
+  A_REVOIR: 'à revoir',
+  OK: 'validées',
+  REJET: 'rejetées',
+  ARCHIVE: 'archivées',
+  SANS_VISAGE: 'sans visage',
+}
+
 export function EmptyState({
   empty,
   bucket,
   total,
   onShowAll,
+  space,
+  otherCount,
+  onSwitchSpace,
 }: {
   empty: boolean
   bucket: string
   total: number
   onShowAll: () => void
+  /** The space being looked at — the callout names the OTHER one. */
+  space: Space
+  /** How many images the other space holds in THIS folder. */
+  otherCount: number | undefined
+  onSwitchSpace: () => void
 }) {
+  const other: Space = space === 'sfw' ? 'nsfw' : 'sfw'
   return (
     <div className="empty">
       <b>{empty ? EMPTY_DONE[bucket] : 'Aucune image dans cette bande de score.'}</b>
@@ -40,9 +66,22 @@ export function EmptyState({
           </button>
         </div>
       )}
+      {empty && Boolean(otherCount) && (
+        <div
+          className="mx-auto mt-[22px] flex max-w-[420px] items-center gap-[12px] rounded-[8px]
+                     border border-warn-line bg-warn-bg px-[14px] py-[11px] text-left
+                     text-[12.5px] leading-[1.45] text-warn-txt"
+          id="autreEspace"
+        >
+          <span className="min-w-0 flex-1">
+            {otherCount} image{(otherCount ?? 0) > 1 ? 's' : ''}{' '}
+            {BUCKET_LABEL[bucket] ?? bucket} dans l'espace {other.toUpperCase()}.
+          </span>
+          <button className="btn sm flex-none" id="btnAutreEspace" onClick={onSwitchSpace}>
+            Ouvrir
+          </button>
+        </div>
+      )}
     </div>
   )
 }
-
-/* Realism judgement buttons: they MEASURE, they do not sort — which is why they
-   stay in both trades. */

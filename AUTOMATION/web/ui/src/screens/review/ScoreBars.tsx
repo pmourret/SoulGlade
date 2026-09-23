@@ -1,113 +1,22 @@
-/* The three realism sub-scores, as compact bars. Ported from `barre()` and
-   `etalon()` in `static/review.js`.
+/* Where the scale of a realism measurement comes from, said in words.
 
-   WHERE THE SCALE COMES FROM. The calibration band when it exists (>= 8 images
-   judged convincing), otherwise the range observed in the CURRENT folder. NO
-   THRESHOLD IS WRITTEN IN THE CODE: the project has no corpus of real
-   photographs, so the reference is the user's own judgement (CLAUDE.md §8.4).
-   Which is exactly why the scale has to be SAID — otherwise one does not know
-   what is being read. */
-import type { GalleryItem } from './useTriage'
+   THE BARS THEMSELVES ARE GONE (design-pass screen-5b, §S4.2): three filled
+   bars on every tile and three more in the meta column became five rules of
+   one shape, `BandRule.tsx`, which draws the band the value should land in
+   rather than a fill whose end means nothing on its own.
 
-/* The three measurements, and the item field each one reads. The band key and
-   the item key differ, and that mismatch is in the payload, not a mistake. */
-const MEASURES: { label: string; band: string; field: keyof GalleryItem; decimals: number }[] = [
-  { label: 'net', band: 'nettete', field: 'nettete', decimals: 0 },
-  { label: 'peau', band: 'texture_visage', field: 'texture', decimals: 2 },
-  { label: 'fond', band: 'bruit_fond', field: 'fond', decimals: 2 },
-]
+   WHAT SURVIVES IS `calibration()`, and it is the important half. The
+   calibration band exists when at least 8 images have been judged
+   convincing; otherwise the scale is the range observed in the CURRENT
+   folder. NO THRESHOLD IS WRITTEN IN THE CODE: the project has no corpus of
+   real photographs, so the reference is the user's own judgement
+   (CLAUDE.md §8.4). Which is exactly why the scale has to be SAID —
+   otherwise one does not know what is being read. */
+import type { Band } from './useTriage'
 
-type Band = { min: number; max: number; n?: number; source?: string }
-
-function Bar({
-  label,
-  value,
-  band,
-  observed,
-  decimals,
-}: {
-  label: string
-  value: number
-  band: Band | null
-  observed: number[]
-  decimals: number
-}) {
-  let lo: number
-  let hi: number
-  let klass = ''
-  if (band) {
-    lo = Math.min(band.min, value)
-    hi = Math.max(band.max, value)
-    klass = value >= band.min && value <= band.max ? 'dans' : 'hors'
-  } else {
-    lo = Math.min(...observed)
-    hi = Math.max(...observed)
-  }
-  const percent = hi > lo ? Math.round((100 * (value - lo)) / (hi - lo)) : 50
-  return (
-    <div className="flex items-center gap-[6px] text-[10.5px] text-dim2">
-      <span className="w-[30px] flex-none">{label}</span>
-      <u className="h-[4px] flex-1 overflow-hidden rounded-[2px] bg-panel2 no-underline">
-        {/* Inside the calibration band, or outside it — the figure sits next to
-            the bar, so the colour never carries the reading alone. No ground in
-            the base chain: two utilities that set the same property are decided
-            by their order in the generated sheet, not here. */}
-        <i
-          className={`block h-full ${
-            klass === 'dans' ? 'bg-ok' : klass === 'hors' ? 'bg-warn' : 'bg-dim2'
-          }`}
-          style={{ width: `${Math.max(3, percent)}%` }}
-        />
-      </u>
-      <b className="w-[34px] text-right font-medium tabular-nums">{value.toFixed(decimals)}</b>
-    </div>
-  )
-}
-
-export function ScoreBars({
-  item,
-  bands,
-  items,
-  flat = false,
-}: {
-  item: GalleryItem
-  bands: Record<string, unknown>
-  items: GalleryItem[]
-  /** In the side panel the bars carry their own padding from the panel. */
-  flat?: boolean
-}) {
-  return (
-    /* `p-0` and the padded chain are exclusive on purpose: written together,
-       the shorthand comes FIRST in the generated sheet and loses to the sides —
-       the flat variant would keep the padding it exists to drop. */
-    <div className={`flex flex-col gap-[3px] ${flat ? 'p-0' : 'px-[10px] pt-0 pb-[4px]'}`}>
-      {MEASURES.map((measure) => {
-        const value = item[measure.field] as number | null | undefined
-        if (value == null) return null
-        const observed = items
-          .map((i) => i[measure.field] as number | null | undefined)
-          .filter((v): v is number => v != null)
-        return (
-          <Bar
-            key={measure.band}
-            label={measure.label}
-            value={value}
-            band={(bands[measure.band] as Band | null) ?? null}
-            observed={observed}
-            decimals={measure.decimals}
-          />
-        )
-      })}
-    </div>
-  )
-}
-
-/* Where the scale of the bars comes from — to be said, otherwise one does not
-   know what is being read.
-
-   The three bars can be calibrated SEPARATELY: taking the first band that comes
-   announced an origin the others do not necessarily share. We say what is true
-   of all three. */
+/* The three measurements can be calibrated SEPARATELY: taking the first band
+   that comes announced an origin the others do not necessarily share. We say
+   what is true of all three. */
 export function calibration(
   bands: Record<string, unknown>,
   references: { mesurees: number; total: number },
