@@ -52,6 +52,29 @@ dont la vérité existe déjà en base.
    (confirmée par Pierre le 23/09) : elle n'appartient à aucun personnage,
    n'entre pas en Revue et ne s'exporte pas.
 
+## Ce que la série du 23/09 ajoute : le cadre décide du mesurable
+
+Vingt images du cran natif produites le 23/09 (batch `20260923_090710`, deux
+scènes, identité 0,72 à 0,79). Le détecteur trouve une exposition sur 12 —
+et la coupure ne passe pas entre les images, elle passe entre les **scènes** :
+10 sur 10 pour `chambre_lumiere_matin`, 2 sur 10 pour `salle_bain_vapeur`.
+
+Regardé : les huit images muettes **sont nues**. Elles sont cadrées en buste,
+le corps est hors champ. La scène du bain ne dit rien de son cadrage quand
+celle de la chambre demande « full body, three-quarter angle » ; le modèle
+retombe sur un portrait.
+
+D'où une distinction que le cadrage doit porter, et qui est exactement celle
+des étiquettes de Pierre :
+
+- **aucune boîte de corps** = non jugeable (`na`). La garde se tait, et le dit ;
+- **une boîte de corps, aucune exposition** = habillé, un vrai verdict ;
+- **une exposition au-dessus du seuil** = le signal.
+
+Confondre les deux premiers ferait taire la garde sur un portrait serré tout
+en laissant croire qu'elle a jugé. Même chose pour la mesure de texture du
+corps : elle n'a rien à mesurer sur 6 de ces 20 images.
+
 ## Étapes
 
 **1. La mesure.** Un module `AUTOMATION/qc_exposition.py` : il rend le score
