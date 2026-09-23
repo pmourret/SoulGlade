@@ -19,7 +19,7 @@
       "id": "salle_bain_vapeur",
       "label": "Salle de bain, apres la douche",
       "intention": "boudoir",
-      "prompt": "in a small tiled bathroom just after a shower, warm damp air, steam on the mirror, wet hair, low side light from a frosted window, intimate and unposed"
+      "prompt": "in a small tiled bathroom just after a shower, warm damp air, steam on the mirror, wet hair, low side light from a frosted window, intimate and unposed, standing full body, three-quarter angle"
     }
   ]
 }
