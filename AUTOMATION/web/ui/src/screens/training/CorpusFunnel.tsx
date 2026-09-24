@@ -9,6 +9,7 @@
    queue, and the response never says how they cross the images missing from
    disk. Drawing them over the left of the bar would claim they are exportable.
    They get a sub-band spanning the queue alone. */
+import { SectionHead } from './SectionHead'
 import { type Counters, type Distribution, percent } from './trainingSummary'
 
 /* Hatching, not a flat: the same ground would read as a fourth disjoint part,
@@ -18,7 +19,7 @@ const HATCH = 'repeating-linear-gradient(45deg,var(--warn) 0 2px,transparent 2px
 function Case({ term, k, value, hint }:
               { term: string; k: string; value: number; hint?: string }) {
   return (
-    <div className="border-l border-line px-[16px] first:border-l-0 first:pl-0">
+    <div className="border-l border-line px-[16px] first:border-l-0">
       <dt className="text-[12px] text-dim">{term}</dt>
       {/* `data-count` is the reading contract — the smoke test compares what is
           on screen with what the route returned, and reads the FIRST child, so
@@ -50,15 +51,12 @@ export function CorpusFunnel({ counters, shape }:
                              { counters: Counters; shape: Distribution }) {
   return (
     <section className="mb-[22px]" id="corpusFunnel">
-      <h2 className="m-0 text-[10.5px] font-normal uppercase tracking-[.5px] text-dim">
-        Du corpus au jeu
-      </h2>
-      <p className="m-0 mb-[14px] text-[12px] text-dim2">
-        La file raisonne sur des empreintes, qui survivent en base à la
-        disparition du PNG&nbsp;; l’entraînement, lui, a besoin du fichier.
-      </p>
+      <SectionHead
+        rule="la file raisonne sur des empreintes, l’entraînement a besoin du fichier"
+        title="Du corpus au jeu"
+      />
 
-      <dl className="m-0 grid grid-cols-4">
+      <dl className="m-0 grid grid-cols-4 rounded-[6px] border border-line p-[14px_2px]">
         <Case term="Dans la file" k="file" value={counters.file}
               hint="empreintes en base" />
         <Case term="Exportables" k="exportables" value={counters.exportables}
@@ -96,8 +94,9 @@ export function CorpusFunnel({ counters, shape }:
         ))}
         <li className="flex items-center gap-[6px]">
           <Pill hatched />
-          jamais étiquetées, dans la file{' '}
+          jamais étiquetées{' '}
           <b className="font-[600] tabular-nums text-txt">{counters.sans_etiquette}</b>
+          <span className="text-dim2">(dans la file, absence de défaut supposée)</span>
         </li>
       </ul>
     </section>

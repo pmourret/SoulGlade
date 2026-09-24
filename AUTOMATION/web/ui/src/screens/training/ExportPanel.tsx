@@ -44,7 +44,12 @@ export function ExportPanel({ character, exportable, trigger, captions,
 
   return (
     <section className="rounded-[var(--r)] border border-line bg-panel p-[15px]">
-      <h2 className="m-0 mb-[12px] text-[15px] font-[650] text-txt">Exporter le jeu</h2>
+      {/* `normal-case`: `base.css` uppercases every h2, and no utility undoes a
+          property no class sets. The section headings of the report ARE
+          uppercase; this title is not. */}
+      <h2 className="m-0 mb-[12px] text-[15px] font-[650] normal-case text-txt">
+        Exporter le jeu
+      </h2>
 
       <dl className="m-0 mb-[14px] grid grid-cols-[76px_minmax(0,1fr)] gap-x-[10px] gap-y-[7px]">
         <Row term="Images">{exportable}</Row>
@@ -74,30 +79,35 @@ export function ExportPanel({ character, exportable, trigger, captions,
         <label className="mb-[5px] block text-[12.5px] text-dim" htmlFor="trainRepetitions">
           Répétitions par image
         </label>
-        <input
-          className="w-[92px] rounded-[8px] border border-line2 bg-panel2 px-[10px] py-[7px]
-                     text-[13.5px] text-txt"
-          id="trainRepetitions"
-          min={1}
-          onChange={(event) => setRepetitions(event.target.value)}
-          placeholder="défaut"
-          type="number"
-          value={repetitions}
-        />
-        <p className="m-0 mt-[5px] text-[12px] text-dim2">
-          Vide = défaut proposé. C’est un réglage d’entraînement : il te revient.
-        </p>
+        {/* The help sits BESIDE the field, not under it: two short lines next to
+            a 92 px box read as one row, three stacked blocks read as a form. */}
+        <div className="flex items-start gap-[12px]">
+          <input
+            className="w-[92px] shrink-0 rounded-[8px] border border-line2 bg-panel2
+                       px-[10px] py-[7px] text-[13.5px] text-txt"
+            id="trainRepetitions"
+            min={1}
+            onChange={(event) => setRepetitions(event.target.value)}
+            placeholder="défaut"
+            type="number"
+            value={repetitions}
+          />
+          <p className="m-0 min-w-0 text-[12px] leading-[1.35] text-dim2">
+            vide = défaut proposé. C’est un réglage d’entraînement : il te revient.
+          </p>
+        </div>
       </div>
 
       <div className="mb-[14px] rounded-[6px] border border-line2 bg-panel p-[10px]
                       font-code text-[11.5px] leading-[1.6] text-dim">
-        <div className="text-dim2">PROD/_ENTRAINEMENT/{character}/</div>
-        <div className="pl-[10px] text-dim2">&lt;date&gt;-&lt;heure&gt;/</div>
-        <div className="pl-[20px]">dataset/{folder}/</div>
-        <div className="pl-[30px] text-dim2">{exportable} image(s) + leurs légendes</div>
-        <div className="pl-[20px]">manifeste.json</div>
-        <div className="pl-[20px]">dataset.toml · entrainer.sh</div>
-        <div className="pl-[20px]">
+        <div className="text-dim2">PROD/_ENTRAINEMENT/{character}/&lt;date&gt;-&lt;heure&gt;/</div>
+        <div className="pl-[12px]">
+          dataset/{folder}/{' '}
+          <span className="text-dim2">{exportable} images + légendes</span>
+        </div>
+        <div className="pl-[12px]">manifeste.json</div>
+        <div className="pl-[12px]">dataset.toml · entrainer.sh</div>
+        <div className="pl-[12px]">
           kohya_config.json <span className="text-dim2">si la famille a un preset</span>
         </div>
       </div>
@@ -108,7 +118,9 @@ export function ExportPanel({ character, exportable, trigger, captions,
         id="btnTrainExport"
         onClick={onExport}
       >
-        {exporting ? 'Export en cours…' : `Exporter ${exportable} image(s)`}
+        {exporting
+          ? 'Export en cours…'
+          : `Exporter ${exportable} image${exportable > 1 ? 's' : ''}`}
       </button>
       {exportable === 0 ? (
         <p className="m-0 mt-[6px] text-[12px] text-warn-txt">

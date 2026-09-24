@@ -40,13 +40,23 @@ import { useTrainingSet } from './useTrainingSet'
    classes go inert, and the DOM order — verdict, export, rest of the report —
    is exactly the stacking the spec asks for. */
 const GRID = `screen grid h-full grid-cols-[minmax(0,1fr)_412px]
-              grid-rows-[auto_minmax(0,1fr)] max-[1100px]:grid-cols-[minmax(0,1fr)_332px]
-              max-[900px]:block max-[900px]:overflow-y-auto`
-const REPORT = `col-start-1 row-start-2 min-w-0 overflow-y-auto px-[32px] pb-[22px]
-                max-[900px]:overflow-visible`
-const ASIDE = `col-start-2 row-span-2 row-start-1 overflow-y-auto py-[22px] pr-[32px]
+              max-[1100px]:grid-cols-[minmax(0,1fr)_332px]
+              max-[900px]:flex max-[900px]:flex-col max-[900px]:overflow-y-auto`
+/* ONE scroll area for the verdict AND the report. They used to be two grid
+   cells with their own overflow, which let the report slide under a pinned
+   verdict and cut the four counters in half — the top of a block scrolling
+   away while its hints stay. At narrow widths the column DISSOLVES
+   (`display:contents`), so the export panel can take its place between the
+   verdict and the rest of the report (§S1) without a second DOM order. */
+const LEFT = 'min-w-0 overflow-y-auto px-[32px] py-[22px] max-[900px]:contents'
+/* `--maxw` is the repo's bound on centred reading width. Without it a 2560 px
+   monitor stretches one criterion line across 1650 px. */
+const HEAD = `max-w-[var(--maxw)] max-[900px]:order-1 max-[900px]:px-[32px]
+              max-[900px]:pt-[22px]`
+const REPORT = `max-w-[var(--maxw)] max-[900px]:order-3 max-[900px]:px-[32px]
+                max-[900px]:pb-[22px]`
+const ASIDE = `overflow-y-auto py-[22px] pr-[32px] max-[900px]:order-2
                max-[900px]:overflow-visible max-[900px]:px-[32px] max-[900px]:pt-0`
-const HEAD = 'col-start-1 row-start-1 px-[32px] pt-[22px]'
 
 /** Same frame as the loaded screen, so nothing jumps when the data lands. */
 function Skeleton() {
@@ -55,11 +65,13 @@ function Skeleton() {
   )
   return (
     <div aria-hidden="true" className={GRID} id="training">
-      <div className={HEAD}>{block('h-[74px]')}</div>
-      <div className={REPORT}>
-        {block('h-[130px]')}
-        {block('h-[170px]')}
-        {block('h-[60px]')}
+      <div className={LEFT}>
+        <div className={HEAD}>{block('h-[74px]')}</div>
+        <div className={REPORT}>
+          {block('h-[130px]')}
+          {block('h-[170px]')}
+          {block('h-[60px]')}
+        </div>
       </div>
       <div className={ASIDE}>{block('h-[420px]')}</div>
     </div>
@@ -130,12 +142,29 @@ export function TrainingScreen() {
     <div className={GRID} id="training">
       <h1 className="sr-only">Jeu d’entraînement</h1>
 
-      <div className={HEAD}>
-        <VerdictBanner
-          blocking={proposal.blocage}
-          ready={proposal.pret}
-          summary={verdictSummary(criteria, proposal.jeu as ActiveSet, counters)}
-        />
+      <div className={LEFT}>
+        <div className={HEAD}>
+          <VerdictBanner
+            blocking={proposal.blocage}
+            ready={proposal.pret}
+            summary={verdictSummary(criteria, proposal.jeu as ActiveSet, counters)}
+          />
+        </div>
+
+        <main className={REPORT}>
+          <CorpusFunnel counters={counters} shape={distribution(counters)} />
+
+          <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-[28px]
+                          max-[1100px]:grid-cols-1 max-[1100px]:gap-[18px]">
+            <CriteriaList criteria={criteria} />
+            <DiversityBars axes={proposal.diversite as unknown as Record<string, Axis>} />
+          </div>
+
+          <ExcludedList
+            outliers={proposal.outliers as unknown as Outlier[]}
+            rows={proposal.ecartes as unknown as Excluded[]}
+          />
+        </main>
       </div>
 
       <aside className={ASIDE}>
@@ -157,21 +186,6 @@ export function TrainingScreen() {
         ) : null}
         <ExportHistory fresh={justExported} rows={past} />
       </aside>
-
-      <main className={REPORT}>
-        <CorpusFunnel counters={counters} shape={distribution(counters)} />
-
-        <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-[28px]
-                        max-[1100px]:grid-cols-1 max-[1100px]:gap-[18px]">
-          <CriteriaList criteria={criteria} />
-          <DiversityBars axes={proposal.diversite as unknown as Record<string, Axis>} />
-        </div>
-
-        <ExcludedList
-          outliers={proposal.outliers as unknown as Outlier[]}
-          rows={proposal.ecartes as unknown as Excluded[]}
-        />
-      </main>
     </div>
   )
 }

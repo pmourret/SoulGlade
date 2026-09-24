@@ -9,6 +9,8 @@
    The scale is COMMON to every axis (the largest `distinctes` of the response):
    one bar per axis, each normalised to itself, would make four axes of unequal
    corpus look identical. */
+import { SectionHead } from './SectionHead'
+
 const AXIS_LABELS: Record<string, string> = {
   scene: 'scène',
   intention: 'intention',
@@ -24,9 +26,7 @@ export function DiversityBars({ axes }: { axes: Record<string, Axis> }) {
 
   return (
     <section>
-      <h2 className="m-0 mb-[10px] text-[10.5px] font-normal uppercase tracking-[.5px] text-dim">
-        Diversité
-      </h2>
+      <SectionHead rule="catégories effectives sur distinctes" title="Diversité" />
       <ul className="m-0 list-none p-0">
         {rows.map(([name, axis]) => (
           <li key={name} className="mb-[10px] last:mb-0">

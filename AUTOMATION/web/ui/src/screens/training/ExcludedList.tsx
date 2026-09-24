@@ -78,9 +78,9 @@ export function ExcludedList({ rows, outliers }:
 
       {outliers.length ? (
         <Fold
-          rule="signalées, jamais écartées seules"
-          summary="loin du gabarit, toujours dans la file"
-          title={`${outliers.length} image(s) atypique(s)`}
+          rule="z ≤ −2"
+          summary="signalées, jamais écartées seules"
+          title={`${outliers.length} atypique(s)`}
         >
           <table>
             <thead>

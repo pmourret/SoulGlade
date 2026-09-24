@@ -6,6 +6,7 @@
    list refuses to fold it into « manque ».
 
    The shape and the colour repeat the word, they never replace it. */
+import { SectionHead } from './SectionHead'
 import type { Criterion } from './trainingSummary'
 
 const VERDICTS: Record<string, { mark: string; word: string; color: string }> = {
@@ -17,9 +18,7 @@ const VERDICTS: Record<string, { mark: string; word: string; color: string }> = 
 export function CriteriaList({ criteria }: { criteria: Criterion[] }) {
   return (
     <section>
-      <h2 className="m-0 mb-[10px] text-[10.5px] font-normal uppercase tracking-[.5px] text-dim">
-        Critères
-      </h2>
+      <SectionHead rule="seuils du bloc entrainement de config.json" title="Critères" />
       <ul className="m-0 list-none p-0">
         {criteria.map((criterion) => {
           const verdict = VERDICTS[criterion.verdict] ?? VERDICTS['sans seuil']
