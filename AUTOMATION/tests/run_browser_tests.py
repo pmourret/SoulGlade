@@ -72,6 +72,7 @@ TESTS = [
     "test_training",      # Entrainement : jeu d'un personnage et son export (ecran 8)
     "test_pose_extract",  # ComfyUI requis (s'ignore sinon) : extraction reelle
     "test_pose_editor",   # aucun ComfyUI requis : preset -> canvas -> save local
+    "test_board_layout",  # unitaire pur : mise en page de la planche (ecran 5c)
 ]
 
 def _free_from(base):
@@ -125,7 +126,14 @@ def run_one(name, port, node_path):
                # sans ca il tomberait sur le `python` du PATH, qui n'est pas
                # forcement celui-la (ADR-0008).
                "SOULGLADE_PYTHON": PY,
-               "PYTHONIOENCODING": "utf-8"}
+               "PYTHONIOENCODING": "utf-8",
+               # Node 22.11 retire les types TypeScript nativement. C'est
+               # ce qui laisse un test unitaire importer un module SOURCE
+               # (.ts) sans build, sans copie, et sans ajouter vitest au
+               # depot pour trois fonctions pures — voir
+               # test_board_layout.js. Sans effet sur les fumigations,
+               # qui n'importent aucun .ts.
+               "NODE_OPTIONS": "--experimental-strip-types"}
         res = subprocess.run(["node", str(script)], cwd=str(OFM), env=env,
                              capture_output=True, text=True,
                              encoding="utf-8", errors="replace", timeout=600)

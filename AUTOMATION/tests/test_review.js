@@ -148,14 +148,23 @@ const volsDeDonnees = [];
   dire(avecV.length === srcs.length,
        `toutes portent v=<mtime> en secondes entieres (${avecV.length}/${srcs.length})`);
   dire(srcs.every(s => s.includes('thumb=1')), 'la grille demande bien des vignettes');
-  // le jeton vient du serveur et n'est pas reinterprete : meme valeur des deux cotes
+  /* Le jeton vient du serveur et n'est pas reinterprete. On compare PAR NOM,
+     plus par rang : depuis l'ecran 5c la planche REGROUPE les images (par
+     intention, scene ou jour), donc l'ordre a l'ecran n'est plus celui de la
+     reponse. Comparer deux listes zippees testait l'ordre en croyant tester
+     le jeton — et c'est le jeton qui compte. */
   const vServeur = await page.evaluate(async () => {
     const d = await (await fetch('/api/gallery?bucket=OK&space=sfw&character=lena')).json();
-    return d.items.slice(0, 5).map(i => String(i.v));
+    return Object.fromEntries(d.items.map(i => [i.name, String(i.v)]));
   });
-  const vEcran = srcs.slice(0, 5).map(s => s.match(/[?&]v=(\d+)/)[1]);
-  dire(JSON.stringify(vServeur) === JSON.stringify(vEcran),
-       `consomme tel quel, jamais recalcule (${vEcran.join(',')})`);
+  const vEcran = srcs.map(s => {
+    const u = new URL(s, 'http://x');
+    return [decodeURIComponent(u.searchParams.get('name')), u.searchParams.get('v')];
+  });
+  const discordants = vEcran.filter(([nom, v]) => vServeur[nom] !== v);
+  dire(discordants.length === 0,
+       `consomme tel quel, jamais recalcule (${vEcran.length} vignettes, `
+       + `${discordants.length} discordance(s))`);
 
   console.log('\n[3] les raccourcis de tri N EXISTENT PAS en Galerie');
   const avantClavier = await tuiles();
@@ -398,8 +407,16 @@ const volsDeDonnees = [];
   }
 
   console.log('\n[7bis] SELECTION MULTIPLE + ACTIONS GROUPEES (design pass ecran 5, §D)');
-  await page.goto(BASE + '/gallery?character=lena', { waitUntil: 'networkidle' });
+  /* EN REVUE, ET PLUS EN GALERIE (design-pass ecran 5c, decide le 23/09).
+     Les trois boutons de la barre groupee — Garder, Rejeter, Archiver — sont
+     des TRIS, et le premier invariant de la Galerie est qu'elle ne trie pas :
+     on pouvait encore y archiver un lot d'images gardees. La barre vit
+     desormais la ou trier a un sens, et la case a cocher de la Galerie
+     remplit le panier (voir [7sexies]). */
+  await page.goto(BASE + '/review?character=lena', { waitUntil: 'networkidle' });
+  await page.click('#bucketSel [data-b="REJET"]');
   await page.waitForSelector('[data-tile]');
+  await page.waitForTimeout(500);
   const avantSelection = await compteurs();
 
   const noms = await page.$$eval('[data-tile]', els => els.slice(0, 3).map(e => {
@@ -448,29 +465,114 @@ const volsDeDonnees = [];
   await page.waitForTimeout(900);
   dire((await texte('#toast')) === '2/2 archivées', `un seul toast recapitulatif ("${await texte('#toast')}")`);
   const apresArchivage = await compteurs();
-  dire(apresArchivage.ARCHIVE === avantSelection.ARCHIVE + 2 && apresArchivage.OK === avantSelection.OK - 2,
-       `les DEUX images ont bouge en un seul geste (OK ${avantSelection.OK}->${apresArchivage.OK}, ARCHIVE ${avantSelection.ARCHIVE}->${apresArchivage.ARCHIVE})`);
+  dire(apresArchivage.ARCHIVE === avantSelection.ARCHIVE + 2
+       && apresArchivage.REJET === avantSelection.REJET - 2,
+       `les DEUX images ont bouge en un seul geste (REJET ${avantSelection.REJET}->${apresArchivage.REJET}, ARCHIVE ${avantSelection.ARCHIVE}->${apresArchivage.ARCHIVE})`);
   dire(!(await vu('#bulkBar')), 'la selection est videe apres le geste');
 
-  // RESTAURATION : actMany n'a pas d'annulation groupee (/api/undo ne defait
-  // qu'UNE action) — cette fumigation ne doit rien laisser bouge sur les
-  // donnees reelles, donc restauration manuelle des DEUX images, verifiee.
-  await page.goto(BASE + '/review?character=lena', { waitUntil: 'networkidle' });
+  /* RESTAURATION : actMany n'a pas d'annulation groupee (/api/undo ne defait
+     qu'UNE action) — cette fumigation ne doit rien laisser bouge sur les
+     donnees reelles. Elles reviennent en REJET, d'ou elles sont parties :
+     « Restaurer » les enverrait en OK, ce qui serait un DEPLACEMENT deguise
+     en remise en place. */
   await page.click('#bucketSel [data-b="ARCHIVE"]');
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(600);
   for (const nom of noms.slice(0, 2)) {
     const tuile = page.locator(`[data-tile]:has([data-thumb] img[src*="${encodeURIComponent(nom)}"])`).first();
     const m = await menuSur(tuile);
-    await m.locator('[data-a="valider"]').click();
-    await page.waitForTimeout(500);
+    await m.locator('[data-a="rejeter"]').click();
+    await page.waitForTimeout(600);
   }
   const apresRestauration = await compteurs();
   dire(JSON.stringify(apresRestauration) === JSON.stringify(avantSelection),
-       `les deux images restaurees, rien de reste change (${JSON.stringify(apresRestauration)})`);
+       `les deux images remises en REJET, rien de reste change (${JSON.stringify(apresRestauration)})`);
+
+  console.log('\n[7sexies] LE PANIER de la Galerie (design pass ecran 5c, §S5)');
+  await page.goto(BASE + '/gallery?character=lena', { waitUntil: 'networkidle' });
+  await page.waitForSelector('[data-tile]');
+  await page.waitForTimeout(600);
+  const avantPanier = await compteurs();
+  dire(!(await vu('#bulkBar')), "la Galerie n'offre plus de barre groupee : elle ne trie pas");
+  dire(!(await vu('#cartBar')), 'ni de barre panier tant que rien n est coche');
+  dire(await vu('#galleryBoard'), 'la planche a remplace la grille');
+  dire((await page.getAttribute('#galleryBoard', 'role')) === 'grid', 'et elle est un role=grid');
+
+  const casesPanier = await page.$$('[data-select]');
+  const nomsPanier = await page.$$eval('[data-tile]', els => els.slice(0, 3).map(e => e.dataset.n));
+  await casesPanier[0].click();
+  await page.waitForTimeout(250);
+  dire(await vu('#cartBar'), 'la barre panier apparait des la premiere cochee');
+  dire((await texte('#cartSummary')).includes('1 image'), `elle compte : « ${await texte('#cartSummary')} »`);
+  dire((await page.getAttribute('#cartSummary', 'aria-live')) === 'polite',
+       'et le compte est annonce, pas seulement peint');
+  await casesPanier[1].click();
+  await page.waitForTimeout(200);
+  await casesPanier[2].click();
+  await page.waitForTimeout(250);
+  dire((await texte('#cartSummary')).includes('3 images'), '3 images au panier');
+  const vignettesPanier = await page.$$eval('#cartBar [data-cart-item]', e => e.length);
+  dire(vignettesPanier === 3, `${vignettesPanier} mini-vignettes dans la barre`);
+  dire((await texte('#btnCartDownload')).includes('3'), 'le bouton dit combien il va telecharger');
+
+  // La touche B ajoute ou retire l'image VISEE, sur la planche seulement.
+  const viseeAvant = await page.$eval('[data-tile][data-cur]', e => e.dataset.n).catch(() => null);
+  if (viseeAvant){
+    const dansPanierAvant = await page.$eval(
+      `[data-tile][data-n="${viseeAvant}"] [data-select]`, e => e.checked);
+    await page.keyboard.press('b');
+    await page.waitForTimeout(300);
+    const dansPanierApres = await page.$eval(
+      `[data-tile][data-n="${viseeAvant}"] [data-select]`, e => e.checked);
+    dire(dansPanierApres !== dansPanierAvant,
+         `B bascule l image visee (${dansPanierAvant} -> ${dansPanierApres})`);
+    await page.keyboard.press('b');
+    await page.waitForTimeout(300);
+  }
+
+  // Un retrait nomme l'image qu'il retire.
+  const nomRetrait = await page.$eval('#cartBar [data-cart-item] button', e => e.getAttribute('aria-label'));
+  dire(/^Retirer .+ du panier$/.test(nomRetrait), `le × nomme ce qu il retire : « ${nomRetrait} »`);
+  await page.click('#cartBar [data-cart-item] button');
+  await page.waitForTimeout(300);
+  dire((await texte('#cartSummary')).includes('2 images'), 'le retrait se voit aussitot');
+
+  await page.click('#btnCartClear');
+  await page.waitForTimeout(300);
+  dire(!(await vu('#cartBar')), '« Vider » fait disparaitre la barre');
+  dire(JSON.stringify(await compteurs()) === JSON.stringify(avantPanier),
+       'et RIEN n a bouge sur le disque : un panier ne trie pas');
+
+  console.log('\n[7septies] le panier est VIDE quand on change de personnage');
+  /* L'isolation du 29/08 vaut pour ce qu'on s'apprete a TELECHARGER autant
+     que pour ce qu'on lit. La cle de remise a zero est `claimed`, donc un
+     panier melange est impossible par construction et pas par memoire. */
+  const casesAvantChangement = await page.$$('[data-select]');
+  await casesAvantChangement[0].click();
+  await page.waitForTimeout(150);
+  await casesAvantChangement[1].click();
+  await page.waitForTimeout(300);
+  dire(await vu('#cartBar'), 'panier rempli sur lena');
+  const autre = await page.evaluate(async () => {
+    const d = await (await fetch('/api/characters')).json();
+    const liste = (d.characters || d.items || []).map(c => c.id || c);
+    return liste.find(id => id !== 'lena') || null;
+  });
+  if (autre){
+    await page.goto(BASE + `/gallery?character=${encodeURIComponent(autre)}`,
+                    { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1200);
+    dire(!(await vu('#cartBar')), `le panier est vide en arrivant sur « ${autre} »`);
+    await page.goto(BASE + '/gallery?character=lena', { waitUntil: 'networkidle' });
+    await page.waitForTimeout(1200);
+    dire(!(await vu('#cartBar')), 'et il est toujours vide en revenant sur lena');
+  } else {
+    console.log('      (un seul personnage au registre : changement non observable)');
+  }
 
   console.log('\n[7quinquies] MODE COMPARER (design pass ecran 5, §B) : 0-1 selection, puis un aller-retour reel');
   await page.goto(BASE + '/gallery?character=lena', { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-tile]');
+  await page.waitForTimeout(600);
   const avantComparer = await compteurs();
 
   await page.click('#viewSel [data-v="comparer"]');
@@ -479,24 +581,22 @@ const volsDeDonnees = [];
        'sous 2 selections, un message actionnable — jamais un ecran vide muet');
 
   await page.click('#viewSel [data-v="grille"]');
-  await page.waitForTimeout(200);
-  const nomsComparer = await page.$$eval('[data-tile]', els => els.slice(0, 2).map(e => {
-    const src = e.querySelector('[data-thumb] img').getAttribute('src');
-    return decodeURIComponent(new URL(src, location.origin).searchParams.get('name'));
-  }));
+  await page.waitForTimeout(400);
+  const nomsComparer = await page.$$eval('[data-tile]', els => els.slice(0, 2).map(e => e.dataset.n));
   const casesComparer = await page.$$('[data-select]');
   await casesComparer[0].click();
   await page.waitForTimeout(150);
   await casesComparer[1].click();
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(250);
 
-  // LE BUG TROUVE EN VERIFIANT : la barre groupee remplacait TOUT #viewSel,
-  // rendant Comparer inatteignable une fois une selection commencee. Corrige
-  // avant ce commit — verifie ici en repassant par exactement ce chemin.
+  /* COMPARER LIT LE PANIER (decide le 23/09) : une seule case, un seul
+     ensemble. Le chemin teste est exactement celui d'avant — cocher deux
+     images, aller sur Comparer, Retenir — mais l'ensemble qu'il lit a un
+     autre nom, et un seul. */
   await page.click('#viewSel [data-v="comparer"]');
-  await page.waitForTimeout(400);
+  await page.waitForTimeout(500);
   dire(await page.$$eval('[data-keep]', e => e.length) === 2,
-       'Comparer reste atteignable MEME depuis l etat "barre groupee visible"');
+       'Comparer lit le PANIER : les deux cochees sont la');
 
   await page.locator('[data-keep]').first().click();
   await page.waitForSelector('dialog[open]');
@@ -504,21 +604,21 @@ const volsDeDonnees = [];
   dire(boiteComparer.includes('sera validée'), 'la confirmation nomme celle qui est gardee');
   dire(boiteComparer.includes('sera rejetée'), 'et ce qui arrive aux autres du lot compare');
   await page.click('#cfOui');
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1400);
   dire((await page.getAttribute('#viewSel [data-v="grille"]', 'aria-checked')) === 'true',
-       'resolu : retour automatique a la Grille');
+       'resolu : retour automatique a la Planche');
 
   // RESTAURATION : la premiere est restee OK (deja la, sans effet), la
   // seconde est passee en REJET — restauree, comptes verifies.
   await page.goto(BASE + '/review?character=lena', { waitUntil: 'networkidle' });
   await page.click('#bucketSel [data-b="REJET"]');
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(600);
   const secondeComparer = nomsComparer[1];
   const tuileComparer = page.locator(`[data-tile]:has([data-thumb] img[src*="${encodeURIComponent(secondeComparer)}"])`).first();
   if (await tuileComparer.count()) {
     const m = await menuSur(tuileComparer);
     await m.locator('[data-a="valider"]').click();
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(600);
   }
   const apresComparer = await compteurs();
   dire(JSON.stringify(apresComparer) === JSON.stringify(avantComparer),
@@ -643,7 +743,12 @@ const volsDeDonnees = [];
   console.log('\n[11] un nom REEL ouvre bien sur cette image');
   await page.goto(BASE + '/gallery?character=lena', { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-tile]');
-  const cible = await page.$eval('[data-tile]:nth-child(3) [data-thumb] img',
+  /* `[data-k="2"]` et plus `:nth-child(3)` : sur la planche (ecran 5c) une
+     vignette est imbriquee dans sa ligne justifiee, elle-meme dans son
+     groupe, donc `:nth-child` ne compte plus les images mais les lignes.
+     `data-k` EST l'ordre de lecture, celui que le curseur et les fleches
+     suivent — c'est le rang qu'on veut nommer ici. */
+  const cible = await page.$eval('[data-tile][data-k="2"] [data-thumb] img',
     e => new URL(e.src, location.origin).searchParams.get('name'));
   await page.goto(BASE + `/gallery/${encodeURIComponent(cible)}?character=lena`,
                   { waitUntil: 'networkidle' });

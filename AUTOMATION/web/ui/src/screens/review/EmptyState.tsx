@@ -37,6 +37,7 @@ export function EmptyState({
   space,
   otherCount,
   onSwitchSpace,
+  gallery,
 }: {
   empty: boolean
   bucket: string
@@ -47,6 +48,11 @@ export function EmptyState({
   /** How many images the other space holds in THIS folder. */
   otherCount: number | undefined
   onSwitchSpace: () => void
+  /* Galerie only (design-pass screen-5c, §S3). « Aucune image validée » is
+     not a state one fixes by looking harder: the images are one screen away,
+     waiting to be judged, or they have to be produced. An empty screen that
+     only names its emptiness leaves one to work out both. */
+  gallery?: { toReview: number; onReview: () => void; onProduce: () => void }
 }) {
   const other: Space = space === 'sfw' ? 'nsfw' : 'sfw'
   return (
@@ -63,6 +69,27 @@ export function EmptyState({
         <div className="mt-[16px]">
           <button className="btn" id="btnEmptyAll" onClick={onShowAll}>
             Tout afficher
+          </button>
+        </div>
+      )}
+      {empty && gallery && (
+        <div className="mt-[20px] flex justify-center gap-[10px]" id="galleryEmptyActions">
+          <button
+            type="button"
+            className="flex h-[36px] items-center rounded-[7px] border-0 bg-pri px-[16px]
+                       text-[13.5px] font-semibold text-on-pri hover:bg-pri-h"
+            id="btnEmptyReview"
+            onClick={gallery.onReview}
+          >
+            Ouvrir la Revue
+            {gallery.toReview > 0 && (
+              <span className="ml-[7px] text-[12px] font-normal opacity-70">
+                {gallery.toReview} à revoir
+              </span>
+            )}
+          </button>
+          <button type="button" className="btn" id="btnEmptyProduce" onClick={gallery.onProduce}>
+            Produire
           </button>
         </div>
       )}

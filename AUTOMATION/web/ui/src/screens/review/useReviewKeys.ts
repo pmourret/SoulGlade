@@ -67,6 +67,7 @@ export function useReviewKeys({
   selectedCount,
   onClearSelection,
   menuOpen,
+  onToggleCart,
 }: {
   trade: Trade
   view: View
@@ -86,6 +87,10 @@ export function useReviewKeys({
       the gesture behind the menu — one would sort the tile one was inspecting,
       with the menu still covering it. The menu owns Escape itself. */
   menuOpen: boolean
+  /** Galerie only: `B` puts the aimed image in the cart, or takes it out
+      (design-pass screen-5c, §S3). Undefined in the Revue, where that letter
+      belongs to the corpus labels and to nothing else. */
+  onToggleCart?: () => void
 }) {
   /* The handler, rebuilt on every render — cheap — and read through a ref by
      the one listener below. */
@@ -124,6 +129,14 @@ export function useReviewKeys({
       return
     }
     if (trade === 'galerie' && 'vrxadu'.includes(key)) return
+    /* `B` ON THE BOARD ONLY. In the loupe that same letter already means
+       « mains bonnes » (CorpusLabels), and a letter doing two things on one
+       screen is a letter one stops trusting. The VIEW tells them apart: the
+       board carries no corpus instrument, the loupe carries no cart. */
+    if (key === 'b' && onToggleCart && view === 'grille') {
+      onToggleCart()
+      return
+    }
     if (key === 'v') void act('valider')
     else if (key === 'r') void act('revoir')
     else if (key === 'x') void act('rejeter')

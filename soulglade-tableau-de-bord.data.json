@@ -886,10 +886,16 @@
           "d": "Trois panneaux et une barre ancrée : intensité, intention et ton à gauche, la grille de scènes au centre, un inspecteur à onglets Scène/Réglages/Prompt à droite. Les réglages et l'aperçu quittent la surimpression, le journal quitte l'écran, Ctrl+Entrée lance."
         },
         {
-          "s": "cours",
+          "s": "fait",
           "it": "IT-9",
           "t": "Revue et Galerie : bibliothèque",
-          "d": "Mêmes trois panneaux : filtres à gauche, loupe ou grille au centre, inspecteur à droite. La vignette perd sa pastille de score et sa rangée de glyphes ; le tri passe par le clavier, la barre groupée ou un menu contextuel. Logique de tri et pile de gardes inchangées."
+          "d": "Filtres à gauche, loupe ou grille au centre, inspecteur à droite. La vignette est redevenue une image : le tri passe par le clavier, la barre groupée ou un menu contextuel qui nomme chaque geste avec sa touche. Cinq mesures lues sur une même réglette de bande."
+        },
+        {
+          "s": "cours",
+          "it": "IT-9",
+          "t": "Galerie : planche de publication",
+          "d": "La grille cède à une planche justifiée et regroupée par intention, scène ou date. Un panneau de cadrage montre le feed et la story ; un panier rassemble ce qu'on veut sortir et le télécharge fichier par fichier. Le panier ne s'enregistre nulle part et se vide au changement de personnage."
         }
       ]
     }
