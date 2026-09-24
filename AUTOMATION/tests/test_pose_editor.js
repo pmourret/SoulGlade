@@ -35,11 +35,11 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   // #poseEditor en meme temps, un simple `svg circle` compterait les trois.
   const circles = (canvas) => page.$$eval(`#poseEditor svg[data-canvas="${canvas}"] circle`, e => e.length);
 
-  console.log('\n[1] la banque de poses propose "+ Nouvelle pose" — une modale, plus un ecran');
+  console.log('\n[1] la banque de poses propose "Nouvelle depuis un gabarit" — une modale, plus un ecran');
   await page.goto(BASE + '/bank/poses?character=lena', { waitUntil: 'networkidle' });
   await page.waitForSelector('#poseGrid');
   const avant = await squelettes();
-  const boutonNeuf = await page.$('button:has-text("+ Nouvelle pose")');
+  const boutonNeuf = await page.$('#btnNewPose');
   dire(Boolean(boutonNeuf), 'le bouton est present');
   await boutonNeuf.click();
   await page.waitForSelector('#newPoseBox[open]');
@@ -393,9 +393,9 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(apres.includes(nouveau), 'la nouvelle pose est dans la banque');
   // 2026-09-02 : "editer" est passe derriere le menu « ⋯ » de la carte
   // (un seul declencheur pour editer/dupliquer/renommer/retirer).
-  await page.click(`[data-pose-card][data-n="${nouveau}"] [data-pose-menu]`);
-  await page.waitForSelector(`[data-pose-card][data-n="${nouveau}"] [role="menu"]`);
-  const lienEditer = await page.$(`[data-pose-card][data-n="${nouveau}"] [role="menu"] a:has-text("éditer")`);
+  await page.click(`[data-pose-card][data-n="${nouveau}"]`);
+  await page.waitForSelector('#poseInspector');
+  const lienEditer = await page.$('#poseInspector a:has-text("Éditer le squelette")');
   dire(Boolean(lienEditer), 'sa carte porte un lien "editer"');
   await lienEditer.click();
   await page.waitForSelector('#poseEditor svg');
@@ -461,9 +461,9 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   console.log('\n[10] NETTOYAGE : seule la pose creee ici est retiree');
   await page.click('#bankView [data-vue="poses"]');
   await page.waitForSelector('#poseGrid');
-  await page.click(`[data-pose-card][data-n="${nouveau}"] [data-pose-menu]`);
-  await page.waitForSelector(`[data-pose-card][data-n="${nouveau}"] [role="menu"]`);
-  await page.click(`[data-pose-card][data-n="${nouveau}"] [role="menu"] [data-del]`);
+  await page.click(`[data-pose-card][data-n="${nouveau}"]`);
+  await page.waitForSelector('#poseInspector [data-del]');
+  await page.click('#poseInspector [data-del]');
   await page.waitForSelector('#armBox[open]');
   await page.click('#cfOui');
   await page.waitForTimeout(800);

@@ -1,8 +1,13 @@
-/* State and mutations behind the pose bank grid — search/filter/sort/density
-   plus the three mutations that go beyond a plain list (rename, duplicate,
+/* State and mutations behind the pose bank table — search/filter/sort plus
+   the three mutations that go beyond a plain list (rename, duplicate,
    remove). Extraction stays in PosesView.tsx: it is orthogonal to browsing
    an existing bank (file input, not a row action) and does not touch any
-   state this hook owns. */
+   state this hook owns.
+
+   THE DENSITY TOGGLE IS GONE (design-pass screen-7d §S2). It sized the
+   thumbnails of a card grid; the table has one density, so the setting had
+   nothing left to choose between. Its localStorage key goes with it — a
+   stored value nothing reads is not compatibility, it is litter. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { errorOf, type ActionLike, type Schema } from '../../../api/client'
@@ -23,29 +28,14 @@ export type PoseBankRow = {
 export type ProvenanceFilter = 'all' | 'preset' | 'extraction'
 export type UsageFilter = 'all' | 'used' | 'unused'
 export type SortBy = 'recent' | 'name' | 'usage'
-export type Density = 'compact' | 'comfortable'
+export type SortDir = 'asc' | 'desc'
 
 type MutationResult = { ok: true; name: string } | { ok: false; erreur: string }
 
-const DENSITY_KEY = 'soulglade.poseBank.density'
-
-/* Same guarded-localStorage shape as ChromeContext's rail/focus flags: a
-   private window or blocked storage must give a NORMAL (compact) grid,
-   never throw. */
-function readDensity(): Density {
-  try {
-    return localStorage.getItem(DENSITY_KEY) === 'comfortable' ? 'comfortable' : 'compact'
-  } catch {
-    return 'compact'
-  }
-}
-function writeDensity(value: Density): void {
-  try {
-    localStorage.setItem(DENSITY_KEY, value)
-  } catch {
-    /* tant pis */
-  }
-}
+/** Which way a column reads on its FIRST click — never a blanket 'asc'.
+    A name sorts A→Z, a usage count and a date sort biggest/newest first;
+    landing on "least used" or "oldest" is nobody's first question. */
+const FIRST_DIR: Record<SortBy, SortDir> = { name: 'asc', usage: 'desc', recent: 'desc' }
 
 export function usePoseBank() {
   const api = useApi()
@@ -55,12 +45,16 @@ export function usePoseBank() {
   const [provenanceFilter, setProvenanceFilter] = useState<ProvenanceFilter>('all')
   const [usageFilter, setUsageFilter] = useState<UsageFilter>('all')
   const [sortBy, setSortBy] = useState<SortBy>('recent')
-  const [density, setDensityState] = useState<Density>(() => readDensity())
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
   const [busyNames, setBusyNames] = useState<ReadonlySet<string>>(new Set())
 
-  const setDensity = useCallback((value: Density) => {
-    setDensityState(value)
-    writeDensity(value)
+  /** One gesture for a column header: a new column takes its own natural
+      direction, the current one flips. */
+  const sortOn = useCallback((column: SortBy) => {
+    setSortBy((current) => {
+      setSortDir((dir) => (current === column ? (dir === 'asc' ? 'desc' : 'asc') : FIRST_DIR[column]))
+      return column
+    })
   }, [])
 
   // Label/provenance/date live outside the plain `poses: string[]` every
@@ -115,17 +109,21 @@ export function usePoseBank() {
       if (usageFilter === 'unused' && row.scenesUsing.length > 0) return false
       return true
     })
+    /* `desc` is what each column's natural reading is (see FIRST_DIR), so
+       the comparators below are written IN that direction and `asc` flips
+       them — one sign, not three mirrored branches. */
+    const sign = sortDir === 'desc' ? 1 : -1
     return kept.sort((a, b) => {
-      if (sortBy === 'name') return (a.label || a.name).localeCompare(b.label || b.name, 'fr')
-      if (sortBy === 'usage') return b.scenesUsing.length - a.scenesUsing.length
+      if (sortBy === 'name') return sign * -(a.label || a.name).localeCompare(b.label || b.name, 'fr')
+      if (sortBy === 'usage') return sign * (b.scenesUsing.length - a.scenesUsing.length)
       // 'recent': most recently created first; a pose with no known date
       // (no sidecar) sorts last rather than first — it is not "brand new",
       // its date is simply unknown.
       const ta = a.createdAt ? Date.parse(a.createdAt) : -Infinity
       const tb = b.createdAt ? Date.parse(b.createdAt) : -Infinity
-      return tb - ta
+      return sign * (tb - ta)
     })
-  }, [rows, search, provenanceFilter, usageFilter, sortBy])
+  }, [rows, search, provenanceFilter, usageFilter, sortBy, sortDir])
 
   /** Renaming reuses the plain save path: load the raw frame, patch its
       `label`, save it back under its OWN name. No dedicated route — the
@@ -208,8 +206,7 @@ export function usePoseBank() {
     search, setSearch,
     provenanceFilter, setProvenanceFilter,
     usageFilter, setUsageFilter,
-    sortBy, setSortBy,
-    density, setDensity,
+    sortBy, sortDir, sortOn,
     busyNames,
     rename, duplicate, remove,
     /** For the extraction flow (PosesView's own file input) — orthogonal to

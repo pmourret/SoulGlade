@@ -40,7 +40,22 @@ catch { console.log('  IGNORE — playwright absent (voir l en-tete du fichier)'
 const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 
 /* Un ecran = une route. Les sous-vues d'un meme ecran comptent pour des
-   ecrans : ce sont des arbres DOM differents (Banque, Revue/Galerie). */
+   ecrans : ce sont des arbres DOM differents (Banque, Revue/Galerie).
+
+   TROISIEME CASE : LES ETATS OUVERTS (24/09/2026). L'en-tete ci-dessus disait
+   que le balayage ne voyait que l'etat de repos, et que le jour ou un cadre
+   apparaitrait dans une modale, il faudrait ajouter l'etat ici plutot que
+   d'accepter le trou. C'est ce que fait cette case : une liste de
+   [nom de l'etat, le selecteur qui l'ouvre], rejouee apres la sonde de repos.
+   Chaque ecran refondu ajoute les siens en passant.
+
+   TOUS SE FERMENT PAR ECHAP, et c'est volontaire : frontend.md l'exige de
+   toute surimpression, donc s'en servir ici teste la regle en meme temps
+   qu'il rend l'ecran a son repos pour l'etat suivant.
+
+   Une surimpression SANS <button> (celle du depot d'une photo sur la banque
+   de poses) n'en porte pas : la sonde ne regarde que les boutons, elle n'y
+   trouverait rien a mesurer. */
 const ECRANS = [
   ['/characters', 'sas d entree'],
   ['/character', 'fiche du personnage'],
@@ -48,7 +63,9 @@ const ECRANS = [
   ['/review', 'Revue'],
   ['/gallery', 'Galerie'],
   ['/bank/scenes', 'Ateliers, Scenes'],
-  ['/bank/poses', 'Ateliers, Poses'],
+  ['/bank/poses', 'Ateliers, Poses', [
+    ['modale « Nouvelle depuis un gabarit »', '#btnNewPose'],
+  ]],
   ['/bank/tones', 'Ateliers, Tons'],
   ['/training', 'Entrainement'],
   ['/worlds', 'Mondes'],
@@ -79,16 +96,28 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
   let ko = 0;
   const dire = (bon, quoi) => { console.log(`   ${bon ? 'ok  ' : 'ECHEC'} ${quoi}`); if (!bon) ko++; };
 
-  console.log('\n[1] aucun <button> ne porte le cadre du navigateur, ecran par ecran');
-  for (const [route, nom] of ECRANS) {
-    await page.goto(`${BASE}${route}?character=lena`, { waitUntil: 'networkidle' });
-    await page.waitForSelector('.screen', { timeout: 8000 }).catch(() => {});
-    await page.waitForTimeout(250);
+  const sonder = async (etiquette) => {
     const nBoutons = await page.$$eval('button', (e) => e.filter((b) => b.offsetParent !== null).length);
     const cadres = await page.evaluate(SONDE);
     dire(cadres.length === 0,
-         `${nom} : ${nBoutons} bouton(s) visible(s), ${cadres.length} cadre(s) du navigateur`);
+         `${etiquette} : ${nBoutons} bouton(s) visible(s), ${cadres.length} cadre(s) du navigateur`);
     cadres.forEach((c) => console.log(`      « ${c.quoi} » : ${c.largeur} ${c.style}`));
+  };
+
+  console.log('\n[1] aucun <button> ne porte le cadre du navigateur, ecran par ecran');
+  for (const [route, nom, etats] of ECRANS) {
+    await page.goto(`${BASE}${route}?character=lena`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('.screen', { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(250);
+    await sonder(nom);
+
+    for (const [etat, ouvre] of etats || []) {
+      await page.click(ouvre);
+      await page.waitForTimeout(350);
+      await sonder(`${nom}, ${etat}`);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(250);
+    }
   }
 
   console.log('\n[2] la sonde sait reconnaitre le defaut (sinon elle dirait vert sur tout)');

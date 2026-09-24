@@ -1,7 +1,11 @@
 /* Presentation only — props + callbacks, all state/gestures live in
-   useReferenceOverlay.ts. File-input pattern (hidden input + a <label
-   styled as a button) copied from PosesView.tsx's own photo picker, same
-   studio, same problem. */
+   useReferenceOverlay.ts. File-input pattern: a hidden input plus a <label
+   styled as a button, which is what makes the label the control and gives
+   it its accessible name. PosesView.tsx used to carry the same shape and no
+   longer does (design-pass screen-7d: its picker is opened by a real button
+   that clicks the input through a ref, because the same button also has to
+   carry a disabled state and a tooltip, which a <label> cannot). The two
+   are no longer the same pattern — this one is still the right one here. */
 export function ReferenceControls({
   referenceUrl,
   opacity,

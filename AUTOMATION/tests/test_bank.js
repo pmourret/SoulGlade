@@ -678,23 +678,38 @@ async function allerA(page, categorie, module) {
        'et la ligne est arrivee dans le niveau choisi, sans trainer son ancien prefixe');
   dire(await vu('#dirtyBar'), 'le rangement est une modification en attente, comme une autre');
 
-  console.log('\n[14] sous-vue POSES : une route, une infobulle de sauvegarde qui suit');
+  console.log('\n[14] sous-vue POSES : une route, une barre d atelier a elle (24/09/2026)');
   await page.click('#bankView [data-vue="poses"]');
   await page.waitForTimeout(400);
   dire(await page.evaluate(() => location.pathname) === '/bank/poses', 'chemin /bank/poses');
   dire(await vu('#bankPoses'), 'la sous-vue Poses est montee');
   dire(!(await vu('#bankScenes')), 'la sous-vue Scenes ne l est plus');
-  // le texte permanent a disparu (voir [1bis]) : ce qui est enregistre ICI —
-  // et ce qui ne l'est PAS — se dit desormais dans l'infobulle du bouton
-  const infobullePoses = await page.$eval('#btnSaveScenes', e => e.dataset.hintText || '');
-  dire(infobullePoses.includes('attributions de pose'),
-       `l'infobulle dit ce qu elle enregistre ICI : « ${infobullePoses} »`);
-  dire(infobullePoses.toLowerCase().includes('squelette'),
-       'et precise ce qu elle N enregistre PAS');
-  dire(await vu('#btnSaveScenes'), "le bouton reste : une edition en attente garde son action");
-  dire(await vu('#dirtyBar'), 'et le bandeau aussi');
-  dire((await texte('#bankPoses')).includes('ne reste jamais sur le disque'),
-       'la vue dit que la photo source n est jamais gardee');
+  // design-pass screen-7d §S1/S2 : Poses suit Scenes ([1bis]). Le bouton a
+  // icone seule disparait au profit du bandeau, qui dit deja ce qui est en
+  // attente ET porte le geste avec son Ctrl S. Il ne reste que sur Tons,
+  // dont la refonte vient apres — voir [15bis], qui lit encore son infobulle.
+  dire(!(await vu('#btnSaveScenes')),
+       "la vue Poses n'a plus de bouton d'enregistrement : c'est le bandeau qui l'a");
+  dire(await vu('#dirtyBar'), 'et le bandeau est bien la, avec la modification en attente');
+  // la barre porte les cinq controles de la banque, sur la MEME ligne que le
+  // switch de sous-vue : une seconde ligne de chrome au-dessus d'une table
+  // dirait ce que celle-ci dit deja
+  const surLaBarre = ['#poseSearch', '#poseProvenance', '#poseUsage', '#btnNewPose', '#btnPoseExtract'];
+  const manquants = [];
+  for (const s of surLaBarre) if (!(await vu(s))) manquants.push(s);
+  dire(manquants.length === 0, `les cinq controles de la banque sont dans la barre (${manquants})`);
+  const milieuNav = await page.$eval('#bankView', e => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; });
+  const milieuExtr = await page.$eval('#btnPoseExtract', e => { const r = e.getBoundingClientRect(); return r.top + r.height / 2; });
+  dire(Math.abs(milieuNav - milieuExtr) < 3,
+       `« Extraire d'une photo » est sur la meme ligne que le switch (${Math.round(milieuNav)} / ${Math.round(milieuExtr)} px)`);
+  dire((await texte('#bankPoses')).includes('partagés par tous les personnages'),
+       'la barre dit que la banque de squelettes est commune a tous les personnages');
+  // LA PROMESSE NE SE PERD PAS AVEC LA GRILLE. Le paragraphe permanent est
+  // parti, mais la phrase doit rester atteignable la ou l'on remet une vraie
+  // photo : sur le bouton (survol et focus) et dans la surimpression de depot.
+  const promesse = await page.$eval('#btnPoseExtract', e => e.closest('[data-hint-text]')?.dataset.hintText || '');
+  dire(promesse.includes('ne reste jamais sur le disque'),
+       `le bouton d extraction porte la promesse : « ${promesse.slice(0, 60)}… »`);
 
   console.log('\n[15] LE RAIL D OUTILS n apparait PLUS sur Poses non plus (2026-09-02)');
   // Meme raisonnement que Scenes (voir [2]) : l'editeur de pose a grandi sa

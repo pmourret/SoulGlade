@@ -55,25 +55,17 @@ import { useWorldCatalogue } from './useWorldCatalogue'
 import { WorldBanner, WorldDriftBand, worldDrift } from './WorldBanner'
 import { WorldCatalogueDialog } from './WorldCatalogueDialog'
 
-/* What « Enregistrer » saves, per sub-view — said in its HOVER tooltip, not as
-   permanent text (2026-09-01: a title + a ".bak" reassurance sat in the chrome
-   at all times, reported as noise — "n'a pas d'intérêt à être affiché ici").
+/* What « Enregistrer » saves — said in its HOVER tooltip, not as permanent
+   text (2026-09-01: a title + a ".bak" reassurance sat in the chrome at all
+   times, reported as noise — "n'a pas d'intérêt à être affiché ici").
 
-   On Poses, plain « scenes.json » would suggest the skeletons are what gets
-   saved. They are already on disk by the time the grid shows them
-   (INPUTS/POSE/, written by the extraction); what this view puts into
-   scenes.json is the ATTRIBUTIONS carried by the scenes. The disk target never
-   lied — the context was missing, and it still needs saying somewhere, just
-   on demand rather than permanently.
-
-   Two entries and no longer three: Scènes saves from the banner now, so it
-   has no button left to hang a tooltip on. */
-const SAVE_HINT = {
-  poses:
-    'Enregistrer les attributions de pose dans scenes.json — jamais les squelettes, déjà sur le disque',
-  tones:
-    'Enregistrer scenes.json — la plage d\'expression d\'un ton s\'enregistre depuis son propre éditeur, pas ici',
-} as const
+   ONE ENTRY LEFT, and it is Tons. Scènes lost its button in 7b (`DirtyBar`
+   already states what is pending and carries the Ctrl S, so a permanent
+   icon-only control for an occasional act said the same thing twice), and
+   Poses loses it now for exactly the same reason, its own pass having come
+   (design-pass screen-7d). Tons keeps it until its own pass. */
+const SAVE_HINT =
+  'Enregistrer scenes.json — la plage d\'expression d\'un ton s\'enregistre depuis son propre éditeur, pas ici'
 
 const NO_CHANGES: Set<SceneField> = new Set()
 
@@ -196,6 +188,36 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
 
   const drift = worldDrift(world, documentWorld)
 
+  /* THE THREE SUB-VIEWS ARE THREE DESTINATIONS, so three links: shareable,
+     and the browser's back button walks between them.
+
+     A NAV, NOT A TABLIST. It looked like a segmented control so it wore
+     `role="tablist"`, and the roles lied twice: there is no `tabpanel` for a
+     tab to control, and these links NAVIGATE — a screen reader announced
+     « onglet 1 sur 3 » for something that changes the URL and unmounts the
+     screen. Three links in a nav say exactly what they do, and
+     `aria-current="page"` marks the one we are on.
+
+     Hoisted out of the bar because Poses builds its OWN bar around it
+     (design-pass screen-7d §S1): the bank's five controls need
+     `usePoseBank`'s state, which lives in that view, and a second 44 px row
+     above the table would be chrome saying what one row already says. */
+  const subViewNav = (
+    <nav className="seg flex-none" id="bankView" aria-label="Sous-vue des ateliers">
+      <SubViewLink to={PATHS.bankScenes} label="Scènes" active={view === 'scenes'} vue="scenes" />
+      <SubViewLink to={PATHS.bankPoses} label="Poses" active={view === 'poses'} vue="poses" />
+      <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
+    </nav>
+  )
+
+  if (view === 'poses') {
+    return (
+      <div className="screen flex h-full flex-col" id="scenes">
+        <PosesView nav={subViewNav} />
+      </div>
+    )
+  }
+
   return (
     <div className="screen flex h-full flex-col" id="scenes">
       {catalogueOpen && world && (
@@ -231,20 +253,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
             Liste des scènes
           </button>
         )}
-        {/* The three sub-views are three DESTINATIONS, so three links:
-            shareable, and the browser's back button walks between them.
-
-            A NAV, NOT A TABLIST. It looked like a segmented control so it wore
-            `role="tablist"`, and the roles lied twice: there is no `tabpanel`
-            for a tab to control, and these links NAVIGATE — a screen reader
-            announced « onglet 1 sur 3 » for something that changes the URL and
-            unmounts the screen. Three links in a nav say exactly what they do,
-            and `aria-current="page"` marks the one we are on. */}
-        <nav className="seg flex-none" id="bankView" aria-label="Sous-vue des ateliers">
-          <SubViewLink to={PATHS.bankScenes} label="Scènes" active={view === 'scenes'} vue="scenes" />
-          <SubViewLink to={PATHS.bankPoses} label="Poses" active={view === 'poses'} vue="poses" />
-          <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
-        </nav>
+        {subViewNav}
 
         {view === 'scenes' && <WorldBanner world={world} sceneCount={drafts.length} />}
 
@@ -276,7 +285,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
             className="btn primary sm flex-none"
             id="btnSaveScenes"
             aria-label="Enregistrer"
-            data-hint-text={SAVE_HINT[view]}
+            data-hint-text={SAVE_HINT}
             onClick={onSave}
           >
             <Icon name="save" className="h-[15px] w-[15px]" />
@@ -490,7 +499,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
       ) : (
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="wrap w-full max-w-none pb-[24px]">
-            {view === 'poses' ? <PosesView /> : <TonesView />}
+            <TonesView />
           </div>
         </div>
       )}

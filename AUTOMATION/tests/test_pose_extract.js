@@ -66,13 +66,17 @@ const comfyUp = () => new Promise(resolve => {
   console.log(`      ${avant.length} squelette(s) au depart`);
 
   console.log('\n[2] extraction par le chemin reel — un vrai job GPU part');
+  // MIGRE LE 2026-09-24 (design-pass screen-7d) : « choisir une photo » puis
+  // « Extraire » etaient deux gestes pour une seule decision. Le bouton ouvre
+  // le selecteur et l'extraction part au choix du fichier, donc setInputFiles
+  // EST le declenchement — il n'y a plus de nom de fichier en attente a lire.
+  dire(!(await page.isDisabled('#btnPoseExtract')), 'le bouton d extraction est arme');
   await page.setInputFiles('#poseFile', SOURCE);
-  await page.waitForTimeout(200);
-  dire((await page.textContent('#poseFileName')).length > 0, 'le nom du fichier choisi est affiche');
-  dire(!(await page.isDisabled('#btnPoseExtract')), 'le bouton d extraction s arme');
-  await page.click('#btnPoseExtract');
-  dire((await page.textContent('#poseMsg')).includes('extraction'),
+  await page.waitForSelector('#poseExtractBand', { timeout: 5000 });
+  dire((await page.textContent('#poseExtractBand')).includes('Extraction en cours'),
        "l'attente est dite a l'ecran, pas laissee muette");
+  dire(await page.isDisabled('#btnPoseExtract'),
+       'et le bouton se desarme pendant, pour qu un second envoi ne parte pas');
 
   // ~20-30 s de GPU : on attend l'apparition d'un squelette de plus
   await page.waitForFunction(
@@ -87,8 +91,8 @@ const comfyUp = () => new Promise(resolve => {
        "on n'a pas quitte la sous-vue");
   dire((await page.textContent('#nPoses')).includes(String(apres.length)),
        `le compteur suit (${await page.textContent('#nPoses')})`);
-  dire((await page.textContent('#poseFileName')) === '',
-       'le champ de fichier est vide : la photo source a fait son office');
+  dire(!(await page.isVisible('#poseExtractBand')),
+       "le bandeau d'attente a disparu : la photo source a fait son office");
   const img = await page.getAttribute(`[data-pose-card][data-n="${nouveau}"] img`, 'src');
   dire(img.startsWith('/img/pose?name='), `sa vignette vient de /img/pose (${img.slice(0, 40)}…)`);
 
@@ -137,9 +141,9 @@ const comfyUp = () => new Promise(resolve => {
   // 2026-09-02 : retirer/dupliquer/renommer sont passes derriere le menu
   // « ⋯ » de la carte (un seul declencheur pour les 4 actions plutot que
   // 4 boutons sur une carte de ~100px de large).
-  await page.click(`[data-pose-card][data-n="${nouveau}"] [data-pose-menu]`);
-  await page.waitForSelector(`[data-pose-card][data-n="${nouveau}"] [role="menu"]`);
-  await page.click(`[data-pose-card][data-n="${nouveau}"] [role="menu"] [data-del]`);
+  await page.click(`[data-pose-card][data-n="${nouveau}"]`);
+  await page.waitForSelector('#poseInspector [data-del]');
+  await page.click('#poseInspector [data-del]');
   await page.waitForSelector('#armBox[open]');
   // 2026-09-02 : la confirmation nomme desormais les scenes qui referencent
   // reellement le squelette (ScenesStoreContext) plutot qu'un avertissement
