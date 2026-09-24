@@ -357,10 +357,10 @@ const D = {
       "id": "IT-9",
       "titre": "Le studio se lit comme un poste de travail",
       "state": "now",
-      "quoi": "Le chrome porte encore les choix de la migration React : navbar latérale de 208 px, en-tête de 56 px, base 15 px, et un accent qui peint les boutons alors que l'image est la seule couleur qui compte. Douze étapes le reprennent écran par écran, dans l'ordre du parcours. Le critère de sortie V1 le demande déjà : chaque écran du parcours nominal passe un audit UX/UI vérifié en vrai.",
-      "dod": "Les douze étapes sont passées, chacune avec son audit audit-ux-ui vérifié en vrai (captures à 1440 et 1024, états réels), typecheck et build verts, et toutes les fumigations navigateur au vert après migration de leurs sélecteurs.",
+      "quoi": "Le chrome portait encore les choix de la migration React : navbar latérale de 208 px, en-tête de 56 px, base 15 px, et un accent qui peignait les boutons alors que l'image est la seule couleur qui compte. Quatorze étapes le reprennent écran par écran, dans l'ordre du parcours, chacune avec son cadrage écrit. Le critère de sortie V1 le demande déjà : chaque écran du parcours nominal passe un audit vérifié en vrai.",
+      "dod": "Les quatorze étapes sont passées, chacune avec son audit audit-ux-ui vérifié en vrai (captures à 1440 et 1024, états réels), typecheck et build verts, et toutes les fumigations navigateur au vert après migration de leurs sélecteurs.",
       "epics": "E13",
-      "ref": "DOCS/design-pass/screen-0-chrome.md (étape 1) — DOCS/design-pass/Refonte_UI_UX/ (les étapes écrites)"
+      "ref": "DOCS/design-pass/Refonte_UI_UX/ (les quatorze cadrages, un dossier par écran)"
     },
     {
       "id": "IT-3f",
@@ -1131,10 +1131,64 @@ const D = {
           "d": "Filtres à gauche, loupe ou grille au centre, inspecteur à droite. La vignette est redevenue une image : le tri passe par le clavier, la barre groupée ou un menu contextuel qui nomme chaque geste avec sa touche. Cinq mesures lues sur une même réglette de bande."
         },
         {
-          "s": "cours",
+          "s": "fait",
           "it": "IT-9",
           "t": "Galerie : planche de publication",
           "d": "La grille cède à une planche justifiée et regroupée par intention, scène ou date. Un panneau de cadrage montre le feed et la story ; un panier rassemble ce qu'on veut sortir et le télécharge fichier par fichier. Le panier ne s'enregistre nulle part et se vide au changement de personnage."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Ateliers, Scènes : composeur à trois panneaux",
+          "d": "La liste des scènes, la scène ouverte et son inspecteur, au lieu d'un formulaire qui défile. Brouillons, héritage du lieu et écriture de scenes.json inchangés."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Ateliers, Poses : catalogue en table",
+          "d": "Les poses passent de la grille de cartes à une table qui se lit en colonnes, avec dépôt direct d'un fichier. L'éditeur de squelette reste à son étape."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Ateliers, Tons et éditeur d'expression",
+          "d": "La liste des tons et l'éditeur d'expression côte à côte, au lieu de deux écrans qui s'appellent l'un l'autre."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Entraînement : rapport de préparation",
+          "d": "Le jeu d'entraînement se lit comme un rapport, et l'export reste visible au lieu d'attendre au bout d'un défilement."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Éditeur photo : panneau droit hiérarchisé",
+          "d": "La modale se simplifie, et le panneau droit de l'éditeur avancé range ses calques par importance. Présentation seulement : la géométrie et les calques ne bougent pas."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Référentiel, Mondes : trois colonnes",
+          "d": "Les mondes, les lieux du monde ouvert, puis le lieu choisi. Trois colonnes plutôt que deux écrans enchaînés."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Application et Journal : préférences par portée",
+          "d": "Les réglages se rangent par ce sur quoi ils portent : l'application, le personnage, la machine. Le journal prend sa place dans le même écran."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Éditeur de pose : poste de travail",
+          "d": "Le squelette gagne un poste de travail autour de lui. Présentation seulement : la géométrie de la pose ne change pas."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Personnages : registre en liste et assistant",
+          "d": "Le registre passe en liste avec aperçu, et l'assistant de création en étapes verticales. Une étape Identité s'ajoute, sans toucher à ce qui s'écrit."
         }
       ]
     }
