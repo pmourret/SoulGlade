@@ -17,6 +17,11 @@ import {
 } from 'react'
 
 const VISIBLE_MS = 4500
+/* Un toast qui porte une ACTION doit laisser le temps de l'atteindre — à la
+   souris comme au clavier (design-pass screen-7c §A, « Annuler » d'un ajout
+   de vêtement). 4,5 s suffisent à lire un accusé de réception ; elles ne
+   suffisent pas à décider puis viser. */
+const ACTION_MS = 6000
 
 type ToastAction = { label: string; run: () => void }
 type ToastState = { message: string; action?: ToastAction; key: number } | null
@@ -41,7 +46,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
      inheriting the tail of the previous one. */
   useEffect(() => {
     if (!current) return
-    const timer = window.setTimeout(() => setCurrent(null), VISIBLE_MS)
+    const timer = window.setTimeout(
+      () => setCurrent(null),
+      current.action ? ACTION_MS : VISIBLE_MS,
+    )
     return () => window.clearTimeout(timer)
   }, [current])
 

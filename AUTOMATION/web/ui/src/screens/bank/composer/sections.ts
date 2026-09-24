@@ -41,7 +41,7 @@ export const SECTIONS: Section[] = [
     label: 'Vêtements',
     icon: 'shirt',
     fields: ['wardrobe'],
-    model: 'champ wardrobe · injecté par niveau, jamais dans le prompt',
+    model: 'champ wardrobe · jamais dans le prompt : ajouté à la génération selon le niveau',
   },
   {
     key: 'pose',
@@ -52,11 +52,18 @@ export const SECTIONS: Section[] = [
   },
   {
     key: 'recap',
-    label: 'Prompt global',
+    /* « Prompt global » promettait le prompt entier ; le panneau ne porte
+       plus que le décor en édition, les deux autres fragments en lecture
+       (design-pass screen-7c §5.1). La CLÉ ne bouge pas : elle est le contrat
+       du rail, des fumigations et de `data-tabpanel`. */
+    label: 'Décor et prompt',
     icon: 'pencil',
-    fields: ['promptBase', 'promptLight', 'promptPose', 'wardrobe'],
+    /* Le décor seul : la lumière, la pose et la tenue ne s'y éditent plus
+       (§5.2, §5.3), et un point ici pour une modification faite ailleurs
+       enverrait chercher dans le mauvais panneau. */
+    fields: ['promptBase'],
     model: 'champ prompt · les trois fragments joints à l’enregistrement',
   },
   { key: 'ai', label: 'Amélioration IA', icon: 'robot', fields: [], model: 'aucun champ écrit — pas encore branché' },
-  { key: 'json', label: 'JSON final', icon: 'terminal', fields: [], model: 'lecture seule — la scène telle qu’elle sera écrite' },
+  { key: 'json', label: 'JSON final', icon: 'terminal', fields: [], model: 'la scène telle qu’elle sera écrite, comparée à ce qui est sur le disque' },
 ]

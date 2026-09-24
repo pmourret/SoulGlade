@@ -26,6 +26,8 @@ export function PromptField({
   lockedNote,
   accentColor,
   changed,
+  hideLabel,
+  minHeight,
 }: {
   /** `data-f` on the compact textarea — the browser fumigation's hook. */
   dataField: string
@@ -52,6 +54,12 @@ export function PromptField({
       the two things a border can say, and the fragment's own colour is
       repeated right beside it in the living preview. */
   changed?: boolean
+  /** The panel already titles the field above (design-pass screen-7c): the
+      label is CLIPPED rather than dropped — it stays the control's accessible
+      name, which a bare textarea would otherwise lose entirely. */
+  hideLabel?: boolean
+  /** Taller box for the one fragment a panel is built around (le décor). */
+  minHeight?: string
 }) {
   const [editing, setEditing] = useState(false)
   const fieldId = `scene-prompt-${dataField}`
@@ -59,17 +67,17 @@ export function PromptField({
 
   return (
     <div className="f">
-      <label htmlFor={fieldId}>
+      <label htmlFor={fieldId} className={hideLabel ? 'sr-only' : undefined}>
         <span>
           {label}
-          {hint && <InfoHint text={hint} />}
+          {hint && !hideLabel && <InfoHint text={hint} />}
         </span>
       </label>
       <div className="flex items-start gap-[6px]">
         <textarea
           id={fieldId}
           data-f={dataField}
-          className="min-h-[78px] resize-y"
+          className={`resize-y ${minHeight ?? 'min-h-[78px]'}`}
           style={border ? { borderColor: border } : undefined}
           value={value}
           placeholder={placeholder}

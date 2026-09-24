@@ -22,6 +22,22 @@ import { useConfirm } from './ConfirmContext'
 import { useToast } from './ToastContext'
 import { useScenes } from '../state/ScenesStoreContext'
 
+/* La question posée avant de jeter le travail en cours. Exportée parce que le
+   panneau JSON du composeur offre le MÊME geste (design-pass screen-7c §7.5) :
+   deux boutons qui font la même chose doivent poser la même question, et une
+   phrase recopiée dérive au premier ajustement. */
+export const REVERT_CONFIRM = {
+  title: 'Revenir à la dernière version enregistrée ?',
+  button: 'Revenir en arrière',
+  body: (
+    <p>
+      Toutes les modifications faites dans cette page depuis le dernier
+      enregistrement seront perdues — l'atelier revient à ce que
+      <code> scenes.json</code> contient déjà sur disque.
+    </p>
+  ),
+}
+
 export function DirtyBar() {
   const { dirty, save, load } = useScenes()
   const confirm = useConfirm()
@@ -50,17 +66,7 @@ export function DirtyBar() {
   if (!dirty) return null
 
   const onRevert = async () => {
-    const ok = await confirm({
-      title: 'Revenir à la dernière version enregistrée ?',
-      button: 'Revenir en arrière',
-      body: (
-        <p>
-          Toutes les modifications faites dans cette page depuis le dernier
-          enregistrement seront perdues — l'atelier revient à ce que
-          <code> scenes.json</code> contient déjà sur disque.
-        </p>
-      ),
-    })
+    const ok = await confirm(REVERT_CONFIRM)
     if (!ok) return
     await load()
     toast('modifications ignorées — dernière version enregistrée reprise')

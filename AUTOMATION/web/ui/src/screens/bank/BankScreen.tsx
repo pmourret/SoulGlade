@@ -33,6 +33,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 
 import { useApi } from '../../api/useApi'
 import { useChrome } from '../../chrome/ChromeContext'
+import { useConfirm } from '../../chrome/ConfirmContext'
+import { REVERT_CONFIRM } from '../../chrome/DirtyBar'
 import { Icon } from '../../chrome/Icon'
 import { useToast } from '../../chrome/ToastContext'
 import { useScenes } from '../../state/ScenesStoreContext'
@@ -78,6 +80,7 @@ const NO_CHANGES: Set<SceneField> = new Set()
 export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   const api = useApi()
   const toast = useToast()
+  const confirm = useConfirm()
   const { narrow } = useChrome()
   const {
     bank,
@@ -176,6 +179,14 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
      fields moved: a scene created in the page has no saved version to differ
      from, and still owes everything to the next save. */
   const pending = bench.selected ? changedUids.has(bench.selected.uid) : false
+
+  /* Le même geste que le bandeau, offert depuis le panneau JSON (§7.5) : la
+     question posée est la sienne, pas une copie. */
+  const onRevert = async () => {
+    if (!(await confirm(REVERT_CONFIRM))) return
+    await load()
+    toast('modifications ignorées — dernière version enregistrée reprise')
+  }
 
   const onSave = async () => {
     const result = await save()
@@ -442,6 +453,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
             ) : bench.selected ? (
               <SceneInspector
                 draft={bench.selected}
+                saved={saved.get(bench.selected.base.id ?? '')}
                 creative={creative}
                 poses={poses}
                 produced={stats[bench.selected.base.id]?.n ?? null}
@@ -452,6 +464,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                 onNextScene={bench.hasNextScene ? () => bench.stepScene(1) : undefined}
                 onClose={bench.close}
                 onSaveDocument={onSave}
+                onRevert={() => void onRevert()}
               />
             ) : (
               <DocumentPane

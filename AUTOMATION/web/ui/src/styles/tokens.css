@@ -112,6 +112,22 @@
      personnage — jamais redeclare par pack, meme regle que les verdicts. */
   --frag-light:#8bab93; --frag-pose:#a99bc7;
 
+  /* Comparaison d'un brouillon avec sa version enregistree (design-pass
+     screen-7c §7, panneau JSON, et §6, amelioration IA). Deux familles, une
+     par sens, derivees des verdicts dont elles portent deja le sens : --ok
+     pour ce qui arrive, --bad pour ce qui part. Trois roles chacune, comme
+     une revue de code : le FOND de la ligne (discret, il doit rester lisible
+     sous du texte), le fond du MOT qui a change (plus soutenu, il doit se
+     voir DANS la ligne deja teintee), et la couleur du compteur « +N » /
+     « -N » de l'en-tete.
+     Signal de lecture, jamais une ambiance : jamais redeclares par pack.
+     Contrastes mesures : --txt sur --diff-add-bg 12.13, sur --diff-del-bg
+     11.55, et sur les fonds de mot 9.66 / 9.16. Les deux textes de compteur
+     contre --panel : add 6.12, del 7.61. La couleur n'est jamais seule, les
+     signes - et + portent le meme sens. */
+  --diff-add-bg:#16241a; --diff-add-word:#24402b; --diff-add-txt:var(--ok);
+  --diff-del-bg:#2a1a19; --diff-del-word:#452725; --diff-del-txt:var(--bad-lift);
+
   /* --- profondeur : primitives neutres, pas une ambiance de palette --- */
   --elev:0 14px 38px #00000099;
   --scrim:#0b0d10cc;

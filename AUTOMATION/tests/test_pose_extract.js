@@ -120,6 +120,13 @@ const comfyUp = () => new Promise(resolve => {
   await page.waitForSelector('#sceneInspector');
   await page.click('[data-tab="pose"]');
   await page.waitForSelector('[data-tabpanel="pose"]');
+  // design-pass screen-7c §4.2 : la bande de squelettes est repliee quand la
+  // scene en porte deja un. « Changer » la rouvre ; elle est ouverte d office
+  // quand il n y a rien a montrer.
+  if (!(await page.$('[data-tabpanel="pose"] [data-f="pose"]'))) {
+    await page.click('[data-tabpanel="pose"] button:has-text("Changer")');
+    await page.waitForSelector('[data-tabpanel="pose"] [data-f="pose"]');
+  }
   const vignettes = await page.$$eval('[data-tabpanel="pose"] [data-f="pose"] button[title]',
                                       e => e.map(x => x.title));
   dire(vignettes.includes(nouveau), 'le nouveau squelette est dans le selecteur de pose');

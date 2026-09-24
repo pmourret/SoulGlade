@@ -432,6 +432,13 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.waitForSelector('#sceneInspector');
   await page.click('[data-tab="pose"]');
   await page.waitForSelector('[data-tabpanel="pose"]');
+  // design-pass screen-7c §4.2 : la bande de squelettes est repliee quand la
+  // scene en porte deja un. « Changer » la rouvre ; elle est ouverte d office
+  // quand il n y a rien a montrer.
+  if (!(await page.$('[data-tabpanel="pose"] [data-f="pose"]'))) {
+    await page.click('[data-tabpanel="pose"] button:has-text("Changer")');
+    await page.waitForSelector('[data-tabpanel="pose"] [data-f="pose"]');
+  }
   // `title` porte le LIBELLE humain, pas le nom de fichier (design pass
   // ecran 7, §A1 — SceneComposer.tsx : `title={label || name}`) : NOM_POSE
   // est ce que la modale a fait ecrire, `nouveau` reste le nom de fichier

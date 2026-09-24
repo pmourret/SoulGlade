@@ -22,7 +22,7 @@
 import { useCallback, useEffect, useRef } from 'react'
 
 import type { Creative } from '../../state/TaxonomyContext'
-import type { SceneDraft } from '../../state/ScenesStoreContext'
+import type { Scene, SceneDraft } from '../../state/ScenesStoreContext'
 import { SceneComposer } from './composer/SceneComposer'
 import type { SceneField } from './sceneChanges'
 
@@ -46,6 +46,7 @@ const HISTORY_LIMIT = 100
 
 export function SceneInspector({
   draft,
+  saved,
   creative,
   poses,
   produced,
@@ -56,8 +57,12 @@ export function SceneInspector({
   onNextScene,
   onClose,
   onSaveDocument,
+  onRevert,
 }: {
   draft: SceneDraft
+  /** The same scene as the last save left it — the JSON panel compares the
+      draft against it (design-pass screen-7c §7). */
+  saved: Scene | undefined
   creative: Creative | null
   poses: string[]
   produced: number | null
@@ -74,6 +79,9 @@ export function SceneInspector({
   onClose: () => void
   /** The document-level save, offered again from the composer's JSON panel. */
   onSaveDocument: () => void
+  /** Drop every pending change — the banner's own gesture, offered again from
+      the JSON panel. */
+  onRevert: () => void
 }) {
   /* A scene bound to a world place (ADR-0015) never owns its frame: `prompt`
      and `intention` are always re-derived from the live catalog server-side,
@@ -217,6 +225,7 @@ export function SceneInspector({
     >
       <SceneComposer
         draft={draft}
+        saved={saved}
         creative={creative}
         poses={poses}
         produced={produced}
@@ -225,6 +234,7 @@ export function SceneInspector({
         narrow={narrow}
         onPatch={patch}
         onSaveDocument={onSaveDocument}
+        onRevert={onRevert}
       />
     </section>
   )

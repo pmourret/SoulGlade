@@ -104,6 +104,13 @@
   --color-danger-txt: var(--danger-txt);
   --color-mes-bg: var(--mes-bg);
   --color-mes-line: var(--mes-line);
+  /* comparison of a draft with its saved version — see tokens.css */
+  --color-diff-add-bg: var(--diff-add-bg);
+  --color-diff-add-word: var(--diff-add-word);
+  --color-diff-add-txt: var(--diff-add-txt);
+  --color-diff-del-bg: var(--diff-del-bg);
+  --color-diff-del-word: var(--diff-del-word);
+  --color-diff-del-txt: var(--diff-del-txt);
 
   /* depth and focus */
   --color-scrim: var(--scrim);

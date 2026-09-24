@@ -22,15 +22,22 @@
      - the fields did not move house without moving their names: the same
        `data-f` controls, in the inspector instead of in the card.
 
-   THE COMPOSER IS SEVEN TABS, NOT ONE FORM (31/08/2026, wireframe-driven,
-   `bank/composer/SceneComposer.tsx`). A `data-f` control now only exists in
-   the DOM while ITS tab is open — the `onglet()` helper below switches tabs
-   the same way a person would, by clicking the icon. The scene's `prompt` is
-   no longer one field: it is composed from up to four fragments
-   (`prompt_base`/`prompt_light`/`prompt_wardrobe`/`prompt_pose`, edited in the
-   "Prompt global" tab), joined with `, ` on save exactly like `build_jobs`
-   joins its own fragments — see the round-trip in [11] and the "never the
-   outfit" guard in [12].
+   THE COMPOSER IS SEVEN SECTIONS, NOT ONE FORM (31/08/2026, wireframe-driven,
+   `bank/composer/`). A `data-f` control only exists in the DOM while ITS
+   section is open — the `onglet()` helper below switches sections the same
+   way a person would. The scene's `prompt` is not one field: it is composed
+   from three fragments (`prompt_base`, `prompt_light`, `prompt_pose`), joined
+   with `, ` on save exactly like `build_jobs` joins its own — see the round
+   trip in [11].
+
+   THE SEVEN PANELS WERE REWORKED ON 24/09/2026 (design-pass screen-7c). What
+   this file had to follow: a control that is no longer a single `<input>`
+   carries its `data-f` on the GROUP, with `data-value` (format, count,
+   band_lo, tones, tags, variants, pose); Vêtements opens ONE level at a time
+   instead of four textarea; « Décor et prompt » lost its three mirrors, so
+   the light, the pose and the outfit are typed in exactly one place; and the
+   JSON panel compares the draft to the saved scene instead of showing it in a
+   read-only textarea.
 
    THE 31/08/2026 CONSOLIDATION PASS moved « + Ajouter une scène » from a card
    in the grid to a toolbar button (same id, `#btnAddScene`, so most of this
@@ -274,7 +281,7 @@ async function allerA(page, categorie, module) {
     e => e.getAttribute('aria-orientation'));
   dire(railVertical === 'vertical', 'et son rail est un tablist VERTICAL a libelles');
   dire((await page.$$eval('#sceneInspector [role="tab"]', e => e.map(t => t.textContent.trim())))
-         .includes('Prompt global'),
+         .includes('Décor et prompt'),
        'chaque section dit son nom, plus seulement son icone');
   // audit UX/UI (M2) : aria-controls doit resoudre a un id REELLEMENT present
   // dans le DOM pour les 7 onglets, pas seulement celui actif — un panneau
@@ -285,12 +292,17 @@ async function allerA(page, categorie, module) {
   // les champs du compositeur sont repartis par onglet — un champ absent du
   // DOM tant que son onglet n'est pas ouvert, contrairement a l'ancien
   // formulaire plat qui les montrait tous a la fois
+  // design-pass screen-7c : un champ qui n'est plus un <input> unique porte
+  // son `data-f` sur le GROUPE, avec `data-value` (meme contrat que
+  // `data-f="pose"` depuis l'ecran 7). Vetements n'ouvre qu'UN niveau a la
+  // fois (celui de `band_lo`), et le recapitulatif a perdu ses trois miroirs :
+  // la lumiere, la pose et la tenue ne s'editent plus qu'a un seul endroit.
   const parOnglet = {
     general: ['id', 'intention', 'format', 'count', 'guidance', 'band_lo', 'tones', 'tags'],
     light: ['prompt_light', 'variants'],
-    clothing: ['wardrobe_0', 'wardrobe_1', 'wardrobe_2', 'wardrobe_3'],
+    clothing: ['wardrobe_0'],
     pose: ['prompt_pose', 'pose'],
-    recap: ['prompt_base', 'prompt_light_recap', 'prompt_pose_recap', 'wardrobe_recap'],
+    recap: ['prompt_base'],
   };
   for (const [cle, champsAttendus] of Object.entries(parOnglet)) {
     await onglet(cle);
@@ -322,21 +334,29 @@ async function allerA(page, categorie, module) {
   const idEdite = 'fumigation_edition_' + Date.now();
   await page.fill(champ('id'), idEdite);
 
-  // audit UX/UI (m1) : les miroirs du recapitulatif disent qu'ils sont le
-  // MEME champ que leur onglet d'origine (pas une copie propre au recap),
-  // et editer l'un met bien a jour l'autre — pas juste le libelle qui le dit
-  console.log('\n[5ter bis] les miroirs du recapitulatif se disent lies a leur onglet, et le sont vraiment');
-  await onglet('recap');
-  const libelleLumiereRecap = await page.$eval(
-    `label[for="scene-prompt-prompt_light_recap"] span`, e => e.textContent);
-  dire(libelleLumiereRecap.includes('même champ que l'), 'le libelle du miroir lumiere dit qu il est lie a son onglet');
+  // design-pass screen-7c §5.2 : les trois miroirs du recapitulatif sont
+  // RETIRES. La lumiere et la pose s'y lisent (texte tronque) et « Modifier »
+  // mene a leur panneau — un seul endroit ou taper, un seul a verifier quand
+  // un prompt a bouge.
+  console.log('\n[5ter bis] « Decor et prompt » LIT la lumiere et la pose, et mene a leur panneau');
   const marqueurSync = 'fumigation_sync_' + Date.now();
   await onglet('light');
   await page.fill(champ('prompt_light'), marqueurSync);
+  await page.waitForTimeout(150);
   await onglet('recap');
-  dire((await page.$eval(champ('prompt_light_recap'), e => e.value)) === marqueurSync,
-       'et la frappe dans l onglet Lumiere se reflete bien dans le miroir du recap');
-  await page.fill(champ('prompt_light_recap'), '');
+  dire((await page.$$eval('#sceneInspector [data-f]', e => e.map(x => x.dataset.f)))
+         .every(f => f === 'prompt_base'),
+       'le panneau ne porte plus qu un champ editable : le decor');
+  dire((await page.textContent('[data-tabpanel="recap"]')).includes(marqueurSync),
+       'la rangee Lumiere montre bien ce qui vient d etre tape dans l onglet Lumiere');
+  const rangeeLumiere = await page.$('[data-tabpanel="recap"] >> text=Lumière');
+  await (await rangeeLumiere.evaluateHandle(
+    e => e.closest('div').querySelector('button'))).asElement().click();
+  await page.waitForTimeout(200);
+  dire((await page.$eval('[data-tab="light"]', e => e.getAttribute('aria-selected'))) === 'true',
+       'et son « Modifier » ouvre l onglet Lumiere');
+  await page.fill(champ('prompt_light'), '');
+  await page.waitForTimeout(150);
 
   await onglet('general');
   dire((await page.$eval(champ('id'), e => e.value)) === idEdite,
@@ -360,7 +380,7 @@ async function allerA(page, categorie, module) {
   await page.fill(champ('prompt_light'), marqueurHeader);
   await page.waitForTimeout(150);
   dire((await page.$eval('#scenePromptPreview', e => e.textContent)).includes(marqueurHeader),
-       'et se met a jour EN DIRECT depuis un onglet qui n est pas Prompt global, sans y aller');
+       'et se met a jour EN DIRECT depuis un onglet qui n est pas Decor et prompt, sans y aller');
   await page.fill(champ('prompt_light'), '');
   await page.waitForTimeout(150);
   await onglet('general');
@@ -389,7 +409,7 @@ async function allerA(page, categorie, module) {
 
   console.log('\n[6bis] Echap dans une modale de prompt ne ferme QUE la modale, pas tout le compositeur');
   await onglet('light');
-  await page.click('[data-tabpanel="light"] button[aria-label*="Modifier"]');
+  await page.click('[data-tabpanel="light"] button[aria-label*="fenêtre plus confortable"]');
   await page.waitForSelector('dialog[open]');
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
@@ -412,71 +432,75 @@ async function allerA(page, categorie, module) {
        'et la barre « Suivant / Precedent » du bas de panneau a disparu');
 
   console.log('\n[7] le plafond de niveau se DEDUIT des tenues, a la frappe — meme lu depuis un AUTRE onglet');
-  // le compositeur (31/08/2026) est un tablist : un champ n'est dans le DOM
-  // que si son onglet est ouvert — voir bank/composer/SceneComposer.tsx.
-  // Le prompt de vetement (25/08/2026) est desormais 4 champs, un par
-  // niveau (design pass ecran 7, §V2) — `tenues` snapshotte/restaure le
-  // TEXTE BRUT du niveau 3 seul, celui que ce bloc modifie.
+  // design-pass screen-7c §3 : les quatre textarea de niveau ont cede a UN
+  // niveau ouvert a la fois. Le segmente choisit lequel, « Saisir une piece
+  // libre » ecrit dedans, et le prefixe « N: » n'est jamais tape a la main.
+  const NIVEAU = n => `[role="radiogroup"][aria-label="Niveau habillé"] button:nth-child(${n + 1})`;
+  const lignes = n => page.$$eval(`[data-f="wardrobe_${n}"] input:not([id^="free"])`,
+                                  e => e.map(x => x.value));
   await onglet('clothing');
-  const tenues = await page.$eval(champ('wardrobe_3'), e => e.value);
-  await page.fill(champ('wardrobe_3'), tenues ? `${tenues}\na test outfit` : 'a test outfit');
+  await page.click(NIVEAU(3));
+  await page.waitForTimeout(150);
+  await page.fill('#free-3', 'a test outfit');
+  await page.press('#free-3', 'Enter');
   await page.waitForTimeout(200);
+  dire((await lignes(3)).includes('a test outfit'), 'la piece libre arrive dans le niveau ouvert');
   await onglet('general');
-  // la jauge de bande (design pass ecran 7, §V1) remplace le texte "jusqu'a
-  // N" — son etat se lit dans son aria-label, pas dans un <b> qui n'existe
-  // plus
+  // le plafond se lit dans l'aria-label de son bouton, qui mene aussi a
+  // l'onglet Vetements — meme contrat que l'ancienne jauge de bande
   const plafond = () => page.$eval(
     '[data-tabpanel="general"] button[aria-label^="Niveaux"]',
     e => e.getAttribute('aria-label').match(/Niveaux (\d+) à (\d+)/)[2]);
   dire(await plafond() === '3', `le plafond (onglet General) suit la tenue tapee (onglet Vetements) (${await plafond()})`);
   await onglet('clothing');
-  await page.fill(champ('wardrobe_3'), tenues);
+  await page.click(NIVEAU(3));
+  await page.waitForTimeout(150);
+  await page.click('[data-f="wardrobe_3"] button[aria-label^="Retirer"]');
   await page.waitForTimeout(200);
+  dire((await lignes(3)).length === 0, 'et le × rend le niveau 3 a son etat vide');
 
-  console.log('\n[7bis] le selecteur de vetement : filtre, SELECTION puis "+" — jamais un ajout au simple survol/clic de la piece');
-  // le "+" ecrit desormais dans le CHAMP du niveau actif (§V2), sans prefixe
-  // — le niveau par defaut du selecteur suit `band_lo`, verifie zero plus haut
-  const niveau0Avant = await page.$eval(champ('wardrobe_0'), e => e.value);
-  const filtre = 'select#wardrobeFilter';
-  const options = await page.$$eval(`${filtre} option`, e => e.map(o => o.value).filter(Boolean));
-  dire(options.length > 0, `${options.length} categorie(s) au filtre (Haut, Bas, ...)`);
-  await page.selectOption(filtre, options[0]);
-  await page.waitForTimeout(100);
-  const boutonAjout = '#sceneInspector button[aria-label="Ajouter la pièce sélectionnée comme nouvelle ligne"]';
-  dire(await page.isDisabled(boutonAjout), 'le bouton "+" est INACTIF tant qu aucune piece n est choisie');
-  const [piece] = await page.$$(`#sceneInspector [aria-pressed]`);
-  const libellePiece = (await piece.textContent()).trim();
+  console.log('\n[7bis] UN clic ajoute la piece au niveau ouvert, et le toast la retire');
+  // §3.3 : le parcours en deux temps (selectionner puis « + ») a cede a un
+  // clic unique. Le motif qui l'avait impose — « un mauvais clic passe
+  // inapercu » — est traite par le surlignage de la ligne et par l'Annuler du
+  // toast, pas en demandant deux gestes a chaque ajout.
+  await page.click(NIVEAU(0));
+  await page.waitForTimeout(150);
+  const niveau0Avant = await lignes(0);
+  const piece = await page.$('[data-piece]');
+  const libellePiece = await piece.getAttribute('data-piece');
   await piece.click();
-  await page.waitForTimeout(100);
-  dire(await piece.getAttribute('aria-pressed') === 'true', 'cliquer une piece la SELECTIONNE (ne touche pas encore la tenue)');
-  const avantAjout = await page.$eval(champ('wardrobe_0'), e => e.value);
-  dire(avantAjout === niveau0Avant, 'la selection seule n a rien ecrit dans le prompt de vetement');
-  dire(!(await page.isDisabled(boutonAjout)), 'le bouton "+" s active une fois une piece choisie');
-  await page.click(boutonAjout);
-  await page.waitForTimeout(150);
-  const apresAjout = await page.$eval(champ('wardrobe_0'), e => e.value);
-  dire(apresAjout === (avantAjout ? `${avantAjout}\n${libellePiece}` : libellePiece),
-       `« + » a ajoute "${libellePiece}" au champ niveau 0, sans prefixe a taper, sans toucher au reste`);
-  await page.fill(champ('wardrobe_0'), niveau0Avant);
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
+  const apresAjout = await lignes(0);
+  dire(apresAjout.length === niveau0Avant.length + 1 && apresAjout.includes(libellePiece),
+       `un clic a ajoute "${libellePiece}" au niveau 0, sans second geste`);
+  dire((await texte('#toastTxt')).includes('niveau 0'),
+       `le toast dit ou la piece est allee : « ${await texte('#toastTxt')} »`);
+  dire((await page.textContent('[data-f="wardrobe_0"]')).includes('ajoutée'),
+       'et la ligne ajoutee se signale, le temps qu on la voie arriver');
+  await page.click('#toast button');
+  await page.waitForTimeout(250);
+  dire(JSON.stringify(await lignes(0)) === JSON.stringify(niveau0Avant),
+       'l Annuler du toast rend le niveau exactement a son etat d avant le clic');
 
-  console.log('\n[7ter] le niveau de la ligne ajoutee se choisit — plus limite au niveau 0 (audit UX/UI, M4)');
-  await page.selectOption('select#wardrobeLevel', '2');
-  await page.waitForTimeout(100);
-  const niveau2Avant = await page.$eval(champ('wardrobe_2'), e => e.value);
-  const [autrePiece] = await page.$$(`#sceneInspector [aria-pressed]`);
-  const libelleAutre = (await autrePiece.textContent()).trim();
-  await autrePiece.click();
-  await page.waitForTimeout(100);
-  await page.click(boutonAjout);
+  console.log('\n[7ter] le niveau ouvert est celui du segmente — un ajout ne touche que lui');
+  await page.click(NIVEAU(2));
   await page.waitForTimeout(150);
-  const apresAjout2 = await page.$eval(champ('wardrobe_2'), e => e.value);
-  dire(apresAjout2 === (niveau2Avant ? `${niveau2Avant}\n${libelleAutre}` : libelleAutre),
-       `le niveau choisi (2) est utilise, plus fige a 0 : le champ niveau 2 recoit "${libelleAutre}"`);
-  dire((await page.$eval(champ('wardrobe_0'), e => e.value)) === niveau0Avant,
-       'et le champ niveau 0 n a pas bouge — chaque "+" ne touche que le niveau actif');
-  await page.fill(champ('wardrobe_2'), niveau2Avant);
+  const niveau2Avant = await lignes(2);
+  const autrePiece = await page.$('[data-piece]');
+  const libelleAutre = await autrePiece.getAttribute('data-piece');
+  await autrePiece.click();
+  await page.waitForTimeout(250);
+  dire((await lignes(2)).includes(libelleAutre), `le niveau choisi (2) recoit "${libelleAutre}"`);
+  await page.click(NIVEAU(0));
+  await page.waitForTimeout(150);
+  dire(JSON.stringify(await lignes(0)) === JSON.stringify(niveau0Avant),
+       'et le niveau 0 n a pas bouge — un ajout ne touche que le niveau ouvert');
+  await page.click(NIVEAU(2));
+  await page.waitForTimeout(150);
+  await page.click('[data-f="wardrobe_2"] button[aria-label^="Retirer"]');
   await page.waitForTimeout(200);
+  dire(JSON.stringify(await lignes(2)) === JSON.stringify(niveau2Avant), 'remise en etat du niveau 2');
   await onglet('general');
 
   console.log('\n[8] une frappe arme le bandeau « modifications non enregistrees »');
@@ -496,7 +520,10 @@ async function allerA(page, categorie, module) {
   await (await carteDe(idEdite)).click();
   await page.waitForSelector('#sceneInspector');
   await onglet('clothing');
-  dire(await page.$eval(champ('wardrobe_3'), e => e.value) === tenues,
+  await page.waitForTimeout(200);
+  // le niveau ouvert par defaut est celui de `band_lo` — 0 pour une scene
+  // neuve, donc la tenue livree avec `NEW_SCENE`
+  dire(JSON.stringify(await lignes(0)) === JSON.stringify(niveau0Avant),
        'la saisie est intacte au retour');
 
   console.log('\n[10] FILTRER retrecit la grille, jamais le document');
@@ -529,11 +556,17 @@ async function allerA(page, categorie, module) {
   const marque = 'a quiet fumigation corner';
   await page.fill(champ('prompt_base'), marque);
   const eclairage = 'fumigation lumiere marker';
-  await page.fill(champ('prompt_light_recap'), eclairage);
+  // le miroir de lumiere du recapitulatif a disparu (§5.2) : la lumiere
+  // s'ecrit dans SON panneau, et le recapitulatif la lit
+  await onglet('light');
+  await page.fill(champ('prompt_light'), eclairage);
   await page.waitForTimeout(150);
+  await onglet('recap');
   const promptAttendu = `${marque}, ${eclairage}`;
-  dire((await page.$eval('#sceneInspector textarea[readonly]', e => e.value)) === promptAttendu,
-       'le "prompt compose" affiche deja la jointure des 2 fragments, virgule separee');
+  // la zone en lecture seule a cede a la carte « Prompt enregistre », coloree
+  // par fragment (§5.4) — meme texte, meme jointure, lisible sans selectionner
+  dire((await page.textContent('#scenePromptJoined')).replace(/\s+/g, ' ').trim() === promptAttendu,
+       'la carte « Prompt enregistre » affiche la jointure des 2 fragments, virgule separee');
   dire(await vu('#dirtyBar'),
        'elle n existe que dans la page tant qu on n enregistre pas — le bandeau le dit');
   // §S3 : la scene non enregistree porte son point dans la liste, et l apercu
@@ -592,31 +625,50 @@ async function allerA(page, categorie, module) {
   dire(JSON.stringify(apres.direction) === JSON.stringify(avant.direction),
        'la note de direction aussi');
 
-  console.log('\n[13] une tenue sans niveau REFUSE l enregistrement');
-  // `cible` (une scene EXISTANTE, etablie en [4]) — `edite` vient d etre
-  // enregistree avec un wardrobe valide en [11], ce test veut le cas
-  // REFUSE sur une scene qui en a deja un, pas sur une scene neuve
+  console.log('\n[13] une tenue hors des quatre niveaux est MONTREE, jamais perdue');
+  // design-pass screen-7c §3.6. Le miroir brut du recapitulatif a disparu, et
+  // avec lui le seul champ ou l'on pouvait taper une ligne sans niveau : le
+  // cas vient desormais du DISQUE. Deux origines, une seule encore joignable
+  // depuis ce test — un niveau au-dela de 3, que le serveur accepte
+  // (`bank.py` exige un niveau numerique, pas un niveau <= 3). Une cle NON
+  // numerique, elle, est refusee a l'ecriture depuis la validation de banque :
+  // elle ne peut plus venir que d'un fichier edite a la main, et c'est
+  // `invalidOutfits` qui monte la garde a l'enregistrement.
+  const avecNiveau4 = JSON.parse(JSON.stringify(apres));
+  const scene4 = avecNiveau4.scenes.find(s => s.id === cible.id);
+  scene4.wardrobe = { ...(scene4.wardrobe || {}), 4: 'a level four outfit' };
+  dire(await page.evaluate(async doc => {
+    const r = await fetch('/api/scenes?character=lena', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: doc }) });
+    return (await r.json()).ok;
+  }, avecNiveau4) === true, 'un niveau 4 ecrit par l API est accepte du serveur');
+
+  await page.goto(SCENES, { waitUntil: 'networkidle' });
+  await page.waitForSelector(CARTE);
   await page.fill('#sceneFilter', cible.id);
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(250);
   await page.click(CARTE);
   await page.waitForSelector('#sceneInspector');
   await page.fill('#sceneFilter', '');
-  // les 4 champs de l'onglet Vetements (§V2) prefixent le niveau eux-memes —
-  // taper une ligne SANS niveau n'y est plus possible. Le mirroir texte brut
-  // du recapitulatif (meme etat que `wardrobe`) reste le seul champ libre qui
-  // peut encore produire ce cas, donc c'est lui que ce test tape desormais.
-  await onglet('recap');
-  await page.fill(champ('wardrobe_recap'), 'une tenue sans niveau');
-  await page.waitForTimeout(150);
-  await page.click('#btnDirtySave');
-  await page.waitForTimeout(600);
-  dire((await texte('#toastTxt')).includes('tenue sans niveau'),
-       `le refus est dit a l'ecran : « ${(await texte('#toastTxt')).slice(0, 70)}… »`);
-  const pendant = await banque();
-  dire(JSON.stringify(pendant.scenes.find(s => s.id === cible.id).wardrobe) ===
-       JSON.stringify(apres.scenes.find(s => s.id === cible.id).wardrobe),
-       "et rien n'a ete ecrit : la tenue d'origine est toujours en banque");
-  dire(await vu('#dirtyBar'), 'le bandeau reste : le travail est toujours en attente');
+  await onglet('clothing');
+  await page.waitForTimeout(200);
+  dire(await vu('[data-f="wardrobe_extra"]'),
+       'le panneau Vetements affiche le bloc des lignes hors niveaux');
+  dire((await texte('[data-f="wardrobe_extra"]')).includes('a level four outfit'),
+       'la ligne y est lisible en entier, pas resumee a un compte');
+
+  // et elle se RANGE : c'est ce que le bloc promet
+  await page.selectOption('[data-f="wardrobe_extra"] select', '2');
+  await page.waitForTimeout(250);
+  dire(!(await vu('[data-f="wardrobe_extra"]')), 'une fois rangee, le bloc disparait');
+  await page.click('[role="radiogroup"][aria-label="Niveau habillé"] button:nth-child(3)');
+  await page.waitForTimeout(200);
+  // le prefixe de l ancien niveau tombe au rangement : sans ca, la jointure
+  // reposerait le sien par-dessus (« 2: 4: a level four outfit »)
+  dire((await lignes(2)).includes('a level four outfit'),
+       'et la ligne est arrivee dans le niveau choisi, sans trainer son ancien prefixe');
+  dire(await vu('#dirtyBar'), 'le rangement est une modification en attente, comme une autre');
 
   console.log('\n[14] sous-vue POSES : une route, une infobulle de sauvegarde qui suit');
   await page.click('#bankView [data-vue="poses"]');
