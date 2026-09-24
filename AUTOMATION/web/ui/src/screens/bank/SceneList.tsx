@@ -48,10 +48,19 @@ export function SceneListRow({
       type="button"
       /* The current row is told by its GROUND plus an accent EDGE, not by a
          full accent border (charte graphite, écran 0): the accent marks where
-         one is, it does not paint controls. */
-      className={`relative flex w-full items-center gap-[9px] rounded-[6px] px-[8px] py-[6px]
-                 text-left [transition:background-color_.12s] focus-visible:outline-2
-                 focus-visible:outline-focus focus-visible:-outline-offset-2 ${
+         one is, it does not paint controls.
+
+         `border-0` IS NOT OPTIONAL, and this row is the second place to prove
+         it. A <button> that declares no `border` falls back to the browser's
+         own `2px outset` frame — the omission measured at 2560 px on
+         `ProduceSidebar`'s rows (report of 2026-09-23, commit 75d6417). Here
+         the row used to declare `border-2 border-transparent`, which covered
+         the case by accident; replacing that border with a background-only
+         selection took the guard away with it, and the UA frame came back on
+         every scene of the picker. A row of a list is a row, not a box. */
+      className={`relative flex w-full items-center gap-[9px] rounded-[6px] border-0
+                 px-[8px] py-[6px] text-left [transition:background-color_.12s]
+                 focus-visible:outline-2 focus-visible:outline-focus focus-visible:-outline-offset-2 ${
                    selected
                      ? 'bg-panel3 font-semibold [box-shadow:inset_2px_0_0_var(--acc)]'
                      : 'bg-transparent hover:bg-panel2'
