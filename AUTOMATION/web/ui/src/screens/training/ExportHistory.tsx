@@ -16,62 +16,64 @@ function readableStamp(stamp: string | undefined): string {
   return m ? `${m[3]}/${m[2]}/${m[1]} ${m[4]}:${m[5]}` : (stamp ?? '—')
 }
 
-export function ExportHistory({ rows }: { rows: PastExport[] }) {
+/** « 24 images + ancre · 8 rép. (défaut) · flux · flux_train_network.py », with
+    every piece dropped when the manifest does not carry it. An export written
+    before a field existed simply lacks it: absent, not false. */
+function summarise(row: PastExport): string {
+  const bits = [`${row.images ?? 0} image(s)${row.ancre_reinjectee ? ' + ancre' : ''}`]
+  if (row.repetitions != null) {
+    bits.push(`${row.repetitions} rép.${row.repetitions_defaut ? ' (défaut)' : ''}`)
+  }
+  if (row.famille) {
+    bits.push(row.famille)
+  }
+  if (row.script) {
+    bits.push(row.script)
+  }
+  return bits.join(' · ')
+}
+
+export function ExportHistory({ rows, fresh }:
+                              { rows: PastExport[]; fresh: string | null }) {
   return (
-    <section className="mt-[22px]">
-      <h3 className="m-0 mb-[4px] text-[15px] font-semibold text-txt">
+    <section className="mt-[18px] border-t border-line pt-[14px]">
+      <h2 className="m-0 text-[10.5px] font-normal uppercase tracking-[.5px] text-dim">
         Exports déjà sortis
-      </h3>
-      <p className="tiny mt-0 mb-[12px]">
-        Un export n’écrase jamais le précédent. Le dossier part tel quel sur une
-        machine kohya : <code>bash entrainer.sh</code> après avoir vérifié les
-        chemins en tête du script.
-      </p>
-      <table>
-        <thead>
-          <tr>
-            <th>date</th>
-            <th>images</th>
-            <th>répétitions</th>
-            <th>famille</th>
-            <th>dossier</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.length ? (
-            rows.map((row) => (
-              <tr key={row.horodatage ?? row.dossier}>
-                <td>{readableStamp(row.horodatage)}</td>
-                <td className="num">
-                  {row.illisible ? '—' : row.images ?? 0}
-                  {row.ancre_reinjectee ? <span className="tiny"> + ancre</span> : null}
-                </td>
-                <td className="num">
-                  {row.repetitions ?? '—'}
-                  {row.repetitions_defaut ? <span className="tiny"> défaut</span> : null}
-                </td>
-                <td>
-                  {row.famille ?? '—'}
-                  {row.script ? <span className="tiny"> · {row.script}</span> : null}
-                </td>
-                <td>
-                  {row.illisible ? (
-                    <span style={{ color: 'var(--bad)' }}>
-                      manifeste illisible — {row.illisible}
-                    </span>
-                  ) : (
-                    <code className="font-code text-[11.5px] text-dim2">{row.dossier}</code>
-                  )}
-                </td>
-              </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan={5} className="empty">aucun export pour ce personnage</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      </h2>
+      <p className="m-0 mb-[10px] text-[12px] text-dim2">Aucun n’est écrasé.</p>
+
+      {rows.length ? (
+        <ul className="m-0 list-none p-0">
+          {rows.map((row) => (
+            <li
+              key={row.horodatage ?? row.dossier}
+              /* No movement, just a ground that fades: `prefers-reduced-motion`
+                 has nothing to turn off here. */
+              className={`-mx-[6px] rounded-[5px] px-[6px] py-[7px] transition-colors
+                          duration-700 ${
+                row.dossier && row.dossier === fresh ? 'bg-panel3' : 'bg-transparent'}`}
+            >
+              <b className="block text-[12.5px] font-[600] text-txt">
+                {readableStamp(row.horodatage)}
+              </b>
+              {row.illisible ? (
+                <span className="block text-[12px] text-danger-txt">
+                  manifeste illisible — {row.illisible}
+                </span>
+              ) : (
+                <span className="block text-[12px] text-dim">{summarise(row)}</span>
+              )}
+              <code className="block overflow-hidden text-ellipsis whitespace-nowrap
+                               font-code text-[11px] text-dim2"
+                    title={row.dossier}>
+                {row.dossier}
+              </code>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="m-0 text-[12.5px] text-dim">Aucun export pour ce personnage.</p>
+      )}
     </section>
   )
 }

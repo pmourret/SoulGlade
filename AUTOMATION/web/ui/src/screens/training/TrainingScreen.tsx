@@ -11,97 +11,167 @@
    an omission: a decision, and the copy on screen says so rather than leaving
    a button-shaped hole.
 
+   TWO COLUMNS, AND THE EXPORT NEVER SCROLLS AWAY (design-pass screen-9, §S1).
+   The report used to be a centred article with the export gesture 1100 px below
+   the verdict that says whether to make it. Reading and acting are one session,
+   so they share one screen.
+
    It composes and lays out; it does not decide. The state and the gestures
    live in `useTrainingSet`, the panels are pure. */
-import { ExcludedList, type Excluded } from './ExcludedList'
+import { Link } from 'react-router-dom'
+
+import { PATHS } from '../../app/routes'
+import { useSystemState } from '../../state/SystemStateContext'
+import { CorpusFunnel } from './CorpusFunnel'
+import { CriteriaList } from './CriteriaList'
+import { DiversityBars, type Axis } from './DiversityBars'
+import { ExcludedList, type Excluded, type Outlier } from './ExcludedList'
 import { ExportHistory } from './ExportHistory'
-import { ProposalPanel } from './ProposalPanel'
+import { ExportPanel } from './ExportPanel'
+import { VerdictBanner } from './VerdictBanner'
+import {
+  type ActiveSet, type Counters, type Criterion, distribution, verdictSummary,
+} from './trainingSummary'
 import { useTrainingSet } from './useTrainingSet'
+
+/* The right track is 412 px, not 380: the panel itself is 380 and the gutter
+   that keeps it off the window edge lives in the same cell. 332 under 1100 px,
+   same arithmetic (§S1). Under 900 the grid becomes a block, the placement
+   classes go inert, and the DOM order — verdict, export, rest of the report —
+   is exactly the stacking the spec asks for. */
+const GRID = `screen grid h-full grid-cols-[minmax(0,1fr)_412px]
+              grid-rows-[auto_minmax(0,1fr)] max-[1100px]:grid-cols-[minmax(0,1fr)_332px]
+              max-[900px]:block max-[900px]:overflow-y-auto`
+const REPORT = `col-start-1 row-start-2 min-w-0 overflow-y-auto px-[32px] pb-[22px]
+                max-[900px]:overflow-visible`
+const ASIDE = `col-start-2 row-span-2 row-start-1 overflow-y-auto py-[22px] pr-[32px]
+               max-[900px]:overflow-visible max-[900px]:px-[32px] max-[900px]:pt-0`
+const HEAD = 'col-start-1 row-start-1 px-[32px] pt-[22px]'
+
+/** Same frame as the loaded screen, so nothing jumps when the data lands. */
+function Skeleton() {
+  const block = (h: string) => (
+    <div className={`${h} mb-[14px] rounded-[6px] bg-panel`} />
+  )
+  return (
+    <div aria-hidden="true" className={GRID} id="training">
+      <div className={HEAD}>{block('h-[74px]')}</div>
+      <div className={REPORT}>
+        {block('h-[130px]')}
+        {block('h-[170px]')}
+        {block('h-[60px]')}
+      </div>
+      <div className={ASIDE}>{block('h-[420px]')}</div>
+    </div>
+  )
+}
 
 export function TrainingScreen() {
   const {
-    proposal, past, error, loading, exporting,
-    repetitions, setRepetitions, runExport,
+    proposal, past, error, loading, exporting, justExported,
+    repetitions, setRepetitions, runExport, reload,
   } = useTrainingSet()
+  /* The route refuses an export while a batch runs (409, one GPU and one
+     batch), and it is right to. The screen knows it BEFORE the click: leaving
+     the button armed buys a refusal the user had no way to foresee. Found on a
+     real 409 during a real production, not by reading the route. */
+  const { state } = useSystemState()
+  const blocked = state?.running
+    ? 'une production tourne : l’export attend la fin du lot'
+    : null
 
-  const exportable = (proposal?.compteurs as Record<string, number> | undefined)?.exportables ?? 0
-  const captions = proposal?.legendes as { repli_vision: number } | undefined
+  if (loading) {
+    return <Skeleton />
+  }
+
+  if (error) {
+    return (
+      <div className="screen flex h-full items-start justify-center overflow-y-auto p-[48px_32px]"
+           id="training">
+        <div className="w-[440px] rounded-[var(--r)] border border-danger-line bg-danger-bg
+                        p-[18px]"
+             role="alert">
+          <b className="flex items-center gap-[8px] text-[15px] font-[650] text-txt">
+            <span aria-hidden="true" style={{ color: 'var(--bad)' }}>◆</span>
+            Jeu d’entraînement indisponible
+          </b>
+          {/* The server's own sentence, never rewritten. */}
+          <p className="m-0 mt-[6px] text-[12.5px] text-danger-txt">{error}</p>
+          <div className="mt-[14px] flex gap-[8px]">
+            <button className="btn" onClick={() => void reload()}>Réessayer</button>
+            <Link className="btn" to={PATHS.journal}>Voir le journal</Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  /* No active reference set is a STATE, not an error: the route answers 200 and
+     says so in `blocage`. The gabarit is built in the Revue, so that is where
+     the way out points. */
+  if (!proposal || !proposal.jeu) {
+    return (
+      <div className="screen h-full overflow-y-auto" id="training">
+        <div className="empty">
+          <b>Aucun jeu de référence</b>
+          Ce personnage n’a pas encore de jeu de référence : il n’y a rien sur
+          quoi entraîner tant que le gabarit n’existe pas.{' '}
+          <Link className="link" to={PATHS.review}>La Revue</Link> le construit.
+        </div>
+      </div>
+    )
+  }
+
+  const counters = proposal.compteurs as unknown as Counters
+  const criteria = proposal.criteres as unknown as Criterion[]
+  const captions = proposal.legendes as unknown as { prompt: number; repli_vision: number }
 
   return (
-    <div className="screen" id="training">
-      <div className="wrap">
-        <h2>Jeu d’entraînement</h2>
-        <p className="tiny mt-0 mb-[18px]">
-          Sur quoi un LoRA d’identité serait entraîné pour ce personnage, et ce
-          qui manque pour y aller. La plateforme prépare le jeu&nbsp;;
-          l’entraînement se fait ailleurs, sur une machine kohya.
-        </p>
+    <div className={GRID} id="training">
+      <h1 className="sr-only">Jeu d’entraînement</h1>
 
-        {error ? (
-          <div className="empty" role="alert">
-            <b>Jeu d’entraînement indisponible</b>
-            {error}
-          </div>
-        ) : loading ? (
-          <div className="empty">chargement…</div>
-        ) : proposal ? (
-          <>
-            <ProposalPanel proposal={proposal} />
-            <ExcludedList rows={proposal.ecartes as unknown as Excluded[]} />
-
-            <section className="meta mt-[22px]">
-              <h3 className="m-0 mb-[4px] text-[15px] font-semibold text-txt">
-                Exporter le jeu
-              </h3>
-              <p className="tiny mt-0 mb-[12px]">
-                Copie les {exportable} image(s) exportable(s) et l’ancre dans un
-                dossier daté, avec leurs légendes, le manifeste, et de quoi
-                lancer par les deux chemins : <code>dataset.toml</code> +{' '}
-                <code>entrainer.sh</code> en ligne de commande,{' '}
-                <code>kohya_config.json</code> pour la GUI kohya_ss.
-                {captions?.repli_vision
-                  ? ` ${captions.repli_vision} légende(s) demanderont le légendeur : compter plusieurs minutes.`
-                  : ' Toutes les légendes viennent du prompt : compter quelques secondes.'}
-              </p>
-              <div className="flex flex-wrap items-center gap-[12px]">
-                <label className="tiny" htmlFor="trainRepetitions">
-                  Répétitions par image
-                </label>
-                <input
-                  id="trainRepetitions"
-                  type="number"
-                  min={1}
-                  className="w-[92px] rounded-[8px] border border-line2 bg-panel2
-                             px-[10px] py-[7px] text-[13.5px] text-txt"
-                  placeholder="défaut"
-                  value={repetitions}
-                  onChange={(event) => setRepetitions(event.target.value)}
-                />
-                <button
-                  className="btn primary"
-                  id="btnTrainExport"
-                  disabled={exporting || exportable === 0}
-                  onClick={() => void runExport()}
-                >
-                  {exporting ? 'export en cours…' : 'Exporter le jeu'}
-                </button>
-                <span className="tiny">
-                  {exportable === 0
-                    ? 'aucune image de la file n’a de fichier sur le disque'
-                    : 'laisser vide garde le défaut proposé — c’est un réglage d’entraînement, il te revient'}
-                </span>
-              </div>
-            </section>
-
-            <ExportHistory rows={past} />
-          </>
-        ) : (
-          <div className="empty">
-            <b>Aucune donnée</b>
-            ce personnage n’a pas encore de jeu de référence
-          </div>
-        )}
+      <div className={HEAD}>
+        <VerdictBanner
+          blocking={proposal.blocage}
+          ready={proposal.pret}
+          summary={verdictSummary(criteria, proposal.jeu as ActiveSet, counters)}
+        />
       </div>
+
+      <aside className={ASIDE}>
+        <ExportPanel
+          blocked={blocked}
+          captions={captions}
+          character={proposal.personnage}
+          exportable={counters.exportables}
+          exporting={exporting}
+          onExport={() => void runExport()}
+          repetitions={repetitions}
+          setRepetitions={setRepetitions}
+          trigger={proposal.declencheur}
+        />
+        {!proposal.pret && counters.exportables > 0 ? (
+          <p className="m-0 mt-[10px] text-[12px] text-dim2">
+            L’export reste possible même sans proposition : c’est à toi de juger.
+          </p>
+        ) : null}
+        <ExportHistory fresh={justExported} rows={past} />
+      </aside>
+
+      <main className={REPORT}>
+        <CorpusFunnel counters={counters} shape={distribution(counters)} />
+
+        <div className="grid grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] gap-[28px]
+                        max-[1100px]:grid-cols-1 max-[1100px]:gap-[18px]">
+          <CriteriaList criteria={criteria} />
+          <DiversityBars axes={proposal.diversite as unknown as Record<string, Axis>} />
+        </div>
+
+        <ExcludedList
+          outliers={proposal.outliers as unknown as Outlier[]}
+          rows={proposal.ecartes as unknown as Excluded[]}
+        />
+      </main>
     </div>
   )
 }

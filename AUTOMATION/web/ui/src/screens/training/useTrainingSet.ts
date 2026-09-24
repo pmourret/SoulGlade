@@ -49,6 +49,11 @@ export function useTrainingSet() {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [exporting, setExporting] = useState(false)
+  /* The folder the LAST export wrote, for the two seconds the history marks it
+     as new. Held here rather than diffed in the list: after a character switch
+     the whole list changes, and a component that guesses « which row is new »
+     from its own previous render would light all of them. */
+  const [justExported, setJustExported] = useState<string | null>(null)
   /* Empty means « laisse le défaut » — the screen never invents a number the
      server would then have to guess was deliberate. A repetition count is a
      training setting: it belongs to the user (PROJET.md). */
@@ -104,11 +109,13 @@ export function useTrainingSet() {
       return
     }
     toast(`${result.images} image(s) exportées — ${result.dossier}`)
+    setJustExported(result.dossier)
+    window.setTimeout(() => setJustExported(null), 2000)
     void load()
   }, [api, load, repetitions, toast])
 
   return {
-    proposal, past, error, loading, exporting,
+    proposal, past, error, loading, exporting, justExported,
     repetitions, setRepetitions, runExport, reload: load,
   }
 }

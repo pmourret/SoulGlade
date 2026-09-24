@@ -82,6 +82,17 @@ details.adv summary::before{content:'▸ ';color:var(--acc)}
 details.adv[open] summary::before{content:'▾ '}
 details.adv summary:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
+/* The two folds of Entraînement live INSIDE a bordered block (design-pass
+   screen-9, §S5), where the sheet's own top borders and 22 px gap would paint a
+   rule above the block's own edge. Overridden here rather than with utility
+   classes: `details.adv` is an element plus a class, and a Tailwind class alone
+   never outranks it. */
+#trainingFolds details.adv{margin:0;padding:0;border-top:1px solid var(--line2)}
+#trainingFolds details.adv:first-child{border-top:0}
+#trainingFolds details.adv summary{display:flex;align-items:baseline;gap:10px;
+  padding:9px 12px;border-top:0}
+#trainingFolds details.adv[open] > :not(summary){margin:0 12px 12px}
+
 /* --------------------------------------------------------------- chips
    `.chip-t` is the pill two screens offer: the tones of Produire and the
    « autre ton » of the decline box. It came from `screens/review.css`, which

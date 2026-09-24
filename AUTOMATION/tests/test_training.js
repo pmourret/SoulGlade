@@ -9,6 +9,9 @@
         disappearance of its PNG), and a screen that merged them would be a
         count hiding its own margin. Read through `data-count`, the explicit
         contract, and compared with the JSON.
+     2bis. The VERDICT reads in words, and the distribution bar of §S3 never
+        writes the sum of its parts: three counters of three natures make a
+        drawing ratio, not a total anyone should read.
      3. The excluded list names a REASON per row. A training set that hides
         its rejections is one nobody can argue with.
      4. The export gesture is wired end to end — payload, pending state,
@@ -72,6 +75,28 @@ const ECRAN = `${BASE}/training?character=lena`;
        || (await compte('file')) !== (await compte('exportables')),
        `file et exportables restent deux nombres distincts `
        + `(${json.compteurs.file} / ${json.compteurs.exportables})`);
+  /* LA BARRE DE REPARTITION N'ANNONCE AUCUN TOTAL (design-pass screen-9, §S3).
+     Ses trois parts sont disjointes, mais leur somme melangerait des empreintes
+     et des fichiers : elle sert a dessiner des largeurs, jamais a etre lue.
+     Verifie dans l'entonnoir seul, ou aucun autre nombre ne circule. */
+  const somme = json.compteurs.exportables + json.compteurs.sans_fichier
+              + json.compteurs.ecartes;
+  const entonnoir = (await page.textContent('#corpusFunnel')).replace(/\s+/g, ' ');
+  dire(!new RegExp(`(^|\\D)${somme}(\\D|$)`).test(entonnoir),
+       `la somme des parts (${somme}) n'est ecrite nulle part dans l'entonnoir`);
+
+  console.log('\n[2bis] le verdict se lit en toutes lettres, pas en couleur');
+  const verdict = (await page.textContent('#trainVerdict')).replace(/\s+/g, ' ');
+  dire(/Proposition d.entraînement prête|Pas de proposition d.entraînement/.test(verdict),
+       `le mot porte le statut : « ${verdict.trim().slice(0, 60)} »`);
+  dire(verdict.includes('critère(s) tenu(s)'),
+       'et la synthese compte les criteres tenus');
+  if (!json.pret) {
+    dire(verdict.includes(json.blocage.slice(0, 40)),
+         'le blocage du serveur est affiche tel quel');
+  } else {
+    dire(true, 'proposition prete : rien ne bloque');
+  }
 
   console.log('\n[3] les ecartees sont listees AVEC leur raison');
   if (json.ecartes.length) {
@@ -184,7 +209,7 @@ const ECRAN = `${BASE}/training?character=lena`;
   // Un jeu d'entrainement appartient a UN personnage : l'ecran doit avoir
   // rejoue sa lecture, et montrer l'etat de l'autre — meme vide.
   const apres = await page.textContent('#training');
-  dire(/Proposition d|Pas de proposition|Aucune donnée|indisponible/.test(apres),
+  dire(/Proposition d|Pas de proposition|jeu de référence|indisponible/.test(apres),
        "l'ecran s'est recharge pour l'autre personnage");
 
   console.log('\n[8] aucune erreur JS sur tout le parcours');
