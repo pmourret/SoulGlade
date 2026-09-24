@@ -155,6 +155,14 @@ opérables au clavier. Statut jamais par la couleur seule.
 Un libellé masqué en mode icônes l'est **visuellement** (clip-path),
 jamais par `display:none` : il reste le nom accessible du contrôle.
 
+Un `<button>` déclare **toujours** son fond ET sa bordure — `bg-*` et
+`border-0` (ou une bordure voulue). Sans fond il retombe sur la face
+grise du navigateur, sans bordure sur son cadre `2px outset`. Les deux
+moitiés du garde-fou, jamais une seule : l'oubli est passé deux fois
+(`ProduceSidebar`, puis le sélecteur de scènes), les deux fois invisible
+à la relecture. `AUTOMATION/tests/test_cadres_ua.js` le mesure sur les
+onze écrans, et le vérificateur le lance dès que `web/ui/` bouge.
+
 Un bouton qui n'a **qu'une icône** porte un `aria-label` — le glyphe
 seul s'annonce littéralement (« cœur noir » pour ♥), et `title` ne suffit
 pas. Un glyphe qui accompagne déjà un libellé texte porte

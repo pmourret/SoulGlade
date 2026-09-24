@@ -39,6 +39,14 @@ c'est un résultat, pas un silence.
 Un test qui s'auto-ignore (IGNORE, prérequis absent) n'est pas un échec :
 rapporte-le tel quel.
 
+Dès qu'un fichier de `AUTOMATION/web/ui/` a bougé, ajoute **toujours**
+`test_cadres_ua` à la liste, quel que soit l'écran touché. Il est
+transverse — il balaie les onze écrans au repos et échoue sur tout
+`<button>` qui rend le cadre `2px outset` du navigateur, faute d'avoir
+déclaré sa bordure. Le défaut est passé deux fois (75d6417, puis le
+sélecteur de scènes), les deux fois invisible à la relecture du JSX :
+c'est une mesure, pas une revue, donc elle se lance.
+
 **Un JSON de workflow** (`WORKFLOWS/**`, ou tout `.json` contenant
 `"nodes"`/`"class_type"`) :
 
