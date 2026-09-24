@@ -30,11 +30,15 @@ export type ParamState = {
 
 /** One selected photo's render state — B1: each of the up to 3 selected
     photos gets its OWN result, so one failing (e.g. no face detected) never
-    hides the others that succeeded. */
+    hides the others that succeeded.
+
+    NO `viewingOriginal` HERE ANY MORE (design-pass screen-8 §S4.1): original
+    versus rendu is one toggle for the whole column now, held by the screen.
+    Per photo, it let two cards sit in different states while being compared
+    side by side, which is the one thing this column exists to avoid. */
 export type PhotoResult = {
   previewUrl: string | null
   scoreAfter: number | null
-  viewingOriginal: boolean
   rendering: boolean
   renderError: string | null
   /** Set on a successful render — compared against `paramsChangedAt` (B5) to
@@ -43,7 +47,7 @@ export type PhotoResult = {
 }
 
 const EMPTY_RESULT: PhotoResult = {
-  previewUrl: null, scoreAfter: null, viewingOriginal: false,
+  previewUrl: null, scoreAfter: null,
   rendering: false, renderError: null, renderedAt: null,
 }
 
@@ -104,6 +108,17 @@ export function useExpressionEditor(toneKey: string) {
     future.current = []
     hydratedFor.current = toneKey
   }, [creative, tone, toneKey])
+
+  /** Takes `creative.json`'s own range back and drops what the page holds —
+      the banner's « Annuler » (design-pass screen-8 §S2). Not the hydration
+      effect above with its `hydratedFor` guard: that one exists precisely to
+      NOT fire for the same tone, which is the only case this one is for. */
+  const reset = useCallback(() => {
+    setParams(initialParamState(tone?.expression))
+    setDirty(false)
+    past.current = []
+    future.current = []
+  }, [tone])
 
   const [photos, setPhotos] = useState<GalleryItem[] | null>(null)
   const [photosError, setPhotosError] = useState<string | null>(null)
@@ -167,13 +182,6 @@ export function useExpressionEditor(toneKey: string) {
       return 'added'
     },
     [selectedPhotos],
-  )
-
-  const toggleViewingOriginal = useCallback(
-    (name: string) => {
-      setResultFor(name, (r) => ({ ...r, viewingOriginal: !r.viewingOriginal }))
-    },
-    [setResultFor],
   )
 
   /** Coalesced by time — dragging the trial slider or typing into a field
@@ -346,7 +354,7 @@ export function useExpressionEditor(toneKey: string) {
           if (r.previewUrl) URL.revokeObjectURL(r.previewUrl)
           return {
             ...r, previewUrl: next, scoreAfter: header ? Number(header) : null,
-            viewingOriginal: false, renderError: null, renderedAt: Date.now(),
+            renderError: null, renderedAt: Date.now(),
           }
         })
       } finally {
@@ -394,13 +402,13 @@ export function useExpressionEditor(toneKey: string) {
 
   return {
     tone, creativeLoaded: creative !== null,
-    params, dirty,
+    params, dirty, reset,
     setTrial, setMin, setMax, toggleIncluded, setAsMin, setAsMax,
     undo, redo, canUndo: past.current.length > 0, canRedo: future.current.length > 0,
     copySources, copyFromTone,
     photos, photosError,
     selectedPhotos, togglePhotoSelection, results,
-    toggleViewingOriginal, renderAll, retryPhoto,
+    renderAll, retryPhoto,
     paramsChangedAt,
     saving, save,
   }

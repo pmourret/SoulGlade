@@ -1,4 +1,4 @@
-/* Permanent banner while scenes.json has pending changes.
+/* Permanent banner while something is not written to disk yet.
 
    A toast does not do: it disappears, and the scene then becomes
    indistinguishable from a saved one — until production refuses to see it. The
@@ -13,12 +13,22 @@
        same rule the spec itself applies to « dernière réponse il y a N s ».
      - it asks for the `Ctrl S` shortcut to be DISPLAYED. No such handler
        existed anywhere in the frontend, so it is wired here rather than merely
-       drawn: a printed shortcut that does nothing is worse than none. It is
-       bound while the banner is mounted, which is exactly while there is
-       something to save, and it overrides the browser's own "save page". */
-import { useEffect } from 'react'
+       drawn: a printed shortcut that does nothing is worse than none.
+
+   TWO SOURCES NOW (design-pass screen-8 §S2). `scenes.json` is read straight
+   from `useScenes`, as it always was; anything else is DECLARED by the screen
+   through `PendingSaveContext` — the tones workshop's expression range is the
+   first. Both can show at once, which is the truth when two files are pending.
+
+   CTRL S HAS ONE OWNER, and it is this file — not one handler per banner
+   racing on `document`. When a screen declares pending work, the shortcut is
+   ITS save: that is the work being looked at. Otherwise it saves the scenes.
+   The `Ctrl S` chip is drawn on whichever banner actually owns it, so the
+   printed shortcut never lies. */
+import { useEffect, type ReactNode } from 'react'
 
 import { useConfirm } from './ConfirmContext'
+import { usePendingSave } from './PendingSaveContext'
 import { useToast } from './ToastContext'
 import { useScenes } from '../state/ScenesStoreContext'
 
@@ -40,10 +50,11 @@ export const REVERT_CONFIRM = {
 
 export function DirtyBar() {
   const { dirty, save, load } = useScenes()
+  const pending = usePendingSave()
   const confirm = useConfirm()
   const toast = useToast()
 
-  const onSave = async () => {
+  const onSaveScenes = async () => {
     const result = await save()
     toast(result.ok ? 'scenes.json enregistré' : result.erreur || "échec de l'enregistrement")
   }
@@ -51,44 +62,97 @@ export function DirtyBar() {
   /* Declared before the early return: a hook cannot sit behind a condition.
      The handler itself does nothing when nothing is pending. */
   useEffect(() => {
-    if (!dirty) return
+    if (!dirty && !pending) return
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== 's' && event.key !== 'S') return
       if (!event.ctrlKey && !event.metaKey) return
+      // Also suppresses the browser's own "save page".
       event.preventDefault()
-      void onSave()
+      if (pending) void pending.onSave()
+      else void onSaveScenes()
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, save, toast])
+  }, [dirty, pending, save, toast])
 
-  if (!dirty) return null
+  if (!dirty && !pending) return null
 
-  const onRevert = async () => {
-    const ok = await confirm(REVERT_CONFIRM)
-    if (!ok) return
+  const onRevertScenes = async () => {
+    if (!(await confirm(REVERT_CONFIRM))) return
     await load()
     toast('modifications ignorées — dernière version enregistrée reprise')
   }
 
   return (
-    <div id="dirtyBar" role="status">
-      <b>Modifications non enregistrées</b>
-      <span>
-        <code>scenes.json</code> — des scènes existent seulement dans cette page
-        et la production ne les voit pas.
-      </span>
+    <>
+      {pending && (
+        <DirtyBanner
+          id="pendingBar"
+          revertId="btnPendingRevert"
+          saveId="btnPendingSave"
+          title={pending.title}
+          body={pending.body}
+          saveLabel={pending.saveLabel}
+          hotkey
+          onRevert={() => void pending.onRevert()}
+          onSave={() => void pending.onSave()}
+        />
+      )}
+      {dirty && (
+        <DirtyBanner
+          id="dirtyBar"
+          revertId="btnDirtyRevert"
+          saveId="btnDirtySave"
+          title="Modifications non enregistrées"
+          body={
+            <>
+              <code>scenes.json</code> — des scènes existent seulement dans cette
+              page et la production ne les voit pas.
+            </>
+          }
+          saveLabel="Enregistrer"
+          /* Only when no screen has claimed it above — a chip saying « Ctrl S »
+             on a banner the shortcut does not act on is worse than no chip. */
+          hotkey={!pending}
+          onRevert={() => void onRevertScenes()}
+          onSave={() => void onSaveScenes()}
+        />
+      )}
+    </>
+  )
+}
+
+/** Presentation only — the same 38 px warning row whatever the file. */
+function DirtyBanner({
+  id, revertId, saveId, title, body, saveLabel, hotkey, onRevert, onSave,
+}: {
+  id: string
+  revertId: string
+  saveId: string
+  title: string
+  body: ReactNode
+  saveLabel: string
+  hotkey: boolean
+  onRevert: () => void
+  onSave: () => void
+}) {
+  return (
+    <div id={id} className="dirty-bar" role="status">
+      <b>{title}</b>
+      <span>{body}</span>
       <div className="acts">
-        <button className="link" id="btnDirtyRevert" onClick={() => void onRevert()}>
+        <button className="link" id={revertId} onClick={onRevert}>
           Annuler
         </button>
-        <button className="btn sm primary" id="btnDirtySave" onClick={() => void onSave()}>
-          Enregistrer
+        <button className="btn sm primary" id={saveId} onClick={onSave}>
+          {saveLabel}
         </button>
-        <span className="kbd" aria-hidden="true">
-          Ctrl S
-        </span>
+        {hotkey && (
+          <span className="kbd" aria-hidden="true">
+            Ctrl S
+          </span>
+        )}
       </div>
     </div>
   )

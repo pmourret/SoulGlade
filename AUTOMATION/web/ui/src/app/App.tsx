@@ -18,6 +18,7 @@ import { ComfyStatsProvider } from '../state/ComfyStatsContext'
 import { FaultsProvider } from '../state/FaultsContext'
 import { SystemStateProvider } from '../state/SystemStateContext'
 import { ConfirmProvider } from '../chrome/ConfirmContext'
+import { PendingSaveProvider } from '../chrome/PendingSaveContext'
 import { ToastProvider } from '../chrome/ToastContext'
 import { ScenesStoreProvider } from '../state/ScenesStoreContext'
 import { ServerLogProvider } from '../state/ServerLogContext'
@@ -25,7 +26,6 @@ import { TaxonomyProvider } from '../state/TaxonomyContext'
 import { ConfigProvider } from '../state/ConfigContext'
 import { LightboxProvider } from '../chrome/LightboxContext'
 import { BankPosesScreen, BankScenesScreen, BankTonesScreen } from '../screens/bank/BankScreen'
-import { ExpressionEditorScreen } from '../screens/expression-editor/ExpressionEditorScreen'
 import { PhotoEditorAdvancedScreen } from '../screens/photo-editor-advanced/PhotoEditorAdvancedScreen'
 import { PoseEditorScreen } from '../screens/pose-editor/PoseEditorScreen'
 import { TrainingScreen } from '../screens/training/TrainingScreen'
@@ -66,6 +66,10 @@ export function App() {
               <ConfigProvider>
               <ScenesStoreProvider>
               <LightboxProvider>
+              {/* A screen's own unsaved work, drawn by the chrome's banner
+                  (design-pass screen-8 §S2). Inside the router: the screens
+                  that register it are mounted by it. */}
+              <PendingSaveProvider>
               <Routes>
                 <Route element={<Shell />}>
                   <Route path="/" element={<HomeRedirect />} />
@@ -86,10 +90,14 @@ export function App() {
                       (2026-09-02) — same list-then-editor shape as worlds/
                       places just below. */}
                   <Route path={`${PATHS.poseEditor}/:name?`} element={<PoseEditorScreen />} />
-                  {/* `:tone` required, no `?` — this editor never creates a
-                      tone, only tunes the range of one that already exists;
-                      a bare visit falls through to `path="*"` below. */}
-                  <Route path={`${PATHS.expressionEditor}/:tone`} element={<ExpressionEditorScreen />} />
+                  {/* THE SAME SCREEN as /bank/tones just above (design-pass
+                      screen-8 §S1): the workshop reads `:tone` when it is
+                      there and opens on the first tone when it is not, so this
+                      path is the shareable address of a SELECTION, not a
+                      second editor one navigates to and comes back from.
+                      `:tone` stays required — a bare /edit names no tone and
+                      falls through to `path="*"` below. */}
+                  <Route path={`${PATHS.expressionEditor}/:tone`} element={<BankTonesScreen />} />
                   {/* Design-pass screen-photo-editor.md §7b — `:name`
                       required, `bucket`/`space` as query params (routes.ts's
                       own note on why). */}
@@ -115,6 +123,7 @@ export function App() {
                   <Route path="*" element={<HomeRedirect />} />
                 </Route>
               </Routes>
+              </PendingSaveProvider>
               </LightboxProvider>
               </ScenesStoreProvider>
               </ConfigProvider>

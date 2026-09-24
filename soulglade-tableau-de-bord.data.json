@@ -919,10 +919,11 @@
           "ref": "DOCS/design-pass/screen-7d-banque-poses.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-9",
           "t": "Ateliers, Tons et éditeur d'expression",
-          "d": "La liste des tons et l'éditeur d'expression côte à côte, au lieu de deux écrans qui s'appellent l'un l'autre."
+          "d": "La liste des tons et l'éditeur d'expression tiennent un seul écran à trois colonnes : le compteur et une bande de repères disent d'un coup d'œil ce qui est réglé, et une réglette montre la plage au lieu de la faire lire dans deux champs. Le bandeau du chrome porte l'enregistrement.",
+          "ref": "DOCS/design-pass/screen-8-tons-expression.md"
         },
         {
           "s": "faire",

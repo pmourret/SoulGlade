@@ -66,7 +66,9 @@ const ECRANS = [
   ['/bank/poses', 'Ateliers, Poses', [
     ['modale « Nouvelle depuis un gabarit »', '#btnNewPose'],
   ]],
-  ['/bank/tones', 'Ateliers, Tons'],
+  ['/bank/tones', 'Ateliers, Tons', [
+    ['boite « Copier depuis… »', 'button:has-text("Copier depuis")'],
+  ]],
   ['/training', 'Entrainement'],
   ['/worlds', 'Mondes'],
   ['/app', 'Application'],
@@ -112,6 +114,13 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
     await sonder(nom);
 
     for (const [etat, ouvre] of etats || []) {
+      // Un etat dont le declencheur n'existe pas sur cette machine (« Copier
+      // depuis… » n'apparait que si un AUTRE ton a deja une plage) s'ignore :
+      // la sonde n'a rien a mesurer, ce n'est pas un echec.
+      if (!(await page.locator(ouvre).count())) {
+        console.log(`   IGNORE ${nom}, ${etat} — declencheur absent (${ouvre})`);
+        continue;
+      }
       await page.click(ouvre);
       await page.waitForTimeout(350);
       await sonder(`${nom}, ${etat}`);

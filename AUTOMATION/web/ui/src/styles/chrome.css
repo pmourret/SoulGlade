@@ -350,14 +350,18 @@ body.editing .app .rail{display:none}
 /* ------------------------------------------- unsaved changes banner
    Same shape as the fault banner, warning tone rather than alert: nothing is
    broken, something is simply not written to disk yet. */
-#dirtyBar{display:flex;align-items:center;gap:12px;height:38px;padding:0 16px;flex:none;
+/* A CLASS, not only the id: scenes.json is no longer the only file that can be
+   pending (design-pass screen-8 §S2 — a tone's expression range owes the same
+   banner to creative.json). `#dirtyBar` stays on the scenes one, which several
+   smoke tests read by id. */
+.dirty-bar{display:flex;align-items:center;gap:12px;height:38px;padding:0 16px;flex:none;
         background:var(--warn-bg);border-bottom:1px solid var(--warn-line);font-size:13px}
-#dirtyBar b{color:var(--warn-txt)}
-#dirtyBar span{color:var(--dim)}
+.dirty-bar b{color:var(--warn-txt)}
+.dirty-bar span{color:var(--dim)}
 /* Text left, actions right. A banner one reads and then acts on: the sentence
    holds the left edge where reading starts, the buttons hold the right edge
    where they are looked for. */
-#dirtyBar .acts,#panneBar .acts{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none}
+.dirty-bar .acts,#panneBar .acts{margin-left:auto;display:flex;align-items:center;gap:8px;flex:none}
 
 /* --------------------------------------------------------- fault banner
    Same shape as the unsaved-changes bar, franker alert tone. An empty screen

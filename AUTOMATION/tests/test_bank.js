@@ -722,22 +722,29 @@ async function allerA(page, categorie, module) {
   dire(!(await vu('#toolRail')),
        "l'editeur de pose a son propre outillage — le rail n'y ajoute plus rien");
 
-  console.log('\n[15bis] sous-vue TONS : une carte par ton, lien vers son propre editeur (2026-09-03)');
+  console.log('\n[15bis] sous-vue TONS : liste et editeur cote a cote, une seule page (24/09/2026)');
   await page.click('#bankView [data-vue="tones"]');
   await page.waitForTimeout(400);
   dire(await page.evaluate(() => location.pathname) === '/bank/tones', 'chemin /bank/tones');
   dire(await vu('#bankTones'), 'la sous-vue Tons est montee');
   dire(!(await vu('#bankPoses')), 'la sous-vue Poses ne l est plus');
-  const infobulleTons = await page.$eval('#btnSaveScenes', e => e.dataset.hintText || '');
-  dire(infobulleTons.toLowerCase().includes('propre'),
-       `l'infobulle precise que la plage d'un ton s'enregistre ailleurs (« ${infobulleTons} »)`);
-  const tons = await page.$$eval('[data-tone-card]', e => e.map(x => x.dataset.key));
+  // design-pass screen-8 §S2 : Tons etait le DERNIER porteur du bouton a icone
+  // seule, apres Scenes en 7b ([1bis]) et Poses en 7d ([14]). Le bandeau dit
+  // deja ce qui est en attente et porte le Ctrl S — ici celui de la plage.
+  dire(!(await vu('#btnSaveScenes')),
+       "plus aucun ecran de la banque n'a de bouton d'enregistrement a icone");
+  const tons = await page.$$eval('#tonesGrid [data-tone-card]', e => e.map(x => x.dataset.key));
   dire(tons.length > 0, `au moins un ton est propose (${tons.join(', ')})`);
-  await page.click('[data-tone-card] a:has-text("éditer l’expression")');
+  // L'editeur est DEJA la, sur la meme page : le premier ton est ouvert sans
+  // que l'URL nomme quoi que ce soit (§S1).
+  dire(await vu('#expressionEditor'), "l'editeur du premier ton est monte a cote de la liste");
+  await page.click(`#tonesGrid [data-tone-card][data-key="${tons[tons.length - 1]}"]`);
   await page.waitForTimeout(400);
-  dire((await page.evaluate(() => location.pathname)).startsWith('/bank/tones/edit/'),
-       'le lien de la carte ouvre bien le propre editeur du ton');
-  await page.goBack();
+  dire((await page.evaluate(() => location.pathname)) === `/bank/tones/edit/${tons[tons.length - 1]}`,
+       'choisir un ton met son adresse partageable dans l URL');
+  dire(await vu('#expressionEditor') && await vu('#tonesGrid'),
+       "et ne change pas d ecran : la liste et l editeur sont toujours la");
+  await page.goto(SCENES, { waitUntil: 'networkidle' });
   await page.waitForTimeout(400);
 
   console.log('\n[16] REMISE EN ETAT : scenes.json revient a son instantane');

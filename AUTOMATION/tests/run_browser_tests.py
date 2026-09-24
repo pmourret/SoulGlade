@@ -73,6 +73,7 @@ TESTS = [
     "test_pose_extract",  # ComfyUI requis (s'ignore sinon) : extraction reelle
     "test_pose_editor",   # aucun ComfyUI requis : preset -> canvas -> save local
     "test_pose_bank",     # outillage de la banque de poses : filtres, tri, renommage
+    "test_expression_editor",  # Ateliers Tons : liste, plage, rendu d essai (ecran 8)
 
     "test_board_layout",  # unitaire pur : mise en page de la planche (ecran 5c)
     "test_diff",          # unitaire pur : diff lignes + mots (ecran 6 bis, §7)

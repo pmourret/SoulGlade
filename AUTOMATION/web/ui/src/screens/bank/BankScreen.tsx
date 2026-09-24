@@ -43,9 +43,9 @@ import { PATHS } from '../../app/routes'
 import { PlaceInspector } from '../worlds/PlaceInspector'
 import { useWorldPlaces } from '../worlds/useWorldPlaces'
 import { useOverlayPanel } from '../produce/useOverlayPanel'
+import { ToneWorkshop } from '../expression-editor/ToneWorkshop'
 import { PosesView } from './poses/PosesView'
 import { SceneListPanel, type ScenePreview } from './SceneList'
-import { TonesView } from './tones/TonesView'
 import { DocumentPane, SceneInspector } from './SceneInspector'
 import { SceneHeader } from './composer/SceneHeader'
 import { ScenePreviewPanel } from './composer/ScenePreviewPanel'
@@ -54,18 +54,6 @@ import { useSceneWorkbench } from './useSceneWorkbench'
 import { useWorldCatalogue } from './useWorldCatalogue'
 import { WorldBanner, WorldDriftBand, worldDrift } from './WorldBanner'
 import { WorldCatalogueDialog } from './WorldCatalogueDialog'
-
-/* What « Enregistrer » saves — said in its HOVER tooltip, not as permanent
-   text (2026-09-01: a title + a ".bak" reassurance sat in the chrome at all
-   times, reported as noise — "n'a pas d'intérêt à être affiché ici").
-
-   ONE ENTRY LEFT, and it is Tons. Scènes lost its button in 7b (`DirtyBar`
-   already states what is pending and carries the Ctrl S, so a permanent
-   icon-only control for an occasional act said the same thing twice), and
-   Poses loses it now for exactly the same reason, its own pass having come
-   (design-pass screen-7d). Tons keeps it until its own pass. */
-const SAVE_HINT =
-  'Enregistrer scenes.json — la plage d\'expression d\'un ton s\'enregistre depuis son propre éditeur, pas ici'
 
 const NO_CHANGES: Set<SceneField> = new Set()
 
@@ -218,6 +206,17 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
     )
   }
 
+  /* Tons builds its own bar around the nav too (design-pass screen-8 §S2), and
+     it is mounted by TWO routes — /bank/tones and /bank/tones/edit/:tone, the
+     shareable address of one tone. It reads that parameter itself. */
+  if (view === 'tones') {
+    return (
+      <div className="screen flex h-full flex-col" id="scenes">
+        <ToneWorkshop nav={subViewNav} />
+      </div>
+    )
+  }
+
   return (
     <div className="screen flex h-full flex-col" id="scenes">
       {catalogueOpen && world && (
@@ -271,31 +270,25 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
             {status}
           </span>
         )}
-        {view === 'scenes' ? (
-          <button
-            className="btn sm flex-none"
-            id="btnBankDocument"
-            aria-pressed={!bench.selected}
-            onClick={() => bench.select(null)}
-          >
-            Réglages de l'atelier
-          </button>
-        ) : (
-          <button
-            className="btn primary sm flex-none"
-            id="btnSaveScenes"
-            aria-label="Enregistrer"
-            data-hint-text={SAVE_HINT}
-            onClick={onSave}
-          >
-            <Icon name="save" className="h-[15px] w-[15px]" />
-          </button>
-        )}
+        {/* THE ICON-ONLY SAVE HAS LEFT THE WHOLE APPLICATION. Scènes lost it
+            in 7b, Poses in 7d, and Tons — the last holder — in screen-8, each
+            time for the same reason: `DirtyBar` already states what is pending
+            and carries the Ctrl S, so a permanent control for an occasional
+            act said the same thing twice. Only Scènes reaches this bar now, so
+            the branch has nothing left to choose between. */}
+        <button
+          className="btn sm flex-none"
+          id="btnBankDocument"
+          aria-pressed={!bench.selected}
+          onClick={() => bench.select(null)}
+        >
+          Réglages de l'atelier
+        </button>
       </div>
 
       {view === 'scenes' && drift && <WorldDriftBand drift={drift} />}
 
-      {view === 'scenes' ? (
+      {view === 'scenes' && (
         <div
           id="bankScenes"
           /* Three tracks while a scene is open, two when none is — an empty
@@ -495,12 +488,6 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                          max-[1100px]:border-t max-[1100px]:border-t-line"
             />
           )}
-        </div>
-      ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          <div className="wrap w-full max-w-none pb-[24px]">
-            <TonesView />
-          </div>
         </div>
       )}
     </div>
