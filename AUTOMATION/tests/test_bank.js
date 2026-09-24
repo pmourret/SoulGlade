@@ -419,17 +419,25 @@ async function allerA(page, categorie, module) {
 
   // La barre Suivant/Precedent/Dupliquer/Supprimer du bas de chaque panneau a
   // disparu (§S4.1) : le rail a libelles fait le pas de section en un clic, et
-  // les deux actions de scene sont dans l en-tete. Ce que ce point verifie
-  // desormais est la regle qui l a remplacee : un formulaire se lit en colonne,
-  // jamais sur toute la largeur d un ecran de studio (§S4.3).
-  console.log('\n[6ter] le formulaire est borne a 880 px, quelle que soit la largeur de la colonne');
-  const largeurForm = await page.$eval('[data-tabpanel="light"] > div',
+  // les deux actions de scene sont dans l en-tete.
+  //
+  // LE PLAFOND DE 880 PX A CHANGE DE PORTEUR (24/09, amendement au §S4.3) : il
+  // etait sur le PANNEAU, ce qui laissait un tiers de colonne vide sur un
+  // ecran large ; il est desormais sur le CHAMP DE TEXTE. Le panneau, lui,
+  // prend la colonne et pose ses blocs cote a cote quand il a la place.
+  console.log('\n[6ter] le panneau prend la colonne, le champ de texte garde sa mesure de lecture');
+  const largeurPanneau = await page.$eval('[data-tabpanel="light"] > div',
     e => e.getBoundingClientRect().width);
   const largeurColonne = await page.$eval('#sceneInspector', e => e.getBoundingClientRect().width);
-  dire(largeurForm <= 882 && largeurColonne > largeurForm,
-       `formulaire a ${Math.round(largeurForm)}px dans une colonne de ${Math.round(largeurColonne)}px`);
+  const largeurRail = await page.$eval('#sceneInspector [role="tablist"]',
+    e => e.getBoundingClientRect().width);
+  dire(largeurPanneau > largeurColonne - largeurRail - 60,
+       `le panneau (${Math.round(largeurPanneau)}px) occupe la colonne moins le rail (${Math.round(largeurColonne - largeurRail)}px)`);
+  const largeurChamp = await page.$eval(champ('prompt_light'), e => e.getBoundingClientRect().width);
+  dire(largeurChamp <= 882,
+       `et le champ de texte reste a ${Math.round(largeurChamp)}px, sous la mesure de lecture`);
   dire((await page.$$('[data-tabpanel="light"] button:has-text("Suivant")')).length === 0,
-       'et la barre « Suivant / Precedent » du bas de panneau a disparu');
+       'la barre « Suivant / Precedent » du bas de panneau a disparu');
 
   console.log('\n[7] le plafond de niveau se DEDUIT des tenues, a la frappe — meme lu depuis un AUTRE onglet');
   // design-pass screen-7c §3 : les quatre textarea de niveau ont cede a UN

@@ -52,7 +52,10 @@ export function RecapPanel({
 
   return (
     <div className="flex flex-col gap-[16px]">
-      <div className="flex flex-col gap-[12px]">
+      {/* La chaîne des trois fragments et ce qu'elle donne : côte à côte dès
+          que le panneau a la place, l'un sous l'autre sinon. */}
+      <div className="grid items-start gap-[18px] @[1200px]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+      <div className="flex min-w-0 flex-col gap-[12px]">
         {/* 1 — le seul champ éditable du panneau */}
         <div className="flex gap-[10px]">
           <Step n={1} color={FRAGMENT_COLORS.base} />
@@ -99,7 +102,7 @@ export function RecapPanel({
       </div>
 
       {/* Le prompt tel qu'il sera écrit */}
-      <div className="rounded-[10px] border border-line bg-panel">
+      <div className="min-w-0 rounded-[10px] border border-line bg-panel">
         <div className="flex items-center justify-between gap-[10px] border-b border-b-line px-[12px] py-[8px]">
           <span className={HEAD}>Prompt enregistré</span>
           <div className="flex items-center gap-[10px]">
@@ -129,6 +132,7 @@ export function RecapPanel({
             ))
           )}
         </p>
+      </div>
       </div>
 
       <p className="m-0 text-[12px] text-dim2">

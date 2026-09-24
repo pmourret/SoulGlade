@@ -73,7 +73,10 @@ export function PromptField({
           {hint && !hideLabel && <InfoHint text={hint} />}
         </span>
       </label>
-      <div className="flex items-start gap-[6px]">
+      {/* La MESURE DE LECTURE est ici, plus sur le panneau (amendement du
+          24/09 au §S4.3 de screen-7b) : un fragment de prompt ne dépasse pas
+          880 px de large, quelle que soit la place que le panneau a prise. */}
+      <div className="flex max-w-[880px] items-start gap-[6px]">
         <textarea
           id={fieldId}
           data-f={dataField}

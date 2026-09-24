@@ -168,3 +168,25 @@ Cinq correctifs nés de l'audit, tous mesurés à l'exécution :
 Le modèle et les données n'ont pas bougé : `scenes.json` porte toujours une
 chaîne `prompt`, `wardrobe` reste le texte plat « N: description », et
 `composePrompt` reste le seul assembleur.
+
+## Suite : les panneaux occupent la colonne (2026-09-24)
+
+Signalé sur captures, écran de 2560 : chaque panneau était condensé en haut
+à gauche, un tiers de la colonne vide à droite. Cause : le plafond de 880 px
+de `screen-7b` §S4.3, amendé le même jour (voir ce document).
+
+Ce que chaque panneau fait de la place, en `@container` :
+
+- **Général** : deux colonnes au-delà de 1200 px — identité et les trois
+  tuiles à gauche, tons, tags et réglages avancés à droite. Les trois tuiles
+  se replient sur la largeur de LEUR colonne, pas sur celle du panneau.
+- **Lumière** : le fragment à gauche, ses variantes à droite au-delà de
+  1100 px.
+- **Vêtements** : le catalogue passe de 300 à 400 px au-delà de 1300 px, et
+  ses vignettes sont en `auto-fill` — elles gardent leur taille quand la
+  colonne s'élargit au lieu de gonfler jusqu'à la remplir.
+- **Décor et prompt** : la chaîne 1-2-3 à gauche, le prompt enregistré à
+  droite au-delà de 1200 px.
+- **JSON final** : pleine largeur, c'est le panneau qui en veut le plus.
+- **Amélioration IA** : garde sa mesure de lecture. Un champ et quatre puces
+  n'ont rien à étaler.

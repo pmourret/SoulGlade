@@ -66,7 +66,13 @@ export function GeneralPanel({
   ]
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    /* Deux colonnes dès que le panneau dépasse 1200 px : l'identité et les
+       trois tuiles à gauche, ce qui qualifie la scène à droite. En dessous,
+       la même pile qu'avant. */
+    <div className="grid items-start gap-[18px] @[1200px]:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+      {/* La colonne est son PROPRE conteneur : les trois tuiles se replient
+          sur leur largeur à elles, pas sur celle du panneau entier. */}
+      <div className="@container flex min-w-0 flex-col gap-[18px]">
       {/* 1. Carte d'identité */}
       <div className="rounded-[10px] border border-line bg-panel p-[14px]">
         <div className="flex items-start gap-[12px]">
@@ -121,7 +127,7 @@ export function GeneralPanel({
       </div>
 
       {/* 2. Trois tuiles */}
-      <div className="grid grid-cols-[1.5fr_.8fr_1fr] gap-[12px] max-[860px]:grid-cols-[1fr]">
+      <div className="grid grid-cols-[1fr] gap-[12px] @[620px]:grid-cols-[1.5fr_.8fr_1fr]">
         <Tile title="Format">
           <div
             className="grid grid-cols-4 gap-[8px]"
@@ -242,6 +248,9 @@ export function GeneralPanel({
         </Tile>
       </div>
 
+      </div>
+
+      <div className="flex min-w-0 flex-col gap-[18px]">
       {/* 3. Tons affins */}
       <div>
         <span className={HEAD}>Tons affins</span>
@@ -306,6 +315,7 @@ export function GeneralPanel({
           <p className="tiny mt-[6px] mb-0">vide = réglage du studio</p>
         </div>
       </details>
+      </div>
     </div>
   )
 }

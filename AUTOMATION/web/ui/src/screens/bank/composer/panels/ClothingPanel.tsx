@@ -164,7 +164,11 @@ export function ClothingPanel({
         </div>
       )}
 
-      <div className="grid grid-cols-[300px_minmax(0,1fr)] gap-[14px] max-[860px]:grid-cols-[1fr]">
+      {/* Le catalogue s'élargit avec le panneau : à 300 px il tient trois
+          vignettes, et tout l'espace gagné allait au vide sous la liste du
+          niveau ouvert. */}
+      <div className="grid gap-[14px] grid-cols-[1fr] @[620px]:grid-cols-[300px_minmax(0,1fr)]
+                      @[1300px]:grid-cols-[400px_minmax(0,1fr)]">
         {/* Catalogue */}
         <div className="flex min-w-0 flex-col gap-[8px] rounded-[10px] border border-line bg-panel p-[10px]">
           <span className={HEAD}>Catalogue</span>
@@ -189,7 +193,12 @@ export function ClothingPanel({
               />
             ))}
           </div>
-          <div className="grid max-h-[320px] grid-cols-3 gap-[6px] overflow-y-auto">
+          {/* `auto-fill` plutôt qu'un nombre de colonnes fixe : la vignette
+              garde sa taille quand le catalogue s'élargit, au lieu de gonfler
+              jusqu'à remplir sa colonne (mesuré à 1440, où la grille tombait
+              en une colonne et donnait des carrés de 200 px). */}
+          <div className="grid max-h-[420px] grid-cols-[repeat(auto-fill,minmax(78px,1fr))]
+                          gap-[6px] overflow-y-auto">
             {shown.map(({ item }) => (
               <button
                 key={item}

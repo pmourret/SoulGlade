@@ -166,3 +166,19 @@ fermait la scène ouverte** (`save` recharge le document, chaque brouillon
 renaît avec un `uid` neuf, et la sélection tenait par l'`uid`). La sélection
 se retient désormais par l'identifiant de la scène, que l'aller-retour
 traverse.
+
+## Amendement du 2026-09-24 : le plafond de 880 px change de porteur
+
+§S4.3 plafonnait **le contenu du panneau** à 880 px. Écrit contre un écran de
+1440, où la colonne du composeur fait 664 px, le plafond ne mordait jamais.
+Signalé sur un écran de 2560 : il laissait un tiers de la colonne vide à
+droite de chaque panneau et empilait en hauteur ce qui tenait côte à côte.
+
+Ce qui reste plafonné est la **mesure de lecture d'un champ de texte**
+(`PromptField`, 880 px), pas le panneau. Le panneau prend la colonne et pose
+ses blocs l'un à côté de l'autre dès qu'il a la place, chaque panneau
+décidant de sa propre bascule.
+
+La bascule se mesure en **`@container`**, jamais en media query : la largeur
+disponible dépend de la colonne, et la colonne dépend de l'aperçu ouvert ou
+non, pas de la fenêtre.

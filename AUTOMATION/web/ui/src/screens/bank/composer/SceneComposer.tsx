@@ -142,13 +142,25 @@ export function SceneComposer({
             hidden={tab !== section.key}
           >
             {tab === section.key && (
-              /* Un formulaire se lit en colonne, jamais sur toute la largeur
-                 d'un écran de studio : le contenu est plafonné à 880 px. Le
-                 plafond est sur un enfant, jamais sur l'élément `hidden` —
-                 une utilitaire de mise en page et le `[hidden]{display:none}`
-                 du navigateur ont la même spécificité, et l'utilitaire peut
-                 gagner. */
-              <div className="max-w-[880px] p-[20px]">
+              /* LE PANNEAU PREND LA COLONNE, la mesure de lecture reste bornée
+                 (amendement du 24/09 au §S4.3 de screen-7b). Le plafond de
+                 880 px avait été écrit contre un écran de 1440, où la colonne
+                 du composeur fait 664 px : il ne mordait jamais. Sur un écran
+                 de 2560 il laissait un tiers de la colonne vide à droite de
+                 chaque panneau, et empilait en hauteur ce qui tenait côte à
+                 côte. Ce qui reste plafonné est donc le CHAMP DE TEXTE, pas le
+                 panneau — au-delà, les blocs se posent l'un à côté de l'autre.
+
+                 `@container` et non une media query : la largeur disponible
+                 dépend de la colonne, et la colonne dépend de l'aperçu ouvert
+                 ou non, pas de la fenêtre. Chaque panneau décide de sa bascule
+                 avec `@[…px]:`.
+
+                 Le plafond, quand il reste, est sur un enfant et jamais sur
+                 l'élément `hidden` : une utilitaire de mise en page et le
+                 `[hidden]{display:none}` du navigateur ont la même
+                 spécificité, et l'utilitaire peut gagner. */
+              <div className="@container p-[20px]">
                 <h2 className="m-0 text-[15px] font-[650] normal-case tracking-normal">
                   {section.label}
                 </h2>

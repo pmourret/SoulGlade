@@ -40,7 +40,10 @@ export function LightPanel({
     <div className="flex flex-col gap-[16px]">
       <FragmentTrail draft={draft} here="light" onGoto={onGoto} />
 
-      <div>
+      {/* Le fragment et ses alternatives sont deux choses qu'on compare : côte
+          à côte dès que le panneau a la place, empilées en dessous. */}
+      <div className="grid items-start gap-[18px] @[1100px]:grid-cols-2">
+      <div className="min-w-0">
         <div className="mb-[4px] flex items-baseline justify-between gap-[10px]">
           <span className={HEAD}>Lumière de la scène</span>
           <span className="text-[11px] text-dim2">
@@ -62,7 +65,7 @@ export function LightPanel({
         />
       </div>
 
-      <div>
+      <div className="min-w-0">
         <span className={HEAD}>Variantes</span>
         <p className="tiny mt-[2px] mb-[8px]">
           alternatives à la lumière de base, jamais une tenue
@@ -112,6 +115,8 @@ export function LightPanel({
             <span aria-hidden="true">+ </span>Ajouter une variante
           </button>
         </div>
+      </div>
+
       </div>
 
       {/* Le catalogue de templates n'a toujours aucune donnée derrière lui. Une
