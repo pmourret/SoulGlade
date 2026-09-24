@@ -49,12 +49,13 @@ const GRID = `screen grid h-full grid-cols-[minmax(0,1fr)_412px]
    (`display:contents`), so the export panel can take its place between the
    verdict and the rest of the report (§S1) without a second DOM order. */
 const LEFT = 'min-w-0 overflow-y-auto px-[32px] py-[22px] max-[900px]:contents'
-/* `--maxw` is the repo's bound on centred reading width. Without it a 2560 px
-   monitor stretches one criterion line across 1650 px. */
-const HEAD = `max-w-[var(--maxw)] max-[900px]:order-1 max-[900px]:px-[32px]
-              max-[900px]:pt-[22px]`
-const REPORT = `max-w-[var(--maxw)] max-[900px]:order-3 max-[900px]:px-[32px]
-                max-[900px]:pb-[22px]`
+/* NO reading-width cap (`--maxw`), on purpose. It left 700 px of nothing next
+   to the panel on a 2560 px monitor, and what the report shows is not prose:
+   four counters, a distribution bar and two lists of short lines. They all gain
+   from the room. What DOES need a bound is bounded where it is used — the
+   excluded table sizes to its content rather than to the column. */
+const HEAD = 'max-[900px]:order-1 max-[900px]:px-[32px] max-[900px]:pt-[22px]'
+const REPORT = 'max-[900px]:order-3 max-[900px]:px-[32px] max-[900px]:pb-[22px]'
 const ASIDE = `overflow-y-auto py-[22px] pr-[32px] max-[900px]:order-2
                max-[900px]:overflow-visible max-[900px]:px-[32px] max-[900px]:pt-0`
 
