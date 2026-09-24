@@ -572,7 +572,7 @@ export function ProduceScreen() {
                                         items-center justify-center rounded-[4px] border ${
                                           on
                                             ? 'border-acc bg-acc text-on-acc'
-                                            : 'border-[#ffffff66] bg-scrim text-transparent'
+                                            : 'border-[#ffffff55] bg-scrim text-transparent'
                                         }`}
                           >
                             {on && <Icon name="check" className="h-[14px] w-[14px]" />}

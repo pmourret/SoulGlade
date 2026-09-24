@@ -97,7 +97,7 @@ export function Tile(props: {
            measured in the browser (audit du 23/09). `appearance-none` drops
            the native control, not the sheet's padding. */
         className="absolute top-[8px] left-[8px] z-[1] h-[18px] w-[18px] cursor-pointer
-                   appearance-none rounded-[4px] border border-[#ffffff66] bg-scrim p-0
+                   appearance-none rounded-[4px] border border-[#ffffff55] bg-scrim p-0
                    checked:border-acc checked:bg-acc
                    focus-visible:outline-2 focus-visible:outline-focus
                    focus-visible:outline-offset-2"

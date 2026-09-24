@@ -132,15 +132,23 @@ export function SceneCard({
           </div>
         )}
         {/* A SQUARE box, 20 px (design-pass screen-3b, §S3): a circle reads as
-            a radio, and ticking scenes is a multiple choice. `#ffffff66` is a
-            veil over a photograph, not an identity colour — the one raw value
-            `DESIGN.md` lists for this purpose. */}
+            a radio, and ticking scenes is a multiple choice.
+
+            `#ffffff55` IS THE DOCUMENTED VALUE, and the digits matter.
+            `styles/DESIGN.md` § « Laissé brut » lists « liseré clair des
+            pastilles cochées (#ffffff55) » and says why: no token family
+            describes a light highlight, and inventing one for two occurrences
+            would cost more than it returns. The design-pass screen-3b asked
+            for `#ffffff66` while calling it « la valeur brute déjà listée
+            dans DESIGN.md » — the intent was to reuse what was documented,
+            and only the digits drifted. Reusing means reusing the value that
+            is there. */}
         <div
           className={`absolute top-[8px] right-[8px] flex h-[20px] w-[20px] items-center
                       justify-center rounded-[4px] border ${
                         selected
                           ? 'border-acc bg-acc text-on-acc'
-                          : 'border-[#ffffff66] bg-scrim text-transparent'
+                          : 'border-[#ffffff55] bg-scrim text-transparent'
                       }`}
         >
           {selected && <Icon name="check" className="h-[14px] w-[14px]" />}

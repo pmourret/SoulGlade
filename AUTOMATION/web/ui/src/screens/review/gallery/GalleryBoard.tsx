@@ -218,7 +218,7 @@ function BoardTile({
         checked={inCart}
         aria-label={`Ajouter ${item.scene || item.name} au panier`}
         className="absolute top-[8px] left-[8px] z-[2] h-[18px] w-[18px] cursor-pointer
-                   appearance-none rounded-[4px] border border-[#ffffff66] bg-scrim p-0
+                   appearance-none rounded-[4px] border border-[#ffffff55] bg-scrim p-0
                    checked:border-acc checked:bg-acc
                    focus-visible:outline-2 focus-visible:outline-focus
                    focus-visible:outline-offset-2"

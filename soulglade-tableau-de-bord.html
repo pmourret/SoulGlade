@@ -358,7 +358,7 @@ const D = {
       "titre": "Le studio se lit comme un poste de travail",
       "state": "now",
       "quoi": "Le chrome portait encore les choix de la migration React : navbar latérale de 208 px, en-tête de 56 px, base 15 px, et un accent qui peignait les boutons alors que l'image est la seule couleur qui compte. Quatorze étapes le reprennent écran par écran, dans l'ordre du parcours, chacune avec son cadrage écrit. Le critère de sortie V1 le demande déjà : chaque écran du parcours nominal passe un audit vérifié en vrai.",
-      "dod": "Les quatorze étapes sont passées, chacune avec son audit audit-ux-ui vérifié en vrai (captures à 1440 et 1024, états réels), typecheck et build verts, et toutes les fumigations navigateur au vert après migration de leurs sélecteurs.",
+      "dod": "Les quatorze étapes sont passées, chacune avec son audit audit-ux-ui vérifié en vrai (captures à 1440 et 1024, états réels), typecheck et build verts, et toutes les fumigations navigateur au vert. Le bilan graphique les relit ensuite d'un coup et arrête la charte que les écrans suivants tiendront.",
       "epics": "E13",
       "ref": "DOCS/design-pass/Refonte_UI_UX/ (les quatorze cadrages, un dossier par écran)"
     },
@@ -1189,6 +1189,13 @@ const D = {
           "it": "IT-9",
           "t": "Personnages : registre en liste et assistant",
           "d": "Le registre passe en liste avec aperçu, et l'assistant de création en étapes verticales. Une étape Identité s'ajoute, sans toucher à ce qui s'écrit."
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
+          "t": "Bilan graphique : ce que le studio doit tenir",
+          "d": "Relecture des quatorze écrans d'un coup : ce qui s'est répété devient une règle, ce qui a dérivé se corrige. La charte vit dans styles/DESIGN.md, qui la porte déjà en partie, et sert de référence aux écrans suivants.",
+          "ref": "AUTOMATION/web/ui/src/styles/DESIGN.md"
         }
       ]
     }
