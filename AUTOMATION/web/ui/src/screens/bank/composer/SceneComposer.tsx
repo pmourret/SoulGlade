@@ -1,10 +1,19 @@
-/* The scene composer: one scene, seven tabs, wireframe-driven (31/08/2026).
+/* The scene composer: one scene, seven sections, wireframe-driven
+   (31/08/2026), in a rail since the three-panel pass (screen-7b, 23/09/2026).
 
    WHAT IT REPLACES. The inspector used to be one flat form — a dozen fields
    stacked in a single scroll, id to pose. This walks the same fields through
    seven small panels instead: general, lumière, vêtements, pose, un
    récapitulatif du prompt, une amélioration IA (pour l'instant un gabarit —
    voir la note du panneau), et le JSON final.
+
+   THE SEVEN ICONS BECAME A LABELLED RAIL (design pass screen-7b §S4.2), the
+   header moved OUT to `SceneHeader` (rendered by `BankScreen`, so it survives
+   the Monde tab replacing this whole column), the live prompt moved OUT to
+   `ScenePreviewPanel`, and the Suivant/Précédent/Dupliquer/Supprimer bars at
+   the bottom of every panel are gone — see those two files for why. What is
+   left here is exactly the form: the same seven panels, the same fields, none
+   added, none removed.
 
    A TABLIST, NOT A NAV — AND RADIX'S, NOT HAND-ROLLED (audit UX/UI
    follow-up). `BankScreen`'s Scènes|Poses switch is a nav because it
@@ -48,35 +57,22 @@ import {
   type SceneDraft,
 } from '../../../state/ScenesStoreContext'
 import { PATHS } from '../../../app/routes'
-import type { ScenePreview } from '../SceneList'
+import type { SceneField } from '../sceneChanges'
 import { InfoHint } from './InfoHint'
 import { PromptField } from './PromptField'
+import { FRAGMENT_COLORS, sceneFragments } from './sceneFragments'
+import { SECTIONS, type SectionKey } from './sections'
+import { SectionRail } from './SectionRail'
 import { joinWardrobeByLevel, splitWardrobeByLevel, WARDROBE_CATALOG, WARDROBE_LEVELS } from './wardrobeCatalog'
 import { PoseEditorModal } from '../../pose-editor/PoseEditorModal'
 
 const FORMATS = ['4:5', '2:3', '9:16', '1:1']
 
-/* Border/highlight tints tying RecapPanel's 3 fragment fields to their
-   segment in the composed preview (design pass écran 7, §V4) — platform
-   tokens (`tokens.css`), not values chosen here: `--frag-light`/`--frag-pose`
-   are new, `--acc` for the base fragment is the app's own existing accent. */
-const FRAGMENT_COLORS = {
-  base: 'var(--acc)',
-  light: 'var(--frag-light)',
-  pose: 'var(--frag-pose)',
-} as const
-
-type TabKey = 'general' | 'light' | 'clothing' | 'pose' | 'recap' | 'ai' | 'json'
-
-const TABS: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'general', label: 'Général', icon: 'gear' },
-  { key: 'light', label: 'Lumière', icon: 'bulb' },
-  { key: 'clothing', label: 'Vêtements', icon: 'shirt' },
-  { key: 'pose', label: 'Pose', icon: 'pose' },
-  { key: 'recap', label: 'Prompt global', icon: 'pencil' },
-  { key: 'ai', label: 'Amélioration IA', icon: 'robot' },
-  { key: 'json', label: 'JSON final', icon: 'terminal' },
-]
+/* A field that differs from the saved scene wears a `--warn` border (design
+   pass screen-7b §S4.3). The value is the whole signal: the rail's own dot
+   says the same thing at the section level, so colour is never alone. */
+const warnIf = (changed: Set<SceneField>, field: SceneField) =>
+  changed.has(field) ? 'border-warn' : undefined
 
 /* Vocabulary of the walk, for the intention selector. A scene carrying a key
    absent from creative.json KEEPS it: we add it to the list rather than let it
@@ -110,41 +106,32 @@ export function SceneComposer({
   creative,
   poses,
   produced,
-  preview,
-  imageUrl,
   worldLinked,
+  changed,
+  narrow,
   onPatch,
-  onRemove,
-  onDuplicate,
-  onPrevScene,
-  onNextScene,
   onSaveDocument,
 }: {
   draft: SceneDraft
   creative: Creative | null
   poses: string[]
   produced: number | null
-  preview: ScenePreview | undefined
-  imageUrl: (ref: Record<string, unknown>) => string
   /* A scene bound to a world place (ADR-0015): its frame — the prompt this
      composer builds — is re-derived server-side on every save, so the four
      fragments below are locked here regardless of what gets typed. Wardrobe
      levels and the pose skeleton are OVERLAY keys, never locked by this. */
   worldLinked: boolean
+  /** Draft fields differing from the saved scene (`sceneChanges`) — borders
+      here, dots on the rail. */
+  changed: Set<SceneField>
+  /** Under 1100 px the rail keeps its icons and clips its labels (§S6). */
+  narrow: boolean
   onPatch: (patch: Partial<SceneDraft>) => void
-  onRemove: () => void
-  /** Clones this scene and opens the clone (design pass écran 7, §B1). */
-  onDuplicate: () => void
-  /** Scene-to-scene chevrons in the header (design pass écran 7, §B2) —
-      `undefined` at either end of the (filtered) list. */
-  onPrevScene: (() => void) | undefined
-  onNextScene: (() => void) | undefined
-  /** The document-level save — same action as the launch bar's "Enregistrer",
+  /** The document-level save — same action as the banner's "Enregistrer",
       offered again from the JSON panel for a "I've checked it, ship it" close. */
   onSaveDocument: () => void
 }) {
-  const [tab, setTab] = useState<TabKey>('general')
-  const tabsRef = useRef<HTMLDivElement | null>(null)
+  const [tab, setTab] = useState<SectionKey>('general')
   const idRef = useRef<HTMLInputElement | null>(null)
   const api = useApi()
 
@@ -180,79 +167,23 @@ export function SceneComposer({
     idRef.current?.focus()
   }, [draft.uid])
 
-  const activeIndex = TABS.findIndex((t) => t.key === tab)
-
-  /* Only for "Suivant"/"Précédent" below a panel — a gesture OUTSIDE Radix's
-     own tablist, so its roving-focus group has no reason to know about it.
-     A click or an arrow key INSIDE `Tabs.List` moves focus correctly on its
-     own; this is the one path left where the composer still has to do it by
-     hand, matching the same "selecting a tab focuses its button" convention
-     either way. */
-  const goto = (index: number) => {
-    if (index < 0 || index >= TABS.length) return
-    const key = TABS[index].key
-    setTab(key)
-    tabsRef.current?.querySelector<HTMLElement>(`[data-tab="${key}"]`)?.focus()
-  }
-  const gotoTab = (key: TabKey) => goto(TABS.findIndex((t) => t.key === key))
-
   const lockedNote =
     "hérité du lieu — s'édite dans l'onglet Monde, ce qui serait tapé ici ne survit pas à l'enregistrement (ADR-0015)."
 
   return (
-    /* `flex h-full flex-col`, not a plain block: the tabpanel's own `flex-1`
-       (below) needs a REAL flex container to grow inside, and `h-full`
-       resolves against `#sceneInspector`'s own height (SceneInspector.tsx)
-       only once every link of the chain between here and there is definite —
-       a plain block div here left that chain broken, so the panel's height
-       fix upstream never reached the tabpanel content at all (audit UX/UI,
-       m2 — measured live: a 300px gap between the nav bar and the panel's
-       real bottom edge). */
+    /* VERTICAL: the rail is the tablist, so Radix binds ↑/↓ (and Home/End)
+       instead of ←/→ — the `orientation` is the only thing that has to be
+       said for the whole roving-focus group to follow. `flex min-h-0`, not a
+       plain block: the rail and the scrolling form are two columns of the
+       same row, and the form's own `overflow-y-auto` only resolves once every
+       link of the chain up to `#sceneInspector` is definite. */
     <Tabs.Root
       value={tab}
-      onValueChange={(v) => setTab(v as TabKey)}
-      className="flex h-full flex-col"
+      onValueChange={(v) => setTab(v as SectionKey)}
+      orientation="vertical"
+      className="flex min-h-0 flex-1"
     >
-      <SceneHeader
-        draft={draft}
-        produced={produced}
-        preview={preview}
-        imageUrl={imageUrl}
-        onPrevScene={onPrevScene}
-        onNextScene={onNextScene}
-      />
-
-      <Tabs.List
-        ref={tabsRef}
-        aria-label="Sections de la scène"
-        className="mb-[16px] flex gap-[6px] rounded-[10px] border border-line bg-panel2 p-[6px]"
-      >
-        {TABS.map((t) => (
-          <Tabs.Trigger
-            key={t.key}
-            value={t.key}
-            /* `data-tab`, not `id`: Radix computes `aria-controls` from an id
-               it generates and tracks internally (`useId`) — overriding the
-               rendered `id` prop replaces the ATTRIBUTE but not Radix's own
-               reference to the value it expected there, which broke both
-               `aria-controls` (pointed at an id nothing wore any more) and
-               the roving-focus group's own lookup of "the next trigger to
-               focus" (same mechanism, same expected id). A plain data
-               attribute gives the browser fumigation something stable to
-               select on without touching what Radix already gets right. */
-            data-tab={t.key}
-            data-hint-text={t.label}
-            className={`flex flex-1 cursor-pointer items-center justify-center rounded-[7px] border-0
-                       py-[12px] focus-visible:outline-2 focus-visible:outline-focus
-                       focus-visible:outline-offset-2 ${
-                         tab === t.key ? 'bg-acc text-on-acc' : 'bg-transparent text-dim hover:text-txt'
-                       }`}
-          >
-            <span className="sr-only">{t.label}</span>
-            <Icon name={t.icon} className="h-[19px] w-[19px]" />
-          </Tabs.Trigger>
-        ))}
-      </Tabs.List>
+      <SectionRail active={tab} changed={changed} narrow={narrow} />
 
       {/* All SEVEN panels stay mounted (`forceMount`) — only the active one's
           CONTENT does not (audit UX/UI, M2). Radix itself only mounts the
@@ -263,236 +194,84 @@ export function SceneComposer({
           without the trigger lying about what it controls — Radix computes
           `aria-controls`/`aria-labelledby` itself from `value`, correctly,
           whichever panels happen to be mounted. */}
-      {TABS.map((t) => (
-        <Tabs.Content
-          key={t.key}
-          value={t.key}
-          data-tabpanel={t.key}
-          forceMount
-          hidden={tab !== t.key}
-          className="flex-1 min-h-0"
-        >
-          {tab === t.key && (
-            /* `flex h-full flex-col` on an INNER wrapper, not the `hidden`
-               element itself (audit UX/UI, m2): Tailwind's `.flex{display:
-               flex}` and the UA's `[hidden]{display:none}` carry the same
-               specificity, so putting both on one element risks the utility
-               winning the cascade and defeating `hidden` — keeping them on
-               separate elements sidesteps the question entirely. The content
-               panel is `flex-1`: on a short tab (Général, Lumière…) it grows
-               to fill the now-full-height box instead of leaving the nav bar
-               floating over a dead gap above the panel's bottom edge. */
-            <div className="flex h-full flex-col">
-              <div className="flex-1">
-                {t.key === 'general' && (
+      {/* Sous 1100 px le formulaire ne defile PAS pour son compte : toute la
+          colonne defile d'un bloc (BankScreen, §S6), sinon deux barres de
+          defilement imbriquees se disputent le meme geste. */}
+      <div className="min-h-0 min-w-0 flex-1 overflow-y-auto max-[1100px]:overflow-visible">
+        {SECTIONS.map((section) => (
+          <Tabs.Content
+            key={section.key}
+            value={section.key}
+            data-tabpanel={section.key}
+            forceMount
+            hidden={tab !== section.key}
+          >
+            {tab === section.key && (
+              /* A form is read in a column, not across a studio-wide screen:
+                 the content is capped at 880 px (design pass screen-7b §S4.3)
+                 whatever room the centre column has. The cap is on an INNER
+                 wrapper, never on the `hidden` element itself (audit UX/UI,
+                 m2): a layout utility and the UA's `[hidden]{display:none}`
+                 carry the same specificity, and the utility can win. */
+              <div className="max-w-[880px] p-[20px]">
+                <h2 className="m-0 text-[15px] font-[650] normal-case tracking-normal">
+                  {section.label}
+                </h2>
+                {/* The form names the model field it writes: the JSON panel
+                    and `scenes.json` stop being a separate vocabulary. */}
+                <p className="tiny mt-[2px] mb-[16px]">{section.model}</p>
+
+                {section.key === 'general' && (
                   <GeneralPanel
                     draft={draft}
                     creative={creative}
                     produced={produced}
                     worldLinked={worldLinked}
+                    changed={changed}
                     idRef={idRef}
                     onPatch={onPatch}
-                    onGotoClothing={() => gotoTab('clothing')}
+                    onGotoClothing={() => setTab('clothing')}
                   />
                 )}
-                {t.key === 'light' && (
-                  <LightPanel draft={draft} worldLinked={worldLinked} lockedNote={lockedNote} onPatch={onPatch} />
+                {section.key === 'light' && (
+                  <LightPanel
+                    draft={draft}
+                    worldLinked={worldLinked}
+                    lockedNote={lockedNote}
+                    changed={changed}
+                    onPatch={onPatch}
+                  />
                 )}
-                {t.key === 'clothing' && <ClothingPanel draft={draft} onPatch={onPatch} />}
-                {t.key === 'pose' && (
+                {section.key === 'clothing' && (
+                  <ClothingPanel draft={draft} changed={changed} onPatch={onPatch} />
+                )}
+                {section.key === 'pose' && (
                   <PosePanel
                     draft={draft}
                     poses={posesWithLabels}
                     worldLinked={worldLinked}
                     lockedNote={lockedNote}
+                    changed={changed}
                     onPatch={onPatch}
                   />
                 )}
-                {t.key === 'recap' && (
-                  <RecapPanel draft={draft} worldLinked={worldLinked} lockedNote={lockedNote} onPatch={onPatch} />
+                {section.key === 'recap' && (
+                  <RecapPanel
+                    draft={draft}
+                    worldLinked={worldLinked}
+                    lockedNote={lockedNote}
+                    changed={changed}
+                    onPatch={onPatch}
+                  />
                 )}
-                {t.key === 'ai' && <AiPanel draft={draft} />}
-                {t.key === 'json' && <JsonPanel draft={draft} onSaveDocument={onSaveDocument} />}
+                {section.key === 'ai' && <AiPanel draft={draft} />}
+                {section.key === 'json' && <JsonPanel draft={draft} onSaveDocument={onSaveDocument} />}
               </div>
-
-              {/* One shared bottom section, same shape on EVERY tab (wireframe
-                  31/08/2026): a rule, then full-width bars — Suivant above
-                  Précédent, never side by side — so the gesture is always in
-                  the same place regardless of which panel is open. Only their
-                  PRESENCE varies (no Précédent on the first tab, no Suivant on
-                  the last); "Dupliquer"/"Supprimer la scène" are General-only,
-                  always last, destructive strictly after neutral (design pass
-                  écran 7, §B1 — a destructive act does not share a row with
-                  navigation, nor come before a constructive one). */}
-              <div className="mt-[18px] flex flex-col gap-[10px] border-t border-line pt-[16px]">
-                {activeIndex < TABS.length - 1 && (
-                  <button className="btn w-full" onClick={() => goto(activeIndex + 1)}>
-                    Suivant →
-                  </button>
-                )}
-                {activeIndex > 0 && (
-                  <button className="btn w-full" onClick={() => goto(activeIndex - 1)}>
-                    ← Précédent
-                  </button>
-                )}
-                {t.key === 'general' && (
-                  <button className="btn w-full" onClick={onDuplicate}>
-                    Dupliquer la scène
-                  </button>
-                )}
-                {t.key === 'general' && (
-                  <button className="btn danger w-full" onClick={onRemove}>
-                    ⚠ Supprimer la scène
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </Tabs.Content>
-      ))}
+            )}
+          </Tabs.Content>
+        ))}
+      </div>
     </Tabs.Root>
-  )
-}
-
-/* ------------------------------------------------------------ En-tête
-   "Studio IA, pas un formulaire" (2026-09-01 direction). Persistent across
-   every tab — unlike the panels below, this is not `Tabs.Content` — because
-   the whole point is to never lose sight of WHAT is being edited while
-   composing it: the composer used to be text fields end to end, no image
-   anywhere, indistinguishable from editing a spreadsheet row. The grid card
-   already carries this same preview; nothing upstream of it changes here,
-   this just stops discarding it the moment a scene opens for editing. */
-function SceneHeader({
-  draft,
-  produced,
-  preview,
-  imageUrl,
-  onPrevScene,
-  onNextScene,
-}: {
-  draft: SceneDraft
-  produced: number | null
-  preview: ScenePreview | undefined
-  imageUrl: (ref: Record<string, unknown>) => string
-  /** Scene-to-scene chevrons (design pass écran 7, §B2) — `undefined` at
-      either end of the list, same "only render what is possible" rule as
-      the composer's own Suivant/Précédent. */
-  onPrevScene: (() => void) | undefined
-  onNextScene: (() => void) | undefined
-}) {
-  const composed = composePrompt(draft)
-  // Mirror of `lb.scene_band` / the old grid card's own call: the ceiling
-  // follows the wardrobe TEXT as typed, so the badge answers "how far does
-  // this scene go" without a save.
-  const band = bandOf({
-    intensity: Number.parseInt(draft.bandLo, 10) || 0,
-    wardrobe: textToWardrobe(draft.wardrobe),
-  })
-  return (
-    <div className="mb-[16px] flex gap-[14px]">
-      {/* Bumped from a 51×64 reminder icon to an actual focal point (studio-IA
-          polish pass, 2026-09-01) — the composer has the width for it now that
-          the scene list gave it up (see BankScreen.tsx's grid-cols). Pose/band
-          badges moved here from the retired grid card (2026-09-01): the list
-          row dropped them once this header started carrying the picture, so
-          they needed exactly one new home, not two. */}
-      <div
-        id="scenePreviewThumb"
-        data-void={preview ? undefined : '1'}
-        className={`relative h-[128px] w-[102px] shrink-0 overflow-hidden rounded-[10px] border
-                   border-line2 bg-panel2 bg-cover bg-center ${
-                     preview
-                       ? ''
-                       : "after:absolute after:inset-0 after:flex after:items-center" +
-                         " after:justify-center after:p-[6px] after:text-center after:text-[10px]" +
-                         " after:leading-tight after:text-dim2 after:content-['jamais_produite']"
-                   }`}
-        style={preview ? { backgroundImage: `url('${imageUrl({ ...preview, thumb: true })}')` } : undefined}
-      >
-        {draft.pose && (
-          // `tabIndex={0}` + `data-hint-text` (design pass écran 7, §A2) —
-          // same contract as `InfoHint` and `PoseCard`'s own provenance
-          // badge (`chrome/HintLayer.tsx`, wired on hover AND focus): a
-          // plain `title` only reaches a mouse, this reaches the keyboard
-          // and a screen reader too. The base fact stays in visible text.
-          <div
-            className="absolute top-[6px] left-[6px] rounded-[8px] bg-scrim px-[6px] py-px
-                       text-[10px] font-bold text-[#9fd8ff]"
-            tabIndex={0}
-            data-hint-text={`pose imposée : ${draft.pose}`}
-          >
-            {/* the glyph accompanies a word, so it is not read out on its own */}
-            <span aria-hidden="true">⛓ </span>pose
-          </div>
-        )}
-        {band[1] > 0 && (
-          <div
-            className="absolute right-[6px] bottom-[6px] rounded-[8px] bg-scrim px-[6px]
-                       py-px text-[10px] font-bold text-dim"
-            tabIndex={0}
-            data-hint-text={`niveaux ${band[0]} à ${band[1]}, déduits des tenues`}
-          >
-            n{band[0]}–{band[1]}
-          </div>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-between">
-        <div>
-          {/* Scene-to-scene chevrons (design pass écran 7, §B2) — discreet,
-              next to the id rather than a bar of their own: Suivant/Précédent
-              below already own the visual weight of "move", these are a
-              lighter accelerator for the one gesture (Échap, arrow, reopen)
-              this replaces. Same Up/Down keys as `onListKeyDown`, elevated to
-              the whole composer (`SceneInspector.tsx`). */}
-          <div className="flex items-center gap-[6px]">
-            <button
-              type="button"
-              className="shrink-0 cursor-pointer rounded-[5px] border-0 bg-transparent p-0
-                         text-[13px] leading-none text-dim2 hover:text-txt
-                         disabled:cursor-not-allowed disabled:opacity-30
-                         focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-              aria-label="Scène précédente"
-              data-hint-text="Scène précédente — même liste que les ateliers, flèche Haut"
-              disabled={!onPrevScene}
-              onClick={onPrevScene}
-            >
-              ◂
-            </button>
-            <b className="block min-w-0 flex-1 truncate text-[17px]">{draft.id || '(sans identifiant)'}</b>
-            <button
-              type="button"
-              className="shrink-0 cursor-pointer rounded-[5px] border-0 bg-transparent p-0
-                         text-[13px] leading-none text-dim2 hover:text-txt
-                         disabled:cursor-not-allowed disabled:opacity-30
-                         focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
-              aria-label="Scène suivante"
-              data-hint-text="Scène suivante — même liste que les ateliers, flèche Bas"
-              disabled={!onNextScene}
-              onClick={onNextScene}
-            >
-              ▸
-            </button>
-          </div>
-          <span className="text-[12px] text-dim">
-            {produced ? `${produced} image${produced > 1 ? 's' : ''} produite${produced > 1 ? 's' : ''}` : 'jamais produite'}
-          </span>
-        </div>
-
-        <div className="flex items-start gap-[6px] rounded-[7px] border border-line2 bg-panel2 px-[10px] py-[8px]">
-          <span className="shrink-0 pt-px text-[10px] font-semibold uppercase tracking-[.5px] text-dim2">
-            Prompt
-            <InfoHint text="Aperçu en direct du prompt composé, mis à jour à chaque frappe — le détail par fragment s'édite dans l'onglet Prompt global, jamais ici." />
-          </span>
-          <p
-            id="scenePromptPreview"
-            className="m-0 line-clamp-3 min-w-0 flex-1 text-[12px] text-dim"
-            title={composed || undefined}
-          >
-            {composed || '— vide —'}
-          </p>
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -502,6 +281,7 @@ function GeneralPanel({
   creative,
   produced,
   worldLinked,
+  changed,
   idRef,
   onPatch,
   onGotoClothing,
@@ -510,6 +290,7 @@ function GeneralPanel({
   creative: Creative | null
   produced: number | null
   worldLinked: boolean
+  changed: Set<SceneField>
   idRef: RefObject<HTMLInputElement | null>
   onPatch: (patch: Partial<SceneDraft>) => void
   /** Jumps to the Vêtements tab — the gauge below answers "why this ceiling",
@@ -527,7 +308,7 @@ function GeneralPanel({
         <span>identifiant — sert de nom de fichier</span>
         <input
           ref={idRef}
-          className="font-semibold"
+          className={`font-semibold ${warnIf(changed, 'id') ?? ''}`}
           data-f="id"
           value={draft.id}
           onChange={(e) => onPatch({ id: e.target.value })}
@@ -545,6 +326,7 @@ function GeneralPanel({
           {worldLinked && <> · <b>héritée du lieu</b>, s'édite dans l'onglet Monde</>}
         </span>
         <select
+          className={warnIf(changed, 'intention')}
           data-f="intention"
           value={draft.intention}
           disabled={worldLinked}
@@ -562,7 +344,12 @@ function GeneralPanel({
       <div className="mt-[12px] grid grid-cols-[repeat(auto-fit,minmax(170px,1fr))] gap-[14px]">
         <label className="f">
           <span>format</span>
-          <select data-f="format" value={draft.format} onChange={(e) => onPatch({ format: e.target.value })}>
+          <select
+            className={warnIf(changed, 'format')}
+            data-f="format"
+            value={draft.format}
+            onChange={(e) => onPatch({ format: e.target.value })}
+          >
             {FORMATS.map((f) => (
               <option key={f}>{f}</option>
             ))}
@@ -571,6 +358,7 @@ function GeneralPanel({
         <label className="f">
           <span>images</span>
           <input
+            className={warnIf(changed, 'count')}
             data-f="count"
             type="number"
             min={1}
@@ -581,6 +369,7 @@ function GeneralPanel({
         <label className="f">
           <span>guidance (option)</span>
           <input
+            className={warnIf(changed, 'guidance')}
             data-f="guidance"
             type="number"
             step="0.1"
@@ -596,6 +385,7 @@ function GeneralPanel({
               <InfoHint text="Le maximum n'est pas saisi : il est déduit de la tenue la plus haute déclarée dans l'onglet Vêtements, pour ne pas avoir deux champs qui peuvent se contredire." />
             </span>
             <input
+              className={warnIf(changed, 'bandLo')}
               data-f="band_lo"
               type="number"
               min={0}
@@ -612,6 +402,7 @@ function GeneralPanel({
         <label className="f">
           <span>tons affins — virgules</span>
           <input
+            className={warnIf(changed, 'tones')}
             data-f="tones"
             placeholder={(creative?.tones ?? []).map((t) => t.key).join(', ')}
             value={draft.tones}
@@ -620,7 +411,12 @@ function GeneralPanel({
         </label>
         <label className="f">
           <span>tags — virgules</span>
-          <input data-f="tags" value={draft.tags} onChange={(e) => onPatch({ tags: e.target.value })} />
+          <input
+            className={warnIf(changed, 'tags')}
+            data-f="tags"
+            value={draft.tags}
+            onChange={(e) => onPatch({ tags: e.target.value })}
+          />
         </label>
       </div>
     </div>
@@ -660,11 +456,13 @@ function LightPanel({
   draft,
   worldLinked,
   lockedNote,
+  changed,
   onPatch,
 }: {
   draft: SceneDraft
   worldLinked: boolean
   lockedNote: string
+  changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
 }) {
   return (
@@ -677,13 +475,14 @@ function LightPanel({
         value={draft.promptLight}
         disabled={worldLinked}
         lockedNote={worldLinked ? lockedNote : undefined}
+        changed={changed.has('promptLight')}
         onChange={(value) => onPatch({ promptLight: value })}
       />
 
       <label className="f mt-[14px]">
         <span>variantes de lumière ou de saison (une par ligne) — jamais une tenue</span>
         <textarea
-          className="min-h-[68px] resize-y"
+          className={`min-h-[68px] resize-y ${warnIf(changed, 'variants') ?? ''}`}
           data-f="variants"
           value={draft.variants}
           onChange={(e) => onPatch({ variants: e.target.value })}
@@ -693,7 +492,7 @@ function LightPanel({
       <EmptyCatalog
         label="Travailler depuis un template de lumière"
         hint="Catalogue de templates de lumière réutilisables — pas encore alimenté dans cette version. En attendant, décris la lumière directement ci-dessus."
-        empty="aucun template pour l'instant"
+        empty="catalogue pas encore peuplé"
       />
     </div>
   )
@@ -716,9 +515,15 @@ function LightPanel({
    the Recap tab's raw mirror) rides along as `extra`, untouched. */
 function ClothingPanel({
   draft,
+  changed,
   onPatch,
 }: {
   draft: SceneDraft
+  /* `wardrobe` is ONE model field split into four inputs for comfort, so the
+     `--warn` border marks all four when it differs from the saved scene: the
+     border says "this field has an unsaved edit", and the field is the whole
+     outfit — not one line of it. */
+  changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
 }) {
   /* Filter narrows which garments the grid shows; SELECTING one only
@@ -758,7 +563,7 @@ function ClothingPanel({
               {lvl === 0 && ' — repli des niveaux au-dessus tant qu ils sont vides'}
             </span>
             <textarea
-              className="min-h-[56px] resize-y"
+              className={`min-h-[56px] resize-y ${warnIf(changed, 'wardrobe') ?? ''}`}
               data-f={`wardrobe_${lvl}`}
               placeholder={lvl === 0 ? 'a beige knit sweater and jeans' : undefined}
               value={byLevel[lvl]}
@@ -860,12 +665,14 @@ function PosePanel({
   poses,
   worldLinked,
   lockedNote,
+  changed,
   onPatch,
 }: {
   draft: SceneDraft
   poses: PoseSummary[]
   worldLinked: boolean
   lockedNote: string
+  changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
 }) {
   const options = poseOptions(poses, draft.pose)
@@ -894,6 +701,7 @@ function PosePanel({
         value={draft.promptPose}
         disabled={worldLinked}
         lockedNote={worldLinked ? lockedNote : undefined}
+        changed={changed.has('promptPose')}
         onChange={(value) => onPatch({ promptPose: value })}
       />
 
@@ -1117,11 +925,13 @@ function RecapPanel({
   draft,
   worldLinked,
   lockedNote,
+  changed,
   onPatch,
 }: {
   draft: SceneDraft
   worldLinked: boolean
   lockedNote: string
+  changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
 }) {
   return (
@@ -1132,6 +942,7 @@ function RecapPanel({
       </p>
       <PromptField
         dataField="prompt_base"
+        changed={changed.has('promptBase')}
         label="Prompt de base — décor, cadrage"
         placeholder="ex : a sunlit kitchen, morning light through the window"
         value={draft.promptBase}
@@ -1142,6 +953,7 @@ function RecapPanel({
       />
       <PromptField
         dataField="prompt_light_recap"
+        changed={changed.has('promptLight')}
         label="Prompt de lumière — même champ que l'onglet Lumière"
         value={draft.promptLight}
         disabled={worldLinked}
@@ -1151,6 +963,7 @@ function RecapPanel({
       />
       <PromptField
         dataField="prompt_pose_recap"
+        changed={changed.has('promptPose')}
         label="Prompt de pose — même champ que l'onglet Pose"
         value={draft.promptPose}
         disabled={worldLinked}
@@ -1161,6 +974,7 @@ function RecapPanel({
 
       <PromptField
         dataField="wardrobe_recap"
+        changed={changed.has('wardrobe')}
         label="Prompt de vêtement — réglé à part"
         hint="Jamais fondu dans le prompt composé ci-dessous : la tenue est injectée séparément selon le niveau de génération (onglet Vêtements), pas ici."
         value={draft.wardrobe}
@@ -1190,11 +1004,10 @@ function RecapPanel({
    fragment-colored, sitting just above the real (accessible, copyable)
    readonly textarea rather than replacing it. */
 function ComposedPromptPreview({ draft }: { draft: SceneDraft }) {
-  const fragments = [
-    { text: draft.promptBase.trim(), color: FRAGMENT_COLORS.base },
-    { text: draft.promptLight.trim(), color: FRAGMENT_COLORS.light },
-    { text: draft.promptPose.trim(), color: FRAGMENT_COLORS.pose },
-  ].filter((fragment) => fragment.text)
+  /* The same cut the right-hand living preview draws (`sceneFragments`) —
+     one breakdown, two readers, and still no second assembler: the join
+     below stays `composePrompt`'s. */
+  const fragments = sceneFragments(draft)
 
   return (
     <p
@@ -1206,7 +1019,7 @@ function ComposedPromptPreview({ draft }: { draft: SceneDraft }) {
         <span className="text-dim">— vide —</span>
       ) : (
         fragments.map((fragment, index) => (
-          <span key={index}>
+          <span key={fragment.key}>
             <span
               className="rounded-[3px] px-[2px] py-px"
               style={{ color: fragment.color, backgroundColor: `color-mix(in srgb, ${fragment.color} 18%, transparent)` }}
@@ -1321,7 +1134,12 @@ function EmptyCatalog({ label, hint, empty }: { label: string; hint: string; emp
         {label}
         <InfoHint text={hint} />
       </span>
-      <div className="empty mt-[6px] p-[16px] text-[12px]">{empty}</div>
+      {/* Dashed, not a filled card (design pass screen-7b §S4.3): a box drawn
+          like the rest would read as a control that does nothing. */}
+      <div className="mt-[6px] rounded-[8px] border border-dashed border-line2 p-[16px]
+                      text-center text-[12px] text-dim2">
+        {empty}
+      </div>
     </div>
   )
 }

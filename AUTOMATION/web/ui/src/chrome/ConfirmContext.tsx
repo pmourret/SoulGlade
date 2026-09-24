@@ -25,6 +25,11 @@ export type ConfirmRequest = {
   body: ReactNode
   /** Label of the confirming button. Says the ACT, never « OK ». */
   button?: string
+  /** A destructive act: the box opens with « annuler » focused, so Enter on
+      arrival cannot be the deletion (design pass screen-7b §A). The safe
+      default stays the confirming button for everything else — those are
+      questions one came to answer yes to. */
+  danger?: boolean
 }
 
 type Pending = ConfirmRequest & { resolve: (value: boolean) => void }
@@ -63,9 +68,13 @@ export function ConfirmProvider({ children }: { children: ReactNode }) {
       {children}
       <Dialog
         id="armBox"
+        /* `alertdialog`, not the implicit `dialog` of the element: this box
+           always interrupts to state a consequence, and the role is what makes
+           a screen reader read the BODY on open rather than only the title. */
+        role="alertdialog"
         open={pending !== null}
         onDismiss={() => settle(false)}
-        initialFocus="#cfOui"
+        initialFocus={pending?.danger ? '#cfNon' : '#cfOui'}
       >
         {pending && (
           <div

@@ -141,22 +141,28 @@ async function allerA(page, categorie, module) {
   const mod = await page.$$eval('.modbar .mod.on', e => e.map(x => x.dataset.m));
   dire(mod.join(',') === 'bank', "et le module Ateliers dans la sous-barre");
 
-  console.log('\n[1bis] pas de barre fixe en bas : reglages + enregistrement vivent en haut, a cote du switch (01/09/2026)');
+  console.log('\n[1bis] barre d atelier : le switch, le monde et les reglages sur une ligne — l enregistrement est au bandeau (23/09/2026)');
   dire(!(await vu('.launch')), "la banque n'a plus de barre de lancement fixe au bas de l'ecran");
-  dire(await vu('#btnBankDocument') && await vu('#btnSaveScenes'),
-       "le duo reglages/enregistrer est visible sans avoir a chercher en bas de page");
-  // le texte permanent "scenes.json / une sauvegarde .bak..." n'a plus sa place ici
-  // (signale sans interet a l'ecran, 01/09/2026) : au repos, #scMsg n'existe pas —
-  // ce que le bouton enregistre se dit desormais dans son infobulle
+  dire(await vu('#btnBankDocument'),
+       "« Reglages de l'atelier » est visible sans avoir a chercher en bas de page");
+  // design-pass screen-7b §S1 : le bouton a icone seule disparait de la vue
+  // Scenes au profit du bandeau, qui dit deja ce qui est en attente ET porte
+  // le geste. Il reste sur Poses et Tons, dont la refonte vient apres — voir
+  // [14] et [15bis], qui lisent toujours son infobulle.
+  dire(!(await vu('#btnSaveScenes')),
+       "la vue Scenes n'a plus de bouton d'enregistrement : c'est le bandeau qui l'a");
   dire(!(await vu('#scMsg')), 'au repos, aucun texte de statut ne traine en permanence');
-  const infobulleSave = await page.$eval('#btnSaveScenes', e => e.dataset.hintText || '');
-  dire(infobulleSave.toLowerCase().includes('scenes.json'),
-       `mais ce qui est enregistre reste dit, dans l'infobulle du bouton (« ${infobulleSave} »)`);
-  const hautNav = await page.$eval('#bankView', e => e.getBoundingClientRect().top);
-  const hautReglages = await page.$eval('#btnBankDocument', e => e.getBoundingClientRect().top);
-  const hautSave = await page.$eval('#btnSaveScenes', e => e.getBoundingClientRect().top);
-  dire(Math.abs(hautNav - hautReglages) < 6 && Math.abs(hautNav - hautSave) < 6,
-       `« Réglages de l'atelier » et « Enregistrer » sont a la meme hauteur que le switch Scenes/Poses (${Math.round(hautNav)} / ${Math.round(hautReglages)} / ${Math.round(hautSave)} px)`);
+  // les CENTRES, pas les sommets : les trois boites n'ont pas la meme hauteur,
+  // c'est leur ligne de base commune dans la barre de 44 px qui est verifiee
+  const milieu = s => page.$eval(s, e => {
+    const r = e.getBoundingClientRect();
+    return r.top + r.height / 2;
+  });
+  const hautNav = await milieu('#bankView');
+  const hautReglages = await milieu('#btnBankDocument');
+  const hautMonde = await milieu('#worldBanner');
+  dire(Math.abs(hautNav - hautReglages) < 3 && Math.abs(hautNav - hautMonde) < 3,
+       `le monde et « Réglages de l'atelier » sont sur la meme ligne que le switch Scenes/Poses (${Math.round(hautNav)} / ${Math.round(hautMonde)} / ${Math.round(hautReglages)} px)`);
 
   console.log('\n[2] LE RAIL D OUTILS n apparait PAS sur Scenes (31/08/2026)');
   dire(!(await vu('#toolRail')),
@@ -168,7 +174,9 @@ async function allerA(page, categorie, module) {
   dire(monde === avant.world, `il porte le monde du document (${monde})`);
   dire((await page.$$('#worldBanner input, #worldBanner select, #worldBanner textarea')).length === 0,
        'aucun controle : le monde est fige a la creation, pas un reglage');
-  dire(!(await vu('#worldBanner [data-world-drift]')),
+  // la derive a quitte la ligne du monde pour un bandeau --warn sous la barre
+  // d atelier (§S2) : son marqueur se cherche dans la page, plus dans #worldBanner
+  dire(!(await vu('[data-world-drift]')),
        'et aucune derive signalee — la fiche et le fichier disent le meme monde');
 
   console.log('\n[4] la LISTE montre l essentiel, une carte par scene, groupee par intention');
@@ -247,24 +255,27 @@ async function allerA(page, categorie, module) {
   await page.click(CARTE);
   await page.waitForSelector('#sceneInspector');
   dire(!(await vu('#bankDocument')), 'la scene ouverte remplace les reglages de l atelier');
-  // le compositeur doit remplir la HAUTEUR disponible (demande explicite),
-  // pas seulement la largeur de son propre contenu — verifie que le panneau
-  // visible (bordure + fond) atteint bien la hauteur de son conteneur
-  // `#bankInspector`, pas seulement celle de l'onglet General (le plus court).
-  // `cible` est desormais TOUJOURS origin=world (voir la note de tete de
-  // fichier) : `#bankInspector` porte alors AUSSI le groupe de bascule
-  // « Personnage | Monde » (BankScreen.tsx) au-dessus de #sceneInspector —
-  // sa hauteur (+ sa marge) fait partie du conteneur mais pas du panneau, a
-  // deduire plutot que d exiger une egalite stricte qui ne peut plus tenir.
-  const hAside = await page.$eval('#bankInspector', e => e.getBoundingClientRect().height);
-  const hPanel = await page.$eval('#sceneInspector', e => e.getBoundingClientRect().height);
-  const hBascule = await page
-    .$eval('#bankInspector [role="group"]', e => e.getBoundingClientRect().height + 10 /* mb-[10px] */)
-    .catch(() => 0);
-  dire(Math.abs(hAside - hPanel - hBascule) < 2,
-       `le panneau (${Math.round(hPanel)}px) + la bascule Personnage/Monde (${Math.round(hBascule)}px) remplissent le conteneur (${Math.round(hAside)}px)`);
+  // TROIS PANNEAUX (design-pass screen-7b §S1) : la liste choisit, le
+  // compositeur travaille, l apercu montre le prompt en direct. L ancienne
+  // mesure de hauteur (le panneau-carte remplissait-il son aside ?) n a plus
+  // d objet : il n y a plus de carte flottante, les trois colonnes sont des
+  // pistes de la grille et remplissent la hauteur de <main> par construction.
+  const larges = await page.evaluate(() => ({
+    liste: document.querySelector('#sceneListPanel').getBoundingClientRect().width,
+    apercu: document.querySelector('#scenePromptPreview').closest('aside').getBoundingClientRect().width,
+  }));
+  dire(Math.abs(larges.liste - 260) < 2, `la liste tient ses 260 px (${Math.round(larges.liste)})`);
+  dire(Math.abs(larges.apercu - 340) < 2, `l apercu tient ses 340 px (${Math.round(larges.apercu)})`);
+  const enTete = await page.$eval('#scenePreviewThumb', e => e.closest('#sceneInspector') === null);
+  dire(enTete, "l'en-tete de scene est AU-DESSUS du compositeur, pas dedans : il survit a l onglet Monde");
   dire((await page.$$eval('#sceneInspector [role="tab"]', e => e.length)) === 7,
-       'le compositeur ouvre sur ses 7 onglets (wireframe 31/08/2026)');
+       'le compositeur ouvre sur ses 7 sections (wireframe 31/08/2026, en rail depuis le 23/09)');
+  const railVertical = await page.$eval('#sceneInspector [role="tablist"]',
+    e => e.getAttribute('aria-orientation'));
+  dire(railVertical === 'vertical', 'et son rail est un tablist VERTICAL a libelles');
+  dire((await page.$$eval('#sceneInspector [role="tab"]', e => e.map(t => t.textContent.trim())))
+         .includes('Prompt global'),
+       'chaque section dit son nom, plus seulement son icone');
   // audit UX/UI (M2) : aria-controls doit resoudre a un id REELLEMENT present
   // dans le DOM pour les 7 onglets, pas seulement celui actif — un panneau
   // demonte pour les 6 autres cassait la reference ARIA en silence
@@ -300,6 +311,10 @@ async function allerA(page, categorie, module) {
   console.log('\n[5ter] scene d edition : une scene neuve (jamais liee a un monde, donc jamais verrouillee)');
   await page.click('#btnAddScene');
   await page.waitForSelector('#sceneInspector');
+  // le compositeur n'est pas remonte (la meme colonne change de scene) : le
+  // retour a la section General vient d'un effet, donc d'un rendu apres celui
+  // du clic — il se laisse le temps d'arriver, comme partout ailleurs ici
+  await page.waitForTimeout(250);
   dire((await page.$eval('[data-tab="general"]', e => e.getAttribute('aria-selected'))) === 'true',
        'une scene neuve (comme une autre) ouvre sur l onglet General');
   dire(await vu('#dirtyBar'),
@@ -350,12 +365,12 @@ async function allerA(page, categorie, module) {
   await page.waitForTimeout(150);
   await onglet('general');
 
-  console.log('\n[5bis] le tablist se pilote au clavier — fleches + roving tabindex (Radix)');
+  console.log('\n[5bis] le rail se pilote au clavier — fleches HAUT/BAS (tablist vertical) + roving tabindex (Radix)');
   await page.focus('[data-tab="general"]');
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowDown');
   await page.waitForTimeout(100);
   dire((await page.$eval('[data-tab="light"]', e => e.getAttribute('aria-selected'))) === 'true',
-       'fleche droite selectionne l onglet suivant');
+       'fleche bas selectionne la section suivante');
   dire((await page.evaluate(() => document.activeElement?.dataset?.tab)) === 'light',
        'et deplace le focus AVEC la selection (roving tabindex)');
   await page.keyboard.press('Home');
@@ -382,16 +397,19 @@ async function allerA(page, categorie, module) {
   dire(await vu('#sceneInspector'), 'mais le compositeur reste ouvert — la scene reste selectionnee');
   dire(!(await vu('#bankDocument')), 'et Echap ne retombe pas sur les reglages de l atelier');
 
-  // audit UX/UI (m2) : sur un onglet COURT (Lumiere n'a qu'un champ), la
-  // barre Suivant/Precedent doit rester proche du bas du panneau plein-hauteur
-  // plutot que de flotter juste apres le contenu, loin au-dessus d'un grand
-  // vide — on est deja sur l'onglet Lumiere depuis le test precedent
-  console.log('\n[6ter] sur un onglet court, la barre de navigation reste proche du bas du panneau (audit m2)');
-  const basPanneau = await page.$eval('#sceneInspector', e => e.getBoundingClientRect().bottom);
-  const basBoutons = await page.$$eval(
-    '[data-tabpanel="light"] button', els => els[els.length - 1].getBoundingClientRect().bottom);
-  dire(Math.abs(basPanneau - basBoutons) < 40,
-       `barre de nav a ${Math.round(basBoutons)}px, bas du panneau a ${Math.round(basPanneau)}px — pas de grand vide`);
+  // La barre Suivant/Precedent/Dupliquer/Supprimer du bas de chaque panneau a
+  // disparu (§S4.1) : le rail a libelles fait le pas de section en un clic, et
+  // les deux actions de scene sont dans l en-tete. Ce que ce point verifie
+  // desormais est la regle qui l a remplacee : un formulaire se lit en colonne,
+  // jamais sur toute la largeur d un ecran de studio (§S4.3).
+  console.log('\n[6ter] le formulaire est borne a 880 px, quelle que soit la largeur de la colonne');
+  const largeurForm = await page.$eval('[data-tabpanel="light"] > div',
+    e => e.getBoundingClientRect().width);
+  const largeurColonne = await page.$eval('#sceneInspector', e => e.getBoundingClientRect().width);
+  dire(largeurForm <= 882 && largeurColonne > largeurForm,
+       `formulaire a ${Math.round(largeurForm)}px dans une colonne de ${Math.round(largeurColonne)}px`);
+  dire((await page.$$('[data-tabpanel="light"] button:has-text("Suivant")')).length === 0,
+       'et la barre « Suivant / Precedent » du bas de panneau a disparu');
 
   console.log('\n[7] le plafond de niveau se DEDUIT des tenues, a la frappe — meme lu depuis un AUTRE onglet');
   // le compositeur (31/08/2026) est un tablist : un champ n'est dans le DOM
@@ -518,10 +536,22 @@ async function allerA(page, categorie, module) {
        'le "prompt compose" affiche deja la jointure des 2 fragments, virgule separee');
   dire(await vu('#dirtyBar'),
        'elle n existe que dans la page tant qu on n enregistre pas — le bandeau le dit');
-  await page.click('#btnSaveScenes');
+  // §S3 : la scene non enregistree porte son point dans la liste, et l apercu
+  // refuse d envoyer a Produire ce que scenes.json ne contient pas encore
+  const carteAvantSave = await carteDe(idEdite);
+  dire((await carteAvantSave.$$('.sr-only')).length > 0 &&
+       (await carteAvantSave.textContent()).includes('modifiée'),
+       'sa ligne de liste se dit « modifiée », pas seulement par un point de couleur');
+  dire(await page.isDisabled('aside[aria-label="Aperçu du prompt"] button'),
+       "« Produire cette scene » est inactif tant que rien n'est enregistre");
+  // §S1 : l enregistrement est au bandeau, et son resultat se dit au toast
+  await page.click('#btnDirtySave');
   await page.waitForTimeout(1400);
-  dire((await texte('#scMsg')).includes('enregistré'), `la barre le confirme : « ${await texte('#scMsg')} »`);
+  dire((await texte('#toastTxt')).includes('enregistré'),
+       `le toast le confirme : « ${await texte('#toastTxt')} »`);
   dire(!(await vu('#dirtyBar')), 'le bandeau disparait : plus rien en attente');
+  dire(Boolean(await page.$('aside[aria-label="Aperçu du prompt"] a[href*="/produce"]')),
+       'et « Produire cette scene » redevient un lien une fois la banque a jour');
 
   const apres = await banque();
   dire(apres.scenes.length === avant.scenes.length + 1,
@@ -578,10 +608,10 @@ async function allerA(page, categorie, module) {
   await onglet('recap');
   await page.fill(champ('wardrobe_recap'), 'une tenue sans niveau');
   await page.waitForTimeout(150);
-  await page.click('#btnSaveScenes');
+  await page.click('#btnDirtySave');
   await page.waitForTimeout(600);
-  dire((await texte('#scMsg')).includes('tenue sans niveau'),
-       `le refus est dit a l'ecran : « ${(await texte('#scMsg')).slice(0, 70)}… »`);
+  dire((await texte('#toastTxt')).includes('tenue sans niveau'),
+       `le refus est dit a l'ecran : « ${(await texte('#toastTxt')).slice(0, 70)}… »`);
   const pendant = await banque();
   dire(JSON.stringify(pendant.scenes.find(s => s.id === cible.id).wardrobe) ===
        JSON.stringify(apres.scenes.find(s => s.id === cible.id).wardrobe),

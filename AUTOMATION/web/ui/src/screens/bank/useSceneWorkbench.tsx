@@ -9,7 +9,7 @@
    `.tsx` because the removal confirmation carries its sentence as markup, like
    `review/useSortActions.tsx`. Nothing here calls the API: the store owns the
    document, this owns the pointing. */
-import { useCallback, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { composePrompt, useScenes, type Scene, type SceneDraft } from '../../state/ScenesStoreContext'
@@ -59,7 +59,32 @@ export function useSceneWorkbench() {
     [drafts, filter],
   )
 
+  /* THE SELECTION SURVIVES A SAVE (design pass screen-7b — the composer is
+     the centre column now, so losing it mid-session is losing the work
+     surface itself). `save` reloads the document and every draft is born with
+     a FRESH uid, so a selection held by uid alone is dropped by the very act
+     of saving: the scene one just saved closed itself. The id crosses the
+     round trip, so it is what re-finds the draft afterwards.
+
+     Only a save can orphan a uid this way — `close()` and `select(null)` are
+     DELIBERATE closings, and they clear this too, otherwise the next document
+     reload would reopen a scene the person had just put away. A scene removed
+     from the bank never comes back either: nothing carries its id any more. */
+  const wanted = useRef<string | null>(null)
+  // The TYPED id, not `base.id`: that is what the save writes, so that is what
+  // the reloaded draft will carry — including for a scene created in the page,
+  // whose `base` is still the nameless NEW_SCENE it was born from.
+  useEffect(() => {
+    if (selected) wanted.current = selected.id
+  }, [selected])
+  useEffect(() => {
+    if (selectedIndex >= 0 || !wanted.current) return
+    const again = drafts.find((draft) => draft.base.id === wanted.current)
+    if (again) setSelectedUid(again.uid)
+  }, [drafts, selectedIndex])
+
   const select = useCallback((uid: string | null) => {
+    if (!uid) wanted.current = null
     setSelectedUid(uid)
     setInspectorMode('character')
   }, [])
@@ -150,6 +175,7 @@ export function useSceneWorkbench() {
      reach the next scene — the exact cost a workbench exists to remove. */
   const close = useCallback(() => {
     const uid = selectedUid
+    wanted.current = null
     setSelectedUid(null)
     if (!uid) return
     listRef.current?.querySelector<HTMLElement>(`[data-uid="${uid}"]`)?.focus()
@@ -199,6 +225,9 @@ export function useSceneWorkbench() {
       const ok = await confirm({
         title: `Retirer la scène « ${draft.id} » ?`,
         button: 'Retirer',
+        // La boîte s'ouvre sur « annuler » : Entrée en arrivant ne peut pas
+        // être la suppression (design pass screen-7b §A).
+        danger: true,
         body: (
           <p>
             Elle quitte l'atelier au prochain enregistrement, et la production
@@ -208,7 +237,10 @@ export function useSceneWorkbench() {
         ),
       })
       if (!ok) return
-      if (draft.uid === selectedUid) setSelectedUid(null)
+      if (draft.uid === selectedUid) {
+        wanted.current = null
+        setSelectedUid(null)
+      }
       removeScene(index)
     },
     [confirm, drafts, removeScene, selectedUid],

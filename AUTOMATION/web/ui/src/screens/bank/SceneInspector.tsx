@@ -2,11 +2,18 @@
 
    THE COMPOSER LIVES NEXT DOOR (31/08/2026, wireframe-driven). The flat form
    this file used to render directly — a dozen fields in one scroll — is now
-   `composer/SceneComposer.tsx`, seven tabs instead: this file keeps the
-   OUTER shell (the section, the Escape-closes gesture, the aria-label) and
-   the world-link decision that gates several of the composer's fields, and
-   hands the rest to it. `DocumentPane` below is untouched — a different
-   concern (the bank's shared settings, shown when nothing is selected).
+   `composer/SceneComposer.tsx`, seven sections instead: this file keeps the
+   OUTER shell (the section, the Escape-closes gesture, the undo history, the
+   aria-label) and the world-link decision that gates several of the
+   composer's fields, and hands the rest to it. `DocumentPane` below is
+   untouched — a different concern (the bank's shared settings, shown when
+   nothing is selected).
+
+   THE SCENE'S OWN HEADER LEFT (design pass screen-7b §S4.1): `SceneHeader` is
+   rendered by `BankScreen` ABOVE this section, so the identity of what is
+   being edited survives the Monde tab replacing this whole column with the
+   place's inspector. What used to arrive here only to be forwarded —
+   `preview`, `onDuplicate`, `onRemove`, the chevrons — goes there directly.
 
    THE INSPECTOR DOES NOT OWN THE SCENE. It edits a DRAFT, and the draft carries
    the original object (`base`): every key it does not display crosses the save
@@ -17,7 +24,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { Creative } from '../../state/TaxonomyContext'
 import type { SceneDraft } from '../../state/ScenesStoreContext'
 import { SceneComposer } from './composer/SceneComposer'
-import type { ScenePreview } from './SceneList'
+import type { SceneField } from './sceneChanges'
 
 /** Same guard as `pose-editor/PoseCanvas.tsx`'s own `isTextEntry`, duplicated
     rather than shared (that one lives in a different screen's module) — a
@@ -42,11 +49,9 @@ export function SceneInspector({
   creative,
   poses,
   produced,
-  preview,
-  imageUrl,
+  changed,
+  narrow,
   onPatch,
-  onRemove,
-  onDuplicate,
   onPrevScene,
   onNextScene,
   onClose,
@@ -56,20 +61,14 @@ export function SceneInspector({
   creative: Creative | null
   poses: string[]
   produced: number | null
-  /** The scene's last produced shot, if any — same source as the grid card's
-      own thumbnail (`BankScreen.tsx`'s `previews`), threaded here so the
-      composer can show it too instead of going image-blind the moment a
-      scene is actually open for editing. */
-  preview: ScenePreview | undefined
-  imageUrl: (ref: Record<string, unknown>) => string
+  /** Draft fields differing from the saved scene (`sceneChanges`). */
+  changed: Set<SceneField>
+  narrow: boolean
   onPatch: (patch: Partial<SceneDraft>) => void
-  onRemove: () => void
-  /** Clones this scene and opens the clone (design pass écran 7, §B1). */
-  onDuplicate: () => void
   /** Steps to the previous/next scene in `useSceneWorkbench`'s `shown` list
-      (design pass écran 7, §B2) — `undefined` at either end, same convention
-      as the composer's own Suivant/Précédent (only rendered when there is
-      somewhere to go). */
+      (design pass écran 7, §B2) — `undefined` at either end. The header owns
+      the BUTTONS; this owns the KEYS, which have to work with the focus
+      anywhere in the composer. */
   onPrevScene: (() => void) | undefined
   onNextScene: (() => void) | undefined
   onClose: () => void
@@ -164,7 +163,11 @@ export function SceneInspector({
          `handlePoseKeyDown`, design-pass screen-6 §A2). Guarded by
          `isEditableControl`: a textarea/input/select needs its OWN Up/Down
          (cursor movement, a number spinner, changing an option) more than
-         this screen needs a global accelerator on top of it.
+         this screen needs a global accelerator on top of it. ALT+Up/Down
+         (screen-7b §S4.1) is the same step WITHOUT that guard: no field
+         claims it, so it is the one that still works from inside a prompt
+         being typed — which is where one actually is when moving on to the
+         next scene.
 
          Ctrl/Cmd+Z (+Shift for redo) undoes/redoes a patch (§B3) — same
          `isEditableControl` guard for what it APPLIES: inside a text field
@@ -185,6 +188,12 @@ export function SceneInspector({
           onClose()
           return
         }
+        const step = e.key === 'ArrowUp' ? onPrevScene : e.key === 'ArrowDown' ? onNextScene : null
+        if (step && e.altKey && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          step()
+          return
+        }
         const inField = isEditableControl(e.target)
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
           e.preventDefault()
@@ -194,42 +203,27 @@ export function SceneInspector({
           return
         }
         if (inField) return
-        if (
-          (e.key === 'ArrowUp' || e.key === 'ArrowDown') &&
-          !e.altKey && !e.ctrlKey && !e.metaKey
-        ) {
-          const step = e.key === 'ArrowUp' ? onPrevScene : onNextScene
-          if (step) {
-            e.preventDefault()
-            step()
-          }
+        if (step && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault()
+          step()
         }
       }}
-      /* `h-full`: the ASIDE around this section is capped, not forced
-         (`BankScreen.tsx`, `max-h-[calc(100vh-150px)]` — reverted from a
-         forced height that could push the composer's Suivant/Précédent bar
-         past the real viewport on a window taller than the cap assumed).
-         Most of the time this section just sizes to its own content, same as
-         the aside. `h-full` only matters the rare time a tab's content
-         actually exceeds the cap: the aside then clamps to it and scrolls,
-         and this keeps the visible bordered/backgrounded box — what actually
-         reads as "the panel" — filling that scrollable area instead of
-         stopping short partway through it. */
-      className="h-full rounded-card border border-line bg-panel p-[16px]"
+      /* A COLUMN OF THE SCREEN, not a card floating in an aside (design pass
+         screen-7b §S1): the rail and the form are its two children, it fills
+         the centre track, and the form scrolls for its own account. The
+         `max-h`/`h-full` dance the card needed — and the bar it could push
+         past the fold — went with the card. */
+      className="flex min-h-0 min-w-0 flex-1"
     >
       <SceneComposer
         draft={draft}
         creative={creative}
         poses={poses}
         produced={produced}
-        preview={preview}
-        imageUrl={imageUrl}
         worldLinked={worldLinked}
+        changed={changed}
+        narrow={narrow}
         onPatch={patch}
-        onRemove={onRemove}
-        onDuplicate={onDuplicate}
-        onPrevScene={onPrevScene}
-        onNextScene={onNextScene}
         onSaveDocument={onSaveDocument}
       />
     </section>
@@ -257,7 +251,9 @@ export function DocumentPane({
     <section
       id="bankDocument"
       aria-label="Réglages de l'atelier"
-      className="h-full rounded-card border border-line bg-panel p-[16px]"
+      /* Same shape as the composer it stands in for: the centre column, its
+         own scroll, and the same 880 px reading width. */
+      className="min-h-0 min-w-0 flex-1 overflow-y-auto p-[20px] [&>*]:max-w-[880px]"
     >
       <h2 className="mt-0 mb-[4px]">Réglages de l'atelier</h2>
       <p className="tiny mt-0 mb-[16px]">

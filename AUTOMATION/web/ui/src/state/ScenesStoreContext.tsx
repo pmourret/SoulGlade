@@ -219,11 +219,14 @@ function uniqueCopyId(id: string, taken: ReadonlySet<string>): string {
   return `${id}-${n}`
 }
 
-export function draftOf(scene: Scene): SceneDraft {
+/* The EDITED half of a draft — everything but `uid` and `base`. Split out of
+   `draftOf` so a caller that only wants "what would this scene look like in
+   the form" can ask for it without minting a draft identity it would throw
+   away (screens/bank/sceneChanges.ts compares a live draft to this, field by
+   field). One mapping, two callers: a second copy of it would drift. */
+export function draftFields(scene: Scene): Omit<SceneDraft, 'uid' | 'base'> {
   const band = bandOf(scene)
   return {
-    uid: nextUid(),
-    base: scene,
     id: scene.id ?? '',
     // `category` was a duplicate of the intention that doubled as the export
     // folder: the card preselects the intention, and saving drops the dead key
@@ -243,6 +246,10 @@ export function draftOf(scene: Scene): SceneDraft {
     variants: (scene.variants ?? []).join('\n'),
     pose: scene.pose ?? '',
   }
+}
+
+export function draftOf(scene: Scene): SceneDraft {
+  return { uid: nextUid(), base: scene, ...draftFields(scene) }
 }
 
 /* Turns the drafts back into scenes, by MERGING onto the original object —

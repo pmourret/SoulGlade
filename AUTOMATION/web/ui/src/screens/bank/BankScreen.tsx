@@ -1,46 +1,38 @@
-/* The scene bank — TWO sub-views, two routes.
+/* The scene bank — THREE sub-views, three routes.
 
    `#scenes` and `#scenes/poses` were one screen with two wrappers shown or
-   hidden. They are `/bank/scenes` and `/bank/poses` now. The reason for the
-   split has not changed: the bank held everything in one column, and the
-   skeleton block sat between the composer and the scene cards, in the middle of
-   a page one scrolls to edit scenes. Two different workshops, not two sections.
+   hidden. They are `/bank/scenes`, `/bank/poses` and `/bank/tones` now. The
+   reason for the split has not changed: the bank held everything in one
+   column, and the skeleton block sat between the composer and the scene
+   cards, in the middle of a page one scrolls to edit scenes. Three different
+   workshops, not three sections.
 
-   SCENES IS A WORKBENCH: A GRID AND AN INSPECTOR (31/08/2026). It was twenty
-   stacked forms — five thousand pixels before one knew what the character owns.
-   The grid holds what identifies a scene, the inspector holds the rest, and the
-   two-column geometry is the one Produire already uses: same studio, same
-   shape.
+   THREE PANELS (design-pass screen-7b, 23/09/2026). Scènes used to be a
+   narrow list plus an inspector CARD floating in a `max-h` aside, with the
+   seven sections as a row of unlabelled icons inside it and a stack of
+   full-width bars under every panel. It is now a workshop bar and three
+   columns filling the height of `<main>`, same shape as Produire (screen-3b)
+   and Revue (screen-5b): the list picks (260 px), the composer works
+   (labelled rail + a form capped at 880 px), and the living preview of the
+   prompt stands on the right (340 px) instead of hiding in one section.
 
-   THE CONSOLIDATION PASS (31/08/2026, wireframe-driven). The world banner and
-   the "Scènes N" heading merge into one band at the top (`WorldBanner`, now
-   also carrying the count); the grid stops wrapping and becomes a fixed
-   2-row, horizontally-scrolling carousel (see `useSceneWorkbench.onGridKeyDown`
-   for the column-major keyboard math this needed); the LLM composer and the
-   raw-JSON panel are RETIRED FROM THIS SCREEN, not deleted — `Composer.tsx`
-   and `ScenesStoreContext`'s `rawJson`/`applyRawJson` are untouched, waiting
-   to resurface elsewhere later. The tool rail is off here too
-   (`chrome/ToolRail.tsx`, `RAIL_ON`): the screen's own toolbar now covers what
-   it offered.
+   WHAT THE PASS DID NOT TOUCH: drafts and the writing of scenes.json
+   (`ScenesStoreContext`), the Personnage/Monde tab and the place inheritance
+   (ADR-0015), the `?scene=` entry from Produire, the world guard, the
+   gestures of `useSceneWorkbench`, and the seven sections' own fields — not
+   one added, not one removed.
 
-   THE SAVE BAR IS ON BOTH VIEWS, and that is deliberate: it saves the screen's
-   DOCUMENT, and a scene edit left pending on the other view must keep its button
-   — hiding it would hide the action while the dirty banner keeps warning.
-
-   THE SAVE BAR MOVED OFF THE FIXED FOOTER (2026-09-01, studio-IA polish). A
-   `position:fixed` bar at the bottom of the viewport cost every screen a
-   reserved strip of dead space (`.wrap`'s own 120px bottom padding) whether or
-   not anything needed it, and pushed the "Réglages de la banque" toggle down
-   below the scene list, a second landmark to scroll past. Both now sit beside
-   the Scènes/Poses switch, at the top, where the switch already is — no
-   `position:fixed`, no reserved clearance, one less thing to scroll for. The
-   `.launch`/`.inner`/`.sum` classes stay defined in the shared stylesheet and
-   in use by `ProduceScreen`/`WizardScreen` — only this screen stops reaching
-   for them. */
-import { useEffect, useRef, useState } from 'react'
+   THE SAVE BUTTON LEFT THE SCENES BAR (§S1). `DirtyBar` (chrome) already
+   states what is pending and carries the save with its Ctrl S; a second,
+   icon-only button saying the same thing at rest was a permanent control for
+   an occasional act. It STAYS on Poses and Tons, whose own passes are still
+   to come and whose tooltip is the only place saying what a save means there
+   — see SAVE_HINT below. */
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { useApi } from '../../api/useApi'
+import { useChrome } from '../../chrome/ChromeContext'
 import { Icon } from '../../chrome/Icon'
 import { useToast } from '../../chrome/ToastContext'
 import { useScenes } from '../../state/ScenesStoreContext'
@@ -48,13 +40,17 @@ import { useTaxonomy } from '../../state/TaxonomyContext'
 import { PATHS } from '../../app/routes'
 import { PlaceInspector } from '../worlds/PlaceInspector'
 import { useWorldPlaces } from '../worlds/useWorldPlaces'
+import { useOverlayPanel } from '../produce/useOverlayPanel'
 import { PosesView } from './poses/PosesView'
 import { SceneListPanel, type ScenePreview } from './SceneList'
 import { TonesView } from './tones/TonesView'
 import { DocumentPane, SceneInspector } from './SceneInspector'
+import { SceneHeader } from './composer/SceneHeader'
+import { ScenePreviewPanel } from './composer/ScenePreviewPanel'
+import { changedFields, hasChanges, savedScenes, type SceneField } from './sceneChanges'
 import { useSceneWorkbench } from './useSceneWorkbench'
 import { useWorldCatalogue } from './useWorldCatalogue'
-import { WorldBanner } from './WorldBanner'
+import { WorldBanner, WorldDriftBand, worldDrift } from './WorldBanner'
 import { WorldCatalogueDialog } from './WorldCatalogueDialog'
 
 /* What « Enregistrer » saves, per sub-view — said in its HOVER tooltip, not as
@@ -68,22 +64,21 @@ import { WorldCatalogueDialog } from './WorldCatalogueDialog'
    lied — the context was missing, and it still needs saying somewhere, just
    on demand rather than permanently.
 
-   A two-entry table, not a growing `if`: the day the bank gains a third
-   sub-view, it adds a line — Tons is that third line (2026-09-03): its own
-   document is creative.json, saved from ITS OWN editor screen, never from
-   this button — the hint says so, rather than implying a tone's expression
-   range rides along with a scenes.json save it has nothing to do with. */
+   Two entries and no longer three: Scènes saves from the banner now, so it
+   has no button left to hang a tooltip on. */
 const SAVE_HINT = {
-  scenes: 'Enregistrer scenes.json — une sauvegarde .bak est faite à chaque fois',
   poses:
     'Enregistrer les attributions de pose dans scenes.json — jamais les squelettes, déjà sur le disque',
   tones:
     'Enregistrer scenes.json — la plage d\'expression d\'un ton s\'enregistre depuis son propre éditeur, pas ici',
 } as const
 
+const NO_CHANGES: Set<SceneField> = new Set()
+
 export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   const api = useApi()
   const toast = useToast()
+  const { narrow } = useChrome()
   const {
     bank,
     drafts,
@@ -127,10 +122,18 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, drafts, searchParams])
 
-  // « + Depuis le monde » (21/09): the places of the character's world that
+  // « Depuis le monde » (21/09): the places of the character's world that
   // its bank does not hold yet, ordinary ones and — armed only — adult ones.
   const [catalogueOpen, setCatalogueOpen] = useState(false)
   const catalogue = useWorldCatalogue(catalogueOpen ? (world?.id ?? null) : null)
+
+  /* Under 1100 px the list is a drawer (§S6) — same non-modal overlay
+     contract as Revue's own inspector: Escape closes it, the focus goes in
+     and comes back out. */
+  const [listOpen, setListOpen] = useState(false)
+  const listPanelRef = useRef<HTMLDivElement | null>(null)
+  const closeList = () => setListOpen(false)
+  useOverlayPanel(narrow && listOpen, closeList, listPanelRef, '#sceneFilter')
 
   // Monde | Personnage (ADR-0015) — the catalog of the CHARACTER's world,
   // loaded once and shared by every scene the Banque opens.
@@ -160,14 +163,30 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   const previews = (bank?.previews ?? {}) as Record<string, ScenePreview>
   const stats = (bank?.stats ?? {}) as Record<string, { n: number; avg: number | null }>
 
+  /* What the last save left on disk, and what each draft owes it (§S3, §S4.2,
+     §S4.3, §S5) — the ONE comparison the dots, the borders and the refusal of
+     « Produire cette scène » all read. */
+  const saved = useMemo(() => savedScenes(bank), [bank])
+  const changedUids = useMemo(
+    () => new Set(drafts.filter((draft) => hasChanges(draft, saved)).map((draft) => draft.uid)),
+    [drafts, saved],
+  )
+  const changed = bench.selected ? changedFields(bench.selected, saved) : NO_CHANGES
+  /* The SCENE is pending, which is not the same question as which of its
+     fields moved: a scene created in the page has no saved version to differ
+     from, and still owes everything to the next save. */
+  const pending = bench.selected ? changedUids.has(bench.selected.uid) : false
+
   const onSave = async () => {
     const result = await save()
     setStatus(result.ok ? 'enregistré · sauvegarde .bak faite' : (result.erreur ?? 'échec'))
     if (result.ok) toast('scenes.json enregistré')
   }
 
+  const drift = worldDrift(world, documentWorld)
+
   return (
-    <div className="screen" id="scenes">
+    <div className="screen flex h-full flex-col" id="scenes">
       {catalogueOpen && world && (
         <WorldCatalogueDialog
           worldLabel={world.label}
@@ -186,284 +205,282 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
           onClose={() => setCatalogueOpen(false)}
         />
       )}
-      {/* `pb-[24px]`: the shared `.wrap` class reserves 120px at the bottom for
-          `ProduceScreen`/`WizardScreen`'s own fixed launch bar — this screen no
-          longer has one, so that clearance is now dead scroll space, overridden
-          back down to match the top padding. */}
-      <div className="wrap w-full max-w-none pb-[24px]">
-        {/* The two sub-views are two DESTINATIONS, so two links: shareable, and
-            the browser's back button walks between them.
+
+      {/* THE WORKSHOP BAR (§S2): which workshop, which world, and the
+          document-level action — one row, 44 px, above the three columns. */}
+      <div className="flex h-[44px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
+        {view === 'scenes' && narrow && (
+          /* ECART ASSUME sur §S6, mesure a 1024 : le cadrage appelle ce
+             bouton « Scenes », mot que la barre porte deja a 12 px de la —
+             l'entree de sous-vue juste a cote. Deux « Scenes » cote a cote,
+             l'un qui ouvre un tiroir et l'autre qui navigue, ne se
+             distinguent pas. Le tiroir prend donc le mot qui dit ce qu'il
+             ouvre. */
+          <button type="button" className="btn sm flex-none" id="btnScenesDrawer" onClick={() => setListOpen(true)}>
+            Liste des scènes
+          </button>
+        )}
+        {/* The three sub-views are three DESTINATIONS, so three links:
+            shareable, and the browser's back button walks between them.
 
             A NAV, NOT A TABLIST. It looked like a segmented control so it wore
             `role="tablist"`, and the roles lied twice: there is no `tabpanel`
             for a tab to control, and these links NAVIGATE — a screen reader
-            announced « onglet 1 sur 2 » for something that changes the URL and
-            unmounts the screen. Two links in a nav say exactly what they do,
-            and `aria-current="page"` marks the one we are on.
+            announced « onglet 1 sur 3 » for something that changes the URL and
+            unmounts the screen. Three links in a nav say exactly what they do,
+            and `aria-current="page"` marks the one we are on. */}
+        <nav className="seg flex-none" id="bankView" aria-label="Sous-vue des ateliers">
+          <SubViewLink to={PATHS.bankScenes} label="Scènes" active={view === 'scenes'} vue="scenes" />
+          <SubViewLink to={PATHS.bankPoses} label="Poses" active={view === 'poses'} vue="poses" />
+          <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
+        </nav>
 
-            The document actions ride along on the SAME row, at the SAME
-            height: "Réglages de la banque" (scenes-only — Poses has no
-            document-level settings pane) and the save button, which stays on
-            BOTH sub-views per the note above. `flex-wrap` lets the right-hand
-            block drop to its own line rather than overflow on a narrow
-            window. */}
-        <div className="mb-[22px] flex flex-wrap items-center justify-between gap-[12px]">
-          <nav className="seg" id="bankView" aria-label="Sous-vue des ateliers">
-            <SubViewLink to={PATHS.bankScenes} label="Scènes" active={view === 'scenes'} vue="scenes" />
-            <SubViewLink to={PATHS.bankPoses} label="Poses" active={view === 'poses'} vue="poses" />
-            <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
-          </nav>
+        {view === 'scenes' && <WorldBanner world={world} sceneCount={drafts.length} />}
 
-          <div className="flex flex-wrap items-center gap-[10px]">
-            {view === 'scenes' && (
-              <button
-                className="btn sm"
-                id="btnBankDocument"
-                aria-pressed={!bench.selected}
-                onClick={() => bench.select(null)}
-              >
-                Réglages de l'atelier
-              </button>
-            )}
-            <div className="flex items-center gap-[10px]">
-              {/* TRANSIENT ONLY — no resting text (2026-09-01: a permanent
-                  "scenes.json / une sauvegarde .bak est faite..." sat here at
-                  all times, reported as not worth the permanent space). What
-                  this button saves, per sub-view, moved into its OWN hover
-                  tooltip below; what a save just DID (success or the refusal
-                  message) still needs to be seen without hovering, so it
-                  stays a visible, if transient, status line — `role="status"`
-                  matches DirtyBar/FaultBar's own transient-message pattern. */}
-              {status && (
-                <span id="scMsg" role="status" className="tiny text-right leading-tight">
-                  {status}
-                </span>
-              )}
-              <button
-                className="btn primary sm"
-                id="btnSaveScenes"
-                aria-label="Enregistrer"
-                data-hint-text={SAVE_HINT[view]}
-                onClick={onSave}
-              >
-                <Icon name="save" className="h-[15px] w-[15px]" />
-              </button>
-            </div>
-          </div>
-        </div>
+        <div className="flex-1" />
 
+        {/* TRANSIENT ONLY — no resting text (2026-09-01: a permanent
+            "scenes.json / une sauvegarde .bak est faite..." sat here at all
+            times, reported as not worth the permanent space). What a save
+            just DID (success, or the refusal message) still needs to be seen
+            without hovering, so it stays a visible, if transient, status
+            line — `role="status"` matches DirtyBar/FaultBar's own transient
+            message pattern. */}
+        {status && (
+          <span id="scMsg" role="status" className="tiny flex-none text-right leading-tight">
+            {status}
+          </span>
+        )}
         {view === 'scenes' ? (
-          <div id="bankScenes">
-            <WorldBanner world={world} documentWorld={documentWorld} sceneCount={drafts.length} />
-
-            {/* Two zones: a NARROW scene list on the left, the composer
-                DOMINANT on the right (studio-IA direction, 2026-09-01 — was
-                the reverse: an unbounded grid squeezing a `clamp(…,600px)`
-                composer sidebar). The list is a picker, not the work
-                surface — Unreal's World Outliner, Photoshop's Layers panel,
-                a narrow vertical list next to the wide area you actually
-                work in. Under 1100 px both still stack into one column,
-                unchanged threshold. */}
-            <div
-              className="grid gap-[22px] [align-items:start]
-                         grid-cols-[clamp(240px,22vw,320px)_minmax(0,1fr)]
-                         max-[1100px]:grid-cols-[1fr]"
-            >
-              {/* `min-w-0`: a general grid-child safety net (a long unbroken
-                  scene id could otherwise force the track wider than the
-                  clamp asks for), not tied to the carousel this replaced —
-                  see `chrome/Shell.tsx`'s own `min-height:0`/`min-width:0`
-                  note for the general shape of this class of bug. */}
-              <div className="min-w-0 max-[1100px]:max-w-[420px]">
-                <div className="mb-[10px] flex flex-col gap-[8px]">
-                  <div className="flex items-center gap-[6px]">
-                    {/* A real <label>, not a placeholder posing as one: the
-                        placeholder disappears at the first keystroke. It is
-                        removed VISUALLY (`sr-only` clips it) because the field
-                        sits in a toolbar, and it stays the control's
-                        accessible name. */}
-                    <label className="sr-only" htmlFor="sceneFilter">
-                      filtrer les scènes
-                    </label>
-                    <input
-                      id="sceneFilter"
-                      ref={searchRef}
-                      className="flex-1"
-                      type="search"
-                      placeholder="Rechercher"
-                      value={bench.filter}
-                      onChange={(e) => bench.setFilter(e.target.value)}
-                    />
-                    {/* The filter is already live — clicking this does not
-                        trigger a search that keystrokes did not already run.
-                        It gives the search field a real, honest affordance
-                        instead of a decorative icon: it puts the cursor back
-                        in it, which is what one wants right after this
-                        click. */}
-                    <button
-                      type="button"
-                      className="btn sm"
-                      aria-label="Rechercher"
-                      onClick={() => searchRef.current?.focus()}
-                    >
-                      <Icon name="search" className="h-[15px] w-[15px]" />
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between gap-[8px]">
-                    <span className="tiny" id="nScenes">
-                      {bench.filter
-                        ? `${bench.shown.length} sur ${drafts.length}`
-                        : `${drafts.length} scènes`}
-                    </span>
-                    <div className="flex items-center gap-[6px]">
-                      {world && (
-                        <button
-                          className="btn sm"
-                          id="btnAddFromWorld"
-                          onClick={() => setCatalogueOpen(true)}
-                        >
-                          + Depuis le monde
-                        </button>
-                      )}
-                      <button className="btn primary sm" id="btnAddScene" onClick={bench.add}>
-                        + Ajouter une scène
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-                {drafts.length === 0 ? (
-                  <div className="empty rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-                    <b className="block mb-[4px]">Atelier vide</b>
-                    Ajoute une première scène avec « + Ajouter une scène » ci-dessus.
-                  </div>
-                ) : bench.shown.length === 0 ? (
-                  <div className="empty rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-                    aucune scène ne porte « {bench.filter} » — le filtre ne cache rien du document,
-                    il ne montre que ce qui répond.
-                  </div>
-                ) : (
-                  <SceneListPanel
-                    shown={bench.shown}
-                    creative={creative}
-                    filterActive={Boolean(bench.filter.trim())}
-                    previews={previews}
-                    stats={stats}
-                    selectedUid={bench.selected?.uid}
-                    imageUrl={api.image}
-                    onOpen={bench.select}
-                    listRef={bench.listRef}
-                    onKeyDown={bench.onListKeyDown}
-                  />
-                )}
-              </div>
-
-              <aside
-                /* CAP, not a forced size (reverted 31/08/2026 — a forced
-                   `h-[calc(100vh-150px)]` was tried to make a short tab visually
-                   fill the column, but "150px" is a GUESS at how much chrome
-                   sits above this aside — it was tuned against a 950px test
-                   viewport, and on a real, taller window it undershoots, so the
-                   forced box (and the Suivant/Précédent bar pinned to its
-                   bottom, since the audit's m2 fix) can extend past the actual
-                   visible viewport with no obvious cue that the primary
-                   navigation button is now off-screen. Reported live: it
-                   disappeared entirely. A `max-h` cap can only ever make the
-                   box SHORTER than its content demands (falling back to its own
-                   `overflow-auto` scrollbar, always reachable from where it
-                   already is) — it can never push a critical control past the
-                   fold the way a wrong forced height can.
-
-                   "150px" DROPPED TO "90px" (2026-09-01): that budget was
-                   guessing room for the top nav AND the fixed launch bar's own
-                   height at the bottom — the bar is gone (moved into the top
-                   row, see the file's opening comment), so only the top nav
-                   need be guessed for now. Being a CAP, an imprecise guess
-                   here only costs the aside its own internal scroll, never a
-                   hidden control — see the paragraph above. */
-                className="sticky top-[12px] max-h-[calc(100vh-90px)] overflow-auto
-                           max-[1100px]:static max-[1100px]:max-h-none"
-                id="bankInspector"
-              >
-                {bench.selected && worldLinked && (
-                  /* A GROUP of two buttons, not a tablist: it toggles which
-                     panel of the SAME inspector shows, no navigation and no
-                     `tabpanel` on either side — see SceneGrid/Scenes-Poses
-                     for why this studio reserves `tablist` for links that
-                     actually navigate. */
-                  <div
-                    role="group"
-                    aria-label="Cadre du lieu ou réglages du personnage"
-                    className="seg mb-[10px]"
-                  >
-                    <button
-                      type="button"
-                      className={`px-[13px] py-[6px] text-[12.5px]${bench.inspectorMode === 'character' ? ' on bg-acc font-semibold text-on-acc' : ' bg-transparent text-dim'}`}
-                      aria-pressed={bench.inspectorMode === 'character'}
-                      onClick={() => bench.setInspectorMode('character')}
-                    >
-                      Personnage
-                    </button>
-                    <button
-                      type="button"
-                      className={`px-[13px] py-[6px] text-[12.5px]${bench.inspectorMode === 'world' ? ' on bg-acc font-semibold text-on-acc' : ' bg-transparent text-dim'}`}
-                      aria-pressed={bench.inspectorMode === 'world'}
-                      onClick={() => bench.setInspectorMode('world')}
-                    >
-                      Monde
-                    </button>
-                  </div>
-                )}
-
-                {bench.selected && worldLinked && bench.inspectorMode === 'world' ? (
-                  selectedPlace ? (
-                    <PlaceInspector
-                      place={selectedPlace}
-                      worldLabel={world?.label ?? bench.selected.base.world ?? ''}
-                      saving={placeSaving}
-                      status={placeStatus}
-                      onSave={onSavePlace}
-                      onClose={bench.close}
-                    />
-                  ) : (
-                    <div className="empty rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-                      {worldPlaces.error ?? 'lieu introuvable dans le catalogue du monde'}
-                    </div>
-                  )
-                ) : bench.selected ? (
-                  <SceneInspector
-                    draft={bench.selected}
-                    creative={creative}
-                    poses={poses}
-                    produced={stats[bench.selected.base.id]?.n ?? null}
-                    preview={previews[bench.selected.base.id]}
-                    imageUrl={api.image}
-                    onPatch={(patch) => patchDraft(bench.selectedIndex, patch)}
-                    onRemove={() => void bench.remove(bench.selectedIndex)}
-                    onDuplicate={() => bench.duplicate(bench.selectedIndex)}
-                    onPrevScene={bench.hasPrevScene ? () => bench.stepScene(-1) : undefined}
-                    onNextScene={bench.hasNextScene ? () => bench.stepScene(1) : undefined}
-                    onClose={bench.close}
-                    onSaveDocument={onSave}
-                  />
-                ) : (
-                  <DocumentPane
-                    anchor={anchor}
-                    direction={direction}
-                    count={drafts.length}
-                    onAnchor={setAnchor}
-                    onDirection={setDirection}
-                  />
-                )}
-              </aside>
-            </div>
-          </div>
-        ) : view === 'poses' ? (
-          <PosesView />
+          <button
+            className="btn sm flex-none"
+            id="btnBankDocument"
+            aria-pressed={!bench.selected}
+            onClick={() => bench.select(null)}
+          >
+            Réglages de l'atelier
+          </button>
         ) : (
-          <TonesView />
+          <button
+            className="btn primary sm flex-none"
+            id="btnSaveScenes"
+            aria-label="Enregistrer"
+            data-hint-text={SAVE_HINT[view]}
+            onClick={onSave}
+          >
+            <Icon name="save" className="h-[15px] w-[15px]" />
+          </button>
         )}
       </div>
+
+      {view === 'scenes' && drift && <WorldDriftBand drift={drift} />}
+
+      {view === 'scenes' ? (
+        <div
+          id="bankScenes"
+          /* Three tracks while a scene is open, two when none is — an empty
+             340 px of « aperçu de rien » is not worth the width. Under
+             1100 px everything stacks in one scrolling column and the list
+             becomes the drawer above. */
+          /* Sous 1100 px la grille cede a une COLONNE qui defile d'un bloc
+             (§S6) : en restant une grille de hauteur definie, chaque piste
+             gardait sa part de l'ecran et le formulaire defilait dans 340 px
+             pendant que l'apercu occupait le reste — mesure a 1024. En flex
+             colonne, chaque bloc prend sa hauteur de contenu et c'est le
+             conteneur qui defile, une seule fois. */
+          className={`grid min-h-0 flex-1 overflow-y-auto max-[1100px]:flex
+                      max-[1100px]:flex-col ${
+                        bench.selected
+                          ? 'grid-cols-[260px_minmax(0,1fr)_340px]'
+                          : 'grid-cols-[260px_minmax(0,1fr)]'
+                      }`}
+        >
+          <div
+            ref={listPanelRef}
+            id="sceneListPanel"
+            aria-label="Scènes de l'atelier"
+            role={narrow ? 'dialog' : undefined}
+            className={`min-h-0 flex-col border-r border-r-line bg-panel ${
+              narrow
+                ? `fixed top-0 bottom-0 left-0 z-[9] w-[min(300px,100vw)] shadow-elev ${
+                    listOpen ? 'flex' : 'hidden'
+                  }`
+                : 'flex'
+            }`}
+          >
+            {narrow && (
+              <button
+                type="button"
+                className="flex-none self-end border-0 bg-transparent px-[12px] py-[8px] text-[16px] text-dim hover:text-txt"
+                aria-label="Fermer la liste des scènes"
+                onClick={closeList}
+              >
+                ×
+              </button>
+            )}
+
+            <div className="flex flex-none flex-col gap-[8px] border-b border-b-line px-[12px] py-[10px]">
+              <div className="flex items-center gap-[6px]">
+                {/* A real <label>, not a placeholder posing as one: the
+                    placeholder disappears at the first keystroke. It is
+                    removed VISUALLY (`sr-only` clips it) because the field
+                    sits in a toolbar, and it stays the control's accessible
+                    name. */}
+                <label className="sr-only" htmlFor="sceneFilter">
+                  filtrer les scènes
+                </label>
+                <input
+                  id="sceneFilter"
+                  ref={searchRef}
+                  className="flex-1"
+                  type="search"
+                  placeholder="Rechercher"
+                  value={bench.filter}
+                  onChange={(e) => bench.setFilter(e.target.value)}
+                />
+                {/* The filter is already live — clicking this does not trigger
+                    a search that keystrokes did not already run. It gives the
+                    search field a real, honest affordance instead of a
+                    decorative icon: it puts the cursor back in it, which is
+                    what one wants right after this click. */}
+                <button
+                  type="button"
+                  className="btn sm"
+                  aria-label="Rechercher"
+                  onClick={() => searchRef.current?.focus()}
+                >
+                  <Icon name="search" className="h-[15px] w-[15px]" />
+                </button>
+              </div>
+              <div className="flex items-center gap-[6px]">
+                <button className="btn primary sm flex-1" id="btnAddScene" onClick={bench.add}>
+                  Nouvelle scène
+                </button>
+                {world && (
+                  <button className="btn sm flex-1" id="btnAddFromWorld" onClick={() => setCatalogueOpen(true)}>
+                    Depuis le monde
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-[8px] py-[10px]">
+              {drafts.length === 0 ? (
+                <div className="empty rounded-card border border-line bg-panel px-[12px] py-[24px] text-[13px]">
+                  <b className="mb-[4px] block">Atelier vide</b>
+                  Ajoute une première scène avec « Nouvelle scène » ci-dessus.
+                </div>
+              ) : bench.shown.length === 0 ? (
+                <div className="empty rounded-card border border-line bg-panel px-[12px] py-[24px] text-[13px]">
+                  aucune scène ne porte « {bench.filter} » — le filtre ne cache rien du document,
+                  il ne montre que ce qui répond.
+                </div>
+              ) : (
+                <SceneListPanel
+                  shown={bench.shown}
+                  creative={creative}
+                  filterActive={Boolean(bench.filter.trim())}
+                  previews={previews}
+                  stats={stats}
+                  selectedUid={bench.selected?.uid}
+                  changedUids={changedUids}
+                  imageUrl={api.image}
+                  onOpen={(uid) => {
+                    bench.select(uid)
+                    if (narrow) closeList()
+                  }}
+                  listRef={bench.listRef}
+                  onKeyDown={bench.onListKeyDown}
+                />
+              )}
+            </div>
+          </div>
+
+          {/* `shrink-0` sous 1100 px : en colonne flex qui deborde, un enfant
+              retrecit au lieu de pousser le defilement — le formulaire se
+              retrouvait a defiler dans 340 px sous l'apercu. */}
+          <div className="flex min-h-0 min-w-0 flex-col bg-bg max-[1100px]:shrink-0">
+            {/* The header is HERE and not inside the composer: the Monde tab
+                replaces the whole column below it, and losing sight of which
+                scene is open at that exact moment is the one thing it must
+                not do (§S4.1). */}
+            {bench.selected && (
+              <SceneHeader
+                draft={bench.selected}
+                creative={creative}
+                produced={stats[bench.selected.base.id]?.n ?? null}
+                preview={previews[bench.selected.base.id]}
+                imageUrl={api.image}
+                changed={pending}
+                worldLinked={worldLinked}
+                inspectorMode={bench.inspectorMode}
+                onInspectorMode={bench.setInspectorMode}
+                onPrevScene={bench.hasPrevScene ? () => bench.stepScene(-1) : undefined}
+                onNextScene={bench.hasNextScene ? () => bench.stepScene(1) : undefined}
+                onDuplicate={() => bench.duplicate(bench.selectedIndex)}
+                onRemove={() => void bench.remove(bench.selectedIndex)}
+              />
+            )}
+
+            {bench.selected && worldLinked && bench.inspectorMode === 'world' ? (
+              <div className="min-h-0 flex-1 overflow-y-auto p-[20px] [&>*]:max-w-[880px]">
+                {selectedPlace ? (
+                  <PlaceInspector
+                    place={selectedPlace}
+                    worldLabel={world?.label ?? bench.selected.base.world ?? ''}
+                    saving={placeSaving}
+                    status={placeStatus}
+                    onSave={onSavePlace}
+                    onClose={bench.close}
+                  />
+                ) : (
+                  <div className="empty rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
+                    {worldPlaces.error ?? 'lieu introuvable dans le catalogue du monde'}
+                  </div>
+                )}
+              </div>
+            ) : bench.selected ? (
+              <SceneInspector
+                draft={bench.selected}
+                creative={creative}
+                poses={poses}
+                produced={stats[bench.selected.base.id]?.n ?? null}
+                changed={changed}
+                narrow={narrow}
+                onPatch={(patch) => patchDraft(bench.selectedIndex, patch)}
+                onPrevScene={bench.hasPrevScene ? () => bench.stepScene(-1) : undefined}
+                onNextScene={bench.hasNextScene ? () => bench.stepScene(1) : undefined}
+                onClose={bench.close}
+                onSaveDocument={onSave}
+              />
+            ) : (
+              <DocumentPane
+                anchor={anchor}
+                direction={direction}
+                count={drafts.length}
+                onAnchor={setAnchor}
+                onDirection={setDirection}
+              />
+            )}
+          </div>
+
+          {bench.selected && (
+            <ScenePreviewPanel
+              draft={bench.selected}
+              stats={stats[bench.selected.base.id]}
+              changed={pending}
+              className="max-[1100px]:w-auto max-[1100px]:overflow-visible max-[1100px]:border-l-0
+                         max-[1100px]:border-t max-[1100px]:border-t-line"
+            />
+          )}
+        </div>
+      ) : (
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="wrap w-full max-w-none pb-[24px]">
+            {view === 'poses' ? <PosesView /> : <TonesView />}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -482,14 +499,14 @@ function SubViewLink({
   return (
     <Link
       to={to}
-      /* `on` is kept as the marker of the current sub-view — it is what the
-         segmented control means, and what a reader looks for — but nothing
-         hangs off it any more: the two states are written here. */
+      /* `on` is what `.seg` itself styles (screens.css): a `--panel3` ground,
+         never an accent flat — the accent marks where one IS, it does not
+         paint controls (charte graphite, écran 0). */
       className={
         'inline-flex cursor-pointer items-center border-none px-[15px] py-[8px]' +
         ' text-[13.5px] no-underline focus-visible:outline-2' +
         ' focus-visible:outline-focus focus-visible:-outline-offset-2' +
-        (active ? ' on bg-acc font-semibold text-on-acc' : ' bg-transparent text-dim')
+        (active ? ' on bg-panel3 font-semibold text-txt' : ' bg-transparent text-dim')
       }
       data-vue={vue}
       aria-current={active ? 'page' : undefined}

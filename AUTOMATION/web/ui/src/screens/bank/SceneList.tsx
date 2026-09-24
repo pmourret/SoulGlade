@@ -30,6 +30,7 @@ export function SceneListRow({
   preview,
   stats,
   selected,
+  changed,
   imageUrl,
   onOpen,
 }: {
@@ -37,16 +38,23 @@ export function SceneListRow({
   preview?: ScenePreview
   stats?: { n: number; avg: number | null }
   selected: boolean
+  /** Holds edits `scenes.json` does not have yet (`sceneChanges`). */
+  changed: boolean
   imageUrl: (ref: Record<string, unknown>) => string
   onOpen: () => void
 }) {
   return (
     <button
       type="button"
-      className={`flex w-full items-center gap-[9px] rounded-[8px] border-2 bg-panel px-[8px] py-[6px]
-                 text-left [transition:border-color_.12s] focus-visible:outline-2
-                 focus-visible:outline-focus focus-visible:outline-offset-2 ${
-                   selected ? 'border-acc' : 'border-transparent hover:border-line2'
+      /* The current row is told by its GROUND plus an accent EDGE, not by a
+         full accent border (charte graphite, écran 0): the accent marks where
+         one is, it does not paint controls. */
+      className={`relative flex w-full items-center gap-[9px] rounded-[6px] px-[8px] py-[6px]
+                 text-left [transition:background-color_.12s] focus-visible:outline-2
+                 focus-visible:outline-focus focus-visible:-outline-offset-2 ${
+                   selected
+                     ? 'bg-panel3 font-semibold [box-shadow:inset_2px_0_0_var(--acc)]'
+                     : 'bg-transparent hover:bg-panel2'
                  }`}
       data-scene-card
       data-uid={draft.uid}
@@ -55,18 +63,29 @@ export function SceneListRow({
       onClick={onOpen}
     >
       <div
-        className="h-[42px] w-[34px] shrink-0 overflow-hidden rounded-[6px] bg-panel2 bg-cover bg-center"
+        className="h-[35px] w-[28px] shrink-0 overflow-hidden rounded-[5px] bg-panel2 bg-cover bg-center"
         style={preview ? { backgroundImage: `url('${imageUrl({ ...preview, thumb: true })}')` } : undefined}
       />
       <div className="min-w-0 flex-1">
-        <b className="block truncate text-[12.5px] font-semibold" data-card-id>
+        <b className="block truncate text-[12.5px]" data-card-id>
           {draft.id || '(sans identifiant)'}
         </b>
-        <span className="block truncate text-[10.5px] text-dim" data-card-produced>
-          {draft.format} · {draft.count} img ·{' '}
+        {/* `--dim` and not `--dim2`: the SELECTED row's ground is `--panel3`,
+            where `--dim2` falls to 4.27:1 — the one exception `tokens.css`
+            names, and a line of 11 px is exactly what it warns against. */}
+        <span className="block truncate text-[11px] text-dim" data-card-produced>
+          {draft.format} ·{' '}
           {stats ? `${stats.n} produite${stats.n > 1 ? 's' : ''}` : 'jamais produite'}
         </span>
       </div>
+      {changed && (
+        /* Never colour alone (frontend.md): the dot finds it, the clipped
+           word is what a screen reader hears. */
+        <>
+          <span aria-hidden="true" className="h-[6px] w-[6px] shrink-0 rounded-[50%] bg-warn" />
+          <span className="sr-only">modifiée</span>
+        </>
+      )}
     </button>
   )
 }
@@ -130,6 +149,7 @@ export function SceneListPanel({
   previews,
   stats,
   selectedUid,
+  changedUids,
   imageUrl,
   onOpen,
   listRef,
@@ -141,6 +161,8 @@ export function SceneListPanel({
   previews: Record<string, ScenePreview>
   stats: Record<string, { n: number; avg: number | null }>
   selectedUid: string | undefined
+  /** Uids of the drafts holding an unsaved edit (design pass screen-7b §S3). */
+  changedUids: Set<string>
   imageUrl: (ref: Record<string, unknown>) => string
   onOpen: (uid: string) => void
   listRef: RefObject<HTMLDivElement | null>
@@ -184,7 +206,7 @@ export function SceneListPanel({
                 which the two engines draw differently. */}
             <summary
               className="flex cursor-pointer list-none items-center gap-[6px] rounded-[6px]
-                         px-[4px] py-[4px] text-[11px] font-semibold uppercase
+                         px-[4px] py-[4px] text-[10.5px] font-semibold uppercase
                          tracking-[.5px] text-dim2 hover:text-dim
                          focus-visible:outline-2 focus-visible:outline-focus
                          focus-visible:outline-offset-2
@@ -204,6 +226,7 @@ export function SceneListPanel({
                   preview={previews[draft.base.id]}
                   stats={stats[draft.base.id]}
                   selected={selectedUid === draft.uid}
+                  changed={changedUids.has(draft.uid)}
                   imageUrl={imageUrl}
                   onOpen={() => onOpen(draft.uid)}
                 />

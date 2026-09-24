@@ -25,6 +25,7 @@ export function PromptField({
   disabled,
   lockedNote,
   accentColor,
+  changed,
 }: {
   /** `data-f` on the compact textarea — the browser fumigation's hook. */
   dataField: string
@@ -46,9 +47,15 @@ export function PromptField({
       composed preview below (design pass écran 7, §V4). Omitted everywhere
       else: a tab with only ONE fragment has nothing to disambiguate. */
   accentColor?: string
+  /** This fragment differs from the saved scene (design pass screen-7b
+      §S4.3). It OUTRANKS `accentColor`: "not saved yet" is the more urgent of
+      the two things a border can say, and the fragment's own colour is
+      repeated right beside it in the living preview. */
+  changed?: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const fieldId = `scene-prompt-${dataField}`
+  const border = changed ? 'var(--warn)' : accentColor
 
   return (
     <div className="f">
@@ -63,7 +70,7 @@ export function PromptField({
           id={fieldId}
           data-f={dataField}
           className="min-h-[78px] resize-y"
-          style={accentColor ? { borderColor: accentColor } : undefined}
+          style={border ? { borderColor: border } : undefined}
           value={value}
           placeholder={placeholder}
           disabled={disabled}
@@ -122,7 +129,7 @@ export function PromptField({
         <h3>{label}</h3>
         <textarea
           className="min-h-[320px] resize-y"
-          style={accentColor ? { borderColor: accentColor } : undefined}
+          style={border ? { borderColor: border } : undefined}
           value={value}
           disabled={disabled}
           onChange={(e) => onChange(e.target.value)}

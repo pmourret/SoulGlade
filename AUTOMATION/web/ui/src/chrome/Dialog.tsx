@@ -25,6 +25,7 @@ export function Dialog({
   dismissable = true,
   initialFocus,
   id,
+  role,
   className,
   cardClassName,
   onKeyDown,
@@ -38,6 +39,9 @@ export function Dialog({
   /** Selector focused first; the first focusable element otherwise. */
   initialFocus?: string
   id?: string
+  /** `alertdialog` for a box that interrupts to state a consequence — the
+      element's own implicit `dialog` role otherwise, which is the default. */
+  role?: 'alertdialog'
   /** Utilities added to the <dialog> ITSELF, for a box that does not take the
       shared geometry — the photo editor is a work surface, sized in vw/vh. The
       `dialog{…}` rule of `chrome.css` is an element selector, so a plain
@@ -121,7 +125,7 @@ export function Dialog({
   }, [dismissable, onDismiss])
 
   return (
-    <dialog id={id} className={className} ref={ref} onKeyDown={onKeyDown}>
+    <dialog id={id} role={role} className={className} ref={ref} onKeyDown={onKeyDown}>
       <div className={cardClassName ? `card ${cardClassName}` : 'card'}>{children}</div>
     </dialog>
   )
