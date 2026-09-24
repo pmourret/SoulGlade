@@ -310,6 +310,12 @@
           "t": "Banque de tons et éditeur d'expression"
         },
         {
+          "s": "faire",
+          "t": "Créer, renommer et supprimer un ton",
+          "d": "Aucun chemin de création d'un ton n'existe dans l'application : l'atelier règle la plage d'un ton déjà déclaré, et la route d'expression refuse une clé inconnue. Cadré le 25/09, construction après IT-9. L'arbitrage à confirmer : un ton créé appartient au personnage, pas à son monde.",
+          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
+        },
+        {
           "s": "fait",
           "t": "Lieux de monde avec héritage live",
           "d": "ADR-0015"
