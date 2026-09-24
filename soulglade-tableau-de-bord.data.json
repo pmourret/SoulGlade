@@ -955,6 +955,13 @@
         {
           "s": "faire",
           "it": "IT-9",
+          "t": "Cadres du navigateur : balayer aussi les états ouverts",
+          "d": "La fumigation transverse ne voit que l'état de repos des onze écrans : un bouton sans bordure déclarée dans une modale, un tiroir ou un panneau ouvert au clic lui échappe encore. Chaque écran restant ajoute ses propres états au balayage en passant.",
+          "ref": "AUTOMATION/tests/test_cadres_ua.js"
+        },
+        {
+          "s": "faire",
+          "it": "IT-9",
           "t": "Bilan graphique : ce que le studio doit tenir",
           "d": "Relecture des quatorze écrans d'un coup : ce qui s'est répété devient une règle, ce qui a dérivé se corrige. La charte vit dans styles/DESIGN.md, qui la porte déjà en partie, et sert de référence aux écrans suivants.",
           "ref": "AUTOMATION/web/ui/src/styles/DESIGN.md"
