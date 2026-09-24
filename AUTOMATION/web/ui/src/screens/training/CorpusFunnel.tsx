@@ -5,10 +5,13 @@
    (see `trainingSummary.ts`), the legend carries every number, and the drawing
    itself is `aria-hidden` — nothing is said by the colour alone.
 
-   THE NEVER-LABELLED ONES ARE NOT A FOURTH PART. They are a subset of the
-   queue, and the response never says how they cross the images missing from
-   disk. Drawing them over the left of the bar would claim they are exportable.
-   They get a sub-band spanning the queue alone. */
+   THE NEVER-LABELLED ONES ARE DRAWN APART, hatched, at the end of the bar (the
+   validated mockup, and Pierre's call on 25/09 after seeing both). They are a
+   SUBSET of the queue, not a fourth kind of image, and the response never says
+   how they cross the files missing from disk — so nothing but the legend may
+   say where they sit, and the legend does: « dans la file, absence de défaut
+   supposée ». The hatching is what keeps them from reading as a flat fourth
+   share. */
 import { SectionHead } from './SectionHead'
 import { type Counters, type Distribution, percent } from './trainingSummary'
 
@@ -69,35 +72,27 @@ export function CorpusFunnel({ counters, shape }:
               hint="comptées dans la file" />
       </dl>
 
-      <div aria-hidden="true" className="mt-[16px]">
-        <div className="flex h-[8px] overflow-hidden rounded-[3px] bg-panel2">
-          {shape.parts.map((part) => (
-            <span key={part.key} style={{ width: percent(part.span), background: part.color }} />
-          ))}
-        </div>
-        {/* Spans the queue alone, never the whole bar. */}
-        <div className="relative mt-[3px] h-[4px]">
-          <span className="absolute inset-y-0 left-0 rounded-[2px] bg-panel2"
-                style={{ width: percent(shape.queueSpan) }} />
-          <span className="absolute inset-y-0 left-0 rounded-[2px]"
-                style={{ width: percent(shape.unlabelledSpan), backgroundImage: HATCH }} />
-        </div>
+      <div aria-hidden="true"
+           className="mt-[16px] flex h-[8px] overflow-hidden rounded-[3px] bg-panel2">
+        {shape.parts.map((part) => (
+          <span
+            key={part.key}
+            style={part.hatched
+              ? { width: percent(part.span), backgroundImage: HATCH }
+              : { width: percent(part.span), background: part.color }}
+          />
+        ))}
       </div>
 
       <ul className="m-0 mt-[10px] flex list-none flex-wrap gap-x-[18px] gap-y-[5px] p-0
                      text-[12px] text-dim">
         {shape.parts.map((part) => (
           <li key={part.key} className="flex items-center gap-[6px]">
-            <Pill color={part.color} />
+            <Pill color={part.color} hatched={part.hatched} />
             {part.label} <b className="font-[600] tabular-nums text-txt">{part.value}</b>
+            {part.note ? <span className="text-dim2">({part.note})</span> : null}
           </li>
         ))}
-        <li className="flex items-center gap-[6px]">
-          <Pill hatched />
-          jamais étiquetées{' '}
-          <b className="font-[600] tabular-nums text-txt">{counters.sans_etiquette}</b>
-          <span className="text-dim2">(dans la file, absence de défaut supposée)</span>
-        </li>
       </ul>
     </section>
   )

@@ -33,30 +33,34 @@ export type ActiveSet = { id?: number; sante?: number | null } | null
 
 /** `span` is the fraction of the bar this part takes, 0 to 1. The denominator
     stays in this file on purpose: it is a drawing ratio, and printing it would
-    turn three counters of three natures into one announced total. */
-export type Part = { key: string; label: string; value: number; color: string; span: number }
+    turn four counters of four natures into one announced total. */
+export type Part = {
+  key: string; label: string; value: number; span: number
+  color?: string
+  /** Hatched instead of flat: this part is not of the same kind as the others.
+      The never-labelled ones are a SUBSET of the queue, so they are drawn
+      apart, and the legend spells out where they sit. */
+  hatched?: boolean
+  note?: string
+}
 
 export type Distribution = {
-  /** Disjoint parts, left to right. Their sum is deliberately never printed. */
+  /** Left to right, as the validated mockup lays them out. Their sum is
+      deliberately never printed. */
   parts: Part[]
-  /** Fraction of the bar the queue spans, 0 to 1 — what the sub-band covers. */
-  queueSpan: number
-  /** Fraction of the bar the never-labelled ones represent, 0 to 1. */
-  unlabelledSpan: number
 }
 
 export function distribution(c: Counters): Distribution {
-  const raw = [
+  const raw: Omit<Part, 'span'>[] = [
     { key: 'exportables', label: 'exportables', value: c.exportables, color: 'var(--ok)' },
     { key: 'sans_fichier', label: 'sans fichier', value: c.sans_fichier, color: 'var(--dim2)' },
     { key: 'ecartes', label: 'écartées', value: c.ecartes, color: 'var(--bad)' },
+    { key: 'sans_etiquette', label: 'jamais étiquetées', value: c.sans_etiquette,
+      hatched: true, note: 'dans la file, absence de défaut supposée' },
   ]
   const total = raw.reduce((sum, part) => sum + part.value, 0)
-  const span = (value: number) => (total > 0 ? value / total : 0)
   return {
-    parts: raw.map((part) => ({ ...part, span: span(part.value) })),
-    queueSpan: span(c.file),
-    unlabelledSpan: span(c.sans_etiquette),
+    parts: raw.map((part) => ({ ...part, span: total > 0 ? part.value / total : 0 })),
   }
 }
 

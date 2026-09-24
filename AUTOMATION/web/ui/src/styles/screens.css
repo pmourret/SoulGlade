@@ -92,10 +92,13 @@ details.adv summary:focus-visible{outline:2px solid var(--focus);outline-offset:
 #trainingFolds details.adv summary{display:flex;align-items:baseline;gap:10px;
   padding:9px 12px;border-top:0}
 #trainingFolds details.adv[open] > :not(summary){margin:0 12px 12px}
-/* The reason belongs NEXT to the file it is about. `table{width:100%}` pushed
-   it to the far side of a 1180 px column, where the eye has to travel the
-   width of the screen to pair two words. */
-#trainingFolds table{width:auto;min-width:min(100%,520px)}
+/* The table spans the fold, so its rules run the full width like every other
+   list on the screen — but the reason stays NEXT to the file it is about
+   rather than at the far side of a 2000 px column. A width hint on the first
+   column does both: automatic layout honours it while the content fits, and
+   grows it for a longer name instead of clipping. */
+#trainingFolds table{width:100%}
+#trainingFolds th:first-child,#trainingFolds td:first-child{width:340px}
 #trainingFolds td,#trainingFolds th{padding-right:28px}
 
 /* --------------------------------------------------------------- chips

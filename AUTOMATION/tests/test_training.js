@@ -80,10 +80,15 @@ const ECRAN = `${BASE}/training?character=lena`;
      et des fichiers : elle sert a dessiner des largeurs, jamais a etre lue.
      Verifie dans l'entonnoir seul, ou aucun autre nombre ne circule. */
   const somme = json.compteurs.exportables + json.compteurs.sans_fichier
-              + json.compteurs.ecartes;
+              + json.compteurs.ecartes + json.compteurs.sans_etiquette;
   const entonnoir = (await page.textContent('#corpusFunnel')).replace(/\s+/g, ' ');
   dire(!new RegExp(`(^|\\D)${somme}(\\D|$)`).test(entonnoir),
        `la somme des parts (${somme}) n'est ecrite nulle part dans l'entonnoir`);
+  // La quatrieme part est HACHUREE, jamais un aplat : les jamais etiquetees
+  // sont un sous-ensemble de la file, pas une quatrieme nature d'image.
+  const hachure = await page.$$eval('#corpusFunnel [aria-hidden] > span',
+    (e) => e.filter((x) => getComputedStyle(x).backgroundImage.includes('repeating')).length);
+  dire(hachure === 1, `une part hachuree et une seule (${hachure})`);
 
   console.log('\n[2bis] le verdict se lit en toutes lettres, pas en couleur');
   const verdict = (await page.textContent('#trainVerdict')).replace(/\s+/g, ' ');
