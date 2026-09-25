@@ -101,6 +101,15 @@ persisté tant que le bouton n'est pas actionné.
   Le pouce est un **composant d'interface** : contraste non-textuel ≥ 3:1
   (WCAG 1.4.11) contre `--bg`, `--panel` **et** `--panel2`, les trois fonds où
   il apparaît. Mesuré : 3,93 / 3,60 / 3,16.
+- **Traces** *(ajouté le 25/09/2026, design-pass écran 10)* — `--graph` (barres
+  d'un histogramme sur `--panel`), `--tick` (repère de neutre sur la piste d'un
+  curseur). Deux gris plus sourds que `--line2`, et la seule famille de jetons
+  à laquelle **aucun seuil de contraste ne s'applique** : ce ne sont ni du
+  texte, ni ce qui identifie un contrôle ou son état. Un curseur dit sa valeur
+  par son pouce, son remplissage et son nombre ; le repère est un repère de
+  lecture, pas l'information. Ils sont ici et pas en dur dans leurs deux
+  composants pour la raison habituelle : un univers qui reteint le studio doit
+  les reteindre sans rouvrir un fichier de composant.
 - **Typographie** — `--font` (texte courant), `--font-mono` (`.kbd`, raccourcis).
 - **Forme** — `--r` (rayon des cartes), `--maxw` (largeur max du contenu centré).
   `--maxw` ne gouverne plus **tous** les écrans depuis le 29/08/2026 : Créer est

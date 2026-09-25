@@ -41,8 +41,9 @@ import {
 } from './photoEditorPixels'
 import {
   ACTIONS, BOX, BTNS, BTNS2, CANVAS, CANVAS_WRAP, CARD, CLOSE, CROP_BOX, FLIP_ON,
-  FRAME, HANDLE, HANDLES, HEAD, LAB, ROW, SEC, SIDE, SLIDER, STAGE, STAGE_SCROLL, VAL,
+  FRAME, HANDLE, HANDLES, HEAD, LAB, SEC, SIDE, STAGE, STAGE_SCROLL, THIRDS,
 } from './photoEditorStyles'
+import { AdjustSlider } from '../../chrome/AdjustSlider'
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { Dialog } from '../../chrome/Dialog'
 import { useRovingChoice } from '../../chrome/useRovingChoice'
@@ -554,6 +555,7 @@ export function PhotoEditor({
                   startDrag('move', event)
                 }}
               >
+                <div aria-hidden="true" className={THIRDS} />
                 {['nw', 'ne', 'sw', 'se'].map((handle) => (
                   <div
                     key={handle}
@@ -579,22 +581,39 @@ export function PhotoEditor({
 
         <div className={SIDE}>
           <div className={HEAD}>
-            <div className="flex min-w-0 items-center gap-[10px]">
-              <h3 className="m-0 text-[16px]">Éditer</h3>
-              <button type="button" className="link shrink-0" id="edAdvanced" onClick={() => void goAdvanced()}>
-                Éditeur avancé →
-              </button>
-            </div>
+            <h3 className="m-0 shrink-0 text-[15px] font-[650]">Éditer</h3>
+            <div className="flex-1" />
+            {/* No « → » in the label any more (§S7): a real button that
+                navigates does not need a glyph to say it leaves. */}
+            <button className="btn sm shrink-0" id="edAdvanced" onClick={() => void goAdvanced()} type="button">
+              Éditeur avancé
+            </button>
             <button
+              aria-label="Fermer l'éditeur"
               className={CLOSE}
               id="edClose"
-              aria-label="Fermer l'éditeur"
               onClick={() => void requestClose()}
             >
               ✕
             </button>
           </div>
-          <p className="tiny mt-[4px] mb-[16px] break-all" id="edFichier">
+          {/* §S7 puts the file name IN the 48 px header. It does not fit:
+              measured on the real DOM, four items left it 51 px for 138 px
+              of text — « _TEST_… », which names nothing. It keeps the line
+              under the header instead, where it has the panel's full 300 px,
+              and the `title` gives the rest for a genuinely long name. */}
+          {/* `shrink-0` is not decoration. `truncate` carries
+              `overflow:hidden`, which turns a flex item's automatic minimum
+              size off — and this panel overflows (measured 871 px of content
+              for 826 px of room), so the paragraph was squeezed to a height
+              of ZERO. It was in the DOM, it measured 259 px wide, and it
+              painted nothing. Found by measuring the computed box after a
+              screenshot showed a gap where the name should be. */}
+          <p
+            className="m-0 mt-[10px] mb-[16px] shrink-0 truncate text-[12px] text-dim2"
+            id="edFichier"
+            title={item.name}
+          >
             {item.name}
           </p>
 
@@ -668,37 +687,34 @@ export function PhotoEditor({
 
           <div className={SEC}>
             <div className={LAB}>Rotation</div>
-            <div className="flex items-center gap-[10px]">
-              <button className="btn sm" id="edRotL" onClick={() => rotate(-1)}>
+            {/* Three equal secondaries (§S7): they are three gestures of the
+                same rank, and the ragged row they made before said one was
+                bigger than the others when none is. */}
+            <div className="mb-[10px] grid grid-cols-3 gap-[6px]">
+              <button className="btn sm !px-0" id="edRotL" onClick={() => rotate(-1)}>
                 <span aria-hidden="true">↺</span> 90°
               </button>
-              <button className="btn sm" id="edRotR" onClick={() => rotate(1)}>
+              <button className="btn sm !px-0" id="edRotR" onClick={() => rotate(1)}>
                 90° <span aria-hidden="true">↻</span>
               </button>
               <button
-                className={`btn sm${settings.flip ? FLIP_ON : ''}`}
-                id="edFlip"
                 aria-pressed={settings.flip}
+                className={`btn sm !px-0${settings.flip ? FLIP_ON : ''}`}
+                id="edFlip"
                 onClick={() => patch('flip', !settings.flip)}
               >
                 <span aria-hidden="true">⇄</span> Miroir
               </button>
             </div>
-            <div className={ROW}>
-              <label htmlFor="edStraighten">redresser</label>
-              <span className={VAL} id="v_edStraighten">
-                {settings.straighten}°
-              </span>
-            </div>
-            <input
-              className={SLIDER}
-              type="range"
+            <AdjustSlider
               id="edStraighten"
-              min={-15}
+              label="redresser"
               max={15}
+              min={-15}
+              onChange={(value) => patch('straighten', value)}
               step={0.5}
+              suffix="°"
               value={settings.straighten}
-              onChange={(e) => patch('straighten', Number(e.target.value))}
             />
             {/* Straightening without cropping trims the corners at save time.
                 The screen shows the tilted image WITH its empty corners: we say
@@ -714,24 +730,16 @@ export function PhotoEditor({
           <div className={SEC}>
             <div className={LAB}>Colorimétrie</div>
             {SLIDERS.map((slider) => (
-              <div key={slider.key}>
-                <div className={ROW}>
-                  <label htmlFor={slider.id}>{slider.label}</label>
-                  <span className={VAL} id={`v_${slider.id}`}>
-                    {settings[slider.key]}
-                  </span>
-                </div>
-                <input
-                  className={SLIDER}
-                  type="range"
-                  id={slider.id}
-                  min={slider.min}
-                  max={slider.max}
-                  step={slider.step}
-                  value={settings[slider.key]}
-                  onChange={(e) => patch(slider.key, Number(e.target.value))}
-                />
-              </div>
+              <AdjustSlider
+                id={slider.id}
+                key={slider.key}
+                label={slider.label}
+                max={slider.max}
+                min={slider.min}
+                onChange={(value) => patch(slider.key, value)}
+                step={slider.step}
+                value={settings[slider.key]}
+              />
             ))}
           </div>
 
@@ -742,21 +750,13 @@ export function PhotoEditor({
                 — manuel, sans rapport avec le grain calibré de la production
               </span>
             </div>
-            <div className={ROW}>
-              <label htmlFor="edGrain">quantité</label>
-              <span className={VAL} id="v_edGrain">
-                {settings.grain}
-              </span>
-            </div>
-            <input
-              className={SLIDER}
-              type="range"
+            <AdjustSlider
               id="edGrain"
-              min={0}
+              label="quantité"
               max={100}
-              step={1}
+              min={0}
+              onChange={(value) => patch('grain', value)}
               value={settings.grain}
-              onChange={(e) => patch('grain', Number(e.target.value))}
             />
           </div>
 
@@ -794,17 +794,23 @@ export function PhotoEditor({
               <button className="btn sm w-full" id="edReset" onClick={reset}>
                 Réinitialiser
               </button>
-              <button className="link" id="edCancel" onClick={() => void requestClose()}>
-                annuler
-              </button>
-              <button
-                className="btn primary w-full"
-                id="edSave"
-                disabled={!ready || busy}
-                onClick={() => save(false)}
-              >
-                Enregistrer une copie
-              </button>
+              {/* The foot is one line (§S7): the way out on the left as a
+                  link, the primary on the right. Stacked full-width as
+                  before, « annuler » read like a third button of equal
+                  weight to the one that saves. */}
+              <div className="flex items-center justify-between gap-[10px]">
+                <button className="link shrink-0" id="edCancel" onClick={() => void requestClose()}>
+                  annuler
+                </button>
+                <button
+                  className="btn primary"
+                  disabled={!ready || busy}
+                  id="edSave"
+                  onClick={() => save(false)}
+                >
+                  Enregistrer une copie
+                </button>
+              </div>
             </div>
             <div className={BTNS2}>
               <button

@@ -48,7 +48,6 @@ export function usePhotoEditorAdvanced(source: PhotoEditorAdvancedSource) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
-  const [beforeAfter, setBeforeAfter] = useState(false)
   const [imageEl, setImageEl] = useState<HTMLImageElement | null>(null)
   const [imageError, setImageError] = useState(false)
 
@@ -133,11 +132,11 @@ export function usePhotoEditorAdvanced(source: PhotoEditorAdvancedSource) {
   /** ALWAYS a fresh, STRUCTURAL step — add/remove a layer, apply a preset:
       design-pass §7b calls these out explicitly as one grouped undo step
       each, and they are what the History panel actually lists. */
-  const pushAction = useCallback((updater: (current: Layer[]) => Layer[], label: string) => {
+  const pushAction = useCallback((updater: (current: Layer[]) => Layer[], label: string, structural = true) => {
     setHist((h) => {
       const current = h.entries[h.cursor].layers
       const next = updater(current)
-      const entries = [...h.entries.slice(0, h.cursor + 1), { layers: next, label, structural: true }]
+      const entries = [...h.entries.slice(0, h.cursor + 1), { layers: next, label, structural }]
       return { entries, cursor: entries.length - 1 }
     })
     // A fresh gesture right after must not merge into what was just pushed
@@ -166,6 +165,28 @@ export function usePhotoEditorAdvanced(source: PhotoEditorAdvancedSource) {
       )
     },
     [push, selectedLayerId],
+  )
+
+  /** A settings write that is ONE step, never merged into the drag that
+      may have just preceded it — what §S5.3's « Réinitialiser » and §S6's
+      double-click-to-neutral both need, and what `push` above cannot give
+      (its 400 ms window would swallow a reset landing right after a drag).
+
+      A `label` makes it a STRUCTURAL step, so it earns a line in the
+      Historique panel: a section put back at neutral is an action one
+      looks for afterwards. Without a label it is a plain, uncoalesced
+      step — a single slider sent back to its neutral is a value change,
+      not an action, and would only be noise in that list. */
+  const commitSelectedSettings = useCallback(
+    (patch: Partial<LayerSettings>, label = '') => {
+      pushAction(
+        (current) =>
+          current.map((l) => (l.id === selectedLayerId ? { ...l, settings: { ...l.settings, ...patch } } : l)),
+        label,
+        Boolean(label),
+      )
+    },
+    [pushAction, selectedLayerId],
   )
 
   const addLayer = useCallback(
@@ -257,10 +278,10 @@ export function usePhotoEditorAdvanced(source: PhotoEditorAdvancedSource) {
     loading, loadError, imageEl, imageError,
     layers, selectedLayer, selectedLayerId, selectLayer: setSelectedLayerId,
     dirty, saving,
-    updateSelectedSettings, addLayer, removeLayer, toggleVisible, setOpacity, reorder, applyPreset,
+    updateSelectedSettings, commitSelectedSettings,
+    addLayer, removeLayer, toggleVisible, setOpacity, reorder, applyPreset,
     undo, redo, canUndo, canRedo, jumpTo,
     history: hist.entries, historyCursor: hist.cursor,
-    beforeAfter, setBeforeAfter,
     save,
   }
 }

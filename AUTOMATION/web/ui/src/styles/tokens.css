@@ -148,6 +148,19 @@
      soit les ratios d'avant (3.93 / 3.60 / 3.16) a la teinte pres. */
   --sb:#727272; --sb-h:#949494; --sb-l:10px;
 
+  /* Deux gris de TRACE, ajoutes le 25/09/2026 (design-pass screen-10, §S5.1
+     et §S6). Ils ne portent jamais de texte et ne delimitent rien : ce sont
+     des marques a lire du coin de l'oeil — les barres d'un histogramme, le
+     repere de neutre sur la piste d'un curseur. Aucun seuil de contraste ne
+     s'y applique donc, ni 4.5:1 (pas du texte) ni 3:1 (WCAG 1.4.11 vise ce
+     qui identifie un controle ou son etat, pas un ornement de lecture ; le
+     curseur dit sa valeur par son pouce, son remplissage et son nombre).
+     Ils vivent ici plutot qu'en dur dans les deux composants pour la raison
+     qui vaut pour tout le reste : un univers qui reteint le studio les
+     reteint avec, sans rouvrir un fichier de composant. */
+  --graph:#5a5a5a;     /* barres d'un histogramme sur --panel */
+  --tick:#4a4a4a;      /* repere de neutre sur une piste de curseur */
+
   /* --- typographie. Base 14 px : une densite de poste de travail, pas de
      page de lecture. Un vrai changement de famille impliquerait d'embarquer
      des fichiers de police (hors contrat tokens-only, en tension avec la

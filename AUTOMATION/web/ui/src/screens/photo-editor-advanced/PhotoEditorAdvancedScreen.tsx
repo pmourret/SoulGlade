@@ -2,23 +2,27 @@
    /:name`, `bucket`/`space` as query params (see routes.ts's own note on why
    a photo resolves fully from those three, unlike the from-scratch pose
    flow's router `state`). Reached from the simplified modal's "Éditeur
-   avancé →" link (screens/review/PhotoEditor.tsx).
+   avancé" button (screens/review/PhotoEditor.tsx).
+
+   THREE ZONES, EDGE TO EDGE (design-pass screen-10 §S1): the rounded cards
+   and the centred `.wrap` are gone. The window is the workbench, each panel
+   scrolls on its own, and the page itself never does.
 
    Composition only (frontend.md): state/gestures live in
    usePhotoEditorAdvanced.ts, the compositing math in
    photoEditorLayersPixels.ts. This file owns the one thing neither of those
    should — the canvas ref and the draw effect, same split PhotoEditor.tsx
    itself uses for its own single-layer canvas. */
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 
 import { screenForImage } from '../../app/routes'
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { useToast } from '../../chrome/ToastContext'
 import { useZoomPan } from '../../chrome/useZoomPan'
-import { ZoomControls } from '../../chrome/ZoomControls'
 import { AdvancedColorPanel } from './AdvancedColorPanel'
 import { AiRetouchPanel } from './AiRetouchPanel'
+import { EditorTopBar, type PreviewMode } from './EditorTopBar'
 import { Histogram } from './Histogram'
 import { HistoryPanel } from './HistoryPanel'
 import { LayerList } from './LayerList'
@@ -26,11 +30,18 @@ import { LayerSettingsPanel } from './LayerSettingsPanel'
 import { renderMaskAlpha } from './maskMath'
 import { DEFAULT_MASK } from './MaskPicker'
 import { PerspectivePanel } from './PerspectivePanel'
-import { composeLayers, computeHistogram, NEUTRAL_SETTINGS, type Mask } from './photoEditorLayersPixels'
+import {
+  composeLayers, computeHistogram, NEUTRAL_SETTINGS, PRESETS, type Layer, type Mask,
+} from './photoEditorLayersPixels'
 import { PresetsPanel } from './PresetsPanel'
+import { PreviewStage, type CanvasGeom } from './PreviewStage'
 import { SharpenBlurPanel } from './SharpenBlurPanel'
 import { usePhotoEditorAdvanced } from './usePhotoEditorAdvanced'
-import { UndoRedoButtons } from '../pose-editor/UndoRedoButtons'
+
+const SHELL = 'screen flex h-full min-h-0 flex-col overflow-hidden'
+const LEFT = 'flex w-[220px] shrink-0 flex-col overflow-y-auto border-r border-line p-[12px] max-[1100px]:hidden'
+const ASIDE =
+  'flex w-[360px] shrink-0 flex-col overflow-y-auto border-l border-line p-[12px] max-[1100px]:w-[320px]'
 
 export function PhotoEditorAdvancedScreen() {
   const { name } = useParams<{ name: string }>()
@@ -48,22 +59,36 @@ function PhotoEditorAdvancedInner({ bucket, space, name }: { bucket: string; spa
     loading, loadError, imageEl, imageError,
     layers, selectedLayer, selectedLayerId, selectLayer,
     dirty, saving,
-    updateSelectedSettings, addLayer, removeLayer, toggleVisible, setOpacity, reorder, applyPreset,
+    updateSelectedSettings, commitSelectedSettings,
+    addLayer, removeLayer, toggleVisible, setOpacity, reorder, applyPreset,
     undo, redo, canUndo, canRedo,
     history, historyCursor, jumpTo,
-    beforeAfter, setBeforeAfter,
     save,
   } = usePhotoEditorAdvanced({ bucket, space, name })
 
   const [tab, setTab] = useState<'presets' | 'history'>('presets')
+  const [leftOpen, setLeftOpen] = useState(false)
+  const [mode, setMode] = useState<PreviewMode>('reglages')
+  const [curtain, setCurtain] = useState(50)
+  /* The preset under the pointer (or under focus), shown but NOT applied
+     (§S3). It is deliberately not state the history knows about: nothing
+     has happened yet. */
+  const [previewPreset, setPreviewPreset] = useState<string | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const stageRef = useRef<HTMLDivElement | null>(null)
   const [histogram, setHistogram] = useState<number[] | null>(null)
+  const [geom, setGeom] = useState<CanvasGeom>({ left: 0, top: 0, width: 0, height: 0 })
   const zoom = useZoomPan({
     stageRef,
     naturalWidth: imageEl?.naturalWidth ?? 0,
     naturalHeight: imageEl?.naturalHeight ?? 0,
   })
+
+  /* Which preset the CURRENT history entry applied — derived from the entry
+     itself rather than remembered on click, so the outline in the tile grid
+     follows undo and redo without a second piece of state to keep in sync. */
+  const appliedPresetId =
+    PRESETS.find((p) => history[historyCursor]?.label === `Préréglage appliqué — ${p.label}`)?.id ?? null
 
   /* Mask placement (design-pass §7b masquage — shared by selective blur
      AND AI retouch, same `Mask` field shape, different `LayerSettings`
@@ -97,16 +122,43 @@ function PhotoEditorAdvancedInner({ bucket, space, name }: { bucket: string; spa
     canvas.style.height = `${Math.round(imageEl.naturalHeight * zoom.displayScale)}px`
     const ctx = canvas.getContext('2d')
     if (!ctx) return
-    // Avant/après (same contract as PhotoEditor.tsx's own): every layer's
-    // COLOUR settings swap to neutral, nothing else about the stack
-    // (visibility/opacity/order) changes — it previews colour work only.
-    const displayLayers = beforeAfter ? layers.map((l) => ({ ...l, settings: NEUTRAL_SETTINGS })) : layers
-    composeLayers(ctx, canvas.width, canvas.height, imageEl, displayLayers)
+
+    /* Avant/après (same contract as PhotoEditor.tsx's own): every layer's
+       COLOUR settings swap to neutral, nothing else about the stack
+       (visibility/opacity/order) changes — it previews colour work only. */
+    const neutralLayers: Layer[] = layers.map((l) => ({ ...l, settings: NEUTRAL_SETTINGS }))
+    const preset = previewPreset ? PRESETS.find((p) => p.id === previewPreset) : undefined
+    const shownLayers: Layer[] = preset
+      ? layers.map((l) =>
+          l.id === selectedLayerId ? { ...l, settings: { ...l.settings, ...preset.settings } } : l,
+        )
+      : (layers as Layer[])
+
+    if (mode === 'avant') {
+      composeLayers(ctx, canvas.width, canvas.height, imageEl, neutralLayers)
+    } else if (mode === 'rideau') {
+      /* THE CURTAIN IS TWO COMPOSITIONS AND A CLIP, on this same canvas —
+         no second rendering path, and not one line of
+         photoEditorLayersPixels.ts touched. Measured before being chosen
+         (2026-09-25): one composition never dropped a frame, at three
+         layers or at native resolution, so two never cost more than two. */
+      composeLayers(ctx, canvas.width, canvas.height, imageEl, neutralLayers)
+      const split = Math.round((curtain / 100) * canvas.width)
+      ctx.save()
+      ctx.beginPath()
+      ctx.rect(split, 0, canvas.width - split, canvas.height)
+      ctx.clip()
+      composeLayers(ctx, canvas.width, canvas.height, imageEl, shownLayers)
+      ctx.restore()
+    } else {
+      composeLayers(ctx, canvas.width, canvas.height, imageEl, shownLayers)
+    }
+
     setHistogram(computeHistogram(ctx, canvas.width, canvas.height))
     // A red tint over whatever the currently-edited mask (blur or AI)
     // currently covers — painted OVER the composited result, on this same
     // canvas, only while actively editing it. Never persisted: the very
-    // next redraw (any layers/beforeAfter change) recomputes from
+    // next redraw (any layers/mode change) recomputes from
     // `composeLayers` fresh.
     if (maskEditTarget && selectedLayer) {
       const mask = (maskEditTarget === 'blur' ? selectedLayer.settings.blurMask : selectedLayer.settings.aiMask) ?? DEFAULT_MASK
@@ -125,10 +177,21 @@ function PhotoEditorAdvancedInner({ bucket, space, name }: { bucket: string; spa
         ctx.putImageData(overlay, 0, 0)
       }
     }
+    /* Where the canvas actually LANDED inside its scroller, for the curtain
+       overlay. Measured HERE rather than in PreviewStage because a child's
+       layout effects run before its parent's: measuring down there would
+       read the size this effect is about to replace. */
+    setGeom((current) =>
+      current.left === canvas.offsetLeft && current.top === canvas.offsetTop
+      && current.width === canvas.offsetWidth && current.height === canvas.offsetHeight
+        ? current
+        : { left: canvas.offsetLeft, top: canvas.offsetTop, width: canvas.offsetWidth, height: canvas.offsetHeight },
+    )
     // Must run after the canvas has actually been resized above — see
     // useZoomPan.ts's own note on why this isn't an effect inside the hook.
     zoom.applyPendingScrollAdjust()
-  }, [imageEl, layers, beforeAfter, maskEditTarget, selectedLayer, zoom.displayScale, zoom.applyPendingScrollAdjust])
+  }, [imageEl, layers, mode, curtain, previewPreset, maskEditTarget, selectedLayer, selectedLayerId,
+      zoom.displayScale, zoom.applyPendingScrollAdjust])
 
   const toImageSpace = (event: { clientX: number; clientY: number }) => {
     const canvas = canvasRef.current
@@ -200,28 +263,63 @@ function PhotoEditorAdvancedInner({ bucket, space, name }: { bucket: string; spa
     document.addEventListener('pointerup', stopMaskDrag, { once: true })
   }
 
-  const onAsideKeyDown = (event: React.KeyboardEvent) => {
-    if (!(event.ctrlKey || event.metaKey)) return
-    const key = event.key.toLowerCase()
-    if (key === 'z') {
-      event.preventDefault()
-      if (event.shiftKey) redo()
-      else undo()
-    } else if (key === 'y') {
-      event.preventDefault()
-      redo()
-    }
-  }
+  /* ON THE DOCUMENT, not on the shell (changed 2026-09-25).
 
-  const onSaveCopy = async () => {
-    if (!imageEl) return
+     It used to be an elevated React handler wrapping the top bar and both
+     panels, which covered every control — right up to the moment a control
+     UNMOUNTS under its own click. « Réinitialiser » disappears the instant
+     the section it resets is neutral, and the context menu's « Supprimer »
+     disappears with the layer: focus falls back to `<body>`, which is not
+     inside the shell, and the very next Ctrl+Z went nowhere. Found by the
+     fumigation, not by reading the JSX — the handler looked right.
+
+     Undo is expected to work wherever focus happens to be in an editor, so
+     the listener belongs to the document for as long as this screen is
+     mounted. `\` keeps its guard: the AI instruction field and the HSL
+     number fields must be allowed to contain a backslash. */
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.ctrlKey || event.metaKey) {
+        const key = event.key.toLowerCase()
+        if (key === 'z') {
+          event.preventDefault()
+          if (event.shiftKey) redo()
+          else undo()
+        } else if (key === 'y') {
+          event.preventDefault()
+          redo()
+        }
+        return
+      }
+      if (event.key === 'Escape' && maskEditTarget) {
+        event.preventDefault()
+        setMaskEditTarget(null)
+        return
+      }
+      const target = event.target as HTMLElement | null
+      if (event.key === '\\' && !['INPUT', 'TEXTAREA'].includes(target?.tagName ?? '')) {
+        event.preventDefault()
+        setMode((current) => (current === 'avant' ? 'reglages' : 'avant'))
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [undo, redo, maskEditTarget])
+
+  const exportCanvas = () => {
+    if (!imageEl) return null
     const canvas = document.createElement('canvas')
     canvas.width = imageEl.naturalWidth
     canvas.height = imageEl.naturalHeight
     const ctx = canvas.getContext('2d')
-    if (!ctx) return
+    if (!ctx) return null
     composeLayers(ctx, canvas.width, canvas.height, imageEl, layers)
-    const dataBase64 = canvas.toDataURL('image/png').split(',')[1]
+    return canvas.toDataURL('image/png').split(',')[1]
+  }
+
+  const onSaveCopy = async () => {
+    const dataBase64 = exportCanvas()
+    if (!dataBase64) return
     const result = await save(dataBase64)
     toast(result.ok ? `copie enregistrée : ${result.name}` : result.erreur)
   }
@@ -244,203 +342,192 @@ function PhotoEditorAdvancedInner({ bucket, space, name }: { bucket: string; spa
         </>
       ),
     })
-    if (!ok || !imageEl) return
-    const canvas = document.createElement('canvas')
-    canvas.width = imageEl.naturalWidth
-    canvas.height = imageEl.naturalHeight
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-    composeLayers(ctx, canvas.width, canvas.height, imageEl, layers)
-    const dataBase64 = canvas.toDataURL('image/png').split(',')[1]
+    if (!ok) return
+    const dataBase64 = exportCanvas()
+    if (!dataBase64) return
     const result = await save(dataBase64, { remplacer: true })
     toast(result.ok ? `${result.name} remplacée` : result.erreur)
   }
 
+  const backTo = screenForImage(bucket, name)
+  const backLabel = bucket === 'OK' ? 'Galerie' : 'Revue'
+
   if (loading) {
     return (
-      <div className="screen" id="photoEditorAdvanced">
-        <div className="wrap">
-          <p className="tiny">chargement…</p>
+      <div className={SHELL} id="photoEditorAdvanced">
+        <div className="flex h-[48px] shrink-0 items-center gap-[12px] border-b border-line bg-panel px-[14px]">
+          <b className="truncate text-[13px]">{name}</b>
+          <span className="text-[12px] text-dim">chargement…</span>
+        </div>
+        <div aria-hidden="true" className="flex min-h-0 flex-1">
+          <div className="w-[220px] shrink-0 border-r border-line bg-panel max-[1100px]:hidden" />
+          <div className="flex-1 bg-[#0a0a0a]" />
+          <div className="w-[360px] shrink-0 border-l border-line bg-panel max-[1100px]:w-[320px]" />
         </div>
       </div>
     )
   }
+
   if (loadError) {
     return (
-      <div className="screen" id="photoEditorAdvanced">
-        <div className="wrap">
-          <Link className="btn sm" to={screenForImage(bucket, name)}>
-            ← Retour
-          </Link>
-          <div className="empty mt-[16px] rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-            {loadError}
+      <div className={`${SHELL} items-center justify-center`} id="photoEditorAdvanced">
+        <div className="w-[440px] max-w-[92vw] rounded-card border border-danger-line bg-panel p-[20px]">
+          <div className="mb-[8px] flex items-baseline gap-[8px]">
+            <span aria-hidden="true" style={{ color: 'var(--bad)' }}>
+              ◆
+            </span>
+            <b className="text-[14px]">L’éditeur n’a pas pu ouvrir cette image</b>
           </div>
+          <p className="m-0 mb-[16px] text-[13px] text-dim">{loadError}</p>
+          <Link className="btn sm" to={backTo}>
+            <span aria-hidden="true">‹</span> {backLabel}
+          </Link>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="screen" id="photoEditorAdvanced">
-      <div
-        className="wrap flex h-[calc(100vh-24px)] w-full max-w-none flex-col gap-[10px]"
-        /* Elevated Undo/Redo listener (same reasoning as PoseEditorScreen.tsx's
-           own): this wraps the top bar AND both side panels, so a keydown
-           bubbles here regardless of which slider or button currently holds
-           focus — attaching it to the top bar alone (first attempt, caught by
-           the fumigation, not by reading the JSX) never saw a keystroke fired
-           from `#peExpo` in the right aside, a SIBLING of the top bar, not an
-           ancestor of it. */
-        onKeyDown={onAsideKeyDown}
-      >
-        {/* Sticky top bar — the design-pass's own list, in order. The back
-            link returns to the photo where 7a is one click away (`onEdit`
-            in ReviewScreen/GalleryScreen) rather than re-opening that modal
-            directly: nothing currently drives it from a URL, and the
-            design-pass explicitly leaves this choice to Claude Code. */}
-        <div className="sticky top-0 z-10 flex flex-wrap items-center gap-[10px] rounded-card border border-line bg-panel px-[12px] py-[8px]">
-          <Link className="link shrink-0" to={screenForImage(bucket, name)}>
-            ← Éditeur simplifié
-          </Link>
-          <b className="min-w-0 truncate text-[13px]">{name}</b>
-          {dirty && <span className="tiny text-warn-txt">modifications non enregistrées</span>}
-          <div className="flex-1" />
-          <UndoRedoButtons canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo} />
+  const leftColumn = (
+    <>
+      <div className="mb-[10px] flex gap-[14px] border-b border-line" role="tablist">
+        {([['presets', 'Préréglages'], ['history', 'Historique']] as const).map(([key, label]) => (
           <button
+            aria-selected={tab === key}
+            className={`-mb-px cursor-pointer border-0 border-b-2 bg-transparent px-0 pb-[7px] text-[12.5px] ${
+              tab === key ? 'border-b-txt font-[600] text-txt' : 'border-b-transparent text-dim'
+            }`}
+            key={key}
+            onClick={() => setTab(key)}
+            role="tab"
             type="button"
-            className={`btn sm${beforeAfter ? ' bg-acc border-acc! text-on-acc font-semibold' : ''}`}
-            aria-pressed={beforeAfter}
-            onClick={() => setBeforeAfter((v) => !v)}
           >
-            {beforeAfter ? 'Afficher les réglages' : 'Avant / après'}
+            {label}
           </button>
-          {/* The one primary CTA of this bar — `btn primary sm` (same combo
-              ExpressionEditorScreen.tsx already uses), everything else here
-              (undo/redo, avant/après, écraser) stays secondary weight.
-              Audit finding: a first pass gave every top-bar button the same
-              `btn sm` weight, unlike every sibling editor's own save button. */}
-          <button type="button" className="btn primary sm" disabled={saving} onClick={() => void onSaveCopy()}>
-            Enregistrer une copie
-          </button>
-          <button type="button" className="btn sm danger" disabled={saving} onClick={() => void onOverwrite()}>
-            Écraser la source…
-          </button>
-        </div>
+        ))}
+      </div>
+      {tab === 'presets' ? (
+        <PresetsPanel
+          appliedPresetId={appliedPresetId}
+          image={imageEl}
+          layers={layers}
+          onApply={applyPreset}
+          onPreview={setPreviewPreset}
+          selectedLayerId={selectedLayerId}
+        />
+      ) : (
+        <HistoryPanel cursor={historyCursor} history={history} onJump={jumpTo} />
+      )}
+    </>
+  )
 
-        <div className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)_380px] gap-[12px]">
-          {/* Left panel — Préréglages / Historique */}
-          <aside className="flex min-h-0 flex-col overflow-y-auto rounded-card border border-line bg-panel p-[12px]">
-            <div className="mb-[10px] flex gap-[4px]" role="tablist">
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'presets'}
-                className={`btn sm${tab === 'presets' ? ' bg-acc border-acc! text-on-acc font-semibold' : ''}`}
-                onClick={() => setTab('presets')}
-              >
-                Préréglages
-              </button>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={tab === 'history'}
-                className={`btn sm${tab === 'history' ? ' bg-acc border-acc! text-on-acc font-semibold' : ''}`}
-                onClick={() => setTab('history')}
-              >
-                Historique
-              </button>
-            </div>
-            {tab === 'presets' ? (
-              <PresetsPanel onApply={applyPreset} />
-            ) : (
-              <HistoryPanel history={history} cursor={historyCursor} onJump={jumpTo} />
-            )}
-          </aside>
+  return (
+    <div className={SHELL} id="photoEditorAdvanced">
+      <EditorTopBar
+        backLabel={backLabel}
+        backTo={backTo}
+        canRedo={canRedo}
+        canUndo={canUndo}
+        dirty={dirty}
+        mode={mode}
+        name={name}
+        onMode={setMode}
+        onOverwrite={() => void onOverwrite()}
+        onRedo={redo}
+        onSaveCopy={() => void onSaveCopy()}
+        onTogglePresets={() => setLeftOpen((v) => !v)}
+        onUndo={undo}
+        presetsOpen={leftOpen}
+        saving={saving}
+      />
 
-          {/* Centre — aperçu composité. `position:relative` sur l'EXTÉRIEUR,
-              `overflow-auto` sur l'INTÉRIEUR SEULEMENT : un enfant absolu
-              d'un conteneur qui défile fait partie de son contenu (il
-              défile AVEC lui — seul `position:fixed` y échapperait), donc
-              le bandeau de masque et les boutons de zoom vivent HORS de la
-              zone défilante, sinon ils dérivent hors champ dès qu'on zoome
-              (trouvé en testant : après quelques clics sur « + », le cadre
-              de recadrage — 7a — se retrouvait mesuré à des coordonnées
-              négatives, le bouton de zoom ayant traîné le défilement très
-              loin en tentant de « scrollIntoView » sa propre position qui
-              reculait sans fin). Le défilement natif sert de pan
-              (useZoomPan.ts) — pas de geste personnalisé, donc aucune
-              collision avec le drag de peinture de masque. */}
-          <div className="relative flex min-h-0 min-w-0 rounded-card border border-line bg-[#0a0a0a]">
-            {/* Pas `items-center justify-center` : voir la note de
-                photoEditorStyles.ts (STAGE_SCROLL) — même piège de
-                "safe centering" CSS, même correctif (margin:auto sur le
-                canvas lui-même plutôt qu'un alignement flex). */}
-            <div className="flex h-full w-full overflow-auto p-[16px]" ref={stageRef}>
-              {imageError ? (
-                <p className="tiny text-danger-txt">échec du chargement de l'image</p>
-              ) : (
-                <canvas
-                  id="peCanvas"
-                  ref={canvasRef}
-                  className={`m-auto block rounded-[2px]${maskEditTarget ? ' cursor-crosshair' : ''}`}
-                  onPointerDown={maskEditTarget ? onMaskPointerDown : undefined}
-                />
-              )}
-            </div>
-            {maskEditTarget && (
-              <p className="tiny absolute bottom-[8px] left-1/2 -translate-x-1/2 rounded-[6px] bg-scrim px-[10px] py-[4px] text-txt" role="status">
-                glisser sur l’image pour placer le masque — teinte rouge = zone couverte
-              </p>
-            )}
-            {imageEl && (
-              <ZoomControls
-                zoomPct={zoom.zoomPct}
-                fitPct={zoom.fitPct}
-                onZoomOut={zoom.zoomOut}
-                onZoomToFit={zoom.zoomToFit}
-                onZoomIn={zoom.zoomIn}
-                className="right-[8px]"
-              />
-            )}
+      <div className="relative flex min-h-0 flex-1">
+        <aside className={LEFT}>{leftColumn}</aside>
+
+        {/* Under 1100 px the left column becomes a floating panel (§S8) —
+            220 px of tiles is what a narrow window can give up without
+            touching the image or the panel that edits it. The button that
+            opens it lives in the screen bar, not here: a control dropped on
+            the stage covers the corner of the very image it previews. */}
+        {leftOpen && (
+          <div className="absolute left-[10px] top-[10px] z-10 hidden max-h-[80%] w-[240px] overflow-y-auto
+                          rounded-card border border-line2 bg-panel p-[12px] shadow-[var(--elev)]
+                          max-[1100px]:block">
+            {leftColumn}
           </div>
+        )}
 
-          {/* Panneau droit — histogramme, calques, colorimétrie */}
-          <aside className="flex min-h-0 flex-col gap-[14px] overflow-y-auto rounded-card border border-line bg-panel p-[12px]">
-            <div>
-              <div className="tiny mb-[6px] uppercase tracking-[.5px] text-dim">Histogramme</div>
-              <Histogram bins={histogram} />
-            </div>
-            <LayerList
-              layers={layers}
-              selectedLayerId={selectedLayerId}
-              onSelect={selectLayer}
-              onAdd={addLayer}
-              onRemove={removeLayer}
-              onToggleVisible={toggleVisible}
-              onOpacity={setOpacity}
-              onReorder={reorder}
-            />
-            {selectedLayer && (
-              <>
-                <LayerSettingsPanel layer={selectedLayer} onChange={updateSelectedSettings} />
-                <AdvancedColorPanel layer={selectedLayer} onChange={updateSelectedSettings} />
-                <SharpenBlurPanel
-                  layer={selectedLayer}
-                  onChange={updateSelectedSettings}
-                  editingMask={maskEditTarget === 'blur'}
-                  onToggleMaskEdit={() => setMaskEditTarget((v) => (v === 'blur' ? null : 'blur'))}
-                />
-                <PerspectivePanel layer={selectedLayer} onChange={updateSelectedSettings} />
-                <AiRetouchPanel
-                  layer={selectedLayer}
-                  onChange={updateSelectedSettings}
-                  editingMask={maskEditTarget === 'ai'}
-                  onToggleMaskEdit={() => setMaskEditTarget((v) => (v === 'ai' ? null : 'ai'))}
-                />
-              </>
-            )}
-          </aside>
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <PreviewStage
+            canvasRef={canvasRef}
+            curtain={mode === 'rideau' ? curtain : null}
+            geom={geom}
+            imageError={imageError}
+            maskMode={selectedLayer
+              ? ((maskEditTarget === 'blur' ? selectedLayer.settings.blurMask : selectedLayer.settings.aiMask) ?? DEFAULT_MASK).mode
+              : DEFAULT_MASK.mode}
+            maskTarget={maskEditTarget}
+            naturalHeight={imageEl?.naturalHeight ?? 0}
+            naturalWidth={imageEl?.naturalWidth ?? 0}
+            onCurtain={setCurtain}
+            onMaskDone={() => setMaskEditTarget(null)}
+            onPointerDown={onMaskPointerDown}
+            stageRef={stageRef}
+            zoom={zoom}
+          />
         </div>
+
+        <aside
+          aria-disabled={imageError || undefined}
+          className={`${ASIDE}${imageError ? ' pointer-events-none opacity-50' : ''}`}
+        >
+          <Histogram bins={histogram} />
+          <div className="mt-[12px]">
+            <LayerList
+              image={imageEl}
+              layers={layers}
+              onAdd={addLayer}
+              onOpacity={setOpacity}
+              onRemove={removeLayer}
+              onReorder={reorder}
+              onSelect={selectLayer}
+              onToggleVisible={toggleVisible}
+              selectedLayerId={selectedLayerId}
+            />
+          </div>
+          {selectedLayer && (
+            <div className="mt-[14px]">
+              <LayerSettingsPanel
+                layer={selectedLayer}
+                onChange={updateSelectedSettings}
+                onCommit={commitSelectedSettings}
+              />
+              <AdvancedColorPanel
+                layer={selectedLayer}
+                onChange={updateSelectedSettings}
+                onCommit={commitSelectedSettings}
+              />
+              <SharpenBlurPanel
+                editingMask={maskEditTarget === 'blur'}
+                layer={selectedLayer}
+                onChange={updateSelectedSettings}
+                onCommit={commitSelectedSettings}
+                onToggleMaskEdit={() => setMaskEditTarget((v) => (v === 'blur' ? null : 'blur'))}
+              />
+              <PerspectivePanel
+                layer={selectedLayer}
+                onChange={updateSelectedSettings}
+                onCommit={commitSelectedSettings}
+              />
+              <AiRetouchPanel
+                editingMask={maskEditTarget === 'ai'}
+                layer={selectedLayer}
+                onChange={updateSelectedSettings}
+                onCommit={commitSelectedSettings}
+                onToggleMaskEdit={() => setMaskEditTarget((v) => (v === 'ai' ? null : 'ai'))}
+              />
+            </div>
+          )}
+        </aside>
       </div>
     </div>
   )

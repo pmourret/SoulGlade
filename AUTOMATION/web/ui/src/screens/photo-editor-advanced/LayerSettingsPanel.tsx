@@ -1,40 +1,49 @@
-/* "Colorimétrie" panel — design-pass §7b: acts on the SELECTED layer's
-   `settings`, changes what it shows when the selection changes. Only the 4
-   basic sliders this pass (courbes/niveaux/HSL land with their own step —
-   see photoEditorLayersPixels.ts's own note on why they are not fields of
-   `LayerSettings` yet). Presentational only (frontend.md). */
+/* "Base" — the four adjustments every layer has, first section of the right
+   panel and the only one open on arrival (design-pass screen-10 §S5.3).
+
+   The old title « Colorimétrie — {calque} » is gone on purpose: the layer
+   being worked on is already named, selected and outlined in the list right
+   above, and saying it twice made the panel look like a second selection.
+
+   Presentational only (frontend.md): `onChange` is the coalesced write of a
+   drag, `onCommit` the single step of a reset. */
+import { AdjustSlider } from '../../chrome/AdjustSlider'
+import { AdjustSection } from './AdjustSection'
+import { changedCount, neutralPatch, sectionSummary } from './layerSummary'
 import { LAYER_SLIDERS, type Layer, type LayerSettings } from './photoEditorLayersPixels'
 
 export function LayerSettingsPanel({
-  layer, onChange,
+  layer, onChange, onCommit,
 }: {
   layer: Layer
   onChange: (patch: Partial<LayerSettings>) => void
+  onCommit: (patch: Partial<LayerSettings>, label?: string) => void
 }) {
+  const settings = layer.settings
+
   return (
-    <div>
-      <div className="tiny mb-[8px] uppercase tracking-[.5px] text-dim">
-        Colorimétrie — {layer.name || layer.kind}
-        {layer.locked && <span className="opacity-70"> (calque de base)</span>}
-      </div>
-      {LAYER_SLIDERS.map((slider) => (
-        <div key={slider.key} className="mb-[10px]">
-          <div className="mt-[10px] flex justify-between text-[12.5px] text-dim">
-            <label htmlFor={slider.id}>{slider.label}</label>
-            <span className="tabular-nums text-txt">{layer.settings[slider.key]}</span>
-          </div>
-          <input
+    <AdjustSection
+      changed={changedCount('base', settings)}
+      defaultOpen
+      onReset={() => onCommit(neutralPatch('base', settings), 'Base réinitialisée')}
+      summary={sectionSummary('base', settings)}
+      title="Base"
+    >
+      <div className="flex flex-col gap-[2px]">
+        {LAYER_SLIDERS.map((slider) => (
+          <AdjustSlider
             id={slider.id}
-            type="range"
-            className="mt-[2px]"
-            min={slider.min}
+            key={slider.key}
+            label={slider.label}
             max={slider.max}
+            min={slider.min}
+            onChange={(value) => onChange({ [slider.key]: value })}
+            onCommit={(value) => onCommit({ [slider.key]: value })}
             step={slider.step}
-            value={layer.settings[slider.key]}
-            onChange={(e) => onChange({ [slider.key]: Number(e.target.value) })}
+            value={settings[slider.key]}
           />
-        </div>
-      ))}
-    </div>
+        ))}
+      </div>
+    </AdjustSection>
   )
 }

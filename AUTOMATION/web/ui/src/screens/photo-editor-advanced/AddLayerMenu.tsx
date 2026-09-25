@@ -22,8 +22,10 @@ export function AddLayerMenu({ onAdd }: { onAdd: (kind: LayerKind, label: string
 
   return (
     <>
-      <button type="button" className="btn sm w-full" onClick={() => setOpen(true)}>
-        + Ajouter un calque
+      {/* Compact and IN the section header since screen-10 §S5.2 — a
+          full-width button under the list read as the stack's last row. */}
+      <button className="btn sm shrink-0 !px-[9px] !py-[3px] text-[12px]" onClick={() => setOpen(true)} type="button">
+        + Ajouter
       </button>
       <Dialog
         id="addLayerBox"

@@ -58,8 +58,16 @@ export const CANVAS = 'block rounded-[2px]'
    frame — passing it to the scrim would be a functional regression, which is
    why DESIGN.md lists it as left raw. */
 export const CROP_BOX =
-  'absolute cursor-move touch-none border-[1.5px] border-acc ' +
+  'absolute cursor-move touch-none border border-txt ' +
   '[box-shadow:0_0_0_2000px_#0b0d1066]'
+/* RULE OF THIRDS (design-pass screen-10 §S7). Two gradients rather than four
+   divs: a 1 px hard stop at each third, and nothing to keep in sync with the
+   frame's own size — the lines are a fraction of the box, so they follow every
+   drag and every ratio for free. `#ffffff59` and not a token: like the veil
+   above, it is a value read ON an image, not a colour of the interface. */
+export const THIRDS =
+  'pointer-events-none absolute inset-0 ' +
+  '[background-image:linear-gradient(to_right,transparent_calc(33.333%_-_0.5px),#ffffff59_calc(33.333%_-_0.5px)_calc(33.333%_+_0.5px),transparent_calc(33.333%_+_0.5px),transparent_calc(66.666%_-_0.5px),#ffffff59_calc(66.666%_-_0.5px)_calc(66.666%_+_0.5px),transparent_calc(66.666%_+_0.5px)),linear-gradient(to_bottom,transparent_calc(33.333%_-_0.5px),#ffffff59_calc(33.333%_-_0.5px)_calc(33.333%_+_0.5px),transparent_calc(33.333%_+_0.5px),transparent_calc(66.666%_-_0.5px),#ffffff59_calc(66.666%_-_0.5px)_calc(66.666%_+_0.5px),transparent_calc(66.666%_+_0.5px))]'
 /* `[transform:…]` and not `-translate-x-1/2`: the utility would write the
    `translate` property instead of `transform`. Same pixels, but the migration
    is meant to leave the computed styles alone. Each corner names its own
@@ -77,7 +85,11 @@ export const HANDLES: Record<string, string> = {
 /* THE WAY OUT LIVES AT THE HEAD of the panel, not at its foot: it is the first
    thing one looks for when abandoning a retouch. */
 export const SIDE = 'flex w-[300px] flex-none flex-col overflow-y-auto border-l border-l-line p-[20px]'
-export const HEAD = 'flex items-center justify-between gap-[10px]'
+/* 48 px, the same height the advanced editor's own screen bar carries
+   (design-pass screen-10 §S7) — one door, two rooms, same lintel. The file
+   name moved INTO it: it used to be a paragraph underneath, which put the
+   answer to « what am I editing? » below the answer to « where am I? ». */
+export const HEAD = 'flex h-[48px] shrink-0 items-center gap-[10px] border-b border-b-line'
 export const CLOSE =
   'cursor-pointer rounded-[8px] [border:0] bg-transparent px-[8px] py-[6px] text-[16px] ' +
   'leading-none text-dim hover:bg-panel2 hover:text-txt focus-visible:outline-offset-[-2px]'
@@ -88,10 +100,6 @@ export const CLOSE =
    does not belong in a migration meant to be invisible. */
 export const SEC = 'mb-[20px] border-b border-b-line pb-[18px]'
 export const LAB = 'mb-[10px] text-[11.5px] uppercase tracking-[.5px] text-dim'
-export const ROW = 'mt-[10px] flex justify-between text-[12.5px] text-dim'
-export const VAL = 'tabular-nums text-txt'
-/* `width:100%` is not repeated: `chrome.css` already gives it to every input. */
-export const SLIDER = 'mt-[2px]'
 
 /* STICKY FOOT of the settings panel. `.edSide` scrolls (the settings are taller
    than the modal from 950 px of window) and used to carry the buttons away with

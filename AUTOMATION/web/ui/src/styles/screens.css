@@ -101,6 +101,18 @@ details.adv summary:focus-visible{outline:2px solid var(--focus);outline-offset:
 #trainingFolds th:first-child,#trainingFolds td:first-child{width:340px}
 #trainingFolds td,#trainingFolds th{padding-right:28px}
 
+/* The sections of the photo editor's right panel (design-pass screen-10
+   §S5.3) are `details.adv` too, but they are stacked EDGE TO EDGE inside a
+   360 px panel rather than spaced out down a page: the sheet's own 22 px
+   gap and doubled top rule would draw a ladder instead of a list. Scoped
+   here rather than with utility classes for the reason `#trainingFolds`
+   already carries — `details.adv summary` is an element plus a class, and a
+   Tailwind class alone never outranks it. */
+details.adjsec{margin:0;padding:0;border-top:1px solid var(--line)}
+details.adjsec summary{display:flex;align-items:center;gap:10px;height:40px;
+  padding:0;border-top:0}
+details.adjsec[open] > :not(summary){margin:0 0 16px}
+
 /* --------------------------------------------------------------- chips
    `.chip-t` is the pill two screens offer: the tones of Produire and the
    « autre ton » of the decline box. It came from `screens/review.css`, which

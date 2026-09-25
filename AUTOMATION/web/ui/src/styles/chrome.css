@@ -462,3 +462,32 @@ input:focus,select:focus,textarea:focus{outline:0;border-color:var(--acc)}
    focus-visible ring like buttons get -- otherwise keyboard focus on a
    slider is invisible (confirmed via before/after screenshot). */
 input[type=range]:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* ------------------------------------------------- adjust slider (S6)
+   The one slider of the two photo editors (`chrome/AdjustSlider.tsx`,
+   design-pass screen-10 §S6). It lives here rather than in a class chain
+   because a range input is drawn by THREE pseudo-elements the browser owns
+   — a utility class cannot reach a `::-webkit-slider-runnable-track`, and
+   spelling them as Tailwind variants made the call site unreadable.
+
+   `--adj-track` is the only thing the component sets: a gradient that fills
+   the track FROM THE NEUTRAL VALUE to the current one, so a slider reads
+   « how far from neutral », not « how full ». Its fallback is the flat
+   track, which is what a slider with no neutral of its own wants.
+
+   The form primitives above give every input a ground, a border and 8/10
+   padding; a range needs none of the three, hence the resets on the first
+   line. */
+input[type=range].adj{-webkit-appearance:none;appearance:none;
+  width:100%;height:18px;padding:0;border:0;background:transparent;
+  border-radius:0;cursor:pointer;display:block}
+input[type=range].adj::-webkit-slider-runnable-track{
+  height:2px;border-radius:1px;background:var(--adj-track,var(--line2))}
+input[type=range].adj::-moz-range-track{
+  height:2px;border-radius:1px;background:var(--adj-track,var(--line2))}
+/* `margin-top` centres the thumb on a 2 px track: half the thumb minus half
+   the track. Chromium needs it spelled out, Firefox centres on its own. */
+input[type=range].adj::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;
+  width:10px;height:10px;border-radius:50%;background:var(--txt);border:0;margin-top:-4px}
+input[type=range].adj::-moz-range-thumb{
+  width:10px;height:10px;border-radius:50%;background:var(--txt);border:0}

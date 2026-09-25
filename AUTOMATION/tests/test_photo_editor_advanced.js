@@ -7,8 +7,10 @@
    exposition slider (coalesced, but the base layer's own pixels move) ->
    undo/redo walking BOTH the coalesced step and the structural one ->
    clicking a History-panel entry jumps straight to it -> a preset applies
-   in one step -> reorder / visibility / delete on a non-base layer -> the
-   base layer can never be deleted -> avant/après swaps colour only ->
+   in one step -> reorder / visibility / delete on a non-base layer (through
+   the context menu since design-pass screen-10 §S5.2) -> the base layer can
+   never be deleted -> the three preview modes, curtain included, driven from
+   the keyboard -> a section reset and a double-click, each ONE undo step ->
    "Enregistrer une copie" round-trips through the API for real -> "Écraser
    la source…" confirms and states the same three consequences as the
    simplified modal, then is ALWAYS CANCELLED, exactly like test_editor.js.
@@ -109,11 +111,11 @@ process.on('exit', nettoyer);
   }, null, { timeout: 20000 });
   dire((await layerIds()).length === 1, 'un seul calque au chargement');
   dire(!(await vu('text=modifications non enregistrées')), 'rien a signaler, ecran tout juste charge');
-  dire(await vu('button:has-text("+ Ajouter un calque")'), 'le geste d ajout est propose');
+  dire(await vu('button:has-text("+ Ajouter")'), 'le geste d ajout est propose');
 
   console.log('\n[2] ajouter un calque : un seul geste d historique, calque selectionne');
   const pixelAvant = await pixelCentre();
-  await page.click('button:has-text("+ Ajouter un calque")');
+  await page.click('button:has-text("+ Ajouter")');
   await page.waitForSelector('#addLayerBox[open]');
   await page.click('#addLayerBox button[role="menuitem"]:has-text("Réglage")');
   await page.waitForTimeout(200);
@@ -408,40 +410,102 @@ process.on('exit', nettoyer);
   await page.waitForTimeout(150);
 
   console.log('\n[9] reordonner, masquer, supprimer un calque non-base — jamais la base elle-meme');
-  await page.click('button:has-text("+ Ajouter un calque")');
+  await page.click('button:has-text("+ Ajouter")');
   await page.waitForSelector('#addLayerBox[open]');
   await page.click('#addLayerBox button[role="menuitem"]:has-text("Image")');
   await page.waitForTimeout(200);
   let ids = await layerIds();
   dire(ids.length === 2 && ids[0] !== idBase, 'le nouveau calque arrive EN HAUT de la liste');
   const idHaut = ids[0];
-  dire(!(await vu(`[data-layer="${idBase}"] button[aria-label="Supprimer le calque"]`)),
-       'la base ne propose aucun bouton supprimer');
+  // La suppression a quitte la rangee pour le MENU CONTEXTUEL (design-pass
+  // screen-10 §S5.2) : plus de ✕ permanent sur chaque ligne. La base, elle,
+  // n'ouvre aucun menu — il n'y a rien a lui proposer.
+  await page.click(`[data-layer="${idBase}"]`, { button: 'right' });
+  await page.waitForTimeout(200);
+  dire(!(await vu(`[data-layer="${idBase}"] [role="menu"]`)),
+       'la base n ouvre aucun menu contextuel, donc aucune suppression');
   await page.click(`[data-layer="${idHaut}"] button[aria-label="Masquer le calque"]`);
   await page.waitForTimeout(200);
   dire(await vu(`[data-layer="${idHaut}"] button[aria-label="Afficher le calque"]`),
        'masquer bascule bien l icone (◉ -> ◌)');
   await page.click(`[data-layer="${idHaut}"] button[aria-label="Afficher le calque"]`);
   await page.waitForTimeout(200);
-  await page.click(`[data-layer="${idHaut}"] button[aria-label="Supprimer le calque"]`);
+  await page.click(`[data-layer="${idHaut}"]`, { button: 'right' });
+  await page.waitForSelector(`[data-layer="${idHaut}"] [role="menuitem"]`);
+  await page.click(`[data-layer="${idHaut}"] [role="menuitem"]:has-text("Supprimer le calque")`);
   await page.waitForTimeout(200);
   ids = await layerIds();
   dire(ids.length === 1 && ids[0] === idBase, 'supprime : un seul calque restant, la base');
 
-  console.log('\n[10] avant/après (design-pass, meme contrat que le modal simplifie) : colorimetrie seule');
+  console.log('\n[10] apercu a TROIS modes (design-pass screen-10 §S4) : Réglages · Rideau · Avant');
   await page.click('[data-presets] button:has-text("Chaud")'); // re-applique un reglage visible sur la base
   await page.waitForTimeout(200);
   const pixelRegle = await pixelCentre();
-  dire((await page.getAttribute('button:has-text("Avant / après")', 'aria-pressed')) === 'false',
-       'relache au depart');
-  await page.click('button:has-text("Avant / après")');
-  await page.waitForTimeout(200);
-  dire((await page.getAttribute('button:has-text("Afficher les réglages")', 'aria-pressed')) === 'true',
-       'enfonce apres un clic, le libelle change');
+  // Le bascule a deux etats est devenu un segmente a trois options : le
+  // rideau ne se « bascule » pas, il se choisit.
+  const segApercu = page.locator('[aria-label="Mode d’aperçu"]');
+  const option = (nom) => segApercu.getByRole('radio', { name: nom, exact: true });
+  dire((await option('Réglages').getAttribute('aria-checked')) === 'true',
+       'l apercu part sur « Réglages »');
+  await option('Avant').click();
+  await page.waitForTimeout(250);
+  dire((await option('Avant').getAttribute('aria-checked')) === 'true',
+       '« Avant » devient l option active');
   const pixelAvantApres = await pixelCentre();
   dire(JSON.stringify(pixelAvantApres) !== JSON.stringify(pixelRegle), 'le rendu redevient neutre');
-  await page.click('button:has-text("Afficher les réglages")');
-  await page.waitForTimeout(200);
+
+  console.log('\n[10bis] RIDEAU : neutre d un cote, reglages de l autre, poignee au clavier');
+  await option('Rideau').click();
+  await page.waitForTimeout(300);
+  const pixelA = (fraction) => page.evaluate((f) => {
+    const c = document.querySelector('#peCanvas');
+    const ctx = c.getContext('2d');
+    return Array.from(ctx.getImageData(Math.floor(c.width * f), Math.floor(c.height / 2), 1, 1).data);
+  }, fraction);
+  const cote = { gauche: await pixelA(0.2), droite: await pixelA(0.8) };
+  dire(JSON.stringify(cote.gauche) !== JSON.stringify(cote.droite),
+       `les deux moities different (${cote.gauche} / ${cote.droite})`);
+  const poignee = page.locator('[role="slider"]');
+  dire((await poignee.getAttribute('aria-valuenow')) === '50', 'le rideau part au milieu');
+  await poignee.focus();
+  for (let i = 0; i < 5; i++) await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(250);
+  const apres5 = await poignee.getAttribute('aria-valuenow');
+  dire(apres5 === '60', `les fleches le deplacent par pas de 2 (${apres5})`);
+  await page.keyboard.press('Home');
+  await page.waitForTimeout(300);
+  dire((await poignee.getAttribute('aria-valuenow')) === '0', 'Home le colle a gauche');
+  // MEME pixel, deux positions de rideau : a 50 % il est du cote neutre, a
+  // 0 % le rideau est passe dessus et il est du cote reglages. Comparer deux
+  // abscisses differentes ne dirait rien — ce sont deux endroits de l'image.
+  const gaucheAZero = await pixelA(0.2);
+  dire(JSON.stringify(gaucheAZero) !== JSON.stringify(cote.gauche),
+       `le rideau a balaye ce pixel : neutre a 50 % (${cote.gauche}), regle a 0 % (${gaucheAZero})`);
+  await option('Réglages').click();
+  await page.waitForTimeout(250);
+
+  console.log('\n[10ter] une SECTION se remet au neutre en une seule etape, un DOUBLE-CLIC ramene un curseur');
+  await regler('#peExpo', 35);
+  await page.waitForTimeout(350);
+  const sectionBase = page.locator('details.adjsec').filter({ hasText: 'Base' }).first();
+  const enTete = async () => (await sectionBase.locator('summary').textContent()).replace(/\s+/g, ' ').trim();
+  dire((await enTete()).includes('modifié'), `l en-tete compte les reglages modifies (${await enTete()})`);
+  await sectionBase.locator('summary button:has-text("Réinitialiser")').click();
+  await page.waitForTimeout(300);
+  dire((await page.textContent('#v_peExpo')) === '0',
+       `exposition revenue au neutre (${await page.textContent('#v_peExpo')})`);
+  dire((await enTete()).includes('neutre'), `et l en-tete dit « neutre » (${await enTete()})`);
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  dire((await page.textContent('#v_peExpo')) === '+35',
+       `UN seul Ctrl+Z rend toute la section (${await page.textContent('#v_peExpo')})`);
+
+  await regler('#peSat', -40);
+  await page.waitForTimeout(350);
+  await page.locator('label[for="peSat"]').dblclick();
+  await page.waitForTimeout(300);
+  dire((await page.textContent('#v_peSat')) === '0',
+       `double-clic sur le libelle : retour au neutre (${await page.textContent('#v_peSat')})`);
 
   console.log('\n[11] "Écraser la source…" confirme, dit les memes 3 consequences que le modal — et on ANNULE toujours');
   await page.click('button:has-text("Écraser la source…")');

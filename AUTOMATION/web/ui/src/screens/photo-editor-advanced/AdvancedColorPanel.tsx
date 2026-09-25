@@ -6,8 +6,11 @@
    `usePhotoEditorAdvanced.ts::updateSelectedSettings` already takes. */
 import { useEffect, useId, useState } from 'react'
 
+import { AdjustSlider } from '../../chrome/AdjustSlider'
+import { AdjustSection } from './AdjustSection'
 import { CurvesEditor } from './CurvesEditor'
 import { HSL_BANDS, type HslBandName } from './hslMath'
+import { changedCount, neutralPatch, sectionSummary } from './layerSummary'
 import type { Layer, LayerSettings } from './photoEditorLayersPixels'
 
 type Channel = 'rgb' | 'r' | 'g' | 'b'
@@ -23,17 +26,22 @@ const HSL_LABELS: Record<HslBandName, string> = {
 }
 
 export function AdvancedColorPanel({
-  layer, onChange,
+  layer, onChange, onCommit,
 }: {
   layer: Layer
   onChange: (patch: Partial<LayerSettings>) => void
+  onCommit: (patch: Partial<LayerSettings>, label?: string) => void
 }) {
   const settings = layer.settings
 
   return (
-    <details className="adv">
-      <summary>Colorimétrie avancée</summary>
-      <div className="mt-[10px] flex flex-col gap-[16px]">
+    <AdjustSection
+      changed={changedCount('color', settings)}
+      onReset={() => onCommit(neutralPatch('color', settings), 'Colorimétrie avancée réinitialisée')}
+      summary={sectionSummary('color', settings)}
+      title="Colorimétrie avancée"
+    >
+      <div className="flex flex-col gap-[16px]">
         <CurvesEditor
           curves={settings.curves}
           channel={settings.curveChannel as Channel}
@@ -46,22 +54,16 @@ export function AdvancedColorPanel({
         <div>
           <div className="tiny mb-[6px] uppercase tracking-[.5px] text-dim">Niveaux</div>
           {LEVEL_ROWS.map((row) => (
-            <div key={row.key} className="mb-[8px]">
-              <div className="mt-[6px] flex justify-between text-[12.5px] text-dim">
-                <label htmlFor={`pe-${row.key}`}>{row.label}</label>
-                <span className="tabular-nums text-txt">{settings[row.key]}</span>
-              </div>
-              <input
-                id={`pe-${row.key}`}
-                type="range"
-                className="mt-[2px]"
-                min={-50}
-                max={50}
-                step={1}
-                value={settings[row.key]}
-                onChange={(e) => onChange({ [row.key]: Number(e.target.value) })}
-              />
-            </div>
+            <AdjustSlider
+              id={`pe-${row.key}`}
+              key={row.key}
+              label={row.label}
+              max={50}
+              min={-50}
+              onChange={(value) => onChange({ [row.key]: value })}
+              onCommit={(value) => onCommit({ [row.key]: value })}
+              value={settings[row.key]}
+            />
           ))}
         </div>
 
@@ -73,7 +75,7 @@ export function AdvancedColorPanel({
           }}
         />
       </div>
-    </details>
+    </AdjustSection>
   )
 }
 

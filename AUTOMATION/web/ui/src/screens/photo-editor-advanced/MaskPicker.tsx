@@ -4,6 +4,7 @@
    l'aperçu (pinceau/dégradé/radial) est piloté par le parent via
    `editing`/`onToggleEditing`, les gestes de glisser eux-mêmes vivent dans
    `PhotoEditorAdvancedScreen.tsx` (qui possède le canvas). */
+import { AdjustSlider } from '../../chrome/AdjustSlider'
 import type { Mask, MaskMode } from './photoEditorLayersPixels'
 
 export const DEFAULT_MASK: Mask = {
@@ -19,15 +20,26 @@ const MODES: { key: MaskMode; label: string; inert?: boolean }[] = [
   { key: 'radial', label: 'Radial' },
 ]
 
+/** The mode's French name, for whoever has to SAY which mode is running —
+    the floating mask bar of the preview does. Without it the bar printed
+    the storage key (« degrade »), which is not a word anyone reads. */
+export const MASK_LABELS: Record<MaskMode, string> =
+  Object.fromEntries(MODES.map((m) => [m.key, m.label])) as Record<MaskMode, string>
+
 const PLACEABLE: MaskMode[] = ['pinceau', 'degrade', 'radial']
 
 export function MaskPicker({
-  mask, onChange, editing, onToggleEditing,
+  mask, onChange, editing, onToggleEditing, radiusId,
 }: {
   mask: Mask
   onChange: (mask: Mask) => void
   editing: boolean
   onToggleEditing: () => void
+  /** This picker is mounted TWICE on the screen (selective blur and AI
+      retouch). A single hard-coded id gave two elements the same one, so
+      the brush-radius label pointed at whichever came first — each caller
+      names its own. */
+  radiusId: string
 }) {
   return (
     <div>
@@ -51,19 +63,13 @@ export function MaskPicker({
 
       {mask.mode === 'pinceau' && (
         <div className="mt-[8px]">
-          <div className="flex justify-between text-[12.5px] text-dim">
-            <label htmlFor="pe-brush-radius">rayon du pinceau</label>
-            <span className="tabular-nums text-txt">{Math.round(mask.brushRadius * 100)}</span>
-          </div>
-          <input
-            id="pe-brush-radius"
-            type="range"
-            className="mt-[2px]"
-            min={1}
+          <AdjustSlider
+            id={radiusId}
+            label="rayon"
             max={30}
-            step={1}
+            min={1}
+            onChange={(value) => onChange({ ...mask, brushRadius: value / 100 })}
             value={Math.round(mask.brushRadius * 100)}
-            onChange={(e) => onChange({ ...mask, brushRadius: Number(e.target.value) / 100 })}
           />
         </div>
       )}

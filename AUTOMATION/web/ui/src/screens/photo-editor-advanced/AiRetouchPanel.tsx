@@ -2,9 +2,16 @@
    screen-photo-editor.md §7b) : panneau complet (sélecteur de masque —
    MÊME composant que le flou sélectif, taille de pinceau, champ prompt),
    mais "Générer la retouche" reste PERMANENTMENT désactivé. Aucun appel
-   réseau, aucun faux résultat — le bouton dit pourquoi en `data-hint-text`
-   (pas `title`, CLAUDE.md §3), jamais un simple `disabled` muet.
+   réseau, aucun faux résultat.
+
+   LE MOTIF EST ÉCRIT, pas seulement suggéré (screen-10 §S5.3 et la règle
+   d'a11y qui va avec) : il vit en toutes lettres sous le bouton, EN PLUS
+   du `data-hint-text` que la fumigation lit — un motif qui n'existe que
+   dans une infobulle n'existe pas pour qui n'a pas de pointeur.
    Presentational only (frontend.md). */
+import { AdjustSlider } from '../../chrome/AdjustSlider'
+import { AdjustSection } from './AdjustSection'
+import { changedCount, neutralPatch, sectionSummary } from './layerSummary'
 import { DEFAULT_MASK, MaskPicker } from './MaskPicker'
 import type { Layer, LayerSettings, Mask } from './photoEditorLayersPixels'
 
@@ -12,10 +19,11 @@ const RAISON_INERTE =
   "Backend d'édition IA pas encore branché (F5.2) — l'interface est prête à recevoir le résultat"
 
 export function AiRetouchPanel({
-  layer, onChange, editingMask, onToggleMaskEdit,
+  layer, onChange, onCommit, editingMask, onToggleMaskEdit,
 }: {
   layer: Layer
   onChange: (patch: Partial<LayerSettings>) => void
+  onCommit: (patch: Partial<LayerSettings>, label?: string) => void
   editingMask: boolean
   onToggleMaskEdit: () => void
 }) {
@@ -23,58 +31,65 @@ export function AiRetouchPanel({
   const mask = settings.aiMask ?? DEFAULT_MASK
 
   return (
-    <details className="adv">
-      <summary>
-        Retouche IA <span className="tiny rounded-[4px] bg-panel2 px-[6px] py-[1px] align-middle text-dim">bientôt</span>
-      </summary>
-      <div className="mt-[10px] flex flex-col gap-[14px]">
+    <AdjustSection
+      changed={changedCount('ai', settings)}
+      onReset={() => onCommit(neutralPatch('ai', settings), 'Retouche IA réinitialisée')}
+      summary={sectionSummary('ai', settings)}
+      title={
+        <>
+          Retouche IA{' '}
+          <span className="ml-[4px] rounded-[4px] border border-dashed border-line2 px-[6px]
+                           py-[1px] align-middle text-[10.5px] font-normal text-dim">
+            bientôt
+          </span>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-[14px]">
         <MaskPicker
+          editing={editingMask}
           mask={mask}
           onChange={(next: Mask) => onChange({ aiMask: next })}
-          editing={editingMask}
           onToggleEditing={onToggleMaskEdit}
+          radiusId="pe-ai-brush-radius"
         />
 
-        <div>
-          <div className="flex justify-between text-[12.5px] text-dim">
-            <label htmlFor="pe-ai-brush">taille du pinceau IA</label>
-            <span className="tabular-nums text-txt">{Math.round(settings.aiBrushSize * 100)}</span>
-          </div>
-          <input
-            id="pe-ai-brush"
-            type="range"
-            className="mt-[2px]"
-            min={1}
-            max={30}
-            step={1}
-            value={Math.round(settings.aiBrushSize * 100)}
-            onChange={(e) => onChange({ aiBrushSize: Number(e.target.value) / 100 })}
-          />
-        </div>
+        <AdjustSlider
+          id="pe-ai-brush"
+          label="pinceau IA"
+          max={30}
+          min={1}
+          onChange={(value) => onChange({ aiBrushSize: value / 100 })}
+          onCommit={(value) => onCommit({ aiBrushSize: value / 100 })}
+          value={Math.round(settings.aiBrushSize * 100)}
+        />
 
         <div>
           <label className="mb-[4px] block text-[12.5px] text-dim" htmlFor="pe-ai-prompt">
             instruction
           </label>
           <textarea
-            id="pe-ai-prompt"
-            rows={3}
             className="w-full resize-none"
-            placeholder="ex : retirer la tache sur le mur"
-            value={settings.aiPrompt}
+            id="pe-ai-prompt"
             onChange={(e) => onChange({ aiPrompt: e.target.value })}
+            placeholder="ex : retirer la tache sur le mur"
+            rows={3}
+            value={settings.aiPrompt}
           />
         </div>
 
-        <button
-          type="button"
-          className="btn primary sm w-full"
-          disabled
-          data-hint-text={RAISON_INERTE}
-        >
-          Générer la retouche
-        </button>
+        <div>
+          <button
+            className="btn primary sm w-full"
+            data-hint-text={RAISON_INERTE}
+            disabled
+            type="button"
+          >
+            Générer la retouche
+          </button>
+          <p className="tiny mt-[6px] text-dim2">{RAISON_INERTE}</p>
+        </div>
       </div>
-    </details>
+    </AdjustSection>
   )
 }
