@@ -562,6 +562,18 @@
           "t": "Grain et redimensionnement d'export"
         },
         {
+          "s": "faire",
+          "t": "Préréglages photo créés par l'utilisateur",
+          "d": "Les cinq préréglages de l'éditeur avancé sont une constante de code : on ne peut pas en écrire un à soi. Cadré le 25/09, construction après IT-9. L'arbitrage à confirmer : un préréglage appartient à la plateforme, pas au personnage, parce que l'édition d'image est un outil de plateforme.",
+          "ref": "DOCS/cadrage/2026-09-25-editeur-photo-prereglages-et-verrous.md"
+        },
+        {
+          "s": "faire",
+          "t": "Verrouiller un calque de l'éditeur photo",
+          "d": "Le champ locked existe, le sidecar le persiste et la liste le lit déjà : aucun geste ne le pose. Cadré le 25/09, construction après IT-9. Sans backend. Le point à fermer : les cinq panneaux de réglage écrivent sans regarder locked.",
+          "ref": "DOCS/cadrage/2026-09-25-editeur-photo-prereglages-et-verrous.md"
+        },
+        {
           "s": "veille",
           "t": "Ambition « niveau professionnel »",
           "d": "ouverte sans hiérarchie ni fin ; attendra un vrai cadrage"
