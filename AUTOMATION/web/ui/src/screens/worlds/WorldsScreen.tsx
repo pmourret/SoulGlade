@@ -50,7 +50,11 @@ export function WorldsScreen() {
   const { narrow } = useChrome()
   const registry = useWorldRegistry()
 
-  const [tab, setTab] = useState<CatalogueTab>('ordinaire')
+  /* `?onglet=tons` opens the Tons tab: the tones workshop links here to change
+     a tone for the whole world (IT-10). Read once, at mount. */
+  const [tab, setTab] = useState<CatalogueTab>(() =>
+    new URLSearchParams(location.search).get('onglet') === 'tons' ? 'tons' : 'ordinaire',
+  )
   const [dialogOpen, setDialogOpen] = useState(false)
   /* The world a creation just made, consumed once ITS empty catalog has
      loaded: one lands on its first place (§S8), because an empty catalog is

@@ -230,6 +230,38 @@ const TONE = 'doux';
            'et jette les modifications : plus rien en attente, rien écrit sur disque');
     }
 
+    /* IT-10 (25/09) : le fragment de prompt d'un ton se LIT ici, et s'ajuste
+       pour ce personnage. C'est le fragment de `joueur` (« slight motion
+       blur ») qui degradait les selfies sans qu'aucun ecran ne le montre. */
+    console.log('\n[4ter] le fragment du ton se lit, s ajuste pour ce personnage, et revient au monde');
+    await page.goto(`${BASE}/bank/tones/edit/joueur?character=lena`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('#toneText');
+    const origine = (await page.textContent('#toneTextFragment')).trim();
+    dire(origine.length > 0 && origine !== 'aucun fragment', `le fragment se lit : « ${origine.slice(0, 50)} »`);
+    dire(await page.getAttribute('[data-tone-layer]', 'data-tone-layer') === 'monde',
+         'et sa couche est dite : du monde');
+    dire((await page.textContent('#bankTones')).includes('viennent du monde'),
+         'le bandeau ne pretend plus que les tons se declarent dans creative.json');
+    await page.click('#btnToneAdjust');
+    await page.fill('#toneTextPrompt', 'candid movement, spontaneous gesture');
+    await page.click('#btnToneTextSave');
+    await page.waitForSelector('#toneTextFragment');
+    await page.waitForTimeout(300);
+    dire((await page.textContent('#toneTextFragment')).trim() === 'candid movement, spontaneous gesture',
+         'le fragment ajuste s affiche');
+    dire(await page.getAttribute('[data-tone-layer]', 'data-tone-layer') === 'surcharge'
+         && (await page.$('[data-key="joueur"] [data-tone-couche="surcharge"]')) !== null,
+         'la couche passe a « ajuste », dans la carte et dans la liste');
+    const ecrit = JSON.parse(fs.readFileSync(CREATIVE_PATH, 'utf-8')).tones.find(t => t.key === 'joueur');
+    dire(ecrit && ecrit.prompt_add === 'candid movement, spontaneous gesture' && !('label' in ecrit && ecrit.label === undefined),
+         'creative.json de lena porte le fragment ajuste');
+    await page.click('#toneText button:has-text("Revenir au monde")');
+    await page.waitForTimeout(400);
+    dire((await page.textContent('#toneTextFragment')).trim() === origine,
+         'revenir au monde rend le fragment d origine');
+    const rendu = JSON.parse(fs.readFileSync(CREATIVE_PATH, 'utf-8')).tones.find(t => t.key === 'joueur');
+    dire(!rendu || !('prompt_add' in rendu), 'et creative.json ne le porte plus');
+
     console.log('\n[5] un ton inconnu affiche un état vide explicite, pas un crash');
     await page.goto(`${BASE}/bank/tones/edit/ce-ton-n-existe-pas?character=lena`, { waitUntil: 'networkidle' });
     await page.waitForSelector('#bankTones .empty');

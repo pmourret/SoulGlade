@@ -12,29 +12,33 @@
    the sub-view nav inside it; this view is handed that nav as `nav` and puts
    its own sentence next to it, exactly as `PosesView` does since screen-7d.
 
-   WHAT THIS SCREEN NEVER DOES: create, rename or delete a tone. Tones are
-   hand-authored in `creative.json`; this only tunes the `expression` range of
-   one that already exists. */
+   WHAT THIS SCREEN NEVER DOES: create or delete a tone. Since IT-10 (25/09) a
+   tone is created with its world (Référentiel › Mondes, onglet Tons). Here a
+   character ADJUSTS one: its expression range, and — through `ToneTextCard` —
+   its own label and prompt fragment, with the way back to the world's. */
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { useApi } from '../../api/useApi'
-import { PATHS } from '../../app/routes'
+import { PATHS, worldPlacesPath } from '../../app/routes'
 import { useChrome } from '../../chrome/ChromeContext'
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { useLightbox } from '../../chrome/LightboxContext'
 import { useRegisterPendingSave, type PendingSave } from '../../chrome/PendingSaveContext'
 import { useToast } from '../../chrome/ToastContext'
 import { useConfig } from '../../state/ConfigContext'
+import { useScenes } from '../../state/ScenesStoreContext'
 import { useSystemState } from '../../state/SystemStateContext'
 import { ParamPanel } from './ParamPanel'
 import { ToneList } from './ToneList'
+import { ToneTextCard } from './ToneTextCard'
 import { TrialColumn } from './TrialColumn'
 import { MAX_SELECTED_PHOTOS, useExpressionEditor, type GalleryItem } from './useExpressionEditor'
 import { PARAM_NAMES, useToneList, type ToneRow } from './useToneList'
+import { useToneText } from './useToneText'
 
 const BANK_SENTENCE =
-  'Les tons se déclarent dans creative.json · cet écran règle leur plage d’expression'
+  'Les tons viennent du monde · cet écran les ajuste pour ce personnage'
 
 export function ToneWorkshop({ nav }: { nav: ReactNode }) {
   const { tone: routeTone } = useParams<{ tone?: string }>()
@@ -78,6 +82,8 @@ function ToneWorkshopInner({
   const { qc } = useConfig()
   const { state } = useSystemState()
   const { open: openLightbox } = useLightbox()
+  const { world } = useScenes()
+  const toneText = useToneText()
   const {
     tone, params, dirty, reset,
     setTrial, setMin, setMax, toggleIncluded, setAsMin, setAsMax,
@@ -242,8 +248,8 @@ function ToneWorkshopInner({
     () =>
       rows.map((row) =>
         row.key === toneKey && params
-          ? { key: row.key, label: row.label, includedParams: PARAM_NAMES.filter((n) => params[n].included) }
-          : { key: row.key, label: row.label, includedParams: row.configuredParams },
+          ? { ...row, includedParams: PARAM_NAMES.filter((n) => params[n].included) }
+          : { ...row, includedParams: row.configuredParams },
       ),
     [rows, toneKey, params],
   )
@@ -252,8 +258,16 @@ function ToneWorkshopInner({
     return (
       <Frame nav={nav} narrow={narrow} rows={[]} toneKey={null} onSelectTone={onSelectTone}>
         <div className="empty m-[16px] rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-          <b className="mb-[4px] block">Aucun ton déclaré pour ce personnage.</b>
-          Les tons s'ajoutent dans <code>creative.json</code>.
+          <b className="mb-[4px] block">Le monde de ce personnage n'a pas encore de ton.</b>
+          Un ton se crée avec son monde, dans{' '}
+          {world ? (
+            <Link className="link" to={`${worldPlacesPath(world.id)}?onglet=tons`}>
+              Référentiel › Mondes › Tons
+            </Link>
+          ) : (
+            'Référentiel › Mondes › Tons'
+          )}
+          . Sans ton, ce personnage produit quand même.
         </div>
       </Frame>
     )
@@ -270,6 +284,7 @@ function ToneWorkshopInner({
   }
 
   const neutral = PARAM_NAMES.every((name) => !params[name].included)
+  const currentRow = rows.find((row) => row.key === toneKey) ?? null
 
   return (
     <Frame nav={nav} narrow={narrow} rows={listRows} toneKey={toneKey} onSelectTone={onSelectTone}>
@@ -290,6 +305,15 @@ function ToneWorkshopInner({
           />
         )}
 
+        <div className="flex min-h-0 flex-col">
+        {currentRow && (
+          <ToneTextCard
+            tone={currentRow}
+            world={world}
+            onAdjust={(fields) => toneText.adjust(currentRow.key, fields)}
+            onRevert={() => toneText.revert(currentRow.key)}
+          />
+        )}
         <TrialColumn
           photos={photos}
           photosError={photosError}
@@ -311,6 +335,7 @@ function ToneWorkshopInner({
           onRetry={retryPhoto}
           openLightbox={openLightbox}
         />
+        </div>
 
         <ParamPanel
           toneLabel={toneLabel}

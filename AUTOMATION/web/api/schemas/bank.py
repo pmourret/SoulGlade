@@ -111,6 +111,21 @@ class CreativeTone(BaseModel):
     # Where the tone comes from (25/09): its world as is, its world adjusted
     # by this character, or this character alone. Computed, never stored.
     couche: Optional[Literal["monde", "surcharge", "personnage"]] = None
+    # The text fields this character sets itself (label, prompt_add): what
+    # « Revenir au monde » would give back to the world.
+    champs_ajustes: list[str] = Field(default_factory=list)
+
+
+class ToneTextRequest(BaseModel):
+    """A character's own label and/or prompt fragment for one tone. Absent
+    fields are left as they are."""
+    key: str
+    label: Optional[str] = None
+    prompt_add: Optional[str] = None
+
+
+class ToneKeyRequest(BaseModel):
+    key: str
 
 
 class IntensityTier(BaseModel):

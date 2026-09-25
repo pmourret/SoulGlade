@@ -25,14 +25,16 @@ import shared_state as ss
 from ..dependencies import RequiredCharacterId
 from ..schemas.bank import (
     ComposeRequest, ComposeResponse, CreativeResponse, SceneBankRejected,
-    SceneBankResponse, SceneBankSaveRequest,
+    SceneBankResponse, SceneBankSaveRequest, ToneKeyRequest, ToneTextRequest,
 )
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
 from ..services.bank import (
     category_order, refresh_world_scenes, rotate_backup, scene_previews,
     scene_stats, stamp_world, validate_scene_bank,
 )
-from ..services.creative import is_edit_tier, tones_with_layers
+from ..services.creative import (
+    is_edit_tier, revert_tone_text, save_tone_text, tones_with_layers,
+)
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -195,6 +197,34 @@ async def get_creative_taxonomy(character_id: RequiredCharacterId):
             "tones": tones_with_layers(cid, creative.get("tones", [])),
             "intensity": tiers,
             "niveau_natif": natif}
+
+
+@router.post("/api/creative/tone", response_model=ActionResponse,
+             response_model_exclude_unset=True,
+             summary="Ajuster le libellé ou le fragment d'un ton pour ce personnage")
+async def adjust_tone_text(payload: ToneTextRequest, character_id: RequiredCharacterId):
+    """Writes only this character's creative.json. The tone itself is created
+    in its world (`/api/worlds/{id}/tones`); here a character only adjusts it."""
+    fields = payload.model_dump(exclude_none=True, exclude={"key"})
+    fields = {k: v.strip() for k, v in fields.items()}
+    try:
+        save_tone_text(character_id, payload.key, fields)
+    except ValueError as e:
+        ss.bad_request(str(e))
+    ss.push_log(f"ton {payload.key!r} ajusté pour {character_id} ({', '.join(fields)})")
+    return {"ok": True}
+
+
+@router.post("/api/creative/tone/revert", response_model=ActionResponse,
+             response_model_exclude_unset=True,
+             summary="Rendre au monde le libellé et le fragment d'un ton")
+async def revert_tone(payload: ToneKeyRequest, character_id: RequiredCharacterId):
+    try:
+        revert_tone_text(character_id, payload.key)
+    except ValueError as e:
+        ss.bad_request(str(e))
+    ss.push_log(f"ton {payload.key!r} rendu au monde pour {character_id}")
+    return {"ok": True}
 
 
 # --------------------------------------------------------------- scene composer

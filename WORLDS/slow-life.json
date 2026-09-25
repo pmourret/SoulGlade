@@ -307,7 +307,7 @@
       "prompt_add": "composed posture, controlled directional light, clean background",
       "expression": {
         "smile": [
-          0.0,
+          0,
           0.22
         ],
         "pupil_y": [

@@ -78,6 +78,8 @@ def poser_personnage(cid, wid, own_tones):
     d.mkdir(parents=True)
     (d / "character.json").write_text(json.dumps({
         "id": cid, "name": cid, "world": wid, "content_types": {"image": True},
+        "universe": "instagram-influenceur", "type": "instagram-influenceur",
+        "output_style": "realiste",
     }), encoding="utf-8")
     (d / "creative.json").write_text(json.dumps({
         "intentions": [], "tones": own_tones, "intensity": [],
@@ -188,6 +190,40 @@ try:
             f"personnage B : un ton herite, un ton propre ({cb})")
     verifie("sombre" not in tons(CA) and "joueur" not in tons(CB),
             "aucun ton ne passe d'un monde a l'autre")
+
+    # ================================================ [5b] ajuster le texte, y revenir
+    print("\n[5b] un personnage ajuste le texte d'un ton, puis le rend au monde")
+    avant_b = (OFM / "CHARACTERS" / CB / "creative.json").read_bytes()
+    r = CLIENT.post(f"/api/creative/tone?character={CA}",
+                    json={"key": "joueur", "prompt_add": "  candid, relaxed  "})
+    verifie(r.status_code == 200, f"route d'ajustement acceptee ({r.status_code} — {r.text[:160]})")
+    verifie(tons(CA)["joueur"]["prompt_add"] == "candid, relaxed",
+            "le fragment ajuste (et nettoye) prime sur celui du monde")
+    verifie(tons(CA)["joueur"]["expression"] == {"smile": [0.2, 0.4]},
+            "la plage deja reglee est gardee")
+    verifie((OFM / "CHARACTERS" / CB / "creative.json").read_bytes() == avant_b,
+            "le creative.json de l'autre personnage n'est pas touche")
+    champs = {t["key"]: t["champs_ajustes"] for t in tones_with_layers(CA, lb.load_creative(CA)["tones"])}
+    verifie(champs["joueur"] == ["prompt_add"] and champs["doux"] == [],
+            f"les champs ajustes sont dits ({champs})")
+    r = CLIENT.post(f"/api/creative/tone?character={CA}", json={"key": "joueur", "expression": {}})
+    verifie(r.status_code == 200 and tons(CA)["joueur"]["expression"] == {"smile": [0.2, 0.4]},
+            "un champ hors texte est ignore par le schema, jamais ecrit")
+    r = CLIENT.post(f"/api/creative/tone?character={CA}", json={"key": "inconnu", "label": "x"})
+    verifie(r.status_code == 400, "un ton inconnu est refuse en 400")
+
+    r = CLIENT.post(f"/api/creative/tone/revert?character={CA}", json={"key": "joueur"})
+    verifie(r.status_code == 200, f"revenir au monde accepte ({r.status_code})")
+    verifie(tons(CA)["joueur"]["prompt_add"] == "candid movement, spontaneous gesture"
+            and tons(CA)["joueur"]["expression"] == {"smile": [0.2, 0.4]},
+            "le fragment revient du monde, la plage reste")
+    CLIENT.post(f"/api/creative/tone?character={CA}", json={"key": "doux", "label": "Doux ajuste"})
+    CLIENT.post(f"/api/creative/tone/revert?character={CA}", json={"key": "doux"})
+    propre = json.loads((OFM / "CHARACTERS" / CA / "creative.json").read_text(encoding="utf-8"))["tones"]
+    verifie({"key": "doux", "expression": {"smile": [0.1, 0.3]}} in propre,
+            "une entree revenue au monde ne garde que sa plage")
+    r = CLIENT.post(f"/api/creative/tone/revert?character={CB}", json={"key": "perso"})
+    verifie(r.status_code == 400, "un ton propre au personnage n'a pas de monde vers quoi revenir")
 
     # ================================================ [6] un monde neuf a une liste de tons
     print("\n[6] create_world")

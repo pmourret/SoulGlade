@@ -1147,6 +1147,143 @@
         }
       }
     },
+    "/api/creative/tone": {
+      "post": {
+        "summary": "Ajuster le libellé ou le fragment d'un ton pour ce personnage",
+        "description": "Writes only this character's creative.json. The tone itself is created\nin its world (`/api/worlds/{id}/tones`); here a character only adjusts it.",
+        "operationId": "adjust_tone_text_api_creative_tone_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToneTextRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/creative/tone/revert": {
+      "post": {
+        "summary": "Rendre au monde le libellé et le fragment d'un ton",
+        "operationId": "revert_tone_api_creative_tone_revert_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToneKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/compose": {
       "post": {
         "summary": "Composer des scènes depuis une intention en français",
@@ -4602,6 +4739,13 @@
               }
             ],
             "title": "Couche"
+          },
+          "champs_ajustes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Champs Ajustes"
           }
         },
         "additionalProperties": true,
@@ -8150,6 +8294,55 @@
         ],
         "title": "SystemStateResponse",
         "description": "`STATE` + bucket counts + ETA + undo depth. Polled every 1.5 s.\n\nEvery key of the `STATE` dict is named here, plus the five the route adds.\n`extra=\"allow\"` keeps the response honest if `STATE` ever grows a key:\ndropping one silently would break the frontend far from the change.\n\nCOUPLING — DO NOT BREAK (migration brief §4.3). `running` and `comfy` are\ntwo of the four inputs of the `#btnRun.disabled` rule; see the note on\n`get_system_state` in routers/state.py."
+      },
+      "ToneKeyRequest": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "ToneKeyRequest"
+      },
+      "ToneTextRequest": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "prompt_add": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Add"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "ToneTextRequest",
+        "description": "A character's own label and/or prompt fragment for one tone. Absent\nfields are left as they are."
       },
       "TonesResponse": {
         "properties": {

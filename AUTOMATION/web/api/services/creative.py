@@ -19,11 +19,15 @@ PROD/EXPORT.
 
 The messages returned are French: they are displayed as-is.
 """
+import json
+
 import nsfw_batch
 import runner as lb
 import shared_state as ss
 import worlds
 from universe import EDIT
+
+from .bank import rotate_backup
 
 
 def is_edit_tier(tier):
@@ -223,4 +227,71 @@ def tones_with_layers(character_id, tones):
     own = (lb.load_json(path).get("tones", []) if path.exists() else [])
     world = lb.character_world(character_id)
     layers = worlds.tone_layers(world if world and worlds.exists(world) else None, own)
-    return [{**t, "couche": layers.get(t.get("key"), "personnage")} for t in tones]
+    adjusted = {t.get("key"): sorted(k for k in t if k in TONE_TEXT_FIELDS)
+                for t in own if isinstance(t, dict)}
+    return [{**t, "couche": layers.get(t.get("key"), "personnage"),
+             "champs_ajustes": adjusted.get(t.get("key"), [])} for t in tones]
+
+
+# The two text fields of a tone a character may adjust in the workshop. The
+# expression range has its own route (`services/expression.py`), and the key
+# is the tone's identity: it is never adjusted.
+TONE_TEXT_FIELDS = ("label", "prompt_add")
+
+
+def _own_creative(character_id):
+    path = lb.creative_path(character_id)
+    raw = (lb.load_json(path) if path.exists()
+           else {"intentions": [], "tones": [], "intensity": []})
+    return path, raw
+
+
+def _write_creative(path, raw):
+    rotate_backup(path)
+    path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def save_tone_text(character_id, key, fields):
+    """Sets this character's own label and/or prompt fragment for ONE tone,
+    writing only its creative.json. `fields` holds only the text fields being
+    set. An inherited tone gains an entry carrying just those fields — tones
+    merge field by field, so the world keeps supplying the rest.
+
+    Raises ValueError on an unknown tone or a field outside the two allowed."""
+    unknown = [k for k in fields if k not in TONE_TEXT_FIELDS]
+    if unknown:
+        raise ValueError(f"champ de ton non ajustable : {', '.join(unknown)}")
+    if lb.by_key(lb.load_creative(character_id).get("tones", []), key) is None:
+        raise ValueError(f"ton inconnu : {key!r}")
+    path, raw = _own_creative(character_id)
+    own = list(raw.get("tones", []))
+    for i, t in enumerate(own):
+        if t.get("key") == key:
+            own[i] = {**t, **fields}
+            break
+    else:
+        own.append({"key": key, **fields})
+    raw["tones"] = own
+    _write_creative(path, raw)
+
+
+def revert_tone_text(character_id, key):
+    """Drops this character's label and fragment for ONE tone of its world, so
+    both come from the world again; its expression range stays. An entry left
+    with nothing but its key is removed. A tone that exists only for this
+    character has no world to go back to: ValueError."""
+    world = lb.character_world(character_id)
+    world_keys = {t.get("key") for t in (worlds.tones(world)
+                                         if world and worlds.exists(world) else [])}
+    if key not in world_keys:
+        raise ValueError(f"le ton {key!r} n'existe pas dans le monde : rien vers quoi revenir")
+    path, raw = _own_creative(character_id)
+    own = []
+    for t in raw.get("tones", []):
+        if t.get("key") == key:
+            t = {k: v for k, v in t.items() if k not in TONE_TEXT_FIELDS}
+            if set(t) <= {"key"}:
+                continue
+        own.append(t)
+    raw["tones"] = own
+    _write_creative(path, raw)

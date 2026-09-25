@@ -557,6 +557,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/creative/tone": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajuster le libellé ou le fragment d'un ton pour ce personnage
+         * @description Writes only this character's creative.json. The tone itself is created
+         *     in its world (`/api/worlds/{id}/tones`); here a character only adjusts it.
+         */
+        post: operations["adjust_tone_text_api_creative_tone_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/creative/tone/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rendre au monde le libellé et le fragment d'un ton */
+        post: operations["revert_tone_api_creative_tone_revert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/compose": {
         parameters: {
             query?: never;
@@ -2020,6 +2058,8 @@ export interface components {
             prompt_add?: string | null;
             /** Couche */
             couche?: ("monde" | "surcharge" | "personnage") | null;
+            /** Champs Ajustes */
+            champs_ajustes?: string[];
         } & {
             [key: string]: unknown;
         };
@@ -3899,6 +3939,24 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /** ToneKeyRequest */
+        ToneKeyRequest: {
+            /** Key */
+            key: string;
+        };
+        /**
+         * ToneTextRequest
+         * @description A character's own label and/or prompt fragment for one tone. Absent
+         *     fields are left as they are.
+         */
+        ToneTextRequest: {
+            /** Key */
+            key: string;
+            /** Label */
+            label?: string | null;
+            /** Prompt Add */
+            prompt_add?: string | null;
+        };
         /** TonesResponse */
         TonesResponse: {
             /** World */
@@ -5160,6 +5218,96 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CreativeResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    adjust_tone_text_api_creative_tone_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToneTextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revert_tone_api_creative_tone_revert_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToneKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
                 };
             };
             /** @description Requête refusée */

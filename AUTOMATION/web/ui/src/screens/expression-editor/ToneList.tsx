@@ -20,6 +20,9 @@ export type ToneListRow = {
   /** Live for the tone being edited, saved for the others — the workshop
       resolves that, this component only draws what it is handed. */
   includedParams: ExpressionParamName[]
+  /** Where the tone comes from (IT-10). Only the two cases that differ from
+      the world's tone as is get a word; an inherited tone is the default. */
+  couche: 'monde' | 'surcharge' | 'personnage'
 }
 
 export function ToneList({
@@ -75,6 +78,11 @@ export function ToneList({
             >
               <div className="flex items-baseline gap-[6px]">
                 <span className="min-w-0 flex-1 truncate text-[13px]">{row.label}</span>
+                {row.couche !== 'monde' && (
+                  <span className="flex-none text-[10.5px] text-dim2" data-tone-couche={row.couche}>
+                    {row.couche === 'surcharge' ? 'ajusté' : 'propre'}
+                  </span>
+                )}
                 {/* NEVER by the dot alone (frontend.md: statut jamais par la
                     couleur seule) — it doubles the banner, which names the
                     tone in full at the top of the screen. */}
