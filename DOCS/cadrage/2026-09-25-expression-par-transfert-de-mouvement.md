@@ -87,6 +87,16 @@ expression les lève exprès. L'ancre porte sur l'implantation
 (position du départ et de la queue du sourcil par rapport à l'œil, au repos)
 et sur l'épaisseur, pas sur la hauteur de l'arc, qui est expressive.
 
+**Amendé le 26/09 après la phase de recherche**
+(`DOCS/recherche/2026-09-26-les-ancres-d-identite-se-tiennent-par-construction.md`) :
+les ancres ne se **mesurent** pas — les 106 points suivent l'apparence d'une
+expression, pas la géométrie, et les modèles 3D qui séparent forme et
+expression sont fermés par leur licence. Elles se **tiennent par
+construction** : le champ du transfert de mouvement est contraint (mâchoire et
+sourcils rigides, pommettes sans mouvement horizontal, iris rigides et jamais
+recollés). Le budget d'identité disparaît ; le score après expression reste
+enregistré, comme information.
+
 ## Hors périmètre
 
 - Les grandes rotations de tête et les grandes ouvertures de bouche : le

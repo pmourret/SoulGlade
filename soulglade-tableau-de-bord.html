@@ -784,7 +784,7 @@ const D = {
         {
           "s": "cours",
           "t": "L'expression se transfère en mouvement, pas en pixels",
-          "d": "Le transfert de mouvement est en production et dans l'aperçu : même netteté avec et sans expression, cheveux et peau intacts. Reste l'étape 2 : des ancres d'identité à la place du budget, qui atténue encore les expressions franches.",
+          "d": "Le transfert de mouvement est en production : même netteté avec et sans expression. Les ancres d'identité se tiennent par construction (verdict du 26/09) ; reste à les intégrer et à retirer le budget qui atténue les expressions franches.",
           "it": "IT-10",
           "ref": "DOCS/cadrage/2026-09-25-expression-par-transfert-de-mouvement.md"
         }
@@ -1568,11 +1568,20 @@ const D = {
       "e": "tranche",
       "t": "L'expression se pose par transfert de mouvement",
       "d": "Décidé le 25/09 au banc (5 seeds, 2 tons) et à l'œil de Pierre. Le recollage de LivePortrait abîme l'image même à vide ; le flux optique appliqué à l'original garde sa texture. Coût : +2,7 s par image, et environ 0,035 d'identité à expression égale, une baisse qu'une expression franche entraîne de toute façon."
+    },
+    {
+      "e": "tranche",
+      "t": "Les ancres d'identité se tiennent par construction",
+      "d": "Décidé le 26/09 à l'œil de Pierre. Le champ du transfert de mouvement interdit à la mâchoire, aux pommettes, aux sourcils et aux iris de changer de forme ; plus rien n'est refusé au nom de l'identité, le score après expression devient une information. Les mesures sur 106 points suivent l'apparence, pas la géométrie."
     }
   ],
   "horizon": {
     "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
     "items": [
+      {
+        "t": "La licence d'InsightFace avant tout pack vendu",
+        "d": "(26 septembre 2026) Relevé en lisant la licence de LivePortrait : les modèles d'InsightFace sont réservés à la recherche non commerciale. La plateforme les utilise pour le contrôle d'identité et pour PuLID, et aucun ADR ne le traite. À instruire avant qu'un pack ne se vende."
+      },
       {
         "t": "Des préréglages enregistrés dans l'éditeur avancé",
         "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. Les préréglages sont une constante du code (PRESETS) ; l'utilisateur ne peut pas enregistrer les siens."
@@ -1713,6 +1722,18 @@ const D = {
       {
         "t": "Poser l'expression avant les étages de détail",
         "d": "(25 septembre 2026) Refait la chaîne et la bande d'identité (invariant 5) pour un gain que le transfert de mouvement obtient sans y toucher."
+      },
+      {
+        "t": "Ancres d'identité mesurées sur les 106 points",
+        "d": "(26 septembre 2026) Le détecteur déplace ses points avec l'apparence d'une expression : un sourire y élargit les pommettes même à flux horizontal nul. Menton et épaisseur des sourcils aveugles."
+      },
+      {
+        "t": "Points canoniques de LivePortrait comme ancres",
+        "d": "(26 septembre 2026) Vraies expressions jusqu'à 0,014, déformations d'identité de 0,001 à 0,007 : même recouvrement."
+      },
+      {
+        "t": "Modèle 3D morphable pour séparer forme et expression",
+        "d": "(26 septembre 2026) Fermé par la licence : BFM payant en usage commercial, FLAME non commercial et interdit en contenu adulte."
       }
     ]
   }
