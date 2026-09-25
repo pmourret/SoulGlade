@@ -161,22 +161,36 @@ export function PhotoEditor({
   const rd = ready ? rotatedDims() : { w: 0, h: 0 }
   const zoom = useZoomPan({ stageRef, naturalWidth: rd.w, naturalHeight: rd.h })
 
-  /* Ratio between the DISPLAYED canvas and the working canvas — now simply
-     `zoom.displayScale` (2026-09-05). It used to be measured live off
-     `canvas.getBoundingClientRect()`, which was fine as long as the canvas
-     was ALWAYS 1:1 with its own buffer (the only thing that could ever
-     override it was `max-width:100%`, a rare safety net). Once zoom made
-     canvas.style.width diverge from canvas.width on purpose, that DOM read
-     turned out to be structurally one render behind: it reads whatever
-     the LAST layout effect committed, but the crop box renders BEFORE
-     the effect for THIS render has run — so `k` always lagged the size
-     the canvas was about to become, and the crop frame visibly drifted
-     off its region on every zoom step (found by measuring the frame's
-     position as a fraction of the canvas after zooming: it changed, when
-     nothing should have touched `crop` itself). Reading `zoom.displayScale`
-     directly is synchronous with the render that also drives the canvas
-     sizing effect, so there is no lag left to have. */
-  const displayScale = () => zoom.displayScale
+  /* CSS pixels per WORKING pixel — the ratio that maps `crop` (which lives
+     in canvas BUFFER coordinates, like `centredCrop`, `safetyMargin` and
+     `finalCanvas` all read it) onto the screen.
+
+     It used to be measured live off `canvas.getBoundingClientRect()`, which
+     was structurally one render behind: the crop box renders BEFORE the
+     layout effect that resizes the canvas, so `k` always lagged the size
+     the canvas was about to become, and the frame drifted on every zoom
+     step. The 2026-09-05 fix replaced it with `zoom.displayScale`, which
+     has no lag — but `zoom.displayScale` counts CSS pixels per NATURAL
+     pixel, and the buffer is NOT the natural size: `sizeCanvas()` caps it
+     at "fit". The two only agree when the image is smaller than the stage,
+     which never happens on a real output.
+
+     REPORTED BY PIERRE, 2026-09-25, and measured: on a 1080-wide photo the
+     buffer and the CSS box were both 635 px, so the true ratio was 1,000
+     while the code applied 0,59. The frame could not be dragged past 58,9 %
+     of the canvas on either axis, and — the worse half — it was DRAWN at
+     59 % of the region it would actually cut, because the export reads the
+     same `crop` in buffer coordinates. What you framed was not what you
+     got.
+
+     `canvas.width` is safe to read here despite the effect ordering above:
+     the buffer is sized to "fit" and does NOT follow the zoom, so it only
+     changes on a 90° rotation, which re-centres the frame anyway. */
+  const displayScale = () => {
+    const canvas = canvasRef.current
+    if (!ready || !canvas || !canvas.width) return 1
+    return (rotatedDims().w * zoom.displayScale) / canvas.width
+  }
 
   const sizeCanvas = useCallback(() => {
     const canvas = canvasRef.current

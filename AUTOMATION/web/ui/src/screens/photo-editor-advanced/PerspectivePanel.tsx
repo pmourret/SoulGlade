@@ -1,8 +1,15 @@
-/* "Recadrage avancé" — design-pass §7b: perspective horizontale/verticale
-   SEULEMENT — le ratio et le redressement fin restent dans le modal
-   simplifié (7a), volontairement pas dupliqués ici. Repliable via
-   `AdjustSection` (screen-10 §S5.3). Presentational only (frontend.md):
-   `onChange` is the one write path. */
+/* "Déformation de perspective" — design-pass §7b: perspective horizontale
+   et verticale SEULEMENT, le ratio et le redressement fin restant dans le
+   modal simplifié (7a), volontairement pas dupliqués ici. Repliable via
+   `AdjustSection` (screen-10 §S5.3).
+
+   RENOMMÉE le 25/09/2026 sur le retour de Pierre. Elle s'appelait
+   « Recadrage avancé », ce qui annonçait un cadre à poser alors qu'elle
+   déforme : elle bascule les plans de l'image et laisse les coins vides.
+   Un nom qui promet un recadrage à côté d'un panneau de recadrage qui,
+   lui, en est un, envoie chercher ici ce qui se règle là-bas.
+
+   Presentational only (frontend.md): `onChange` is the one write path. */
 import { AdjustSlider } from '../../chrome/AdjustSlider'
 import { AdjustSection } from './AdjustSection'
 import { changedCount, neutralPatch, sectionSummary } from './layerSummary'
@@ -25,9 +32,9 @@ export function PerspectivePanel({
   return (
     <AdjustSection
       changed={changedCount('perspective', settings)}
-      onReset={() => onCommit(neutralPatch('perspective', settings), 'Recadrage avancé réinitialisé')}
+      onReset={() => onCommit(neutralPatch('perspective', settings), 'Perspective réinitialisée')}
       summary={sectionSummary('perspective', settings)}
-      title="Recadrage avancé"
+      title="Déformation de perspective"
     >
       <div className="flex flex-col gap-[2px]">
         {ROWS.map((row) => (

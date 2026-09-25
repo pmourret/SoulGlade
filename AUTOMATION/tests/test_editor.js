@@ -226,6 +226,40 @@ process.on('exit', nettoyer);
   dire(Math.abs(vertical - 16 / 9) < 0.05,
        `9:16 aussi (rapport ${vertical.toFixed(2)} pour ${(16 / 9).toFixed(2)})`);
 
+  console.log('\n[3ter-bis] LE CADRE ATTEINT LES BORDS (signale par Pierre le 25/09)');
+  /* Le cadre vit en pixels de BUFFER, l ecran en pixels CSS. Tant que le
+     facteur de conversion etait `zoom.displayScale` (CSS par pixel NATIF,
+     pas par pixel de buffer), le cadre plafonnait a 59 % du canvas ET se
+     dessinait a 59 % de la region qu il allait reellement couper : ce qu on
+     cadrait n etait pas ce qu on obtenait. Un compteur ne l aurait pas vu,
+     seule la position mesuree du cadre le dit. */
+  await page.click('#edRatio button[data-r="libre"]');
+  await page.waitForTimeout(300);
+  const boiteCanvas = await page.$eval('#edCanvas', (e) => {
+    const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height };
+  });
+  const poigneeSE = await page.$eval('#edCropBox', (e) => {
+    const r = e.getBoundingClientRect(); return { x: r.x + r.width, y: r.y + r.height };
+  });
+  await page.mouse.move(poigneeSE.x, poigneeSE.y);
+  await page.mouse.down();
+  await page.mouse.move(boiteCanvas.x + boiteCanvas.w + 300, boiteCanvas.y + boiteCanvas.h + 300, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForTimeout(350);
+  const atteint = await page.evaluate(() => {
+    const c = document.querySelector('#edCanvas').getBoundingClientRect();
+    const b = document.querySelector('#edCropBox').getBoundingClientRect();
+    return { droite: (b.right - c.left) / c.width, bas: (b.bottom - c.top) / c.height };
+  });
+  dire(atteint.droite > 0.98, `le cadre atteint le bord DROIT du canvas (${(atteint.droite * 100).toFixed(1)} %)`);
+  dire(atteint.bas > 0.98, `et le bord BAS (${(atteint.bas * 100).toFixed(1)} %)`);
+  await page.click('#edCropOff');
+  await page.waitForTimeout(250);
+  await page.click('#edCropOn');
+  await page.waitForTimeout(300);
+  await page.click('#edRatio button[data-r="9:16"]');
+  await page.waitForTimeout(350);
+
   console.log('\n[3bis] ZOOM (2026-09-05) : les boutons agrandissent l affichage SANS toucher au buffer, et le cadre suit');
   const infoCanvas = () => page.evaluate(() => {
     const c = document.querySelector('#edCanvas');

@@ -235,8 +235,8 @@ process.on('exit', nettoyer);
   await page.waitForTimeout(200);
   dire((await hueField.inputValue()) === '12', 'le champ teinte de la bande "rouges" retient la valeur saisie');
 
-  console.log('\n[8ter] Recadrage avancé : perspective H/V deforme et laisse des coins transparents');
-  const perspDetails = page.locator('details.adv:has-text("Recadrage avancé")');
+  console.log('\n[8ter] Déformation de perspective : H/V deforme et laisse des coins transparents');
+  const perspDetails = page.locator('details.adv:has-text("Déformation de perspective")');
   await perspDetails.locator('summary').click();
   await page.waitForTimeout(200);
   const cornerAlpha = () => page.evaluate(() => {
