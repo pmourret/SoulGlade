@@ -41,6 +41,7 @@ import { useScenes } from '../../state/ScenesStoreContext'
 import { useTaxonomy } from '../../state/TaxonomyContext'
 import { PATHS } from '../../app/routes'
 import { PlaceInspector } from '../worlds/PlaceInspector'
+import { usePlaceDraft } from '../worlds/usePlaceDraft'
 import { useWorldPlaces } from '../worlds/useWorldPlaces'
 import { useOverlayPanel } from '../produce/useOverlayPanel'
 import { ToneWorkshop } from '../expression-editor/ToneWorkshop'
@@ -129,8 +130,16 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
       ? (worldPlaces.places?.find((p) => p.id === bench.selected!.base.world_ref) ?? null)
       : null
 
-  const onSavePlace = async (patch: { id: string; label: string; intention: string; prompt: string }) => {
+  /* The draft of the open place lives in `usePlaceDraft` since the design-pass
+     screen-11: `PlaceInspector` became controlled there, so the Mondes screen
+     could hand its dirty state to the chrome's banner. The Banque keeps its own
+     immediate save, which is its contract — one place tied to one scene, not a
+     document one composes. */
+  const placeDraft = usePlaceDraft(selectedPlace)
+
+  const onSavePlace = async () => {
     if (!selectedPlace || !worldPlaces.places) return
+    const patch = { ...placeDraft.draft, prompt: placeDraft.draft.prompt.trim() }
     setPlaceSaving(true)
     // `idEditable` is not set below, so `patch.id` always equals `selectedPlace.id` here.
     const next = worldPlaces.places.map((p) => (p.id === selectedPlace.id ? { ...p, ...patch } : p))
@@ -439,11 +448,18 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
               <div className="min-h-0 flex-1 overflow-y-auto p-[20px] [&>*]:max-w-[880px]">
                 {selectedPlace ? (
                   <PlaceInspector
-                    place={selectedPlace}
+                    place={{
+                      id: selectedPlace.id ?? '',
+                      label: selectedPlace.label ?? '',
+                      intention: selectedPlace.intention ?? '',
+                      prompt: selectedPlace.prompt ?? '',
+                    }}
+                    draft={placeDraft.draft}
                     worldLabel={world?.label ?? bench.selected.base.world ?? ''}
                     saving={placeSaving}
                     status={placeStatus}
-                    onSave={onSavePlace}
+                    onPatch={placeDraft.patch}
+                    onSave={() => void onSavePlace()}
                     onClose={bench.close}
                   />
                 ) : (

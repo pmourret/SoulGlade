@@ -1,230 +1,362 @@
-/* The world registry, at /worlds (ADR-0016) — a navbar destination of its
-   own, on the same footing as Produire or Revue.
+/* Référentiel > Mondes — ONE screen for both `/worlds` and
+   `/worlds/:worldId/places` (design-pass screen-11).
 
-   REGISTRY + A SHORT CREATION FORM, one screen, same shape as
-   `CharactersScreen.tsx` (a grid of cards + a dashed "+ new" card). The
-   difference: creating a character is a multi-step wizard (identity base,
-   frozen forever); creating a world is a SHORT form — id, name, an existing
-   pack, an optional tone — because all it does is write an empty catalog.
-   No wizard file for something this small.
+   IT USED TO BE TWO. `/worlds` was a grid of cards linking to a second screen
+   that held the catalog, and that second screen carried the adult catalog as a
+   folded `<details>` with a full copy of the list and the inspector inside. The
+   split cost a navigation to see what a world holds, and made « which world am
+   I editing » a question one answered by reading the URL.
 
-   THE PACK IS A PROPOSAL, NOT A ROUTING CHOICE (ADR-0016 §2): the form picks
-   one only to let the server derive `compatible_families` — it never writes
-   a new entry into `universe.resolve()`'s table, and the created world stays
-   proposable to any pack of the same family afterwards.
+   THE SELECTED WORLD IS DERIVED, NEVER STORED: `worldId` comes from the route,
+   and falls back to the first row of the registry. There is no second source of
+   truth to drift from the URL — the same reasoning as `activeCategory` in
+   `app/routes.ts`. `WorldPlacesScreen` is gone; its route mounts this file.
 
-   A NEW WORLD'S CATALOG IS EMPTY: creating one always ends on its places
-   editor (`worldPlacesPath`), because an empty catalog is not useful on its
-   own — the very next thing to do is add a place to it. */
-import { useCallback, useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+   THE SAVE BELONGS TO THE CHROME. A place is edited in the third column and
+   written by the `DirtyBar` (§S5.4), like the tones workshop writes
+   `creative.json`. That is also what makes leaving a modified place a QUESTION
+   rather than a silent loss: changing world, changing tab or opening another
+   place all pass through `leaveGuard`. */
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
-import { errorOf, type Schema } from '../../api/client'
-import { useApi } from '../../api/useApi'
+import { useChrome } from '../../chrome/ChromeContext'
+import { useConfirm } from '../../chrome/ConfirmContext'
+import { useRegisterPendingSave, type PendingSave } from '../../chrome/PendingSaveContext'
 import { useToast } from '../../chrome/ToastContext'
-import { worldPlacesPath } from '../../app/routes'
+import { PATHS, worldPlacesPath } from '../../app/routes'
+import { CatalogueColumn, type CatalogueTab } from './CatalogueColumn'
+import { NewWorldDialog } from './NewWorldDialog'
+import { PlaceInspector } from './PlaceInspector'
+import { useCatalogueEditor, type CatalogueEditor } from './useCatalogueEditor'
+import { useWorldPlaces, type Place } from './useWorldPlaces'
+import { useWorldRegistry } from './useWorldRegistry'
+import { WorldList } from './WorldList'
 
-type WorldListResponse = Schema<'WorldListResponse'>
-type WorldOptionsResponse = Schema<'WorldOptionsResponse'>
-type CreateWorldResponse = Schema<'CreateWorldResponse'>
-type WorldSummary = Schema<'WorldSummary'>
-type PackOption = Schema<'PackOption'>
-
-const CID_RE = /^[a-z][a-z0-9_-]*$/
-
-const CARD =
-  'block rounded-card border-2 bg-panel px-[15px] py-[14px] text-txt no-underline ' +
-  'hover:border-line2 focus-visible:outline-2 focus-visible:outline-focus ' +
-  'focus-visible:outline-offset-2 flex flex-col justify-center gap-[4px]'
-
-function WorldCard({ world }: { world: WorldSummary }) {
-  return (
-    <a className={`${CARD} border-line`} href={worldPlacesPath(world.id)} data-world-card>
-      <b className="block text-[15px] font-semibold">{world.label}</b>
-      <code className="font-code text-[12px] leading-[normal] text-dim2">{world.id}</code>
-      <div className="mt-[10px] flex flex-wrap gap-[6px]">
-        {(world.compatible_families ?? []).map((f) => (
-          <span
-            key={f}
-            className="rounded-[20px] border px-[8px] py-[2px] text-[11px] whitespace-nowrap border-line2 text-dim"
-          >
-            {f}
-          </span>
-        ))}
-        <span className="rounded-[20px] border px-[8px] py-[2px] text-[11px] whitespace-nowrap border-line2 text-dim">
-          {world.places_count} lieu{world.places_count > 1 ? 'x' : ''}
-        </span>
-      </div>
-    </a>
-  )
-}
-
-function NewWorldCard({
-  packs,
-  creating,
-  onCreate,
-}: {
-  packs: PackOption[]
-  creating: boolean
-  onCreate: (fields: { id: string; label: string; pack: string; tone: string }) => Promise<string | null>
-}) {
-  const [open, setOpen] = useState(false)
-  const [id, setId] = useState('')
-  const [label, setLabel] = useState('')
-  const [pack, setPack] = useState(packs[0]?.id ?? '')
-  const [tone, setTone] = useState('')
-  const [error, setError] = useState<string | null>(null)
-
-  const idValid = CID_RE.test(id)
-  const family = packs.find((p) => p.id === pack)?.family ?? null
-  const ready = idValid && label.trim() && pack
-
-  if (!open) {
-    return (
-      <button
-        type="button"
-        className={`${CARD} border-line border-dashed w-full text-left cursor-pointer`}
-        data-new
-        onClick={() => setOpen(true)}
-      >
-        <b className="block text-[15px] font-semibold text-acc">+ Nouveau monde</b>
-        <span className="tiny">catalogue vide, pack déjà curaté</span>
-      </button>
-    )
-  }
-
-  return (
-    <div className={`${CARD} border-acc`} data-new-open>
-      <b className="block text-[15px] font-semibold">Nouveau monde</b>
-
-      <label className="f mt-[8px]">
-        <span>nom</span>
-        <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="ex : Terres sauvages" />
-      </label>
-
-      <label className="f mt-[8px]">
-        <span>
-          identifiant <span className="tiny">{!id ? '' : idValid ? '✓' : '— minuscules, chiffres, - et _'}</span>
-        </span>
-        <input value={id} onChange={(e) => setId(e.target.value.trim())} placeholder="slug" spellCheck={false} />
-      </label>
-
-      <label className="f mt-[8px]">
-        <span>
-          pack — sert seulement à dériver la famille compatible
-          {family && <> · <b>{family}</b></>}
-        </span>
-        <select value={pack} onChange={(e) => setPack(e.target.value)}>
-          {packs.map((p) => (
-            <option key={p.id} value={p.id}>
-              {p.label} ({p.family})
-            </option>
-          ))}
-        </select>
-      </label>
-
-      <label className="f mt-[8px]">
-        <span>ton (optionnel)</span>
-        <input value={tone} onChange={(e) => setTone(e.target.value)} placeholder="ex : calm, natural light" />
-      </label>
-
-      {error && (
-        <p className="tiny mt-[8px] text-danger-txt" role="alert">
-          {error}
-        </p>
-      )}
-
-      <div className="mt-[10px] flex gap-[8px]">
-        <button
-          className="btn primary sm"
-          disabled={!ready || creating}
-          onClick={async () => {
-            setError(null)
-            const failure = await onCreate({ id, label: label.trim(), pack, tone: tone.trim() })
-            if (failure) setError(failure)
-          }}
-        >
-          Créer
-        </button>
-        <button className="btn sm" onClick={() => setOpen(false)} disabled={creating}>
-          Annuler
-        </button>
-      </div>
-    </div>
-  )
-}
+const SHELL = 'screen flex h-full min-h-0 overflow-hidden'
+const LEFT = 'flex w-[260px] shrink-0 flex-col overflow-hidden border-r border-line max-[1100px]:hidden'
+const MIDDLE = 'flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-line max-[1100px]:w-[340px]'
+const RIGHT = 'flex min-w-0 flex-1 flex-col overflow-hidden bg-panel2'
 
 export function WorldsScreen() {
-  const api = useApi()
-  const toast = useToast()
+  const { worldId } = useParams<{ worldId: string }>()
   const navigate = useNavigate()
-  const [worlds, setWorlds] = useState<WorldSummary[] | null>(null)
-  const [packs, setPacks] = useState<PackOption[]>([])
-  const [failed, setFailed] = useState(false)
-  const [creating, setCreating] = useState(false)
+  const location = useLocation()
+  const toast = useToast()
+  const confirm = useConfirm()
+  const { narrow } = useChrome()
+  const registry = useWorldRegistry()
 
-  const load = useCallback(async () => {
-    const [worldsResponse, optionsResponse] = await Promise.all([
-      api.get<WorldListResponse>('/api/worlds').catch(() => null),
-      api.get<WorldOptionsResponse>('/api/worlds/options').catch(() => null),
-    ])
-    const failure =
-      !worldsResponse || errorOf(worldsResponse) || !Array.isArray(worldsResponse.worlds)
-        ? 'registre des mondes illisible'
-        : null
-    if (failure) {
-      setFailed(true)
-      return
+  const [tab, setTab] = useState<CatalogueTab>('ordinaire')
+  const [dialogOpen, setDialogOpen] = useState(false)
+  /* The world a creation just made, consumed once ITS empty catalog has
+     loaded: one lands on its first place (§S8), because an empty catalog is
+     not something one came to look at.
+
+     IT HOLDS THE ID, NOT A BOOLEAN. Measured on the first build: a flag fired
+     the moment it was set, against the PREVIOUS world's places — `useWorldPlaces`
+     keeps the loaded catalog until the next one answers, so there is a window
+     where the route already names the new world and the list is still the old
+     one. Waiting for « this world, and it is empty » closes it without
+     touching the loader. */
+  const [freshWorld, setFreshWorld] = useState<string | null>(null)
+
+  const worlds = registry.worlds
+  const selectedId = worldId ?? worlds?.[0]?.id ?? null
+  const world = worlds?.find((w) => w.id === selectedId) ?? null
+
+  const ordinary = useWorldPlaces(selectedId)
+  const adult = useWorldPlaces(selectedId, { adulte: true })
+
+  /* The same warning for both catalogs: a retired place breaks the frame of
+     every character scene that references it, adult or not. */
+  const confirmRemoval = useCallback(
+    (place: Place) =>
+      confirm({
+        title: `Retirer le lieu « ${place.label || place.id} » ?`,
+        button: 'Retirer',
+        danger: true,
+        body: (
+          <p>
+            Toute scène de personnage qui le référence (`world_ref`) perdra son cadre au prochain
+            enregistrement de son atelier — elle ne sera plus produisible sans être réassignée.
+          </p>
+        ),
+      }),
+    [confirm],
+  )
+
+  const handlers = useMemo(() => ({ onSaved: toast, confirmRemoval }), [toast, confirmRemoval])
+  const ordinaryEditor = useCatalogueEditor(ordinary, handlers)
+  const adultEditor = useCatalogueEditor(adult, handlers)
+  const editor: CatalogueEditor = tab === 'adulte' ? adultEditor : ordinaryEditor
+  const file = `WORLDS/${selectedId}${tab === 'adulte' ? '.adulte' : ''}.json`
+
+  const saveDraft = useCallback(async () => {
+    const draft = editor.draft
+    if (!draft.prompt.trim() || (editor.creatingNew && !draft.id.trim())) {
+      toast(
+        editor.creatingNew && !draft.id.trim()
+          ? 'un lieu a besoin d’un identifiant'
+          : 'un lieu a besoin d’un prompt : c’est le cadre que les scènes héritent',
+      )
+      return false
     }
-    setFailed(false)
-    setWorlds(worldsResponse!.worlds)
-    setPacks(optionsResponse && !errorOf(optionsResponse) ? (optionsResponse.packs ?? []) : [])
-  }, [api])
+    return editor.save({ ...draft, id: draft.id.trim(), prompt: draft.prompt.trim() })
+  }, [editor, toast])
+
+  /** Three honest issues before losing what is typed: write it, drop it, stay. */
+  const leaveGuard = useCallback(async (): Promise<boolean> => {
+    if (!editor.dirty) return true
+    const outcome = await confirm({
+      title: `Abandonner les modifications de « ${editor.draft.label || editor.draft.id || 'ce lieu'} » ?`,
+      button: 'Enregistrer puis continuer',
+      alt: 'Abandonner',
+      body: (
+        <p>
+          Ce lieu n'est pas écrit dans <code>{file}</code>. Les personnages de ce monde héritent
+          toujours de ce que le fichier contient.
+        </p>
+      ),
+    })
+    if (outcome === false) return false
+    if (outcome === true) return await saveDraft()
+    editor.reset()
+    return true
+  }, [confirm, editor, file, saveDraft])
+
+  const goToWorld = useCallback(
+    async (id: string) => {
+      if (id === selectedId) return
+      if (!(await leaveGuard())) return
+      /* `replace` when we came from the bare /worlds: the registry picked that
+         first world, the user did not, so Back should leave the screen rather
+         than walk back through a choice nobody made. Search carried forward
+         explicitly, or `CharacterContext` would re-add `?character=` a tick
+         later and push a second entry. */
+      navigate(
+        { pathname: worldPlacesPath(id), search: location.search },
+        { replace: location.pathname === PATHS.worlds },
+      )
+    },
+    [selectedId, leaveGuard, navigate, location.search, location.pathname],
+  )
+
+  const onTab = useCallback(
+    async (next: CatalogueTab) => {
+      if (next === tab) return
+      if (!(await leaveGuard())) return
+      setTab(next)
+    },
+    [tab, leaveGuard],
+  )
+
+  const onOpenPlace = useCallback(
+    async (id: string) => {
+      if (!(await leaveGuard())) return
+      editor.open(id)
+    },
+    [leaveGuard, editor],
+  )
+
+  const onAddPlace = useCallback(async () => {
+    if (!(await leaveGuard())) return
+    editor.add()
+  }, [leaveGuard, editor])
+
+  const onClosePlace = useCallback(async () => {
+    if (!(await leaveGuard())) return
+    editor.close()
+  }, [leaveGuard, editor])
 
   useEffect(() => {
-    void load()
-  }, [load])
+    if (!freshWorld || freshWorld !== selectedId) return
+    if (ordinary.places === null || ordinary.places.length > 0) return
+    setFreshWorld(null)
+    ordinaryEditor.add()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [freshWorld, selectedId, ordinary.places])
 
-  const onCreate = async (fields: { id: string; label: string; pack: string; tone: string }) => {
-    setCreating(true)
-    const response = await api.post<CreateWorldResponse>('/api/worlds', fields)
-    setCreating(false)
-    const failure = errorOf(response)
-    if (failure) return failure
+  const onCreateWorld = async (fields: Parameters<typeof registry.create>[0]) => {
+    const result = await registry.create(fields)
+    if (result.erreur) return result.erreur
     toast(`monde « ${fields.label} » créé`)
-    navigate(worldPlacesPath(response.id))
+    setDialogOpen(false)
+    setTab('ordinaire')
+    setFreshWorld(result.id!)
+    navigate({ pathname: worldPlacesPath(result.id!), search: location.search })
     return null
   }
 
-  if (failed) {
+  /* Declared to the chrome's banner, which draws it and owns Ctrl S. MEMOIZED:
+     handing a fresh object every render would set state on every render. */
+  const characters = selectedId ? registry.characterCount(selectedId) : null
+  const pendingSave = useMemo<PendingSave | null>(
+    () =>
+      editor.dirty && world
+        ? {
+            title: `Lieu « ${editor.draft.label || editor.draft.id || 'sans nom'} » modifié`,
+            body: (
+              <>
+                <code>{file}</code>
+                {/* Only when a route already answered it, and only from 1 up:
+                    `CHARACTERS/` is outside the repo, and « 0 personnage »
+                    would read as a measurement made on data that is absent. */}
+                {characters && characters > 0 ? (
+                  <> — {characters} personnage{characters > 1 ? 's' : ''} compose
+                    {characters > 1 ? 'nt' : ''} dans ce monde et hérite
+                    {characters > 1 ? 'nt' : ''} de ce cadre.</>
+                ) : (
+                  <> — les personnages de ce monde héritent de ce cadre.</>
+                )}
+              </>
+            ),
+            saveLabel: 'Enregistrer le lieu',
+            onSave: () => void saveDraft(),
+            onRevert: () => editor.reset(),
+          }
+        : null,
+    [editor.dirty, editor.draft.label, editor.draft.id, editor.reset, world, file, characters, saveDraft],
+  )
+  useRegisterPendingSave(pendingSave)
+
+  if (registry.failed) {
     return (
-      <div className="screen">
-        <div className="wrap">
-          <div className="empty">
+      <div className={SHELL} id="worlds">
+        <div className="flex min-w-0 flex-1 items-center justify-center p-[24px]">
+          <div className="empty max-w-[420px] rounded-card border border-line bg-panel px-[20px] py-[26px]">
+            <span aria-hidden="true" className="mb-[6px] block text-[15px] text-warn-txt">
+              ◆
+            </span>
             <b>Registre indisponible</b>
             La liste des mondes n'a pas pu être lue.
+            <div className="mt-[14px]">
+              <button className="btn sm" onClick={() => void registry.load()}>
+                Réessayer
+              </button>
+            </div>
           </div>
         </div>
       </div>
     )
   }
 
-  return (
-    <div className="screen" id="worlds">
-      <div className="wrap">
-        <h2>Mondes</h2>
-        <p className="tiny mt-[6px] mb-[18px]">
-          Le cadre que composent les personnages. Ouvrir un monde mène à son catalogue de lieux ;
-          le catalogue d'un monde neuf est vide.
-        </p>
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-[14px]">
-          {worlds === null && <p className="tiny">chargement du registre…</p>}
-          {worlds?.map((world) => (
-            <WorldCard key={world.id} world={world} />
-          ))}
-          {worlds !== null && <NewWorldCard packs={packs} creating={creating} onCreate={onCreate} />}
+  if (worlds === null) {
+    return (
+      <div className={SHELL} id="worlds" aria-busy="true">
+        <div className={LEFT} aria-hidden="true">
+          <Skeletons rows={6} />
+        </div>
+        <div className={MIDDLE} aria-hidden="true">
+          <Skeletons rows={5} />
+        </div>
+        <div className={RIGHT} aria-hidden="true">
+          <Skeletons rows={4} />
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div className={SHELL} id="worlds">
+      {dialogOpen && (
+        <NewWorldDialog
+          packs={registry.packs}
+          creating={registry.creating}
+          takenIds={worlds.map((w) => w.id)}
+          onCreate={onCreateWorld}
+          onClose={() => setDialogOpen(false)}
+        />
+      )}
+
+      <div className={LEFT}>
+        <WorldList
+          worlds={worlds}
+          selectedId={selectedId}
+          onSelect={(id) => void goToWorld(id)}
+          onNew={() => setDialogOpen(true)}
+        />
+      </div>
+
+      {world === null ? (
+        <div className="flex min-w-0 flex-1 items-center justify-center p-[24px]">
+          <div className="empty max-w-[420px]">
+            <b>Aucun monde pour l'instant</b>
+            Un monde porte le catalogue de lieux où les personnages composent leurs scènes.
+            <div className="mt-[14px]">
+              <button className="btn primary sm" data-new onClick={() => setDialogOpen(true)}>
+                Nouveau monde
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className={MIDDLE} id="worldPlaces">
+            <CatalogueColumn
+              world={world}
+              tab={tab}
+              onTab={(next) => void onTab(next)}
+              ordinaryCount={ordinary.places?.length ?? world.places_count}
+              adultCount={adult.places?.length ?? 0}
+              ordinary={ordinary.places}
+              adult={adult.places}
+              ordinaryEditor={ordinaryEditor}
+              adultEditor={adultEditor}
+              ordinaryError={ordinary.error}
+              adultError={adult.error}
+              narrow={narrow}
+              worlds={worlds}
+              onSelectWorld={(id) => void goToWorld(id)}
+              onOpenPlace={(id) => void onOpenPlace(id)}
+              onAddPlace={() => void onAddPlace()}
+            />
+          </div>
+
+          <div className={RIGHT}>
+            {editor.selected ? (
+              <PlaceInspector
+                place={editor.creatingNew ? BLANK : toPatch(editor.selected)}
+                draft={editor.draft}
+                worldLabel={world.label}
+                saving={editor.saving}
+                status={editor.status}
+                idEditable={editor.creatingNew}
+                takenIds={(tab === 'adulte' ? adult.places : ordinary.places)?.map((p) => p.id) ?? []}
+                onPatch={editor.patch}
+                onRemove={
+                  editor.creatingNew ? undefined : () => void editor.remove(editor.selected!.id)
+                }
+                onClose={() => void onClosePlace()}
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center p-[24px]">
+                <div className="empty text-[13px]">Ouvre un lieu dans la liste, ou ajoutes-en un.</div>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+const BLANK = { id: '', label: '', intention: '', prompt: '' }
+const toPatch = (place: Place) => ({
+  id: place.id ?? '',
+  label: place.label ?? '',
+  intention: place.intention ?? '',
+  prompt: place.prompt ?? '',
+})
+
+/** The loading state of the three columns (§S8) — `aria-hidden` on the column
+    itself, so a screen reader hears the busy region, not six empty bars. */
+function Skeletons({ rows }: { rows: number }) {
+  return (
+    <div className="flex flex-col gap-[10px] p-[12px]">
+      {Array.from({ length: rows }, (_, i) => (
+        <div key={i} className="h-[34px] rounded-[6px] bg-panel" />
+      ))}
     </div>
   )
 }

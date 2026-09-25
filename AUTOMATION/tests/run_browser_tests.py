@@ -77,6 +77,7 @@ TESTS = [
 
     "test_board_layout",  # unitaire pur : mise en page de la planche (ecran 5c)
     "test_diff",          # unitaire pur : diff lignes + mots (ecran 6 bis, §7)
+    "test_slugify",       # unitaire pur : identifiant propose depuis le nom (ecran 11)
     "test_cadres_ua",     # transverse : le cadre du navigateur sur un <button>
 ]
 

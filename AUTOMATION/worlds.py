@@ -85,10 +85,19 @@ def _read_json(path):
 
 
 def list_worlds():
-    """Ids des mondes declares, ordre alphabetique. [] si WORLDS/ absent."""
+    """Ids des mondes declares, ordre alphabetique. [] si WORLDS/ absent.
+
+    Les catalogues adultes sont ECARTES : `<id>.adulte.json` est le second
+    catalogue d'un monde existant (21/09), pas un monde. Sans ce filtre son
+    `stem` (`slow-life.adulte`) remontait comme une entree du registre, et
+    l'ecran Mondes l'affichait comme un monde vide a cote du sien. Le wizard
+    ne l'a jamais vu (`worlds_for_family` filtre sur `compatible_families`,
+    qu'un fichier adulte n'a pas), l'ecran si.
+    """
     if not WORLDS_DIR.is_dir():
         return []
-    return sorted(p.stem for p in WORLDS_DIR.glob("*.json"))
+    return sorted(p.stem for p in WORLDS_DIR.glob("*.json")
+                  if not p.name.endswith(".adulte.json"))
 
 
 def exists(wid):

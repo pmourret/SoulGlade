@@ -29,7 +29,6 @@ import { BankPosesScreen, BankScenesScreen, BankTonesScreen } from '../screens/b
 import { PhotoEditorAdvancedScreen } from '../screens/photo-editor-advanced/PhotoEditorAdvancedScreen'
 import { PoseEditorScreen } from '../screens/pose-editor/PoseEditorScreen'
 import { TrainingScreen } from '../screens/training/TrainingScreen'
-import { WorldPlacesScreen } from '../screens/worlds/WorldPlacesScreen'
 import { WorldsScreen } from '../screens/worlds/WorldsScreen'
 import { GalleryRoute, ReviewRoute } from '../screens/review/ReviewScreen'
 import { ProduceScreen } from '../screens/produce/ProduceScreen'
@@ -105,11 +104,12 @@ export function App() {
                   {/* The training set of the claimed character, and its export.
                       No route param: it is always the character's own set. */}
                   <Route path={PATHS.training} element={<TrainingScreen />} />
-                  {/* ADR-0016: the world registry, and its catalog editor —
-                      the id is a route param, like the review/gallery image
-                      name below. */}
+                  {/* ADR-0016: the world registry and its catalog editor, ONE
+                      screen since the design-pass screen-11. The bare path
+                      opens on the first world of the registry; the param names
+                      which one, like the review/gallery image name below. */}
                   <Route path={PATHS.worlds} element={<WorldsScreen />} />
-                  <Route path={`${PATHS.worlds}/:worldId/places`} element={<WorldPlacesScreen />} />
+                  <Route path={`${PATHS.worlds}/:worldId/places`} element={<WorldsScreen />} />
                   {/* The second screen the legacy chrome switched by attribute:
                       `#trier[data-metier]` becomes two routes. `:name?` is the
                       image aimed at (F1.3), the shape `#trier/<nom>` carried. */}

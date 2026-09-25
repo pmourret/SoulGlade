@@ -53,6 +53,12 @@ REELS = ("slow-life", "terres-sauvages")
 print("[1] les deux mondes reels se chargent et ont leurs cles de structure")
 ids = worlds.list_worlds()
 verifie(set(ids) >= set(REELS), f"list_worlds() contient les deux mondes ({ids})")
+# Un catalogue adulte est le SECOND catalogue d'un monde, pas un monde : son
+# fichier `<id>.adulte.json` ne doit jamais remonter comme une entree du
+# registre (trouve a l'audit de l'ecran 11, ou il s'affichait comme un monde
+# vide nomme « slow-life.adulte »).
+verifie(not [w for w in ids if w.endswith(".adulte")],
+        f"aucun catalogue adulte dans le registre ({ids})")
 for wid in REELS:
     w = worlds.load_world(wid)
     verifie(w.get("id") == wid and bool(w.get("label"))
