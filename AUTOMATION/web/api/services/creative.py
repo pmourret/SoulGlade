@@ -22,6 +22,7 @@ The messages returned are French: they are displayed as-is.
 import nsfw_batch
 import runner as lb
 import shared_state as ss
+import worlds
 from universe import EDIT
 
 
@@ -211,3 +212,15 @@ def valid_sources(payload, character):
                  for f, _ in nsfw_batch.sources_disponibles(ss.cfg(character), character)}
     return [n for n in (payload.sources or [])
             if ss.SAFE_NAME.match(n) and n in available]
+
+
+def tones_with_layers(character_id, tones):
+    """The resolved tones, each told where it comes from (`couche`): the
+    world, the world adjusted by this character, or the character alone.
+    Read from the character's RAW creative.json, never the merged view — the
+    merge is exactly what hides the answer (25/09)."""
+    path = lb.creative_path(character_id)
+    own = (lb.load_json(path).get("tones", []) if path.exists() else [])
+    world = lb.character_world(character_id)
+    layers = worlds.tone_layers(world if world and worlds.exists(world) else None, own)
+    return [{**t, "couche": layers.get(t.get("key"), "personnage")} for t in tones]

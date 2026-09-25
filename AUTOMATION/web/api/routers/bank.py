@@ -32,7 +32,7 @@ from ..services.bank import (
     category_order, refresh_world_scenes, rotate_backup, scene_previews,
     scene_stats, stamp_world, validate_scene_bank,
 )
-from ..services.creative import is_edit_tier
+from ..services.creative import is_edit_tier, tones_with_layers
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -192,7 +192,7 @@ async def get_creative_taxonomy(character_id: RequiredCharacterId):
     natif = next((p["level"] for p in creative.get("intensity", [])
                   if p.get("lora_adulte")), None)
     return {"intentions": creative.get("intentions", []),
-            "tones": creative.get("tones", []),
+            "tones": tones_with_layers(cid, creative.get("tones", [])),
             "intensity": tiers,
             "niveau_natif": natif}
 

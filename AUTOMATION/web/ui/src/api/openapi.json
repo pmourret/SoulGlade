@@ -3495,6 +3495,113 @@
         }
       }
     },
+    "/api/worlds/{world_id}/tones": {
+      "get": {
+        "summary": "Tons d'un monde",
+        "operationId": "get_tones_api_worlds__world_id__tones_get",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TonesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Enregistrer les tons d'un monde",
+        "description": "Replaces the world's WHOLE `tones` list, same contract as `places`.\nA tone is created with its world (25/09); every character of the world\ninherits it, field by field under its own adjustments. A removed key\nbreaks nothing: a scene that still lists it simply stops matching it.",
+        "operationId": "save_tones_api_worlds__world_id__tones_post",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTonesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tons refusés",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacesRejected"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/worlds/{world_id}/places-adulte": {
       "get": {
         "summary": "Catalogue adulte d'un monde",
@@ -4468,6 +4575,33 @@
                 "type": "null"
               }
             ]
+          },
+          "prompt_add": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Prompt Add"
+          },
+          "couche": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "monde",
+                  "surcharge",
+                  "personnage"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Couche"
           }
         },
         "additionalProperties": true,
@@ -7527,6 +7661,22 @@
         "title": "SavePlacesRequest",
         "description": "The business shape (unique ids, non-empty prompt, no character-only\nkey) is validated in `services/worlds.py`, not here — same reasoning as\n`SceneBankSaveRequest`: this is a FILE that belongs to the world, not a\nrequest payload the schema layer should own the rules of."
       },
+      "SaveTonesRequest": {
+        "properties": {
+          "tones": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Tones"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SaveTonesRequest",
+        "description": "Shape checked in `services/worlds.validate_tones`, like places."
+      },
       "SceneBankRejected": {
         "properties": {
           "ok": {
@@ -8000,6 +8150,32 @@
         ],
         "title": "SystemStateResponse",
         "description": "`STATE` + bucket counts + ETA + undo depth. Polled every 1.5 s.\n\nEvery key of the `STATE` dict is named here, plus the five the route adds.\n`extra=\"allow\"` keeps the response honest if `STATE` ever grows a key:\ndropping one silently would break the frontend far from the change.\n\nCOUPLING — DO NOT BREAK (migration brief §4.3). `running` and `comfy` are\ntwo of the four inputs of the `#btnRun.disabled` rule; see the note on\n`get_system_state` in routers/state.py."
+      },
+      "TonesResponse": {
+        "properties": {
+          "world": {
+            "type": "string",
+            "title": "World"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "tones": {
+            "items": {
+              "$ref": "#/components/schemas/WorldTone"
+            },
+            "type": "array",
+            "title": "Tones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "world",
+          "label",
+          "tones"
+        ],
+        "title": "TonesResponse"
       },
       "TrainingExcluded": {
         "properties": {
@@ -8748,6 +8924,11 @@
             "type": "integer",
             "title": "Places Count",
             "default": 0
+          },
+          "tones_count": {
+            "type": "integer",
+            "title": "Tones Count",
+            "default": 0
           }
         },
         "additionalProperties": true,
@@ -8758,6 +8939,48 @@
         ],
         "title": "WorldSummary",
         "description": "One row of the « Mondes » screen's registry — enough to card it and\nlink to its places editor, nothing a character sheet needs."
+      },
+      "WorldTone": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "prompt_add": {
+            "type": "string",
+            "title": "Prompt Add",
+            "default": ""
+          },
+          "expression": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "items": {
+                    "type": "number"
+                  },
+                  "type": "array"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expression"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "WorldTone",
+        "description": "One tone of a world's catalog (25/09): key, label, prompt fragment,\nexpression range. `extra=\"allow\"`: the file may carry `_` notes."
       }
     }
   }

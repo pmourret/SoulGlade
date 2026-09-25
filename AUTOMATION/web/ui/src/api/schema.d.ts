@@ -1561,6 +1561,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/worlds/{world_id}/tones": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Tons d'un monde */
+        get: operations["get_tones_api_worlds__world_id__tones_get"];
+        put?: never;
+        /**
+         * Enregistrer les tons d'un monde
+         * @description Replaces the world's WHOLE `tones` list, same contract as `places`.
+         *     A tone is created with its world (25/09); every character of the world
+         *     inherits it, field by field under its own adjustments. A removed key
+         *     breaks nothing: a scene that still lists it simply stops matching it.
+         */
+        post: operations["save_tones_api_worlds__world_id__tones_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/worlds/{world_id}/places-adulte": {
         parameters: {
             query?: never;
@@ -1992,6 +2016,10 @@ export interface components {
             /** Label */
             label?: string | null;
             expression?: components["schemas"]["ExpressionRangeParams"] | null;
+            /** Prompt Add */
+            prompt_add?: string | null;
+            /** Couche */
+            couche?: ("monde" | "surcharge" | "personnage") | null;
         } & {
             [key: string]: unknown;
         };
@@ -3616,6 +3644,18 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * SaveTonesRequest
+         * @description Shape checked in `services/worlds.validate_tones`, like places.
+         */
+        SaveTonesRequest: {
+            /** Tones */
+            tones?: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * SceneBankRejected
          * @description 400 of a refused save. `erreur` is the first problem — what the screen
          *     shows; `problemes` is the whole list, for the details panel.
@@ -3858,6 +3898,15 @@ export interface components {
             undo: number;
         } & {
             [key: string]: unknown;
+        };
+        /** TonesResponse */
+        TonesResponse: {
+            /** World */
+            world: string;
+            /** Label */
+            label: string;
+            /** Tones */
+            tones: components["schemas"]["WorldTone"][];
         };
         /**
          * TrainingExcluded
@@ -4167,6 +4216,36 @@ export interface components {
              * @default 0
              */
             places_count: number;
+            /**
+             * Tones Count
+             * @default 0
+             */
+            tones_count: number;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * WorldTone
+         * @description One tone of a world's catalog (25/09): key, label, prompt fragment,
+         *     expression range. `extra="allow"`: the file may carry `_` notes.
+         */
+        WorldTone: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Prompt Add
+             * @default
+             */
+            prompt_add: string;
+            /** Expression */
+            expression?: {
+                [key: string]: number[];
+            } | null;
         } & {
             [key: string]: unknown;
         };
@@ -6830,6 +6909,90 @@ export interface operations {
                 };
             };
             /** @description Catalogue refusé */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlacesRejected"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_tones_api_worlds__world_id__tones_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TonesResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_tones_api_worlds__world_id__tones_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveTonesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Tons refusés */
             400: {
                 headers: {
                     [name: string]: unknown;

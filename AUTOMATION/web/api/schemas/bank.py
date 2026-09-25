@@ -2,7 +2,7 @@
 
 Scene bank, creative taxonomy, scene composer.
 """
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -107,6 +107,10 @@ class CreativeTone(BaseModel):
     # the first real reader of this field — `extra="allow"` already let it
     # through untyped before.
     expression: Optional[ExpressionRangeParams] = None
+    prompt_add: Optional[str] = None
+    # Where the tone comes from (25/09): its world as is, its world adjusted
+    # by this character, or this character alone. Computed, never stored.
+    couche: Optional[Literal["monde", "surcharge", "personnage"]] = None
 
 
 class IntensityTier(BaseModel):

@@ -3,6 +3,7 @@
     /api/worlds                     GET the registry, POST to create one (ADR-0016)
     /api/worlds/options              packs available to derive a new world from
     /api/worlds/{world_id}/places   GET the catalog, POST to save it (ADR-0015)
+    /api/worlds/{world_id}/tones    GET the tones, POST to save them (25/09)
 
 These routes touch ONLY `WORLDS/<world_id>.json` files. They are a world
 resource, not a character one — no `?character=` dependency, unlike every
@@ -21,10 +22,10 @@ import worlds
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
 from ..schemas.worlds import (
     CreateWorldRequest, CreateWorldResponse, PackOption, PlacesRejected,
-    PlacesResponse, SavePlacesRequest, WorldListResponse, WorldOptionsResponse,
-    WorldSummary,
+    PlacesResponse, SavePlacesRequest, SaveTonesRequest, TonesResponse,
+    WorldListResponse, WorldOptionsResponse, WorldSummary,
 )
-from ..services.worlds import validate_places
+from ..services.worlds import validate_places, validate_tones
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -41,7 +42,8 @@ async def get_world_registry():
         out.append({"id": wid, "label": w.get("label", wid),
                     "compatible_families": w.get("compatible_families", []),
                     "tone": w.get("tone", ""),
-                    "places_count": len(w.get("places", []))})
+                    "places_count": len(w.get("places", [])),
+                    "tones_count": len(w.get("tones", []))})
     return {"worlds": out}
 
 
@@ -105,6 +107,36 @@ async def save_places(world_id: str, payload: SavePlacesRequest):
     worlds.save_places(world_id, payload.places)
     ss.push_log(f"WORLDS/{world_id}.json : catalogue enregistré "
                f"({len(payload.places)} lieu(x))")
+    return {"ok": True}
+
+
+@router.get("/api/worlds/{world_id}/tones", response_model=TonesResponse,
+            summary="Tons d'un monde")
+async def get_tones(world_id: str):
+    w = worlds.load_world(world_id)             # UnknownWorldError -> 400
+    return {"world": world_id, "label": w.get("label", world_id),
+            "tones": worlds.tones(world_id)}
+
+
+@router.post("/api/worlds/{world_id}/tones", response_model=ActionResponse,
+             response_model_exclude_unset=True,
+             responses={400: {"model": PlacesRejected,
+                              "description": "Tons refusés"}},
+             summary="Enregistrer les tons d'un monde")
+async def save_tones(world_id: str, payload: SaveTonesRequest):
+    """Replaces the world's WHOLE `tones` list, same contract as `places`.
+    A tone is created with its world (25/09); every character of the world
+    inherits it, field by field under its own adjustments. A removed key
+    breaks nothing: a scene that still lists it simply stops matching it."""
+    worlds.load_world(world_id)
+    problems = validate_tones(payload.tones)
+    if problems:
+        ss.push_log(f"WORLDS/{world_id}.json tones REFUSE — {problems[0]}")
+        return JSONResponse({"ok": False, "erreur": problems[0],
+                             "problemes": problems}, status_code=400)
+    worlds.save_tones(world_id, payload.tones)
+    ss.push_log(f"WORLDS/{world_id}.json : tons enregistrés "
+                f"({len(payload.tones)} ton(s))")
     return {"ok": True}
 
 

@@ -22,33 +22,27 @@ def save_tone_expression(character_id, tone_key, params):
     0.35), ...}` — a parameter left out simply stops being posed for this
     tone (`expression.tirage()` already treats an absent key that way).
 
-    Raises `ValueError` if the tone does not exist: this route never creates
-    one — tones themselves stay hand-authored, only their expression range is
-    edited here. The tone can come from the character's OWN file or be
-    purely inherited from its world: either way this writes a full
-    character-side override (every field of the resolved tone, `expression`
-    replaced) — never just `{"key", "expression"}`, which would silently
-    drop `label`/`prompt_add` the next time the world's entry is read
-    (`worlds._merge_by_key` replaces a keyed override entirely, it does not
-    merge field by field). Writing the WHOLE merged dict back, as if every
-    tone belonged to this character, would silently un-migrate the world's
-    inherited tones on first use — exactly what this route must not do.
+    Raises `ValueError` if the tone does not exist: tones are created in
+    their world, this only sets a range. The character's entry carries ONLY
+    what it changes: `{"key", "expression"}` for an inherited tone, the
+    `expression` field replaced for one it already has. Tones merge field by
+    field since 25/09 (`worlds._merge_fields_by_key`), so the world's label
+    and prompt fragment keep flowing through — a full copy would freeze them
+    here and hide every later correction made in the world.
     """
     merged = lb.load_creative(character_id)
-    tone = lb.by_key(merged.get("tones", []), tone_key)
-    if tone is None:
+    if lb.by_key(merged.get("tones", []), tone_key) is None:
         raise ValueError(f"ton inconnu : {tone_key!r}")
     target = lb.creative_path(character_id)
     raw = lb.load_json(target) if target.exists() else {"intentions": [], "tones": [],
                                                          "intensity": []}
     own_tones = list(raw.get("tones", []))
-    override = {**tone, "expression": params}
     for i, t in enumerate(own_tones):
         if t.get("key") == tone_key:
-            own_tones[i] = override
+            own_tones[i] = {**t, "expression": params}
             break
     else:
-        own_tones.append(override)
+        own_tones.append({"key": tone_key, "expression": params})
     raw["tones"] = own_tones
     rotate_backup(target)
     target.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")

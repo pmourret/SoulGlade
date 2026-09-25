@@ -45,6 +45,30 @@ class PlacesRejected(BaseModel):
     problemes: list[str] = Field(default_factory=list)
 
 
+class WorldTone(BaseModel):
+    """One tone of a world's catalog (25/09): key, label, prompt fragment,
+    expression range. `extra="allow"`: the file may carry `_` notes."""
+    model_config = ConfigDict(extra="allow")
+
+    key: str
+    label: str = ""
+    prompt_add: str = ""
+    expression: Optional[dict[str, list[float]]] = None
+
+
+class TonesResponse(BaseModel):
+    world: str
+    label: str
+    tones: list[WorldTone]
+
+
+class SaveTonesRequest(BaseModel):
+    """Shape checked in `services/worlds.validate_tones`, like places."""
+    model_config = ConfigDict(extra="allow")
+
+    tones: list[dict[str, Any]] = Field(default_factory=list)
+
+
 # --------------------------------------------------------------- world registry
 class WorldSummary(BaseModel):
     """One row of the « Mondes » screen's registry — enough to card it and
@@ -56,6 +80,7 @@ class WorldSummary(BaseModel):
     compatible_families: list[str] = Field(default_factory=list)
     tone: str = ""
     places_count: int = 0
+    tones_count: int = 0
 
 
 class WorldListResponse(BaseModel):

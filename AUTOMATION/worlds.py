@@ -148,6 +148,7 @@ def create_world(wid, label, pack, tone=""):
         "tone": (tone or "").strip(),
         "ui_skin_token": f"world-{wid}",
         "places": [],
+        "tones": [],
         "_notes": [
             f"Cree par l'ecran « Mondes ». Pack {pack!r} choisi pour en deriver",
             f"compatible_families ({family!r}) et suggested_styles — UNE",
@@ -250,15 +251,50 @@ def _merge_by_key(base, overrides):
     return out
 
 
+def _merge_fields_by_key(base, overrides):
+    """Comme `_merge_by_key`, mais une entree d'`overrides` de meme `key` ne
+    remplace QUE les champs qu'elle porte : `{"key": "doux", "expression":
+    {...}}` garde le libellé et le fragment du monde. Un champ est remplace
+    en bloc — `expression` n'est jamais fusionnee parametre par parametre,
+    une plage est un reglage entier.
+
+    Pourquoi pas `_merge_by_key` pour les tons (25/09) : une surcharge qui
+    remplace l'entree entiere fige chez le personnage une copie du fragment
+    du monde, et corriger ce fragment dans le monde ne l'atteint plus. C'est
+    ce qui rendait un createur de tons du monde inoperant pour tout ton deja
+    regle dans l'atelier."""
+    surcharges = {e["key"]: e for e in overrides
+                  if isinstance(e, dict) and e.get("key")}
+    out = [{**e, **surcharges[e["key"]]}
+           if isinstance(e, dict) and e.get("key") in surcharges else e
+           for e in base]
+    connues = {e.get("key") for e in base if isinstance(e, dict) and e.get("key")}
+    out += [e for e in overrides
+            if not (isinstance(e, dict) and e.get("key") in connues)]
+    return out
+
+
 def merge_creative_vocab(wid, character_intentions, character_tones):
     """Fusion monde + personnage des deux listes de vocabulaire creatif
     (J8.3, ADR-0019) : le monde fournit la base, le personnage surcharge une
-    cle existante et ajoute les cles neuves (`_merge_by_key`). Utilisee par
+    cle existante et ajoute les cles neuves. Les intentions se remplacent
+    entree par entree (`_merge_by_key`), les tons champ par champ
+    (`_merge_fields_by_key`, 25/09). Utilisee par
     `AUTOMATION/runner/prompt.py::load_creative()` — jamais par
     `build_jobs()` lui-meme, meme principe qu'ADR-0015 §4 pour les scenes :
     la fusion vit en amont de l'assemblage, jamais dedans."""
     return (_merge_by_key(intentions(wid), character_intentions or []),
-            _merge_by_key(tones(wid), character_tones or []))
+            _merge_fields_by_key(tones(wid), character_tones or []))
+
+
+def tone_layers(wid, character_tones):
+    """Couche de chaque ton resolu, par cle : `monde` (herite tel quel),
+    `surcharge` (du monde, ajuste par le personnage) ou `personnage` (propre
+    au personnage). `wid` None = aucun monde, tout ton est au personnage."""
+    du_monde = {t.get("key") for t in (tones(wid) if wid else [])}
+    propres = {t.get("key") for t in character_tones or [] if isinstance(t, dict)}
+    return {k: ("surcharge" if k in propres else "monde") for k in du_monde} | {
+        k: "personnage" for k in propres - du_monde}
 
 
 # Reglages qui appartiennent au PERSONNAGE, jamais au catalogue d'un monde
@@ -391,6 +427,18 @@ def save_places(wid, new_places):
     path = world_path(wid)
     data = _read_json(path)
     data["places"] = list(new_places)
+    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
+                    encoding="utf-8")
+
+
+def save_tones(wid, new_tones):
+    """Reecrit UNIQUEMENT la cle `tones` de WORLDS/<wid>.json, jumelle de
+    `save_places` : le monde cree ses tons comme il cree ses lieux (25/09,
+    `DOCS/cadrage/2026-09-25-creer-un-ton.md`). La forme est verifiee par
+    `api/services/worlds.validate_tones` ; cette fonction ecrit."""
+    path = world_path(wid)
+    data = _read_json(path)
+    data["tones"] = list(new_tones)
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8")
 
