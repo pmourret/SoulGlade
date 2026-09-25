@@ -47,18 +47,45 @@ nommés et commentés avec la mesure qui les a fixés.
 (24/08 : sourire franc 0,910 → 0,824, à identité constante), et C5 ajoute
 environ 0,035 à expression égale. Le garde-fou refuserait ce qu'on demande.
 
-**À trancher par Pierre avant le mode Plan** — recommandation en premier :
+**Tranché par Pierre le 25/09 : des ancres d'identité, pas un score
+global.** Une expression a le droit de bouger ce qui est expressif — la
+bouche, les paupières, la hauteur des sourcils. Elle n'a pas le droit de
+toucher aux **points d'ancrage** qui font le visage : la forme du menton, les
+pommettes, l'implantation et l'épaisseur des sourcils, la couleur des yeux.
+Le score d'identité global (ArcFace) ne sait pas faire cette différence : il
+baisse avec n'importe quel sourire. Le garde-fou devient une mesure propre à
+la plateforme, qui vérifie les ancres une par une.
 
-1. **Borner la déformation elle-même** (recommandé). Le flux optique est déjà
-   calculé : son amplitude dans le cadre du visage, rapportée à la taille du
-   visage, dit directement si l'expression tord le visage. Le seuil se mesure
-   sur les plages de `slow-life` et vit dans `config.json` (invariant 4). Le
-   score d'identité après expression reste mesuré et enregistré
-   (`identite_apres_expression`), mais ne refuse plus rien.
-2. Garder le budget d'identité, recalibré pour C5 : le plus petit changement,
-   mais il continue de punir une expression franche.
-3. Un budget qui dépend de l'amplitude demandée : juste sur le papier, mais
-   il faut étalonner une courbe score / amplitude par personnage.
+- **Les points existent déjà.** InsightFace charge `2d106det` (106 points
+  2D) et `1k3d68` (68 points 3D) à chaque contrôle d'identité ; seuls
+  la détection et l'embedding sont utilisés aujourd'hui. Aucun modèle neuf.
+- **La forme, pas la position.** Ouvrir la bouche abaisse le menton : c'est
+  réel. Ce qui ne doit pas changer est la forme du contour (comparée après
+  alignement : translation, échelle et rotation retirées), la largeur aux
+  pommettes rapportée à l'écart des yeux, l'arc et l'épaisseur des sourcils.
+- **Photométrique quand la géométrie ne suffit pas.** La couleur des yeux se
+  compare sur la teinte de l'iris, l'épaisseur des sourcils sur la bande
+  sombre mesurée le long de leurs points.
+- **Par construction autant que par contrôle.** Avec le transfert de
+  mouvement, une ancre peut aussi être protégée à la source : le flux se
+  borne sur ses points au lieu d'être mesuré après coup.
+- **Agnostique.** Les 106 points valent pour tout visage humain, quel que soit
+  le personnage ou le pack. Sur un visage que le détecteur ne sait pas lire
+  (un pack non photoréaliste), l'ancre se déclare **non mesurable** et ne
+  refuse rien : c'est l'entrée d'horizon « mesure d'identité pour un
+  personnage non photoréaliste », pas un cas à forcer ici.
+- **Tolérances mesurées, jamais écrites en dur** (invariant 4) : étalonnées
+  au banc sur les plages de `slow-life` et sur des déformations volontaires
+  (négatifs), puis portées par la configuration du personnage, avec leurs
+  valeurs de départ dans les défauts du pack.
+
+Le score d'identité après expression reste mesuré et enregistré
+(`identite_apres_expression`), mais il ne refuse plus rien.
+
+**Tranché le 25/09** : « placement des sourcils ». Le paramètre `eyebrow` d'une
+expression les lève exprès. L'ancre porte sur l'implantation
+(position du départ et de la queue du sourcil par rapport à l'œil, au repos)
+et sur l'épaisseur, pas sur la hauteur de l'arc, qui est expressive.
 
 ## Hors périmètre
 
@@ -74,7 +101,11 @@ environ 0,035 à expression égale. Le garde-fou refuserait ce qu'on demande.
    et `appliquer` passent par elle. Test unitaire sur images fixes : une
    expression nulle rend l'image d'origine à l'octet près ou presque, la
    texture hors visage est inchangée.
-2. Le garde-fou, selon l'option retenue.
+2. Les ancres d'identité : une mesure de plateforme (module à part, pas dans
+   `expression.py`), étalonnée au banc sur des expressions réelles et des
+   déformations volontaires, avec faux positifs et faux négatifs comptés
+   avant qu'elle refuse quoi que ce soit (ADR-0025). Elle remplace le budget
+   d'identité dans `poser_sous_budget`.
 3. L'essai de rendu d'IT-10 rejoué sur `joueur` et `doux` : l'image « ton
    complet » doit rejoindre « fragment seul » en netteté, et Pierre juge.
 
