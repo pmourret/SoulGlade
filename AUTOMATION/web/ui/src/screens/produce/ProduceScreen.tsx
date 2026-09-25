@@ -306,7 +306,12 @@ export function ProduceScreen() {
     setIntent(key)
     setSelected(new Set()) // changing intention starts from a blank page
     const entry = ((creative?.intentions ?? []) as Intention[]).find((i) => i.key === key)
-    setTone(entry?.defaults?.tone || tone || (creative?.tones?.[0]?.key ?? ''))
+    /* The intention PROPOSES its tone when it declares one that exists; it no
+       longer imposes one. No default = no tone, never « the first tone of the
+       list » — that fallback is how every selfie went out as `joueur`
+       (IT-10, 25/09). The user's pick stays one click away in the rail. */
+    const proposed = entry?.defaults?.tone
+    setTone(proposed && (creative?.tones ?? []).some((t) => t.key === proposed) ? proposed : '')
   }
 
   /* screen-3-produire, §S: the panel is always on screen, so the screen no

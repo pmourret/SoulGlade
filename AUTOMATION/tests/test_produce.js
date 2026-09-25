@@ -133,11 +133,20 @@ const ONGLET = k => `[data-tab="${k}"]`;
   // §fix 2026-09-04 : .chip-t.on n'existait plus dans screens.css depuis la
   // scission React (trou documente sur place, jamais comble) — un ton
   // choisi restait indiscernable des autres.
-  const toneBg = await page.$eval('#railTone button', e => getComputedStyle(e).backgroundColor);
-  await page.click('#railTone button');
+  // IT-10 (25/09) : « Aucun » mene le groupe, un ton est un choix, jamais une
+  // valeur imposee. Le premier VRAI ton est donc le second bouton.
+  const vraiTon = '#railTone button:not([data-k=""])';
+  dire((await page.textContent('#railTone button')).trim() === 'Aucun',
+       '« Aucun » est le premier choix du groupe Ton');
+  await page.click('#railTone button[data-k=""]');
+  await page.waitForTimeout(150);
+  dire(await page.$eval('#railTone button[data-k=""]', e => e.getAttribute('aria-checked')) === 'true',
+       'et il se coche : on produit sans ton');
+  const toneBg = await page.$eval(vraiTon, e => getComputedStyle(e).backgroundColor);
+  await page.click(vraiTon);
   await page.waitForTimeout(200);
-  const toneBgApres = await page.$eval('#railTone button', e => getComputedStyle(e).backgroundColor);
-  dire(await page.$eval('#railTone button', e => e.getAttribute('aria-checked')) === 'true',
+  const toneBgApres = await page.$eval(vraiTon, e => getComputedStyle(e).backgroundColor);
+  dire(await page.$eval(vraiTon, e => e.getAttribute('aria-checked')) === 'true',
        'le premier ton est maintenant coche');
   dire(toneBgApres !== toneBg,
        `et ca se voit — fond avant/apres : ${toneBg} -> ${toneBgApres}`);

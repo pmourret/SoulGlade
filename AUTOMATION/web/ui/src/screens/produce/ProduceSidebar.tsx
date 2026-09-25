@@ -19,6 +19,8 @@ import { useRovingChoice } from '../../chrome/useRovingChoice'
 import type { Creative } from '../../state/TaxonomyContext'
 import { isEditTier, type IntensityTier } from './useProduceState'
 
+const NO_TONE = '__aucun__'
+
 /* `CreativeIntention` only declares `key` and `label` in the Pydantic model,
    with `extra="allow"`: creative.json belongs to the character, and that
    layer relays it rather than freezing its shape. */
@@ -113,8 +115,13 @@ export function ProduceSidebar({
   const levelRoving = useRovingChoice(levelIds, level != null ? String(level) : null)
   const intentIds = full.map(([entry]) => entry.key)
   const intentRoving = useRovingChoice(intentIds, intent)
-  const toneIds = (tones ?? []).map((entry) => entry.key)
-  const toneRoving = useRovingChoice(toneIds, tone)
+  /* « Aucun » leads the group (IT-10, 25/09): a tone is a choice, not a value
+     the screen imposes — and a world created without tones must still produce.
+     A sentinel id in the group, '' on the way out: the roving focus ignores an
+     empty id, so arrows could never land on it otherwise. */
+  const toneIds = [NO_TONE, ...(tones ?? []).map((entry) => entry.key)]
+  const toneRoving = useRovingChoice(toneIds, tone || NO_TONE)
+  const pickTone = (id: string) => onPickTone(id === NO_TONE ? '' : id)
 
   return (
     <nav
@@ -278,27 +285,35 @@ export function ProduceSidebar({
             )}
           </div>
 
-          {intent && (tones ?? []).length > 0 && (
+          {intent && (
             <div>
               <h2 className={TITLE}>Ton</h2>
               <div className="chips" id="railTone" role="radiogroup" aria-label="Ton">
-                {(tones ?? []).map((entry) => (
-                  <button
-                    type="button"
-                    key={entry.key}
-                    ref={toneRoving.registerRef(entry.key)}
-                    role="radio"
-                    aria-checked={entry.key === tone}
-                    tabIndex={toneRoving.tabIndexFor(entry.key)}
-                    className={`chip-t${entry.key === tone ? ' on' : ''}`}
-                    data-k={entry.key}
-                    onClick={() => onPickTone(entry.key)}
-                    onKeyDown={(event) => toneRoving.onKeyDown(event, entry.key, onPickTone)}
-                  >
-                    {entry.label}
-                  </button>
-                ))}
+                {[{ key: NO_TONE, label: 'Aucun' }, ...(tones ?? [])].map((entry) => {
+                  const on = entry.key === (tone || NO_TONE)
+                  return (
+                    <button
+                      type="button"
+                      key={entry.key}
+                      ref={toneRoving.registerRef(entry.key)}
+                      role="radio"
+                      aria-checked={on}
+                      tabIndex={toneRoving.tabIndexFor(entry.key)}
+                      className={`chip-t${on ? ' on' : ''}`}
+                      data-k={entry.key === NO_TONE ? '' : entry.key}
+                      onClick={() => pickTone(entry.key)}
+                      onKeyDown={(event) => toneRoving.onKeyDown(event, entry.key, pickTone)}
+                    >
+                      {entry.label}
+                    </button>
+                  )
+                })}
               </div>
+              {(tones ?? []).length === 0 && (
+                <p className="m-0 mt-[6px] text-[12px] text-dim2" id="railToneEmpty">
+                  Le monde de ce personnage n'a pas encore de ton : les scènes partent telles quelles.
+                </p>
+              )}
             </div>
           )}
         </>
