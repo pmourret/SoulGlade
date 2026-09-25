@@ -101,6 +101,26 @@ RECOLLAGE_OUVERTURE = 5       # retire les points isoles (px)
 RECOLLAGE_DILATATION = 11     # deborde un peu autour des dents (px)
 RECOLLAGE_FONDU = 5           # sigma du fondu du masque (px)
 
+# ANCRES D'IDENTITE, TENUES PAR CONSTRUCTION (26/09/2026). Une expression bouge
+# ce qui est expressif ; elle n'a pas le droit de toucher a ce qui fait le
+# visage (Pierre, 25/09). Mesurer ces ancres ne marche pas — les 106 points
+# suivent l'APPARENCE d'une expression, pas la geometrie — donc on les tient
+# dans le champ de mouvement lui-meme. Verdict :
+# DOCS/recherche/2026-09-26-les-ancres-d-identite-se-tiennent-par-construction.md
+#
+# Indices des 106 points d'InsightFace (2d106det), carte verifiee sur image le
+# 25/09 : contour 0-32 (0 = pointe du menton), sourcils 43-51 et 97-105,
+# pupilles 38 et 88. Rayons en fraction de l'ecart pupillaire.
+ANCRES_RIGIDES = (            # zone qui ne peut que se deplacer d'un bloc
+    ((2, 3, 4, 5, 6, 7, 8, 0, 24, 23, 22, 21, 20, 19, 18), 0.10),   # machoire, menton
+    ((44, 45, 46, 47, 48, 49, 50, 51), 0.07),                        # sourcil
+    ((97, 98, 99, 100, 102, 103, 104, 105), 0.07),                   # sourcil
+    ((38,), 0.11), ((88,), 0.11),                                    # iris
+)
+ANCRES_SANS_ELARGIR = (       # zone qui peut monter, jamais s'elargir
+    ((10, 11, 12, 13, 14), 0.10), ((26, 27, 28, 29, 30), 0.10),      # pommettes
+)
+
 
 def tirage(creative, ton, seed):
     """Parametres d'expression pour un ton, tires dans sa plage.
@@ -170,14 +190,46 @@ def _nettoyer_scratch():
         d.rmdir()
 
 
-def transferer_mouvement(source, neutre, expressive):
+def _disques(forme, points, rayon):
+    """Masque doux (h, w, 1) : un disque flou autour de chaque point."""
+    import cv2
+    import numpy as np
+    masque = np.zeros(forme[:2], np.float32)
+    for x, y in points:
+        cv2.circle(masque, (int(x), int(y)), int(rayon), 1.0, -1)
+    return cv2.GaussianBlur(masque, (0, 0), max(rayon * 0.6, 1.0))[..., None]
+
+
+def tenir_les_ancres(flux, points):
+    """Le champ de mouvement, contraint sur les ancres d'identite : la
+    machoire, chaque sourcil et chaque iris ne font que se deplacer d'un bloc
+    (leur mouvement moyen), les pommettes perdent toute composante horizontale.
+    `points` : les 106 points de la source (tableau 106 x 2)."""
+    import numpy as np
+    flux = flux.copy()
+    ecart = float(np.linalg.norm(points[38] - points[88]))
+    for indices, rayon in ANCRES_RIGIDES:
+        poids = _disques(flux.shape, points[list(indices)], rayon * ecart)
+        zone = poids[..., 0] > 0.5
+        moyen = flux[zone].mean(axis=0) if zone.any() else np.zeros(2, np.float32)
+        flux = flux * (1 - poids) + moyen * poids
+    for indices, rayon in ANCRES_SANS_ELARGIR:
+        poids = _disques(flux.shape, points[list(indices)], rayon * ecart)
+        flux[..., 0] *= 1 - poids[..., 0]
+    return flux
+
+
+def transferer_mouvement(source, neutre, expressive, points=None):
     """Pose sur `source` le mouvement qui separe `neutre` de `expressive`.
 
     Trois images BGR de meme taille : l'original, et les deux sorties du noeud
-    — a vide, puis avec l'expression. Rend (image, part_recollee) : l'image
-    composee, et la part de l'image (0..1) prise dans `expressive` parce qu'une
-    deformation ne pouvait pas la creer. Fonction pure, sans ComfyUI : c'est ce
-    qui la rend testable sur des images synthetiques.
+    — a vide, puis avec l'expression. `points` : les 106 points de la source ;
+    avec eux, les ancres d'identite sont tenues (`tenir_les_ancres`) et rien
+    d'une ancre n'est recolle depuis la sortie du noeud. Sans eux (None), le mouvement passe tel quel.
+    Rend (image, part_recollee) : l'image composee, et la part de l'image
+    (0..1) prise dans `expressive` parce qu'une deformation ne pouvait pas la
+    creer. Fonction pure, sans ComfyUI : c'est ce qui la rend testable sur des
+    images synthetiques.
     """
     import cv2
     import numpy as np
@@ -185,28 +237,57 @@ def transferer_mouvement(source, neutre, expressive):
     flux = cv2.calcOpticalFlowFarneback(gris(expressive), gris(neutre), None, *FLUX, 0)
     h, w = source.shape[:2]
     gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
-    carte_x, carte_y = gx + flux[..., 0], gy + flux[..., 1]
-    deformee = cv2.remap(source, carte_x, carte_y, cv2.INTER_CUBIC,
-                         borderMode=cv2.BORDER_REFLECT)
-    # Le neutre deforme de la meme facon porte le meme dommage de
-    # reechantillonnage que l'expressive : ce qui les separe encore est ce que
-    # le mouvement n'explique pas.
-    neutre_def = cv2.remap(neutre, carte_x, carte_y, cv2.INTER_CUBIC,
-                           borderMode=cv2.BORDER_REFLECT)
+    carte = lambda f: (gx + f[..., 0], gy + f[..., 1])
+    # La source se deforme par le flux CONTRAINT : les ancres ne changent pas
+    # de forme.
+    tenu = tenir_les_ancres(flux, points) if points is not None else flux
+    deformee = cv2.remap(source, *carte(tenu), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
+    # Le contenu neuf se lit par le flux LIBRE. Le neutre deforme ainsi porte le
+    # meme dommage de reechantillonnage que l'expressive : ce qui les separe
+    # encore est ce qu'aucun mouvement n'explique (des dents). Lu par le flux
+    # contraint, l'ecart a la contrainte passerait pour du contenu neuf, et le
+    # recollage remettrait la machoire elargie qu'on vient de refuser — trouve
+    # par le test synthetique, le 26/09.
+    neutre_def = cv2.remap(neutre, *carte(flux), cv2.INTER_CUBIC, borderMode=cv2.BORDER_REFLECT)
     residu = np.abs(neutre_def.astype(np.float32) - expressive.astype(np.float32)).mean(axis=2)
     masque = (residu > RECOLLAGE_SEUIL).astype(np.uint8) * 255
     masque = cv2.morphologyEx(masque, cv2.MORPH_OPEN,
                               np.ones((RECOLLAGE_OUVERTURE,) * 2, np.uint8))
     masque = cv2.dilate(masque, np.ones((RECOLLAGE_DILATATION,) * 2, np.uint8))
     masque = cv2.GaussianBlur(masque, (0, 0), RECOLLAGE_FONDU).astype(np.float32)[..., None] / 255
+    if points is not None:
+        # Rien d'une ancre ne vient jamais de la sortie du noeud : c'est
+        # precisement le repeint a 512 qu'on ecarte.
+        ecart = float(np.linalg.norm(points[38] - points[88]))
+        for indices, rayon in ANCRES_RIGIDES + ANCRES_SANS_ELARGIR:
+            masque = masque * (1 - _disques(masque.shape, points[list(indices)], rayon * ecart))
     image = deformee.astype(np.float32) * (1 - masque) + expressive.astype(np.float32) * masque
     return np.clip(np.rint(image), 0, 255).astype(np.uint8), float(masque.mean())
+
+
+def _points_du_visage(image):
+    """Les 106 points du plus grand visage de `image` (BGR), dans ses
+    coordonnees, ou None. Le detecteur est celui du controle d'identite
+    (qc_identity, InsightFace antelopev2), deja charge : rien de neuf."""
+    import cv2
+    import qc_identity
+    h, w = image.shape[:2]
+    echelle = min(1.0, 1600 / max(h, w))        # meme reduction que qc_identity.analyse
+    petite = image if echelle == 1.0 else cv2.resize(image, (int(w * echelle), int(h * echelle)))
+    visages = qc_identity._app(str(env_config.insightface_root())).get(petite)
+    if not visages:
+        return None
+    visage = max(visages, key=lambda f: (f.bbox[2] - f.bbox[0]) * (f.bbox[3] - f.bbox[1]))
+    return visage.landmark_2d_106.astype("float64") / echelle
 
 
 def _poser(path, params, comfy_url, timeout):
     """Le coeur partage par la production et l'apercu : deux appels du noeud
     (a vide, puis avec `params`), puis le transfert de mouvement sur l'image
-    d'origine. Rend l'image composee (tableau BGR). Leve sur un echec.
+    d'origine, ancres d'identite tenues. Rend l'image composee (tableau BGR).
+    Leve sur un echec — y compris quand aucun visage n'est lu : sans ses
+    points, rien ne garantit les ancres, et on ne pose pas une expression a
+    l'aveugle.
 
     UN NOM D'ENTREE UNIQUE PAR APPEL : ComfyUI met en cache un graphe deja vu et
     renvoie le fichier qu'il a produit la premiere fois — fichier que le
@@ -230,7 +311,10 @@ def _poser(path, params, comfy_url, timeout):
         source = cv2.imread(str(path))
         if source is None or any(s is None for s in sorties):
             raise RenderError("image illisible avant ou apres le noeud d'expression")
-        image, _ = transferer_mouvement(source, *sorties)
+        points = _points_du_visage(source)
+        if points is None:
+            raise RenderError("aucun visage lu : l'expression ne se pose pas sans ses ancres")
+        image, _ = transferer_mouvement(source, *sorties, points=points)
         return image
     finally:
         for f in temporaires:
@@ -302,50 +386,28 @@ def apercu(path, params, comfy_url, mesurer=None, timeout=300):
     return png.tobytes(), score
 
 
-def attenuer(params, facteur):
-    """Meme expression, moins appuyee."""
-    return {k: round(v * facteur, 3) for k, v in params.items()}
+def poser_et_mesurer(path, params, comfy_url, mesurer):
+    """Pose l'expression en place, puis mesure l'identite apres. Rend
+    (params, score_apres) — ({}, None) si la pose a echoue, et l'image reste
+    alors telle qu'elle etait.
 
+    IL N'Y A PLUS DE BUDGET (26/09/2026). Jusque-la, une expression qui coutait
+    plus de 0.05 d'identite etait attenuee de moitie, puis abandonnee. Or une
+    expression franche fait baisser le score par nature (24/08 : sourire franc
+    0.910 -> 0.824 a identite constante) : le budget refusait precisement ce
+    qu'on demandait. Les ancres d'identite sont desormais tenues par
+    construction dans `transferer_mouvement` ; le score apres expression reste
+    mesure et enregistre (`identite_apres_expression`), comme information, et
+    le verdict reste celui du visage neutre, avant expression.
 
-def poser_sous_budget(path, params, comfy_url, mesurer, avant, budget,
-                      journal=None):
-    """Pose l'expression sans depasser un budget d'identite.
-
-    POURQUOI UNE BOUCLE PLUTOT QU'UN REGLAGE PLUS SAGE. Le cout du warp varie
-    fortement d'une image a l'autre : le meme sourire leger a coute -0.007 sur une
-    source et -0.046 sur une autre, et un tirage « joueur » a coute -0.105 la ou
-    un reglage plus fort en avait coute -0.013 ailleurs. Aucune plage fixe ne peut
-    donc garantir le cout. On mesure, et on recule si c'est trop cher.
-
-    Trois essais au plus : plein, puis moitie, puis rien. Retourne
-    (params_retenus, score_apres) — ({}, avant) si tout a ete refuse.
-
-    `mesurer(path)` doit rendre le score d'identite, ou None.
+    `mesurer(path)` rend le score d'identite, ou None.
     """
-    import shutil
-    path = Path(path)
-    if not params or avant is None:
-        return ({}, avant) if not (params and avant is None) else (
-            (params, None) if appliquer(path, params, comfy_url) else ({}, None))
-
-    sauvegarde = path.with_suffix(".avant_expr" + path.suffix)
-    shutil.copy(path, sauvegarde)
+    if not params or not appliquer(path, params, comfy_url):
+        return {}, None
     try:
-        for facteur in (1.0, 0.5):
-            essai = params if facteur == 1.0 else attenuer(params, facteur)
-            if not appliquer(path, essai, comfy_url):
-                shutil.copy(sauvegarde, path)
-                return {}, avant
-            apres = mesurer(path)
-            if apres is not None and (avant - apres) <= budget:
-                return essai, apres
-            if journal:
-                journal(f"expression trop couteuse a {facteur:g}x "
-                        f"({avant:.3f} -> {apres:.3f}, budget {budget:g})")
-            shutil.copy(sauvegarde, path)      # on repart du visage d'origine
-        return {}, avant
-    finally:
-        sauvegarde.unlink(missing_ok=True)
+        return params, mesurer(path) if mesurer else None
+    except Exception:
+        return params, None
 
 
 def resume(params):

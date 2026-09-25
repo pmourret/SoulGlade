@@ -4,7 +4,7 @@
     "guidance": 2.2, "steps": 20, "refiner": true, "refiner_denoise": 0.4,
     "facedetailer": true, "grain_export": true, "upscale_2k": true,
     "grain_strength": 0.0, "grain_telephone": true, "sharpen": 0.3,
-    "expression": true, "expression_budget": 0.05,
+    "expression": true,
     "pose_strength": 0.9, "pose_end": 0.65
   },
   "formats": {

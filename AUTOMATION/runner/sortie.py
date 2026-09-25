@@ -328,15 +328,15 @@ def mesurer_mains(path, cfg):
 
 
 def appliquer_expression(path, job, cfg, character_id, checker=None, avant=None):
-    """Pose l'expression du ton, sous budget d'identite. Rend (params, apres).
+    """Pose l'expression du ton. Rend (params, apres).
 
     APRES le controle d'identite, jamais avant : la mesure d'identite n'est pas
     neutre vis-a-vis de l'expression (voir AUTOMATION/expression.py). Poser
     l'expression avant le QC rendrait la bande 0.72-0.78 incomparable.
 
-    Le budget est necessaire parce que le cout du warp varie fortement selon
-    l'image — mesure entre -0.007 et -0.105 pour des reglages comparables. On
-    essaie plein, puis moitie, puis on renonce et l'image reste telle quelle.
+    Plus de budget d'identite depuis le 26/09 : les ancres du visage sont
+    tenues par construction dans le transfert de mouvement, et `apres` est une
+    information enregistree, jamais un refus (`expression.poser_et_mesurer`).
     """
     if not cfg.get("preset", {}).get("expression"):
         return {}, avant
@@ -346,14 +346,9 @@ def appliquer_expression(path, job, cfg, character_id, checker=None, avant=None)
         params = ex.tirage(load_creative(character_id), job.get("tone"), job["seed"])
         if not params:
             return {}, avant
-        if checker is None or avant is None:
-            return (params, None) if ex.appliquer(path, params,
-                                                  cfg["comfy_url"]) else ({}, avant)
-        budget = float(cfg.get("preset", {}).get("expression_budget", 0.05))
-        return ex.poser_sous_budget(
-            path, params, cfg["comfy_url"],
-            mesurer=lambda p: checker.mesure(p)["score"],
-            avant=avant, budget=budget, journal=lambda m: log("   " + m))
+        mesurer = (lambda p: checker.mesure(p)["score"]) if checker else None
+        posees, apres = ex.poser_et_mesurer(path, params, cfg["comfy_url"], mesurer)
+        return (posees, apres) if posees else ({}, avant)
     except Exception as e:
         _best_effort("expression impossible", e)
     return {}, avant

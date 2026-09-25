@@ -543,11 +543,11 @@
           "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
         },
         {
-          "s": "cours",
+          "s": "fait",
           "t": "L'expression se transfère en mouvement, pas en pixels",
-          "d": "Le transfert de mouvement est en production : même netteté avec et sans expression. Les ancres d'identité se tiennent par construction (verdict du 26/09) ; reste à les intégrer et à retirer le budget qui atténue les expressions franches.",
+          "d": "L'expression se pose par transfert de mouvement, ancres du visage tenues par construction : même netteté avec et sans expression, expressions franches en production, plus de budget d'identité.",
           "it": "IT-10",
-          "ref": "DOCS/cadrage/2026-09-25-expression-par-transfert-de-mouvement.md"
+          "ref": "DOCS/recherche/2026-09-26-les-ancres-d-identite-se-tiennent-par-construction.md"
         }
       ]
     },

@@ -273,13 +273,14 @@
     "de la bouche et l'identite chute de 0.06 a 0.11 (mesure du 24/08/2026).",
     "Plages elargies puis ramenees a ces valeurs le 24/08/2026 : les elargir n'a PAS",
     "augmente la variation obtenue (2.8 % contre 3.2 %) et a produit 1 abandon sur 12.",
-    "C'est le budget d'identite qui contraint, pas les plages. Aller plus loin demande",
-    "de relever preset.expression_budget, donc d'accepter plus de perte d'identite.",
+    "Depuis le 26/09/2026 il n'y a plus de budget d'identite : l'expression se pose",
+    "par transfert de mouvement, ancres du visage tenues par construction",
+    "(DOCS/recherche/2026-09-26-les-ancres-d-identite-se-tiennent-par-construction.md).",
+    "Ces plages sont a regler a l'oeil dans l'atelier Tons, avec l'essai de rendu.",
     "",
     "Deplacee ici depuis CHARACTERS/lena/creative.json par la migration J8.3",
-    "(ADR-0019). RESERVE (voir _notes racine) : ces plages `expression` restent",
-    "mesurees contre le budget d'identite de Lena precisement -- un futur second",
-    "personnage de ce monde peut les surcharger dans son propre creative.json."
+    "(ADR-0019). Un personnage de ce monde peut les ajuster dans son propre",
+    "creative.json, depuis l'atelier Tons."
   ],
   "tones": [
     {

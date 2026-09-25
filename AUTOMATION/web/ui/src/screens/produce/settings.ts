@@ -5,8 +5,8 @@
    RULE: everything exposed drives something real. Each `key` is consumed either
    by WorkflowRunner.api_for (guidance, steps, refiner, refiner_denoise, sharpen,
    and the facedetailer / upscale_2k / grain_export groups), or by
-   appliquer_grain (grain_telephone), or by appliquer_expression (expression,
-   expression_budget), or by nsfw_batch (dest 'nsfw'). A control that drives
+   appliquer_grain (grain_telephone), or by appliquer_expression (expression),
+   or by nsfw_batch (dest 'nsfw'). A control that drives
    nothing would suggest a setting that does not exist — worse than no control.
 
    `ref` is NOT written here: it comes from config.json through /api/config. The
@@ -162,13 +162,6 @@ export const SECTIONS: SettingSection[] = [
         id: 'expression', cle: 'expression', dest: 'preset', type: 'bool',
         label: 'Expression du visage',
         quoi: "Fait jouer la mine selon le ton choisi, après le contrôle d'identité. Sans elle, le personnage porte rigoureusement le même visage sur toutes ses photos.",
-      },
-      {
-        id: 'exprbudget', cle: 'expression_budget', dest: 'preset', type: 'curseur', min: 0, max: 0.15, pas: 0.01,
-        label: "Marge d'identité accordée", bas: 'visage très stable', haut: 'plus de vie',
-        quoi: "Ce qu'on accepte de perdre en ressemblance pour gagner en expression. Au-delà, l'expression est atténuée puis abandonnée.",
-        cout: "Les photos réelles varient environ deux fois plus que la production actuelle. Monter ce curseur est le seul moyen de s'en rapprocher — et il se paie en ressemblance. C'est un arbitrage, pas un réglage optimal.",
-        lieA: 'expression',
       },
       {
         id: 'graintel', cle: 'grain_telephone', dest: 'preset', type: 'bool',
