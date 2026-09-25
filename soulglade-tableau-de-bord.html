@@ -568,31 +568,31 @@ const D = {
           "d": "auto / net / flou, la seule dimension du rendu qui se décidait sans l'utilisateur. Retiré le 09/09 par son propre critère de sortie : « net » et « flou » ne se séparent pas sur fond_net (0.552 contre 0.561, cinq seeds appariés), et un texte plus fort ne change rien. Le levier n'est pas le prompt."
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-10",
           "t": "Atelier Tons : le ton se lit en entier",
-          "d": "Fragment de prompt et plage d'expression côte à côte, avec la couche : monde, surchargé, ou propre au personnage. L'atelier ajuste, il ne crée plus. Le bandeau cesse de dire creative.json.",
+          "d": "L'atelier montre le fragment effectif et sa couche (monde, ajusté, propre) ; un personnage ajuste libellé et fragment, et revient au monde. Le bandeau dit que les tons viennent du monde.",
           "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-10",
           "t": "Tons : créateur dans l'éditeur de mondes",
-          "d": "Un ton se crée avec le monde, comme un lieu : onglet Tons dans Référentiel › Mondes, état vide pour un monde neuf. Clé immuable, suppression sans casser une scène qui le cite.",
+          "d": "Onglet Tons dans Référentiel › Mondes : création depuis un état vide, clé figée, fragment lisible dans la liste. Fusion monde + personnage champ par champ.",
           "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-10",
           "t": "Atelier Tons : essai de rendu avec et sans le ton",
-          "d": "Même scène, même seed, hors production par le Sink du banc. C'est le geste qui a trouvé le défaut de joueur le 25/09.",
+          "d": "Trois images à la même graine (sans ton, fragment seul, ton complet), hors production, sous le verrou de lot. C'est lui qui a isolé la passe d'expression.",
           "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-10",
           "t": "Produire : aucun ton",
-          "d": "L'intention propose son ton par défaut, elle ne l'impose plus. Obligatoire : un monde neuf sans ton doit produire sa première image.",
+          "d": "« Aucun » mène le groupe Ton ; une intention propose son ton sans l'imposer, et un monde sans ton produit.",
           "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
         },
         {
@@ -782,9 +782,9 @@ const D = {
           "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
         },
         {
-          "s": "faire",
+          "s": "cours",
           "t": "L'expression se transfère en mouvement, pas en pixels",
-          "d": "Cause : LivePortrait régénère tout le recadrage à 512 et le recolle, cheveux compris. Adopté : transférer le mouvement sur l'original en pleine résolution, texture gardée sur 10/10 paires, +2,7 s par image. Reste à construire, et le garde-fou d'identité à repenser.",
+          "d": "Le transfert de mouvement est en production et dans l'aperçu : même netteté avec et sans expression, cheveux et peau intacts. Reste l'étape 2 : des ancres d'identité à la place du budget, qui atténue encore les expressions franches.",
           "it": "IT-10",
           "ref": "DOCS/cadrage/2026-09-25-expression-par-transfert-de-mouvement.md"
         }
