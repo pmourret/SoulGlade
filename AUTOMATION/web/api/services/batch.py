@@ -25,13 +25,16 @@ a stage of the run, handed to `execute_jobs` as `after=`.
 """
 import asyncio
 import logging
+import random
 from datetime import datetime
+from types import SimpleNamespace
 
 import logs
 import nsfw_batch
 import runner as lb
 import shared_state as ss
-from .creative import is_edit_tier
+from runner.sortie import Sink
+from .creative import apply_tier_rules, is_edit_tier
 
 LOG = logging.getLogger("batch")
 
@@ -228,3 +231,101 @@ def start_batch(jobs, configuration, use_qc, character, header=None):
     _launch(lambda: run_batch_blocking(jobs, configuration, batch_id, use_qc,
                                        character))
     return batch_id
+
+
+# ------------------------------------------------------------------ tone trial
+# IT-10, 25/09. The same scene at the same seed, WITHOUT and WITH a tone: the
+# gesture that found `joueur`'s « slight motion blur » by hand. It runs as a
+# batch like any other — same STATE, same panel, same single-GPU lock through
+# `_launch` — and through `execute_jobs` (§8.2), but with a `Sink`: the images
+# land under PROD/<CID>/_BENCH/, out of the Revue, the export and the
+# production tables, like the bench's.
+
+TRIAL_WITHOUT = "sans_ton"
+
+
+def trial_jobs(character, scene, tone, seed):
+    """The two jobs of a trial, or [] when the scene does not resolve at the
+    base level. Only the tone differs between them."""
+    jobs = []
+    for label, tone_key in ((TRIAL_WITHOUT, None), (tone, tone)):
+        filters = SimpleNamespace(scene=[scene], category=None, format=None, count=1,
+                                  limit=1, seed=seed, no_variants=True, tone=tone_key,
+                                  intention=None, intensity=0)
+        built = lb.build_jobs(lb.scenes_path(character), filters, character_id=character)
+        if not built:
+            return []
+        jobs.append((label, {**built[0], "seed": seed}))
+    return jobs
+
+
+def start_tone_trial(character, scene, tone, seed=None):
+    """Launches a tone trial and returns its id. Raises ValueError when the
+    tone or the scene does not resolve — checked before STATE is armed."""
+    if lb.by_key(lb.load_creative(character).get("tones", []), tone) is None:
+        raise ValueError(f"ton inconnu : {tone!r}")
+    seed = int(seed) if seed is not None else random.randint(1, 2**31 - 1)
+    jobs = trial_jobs(character, scene, tone, seed)
+    if not jobs:
+        raise ValueError(f"scène introuvable au niveau de base : {scene!r}")
+
+    trial_id = f"essai-ton-{datetime.now():%Y%m%d_%H%M%S}"
+    configuration = ss.cfg(character)
+    configuration["_intensity"] = 0
+    apply_tier_rules(configuration, 0, character)
+    root = lb.OFM / "PROD" / character.upper() / "_BENCH" / trial_id
+    ss.STATE.update(running=True, stop=False, batch_id=trial_id, index=0, total=2,
+                    current=None, stats={}, recent=[], intensity=0, character=character,
+                    last_error=None, edition=False,
+                    started_at=datetime.now().isoformat(timespec="seconds"))
+    ss.STATE["essai"] = {"id": trial_id, "character": character, "scene": scene,
+                         "tone": tone, "seed": seed, "results": {}}
+    ss.push_log(f"essai de ton {trial_id} — « {scene} », sans ton puis « {tone} », "
+                f"graine {seed} · hors production")
+
+    def work():
+        checker = ss.checker_partage(configuration)
+        total = {"OK": 0, "A_REVOIR": 0, "REJET": 0, "ERREUR": 0}
+        for index, (label, job) in enumerate(jobs, start=1):
+            if ss.STATE["stop"]:
+                break
+            ss.STATE.update(index=index, current=f"{scene} · {label}")
+
+            def record(job, verdict, score, reel, dest, label=label):
+                ss.STATE["essai"]["results"][label] = {
+                    "path": str(dest), "verdict": verdict, "score": score,
+                    "measures": {k: v for k, v in (reel or {}).items()
+                                 if isinstance(v, (int, float))}}
+
+            _, stats = lb.execute_jobs([job], configuration, checker, f"{trial_id}-{label}",
+                                       character_id=character,
+                                       should_stop=lambda: ss.STATE["stop"],
+                                       sink=Sink(dest_root=root / label, record=record))
+            for k, v in (stats or {}).items():
+                total[k] = total.get(k, 0) + v
+        return total
+
+    _launch(work)
+    return trial_id
+
+
+def trial_state(character):
+    """The current (or last) trial of THIS character, without file paths —
+    those stay on the server. None when there is none."""
+    essai = ss.STATE.get("essai")
+    if not essai or essai.get("character") != character:
+        return None
+    return {**{k: v for k, v in essai.items() if k != "results"},
+            "running": bool(ss.STATE["running"]) and ss.STATE.get("batch_id") == essai["id"],
+            "results": {label: {k: v for k, v in r.items() if k != "path"}
+                        for label, r in essai["results"].items()}}
+
+
+def trial_image(character, label):
+    """The path of one image of THIS character's current trial, or None. The
+    path comes from the server's own record, never from the request."""
+    essai = ss.STATE.get("essai")
+    if not essai or essai.get("character") != character:
+        return None
+    result = essai["results"].get(label)
+    return result and result["path"]

@@ -261,6 +261,14 @@ const TONE = 'doux';
          'revenir au monde rend le fragment d origine');
     const rendu = JSON.parse(fs.readFileSync(CREATIVE_PATH, 'utf-8')).tones.find(t => t.key === 'joueur');
     dire(!rendu || !('prompt_add' in rendu), 'et creative.json ne le porte plus');
+    /* L'essai de rendu lance ComfyUI : la fumigation ne le declenche pas, elle
+       verifie qu'il est la, qu'il propose des scenes, et qu'un bouton
+       indisponible dit pourquoi au lieu de rester muet. */
+    dire(await page.$('#toneTrial') !== null, 'le panneau d essai de rendu est monte');
+    dire((await page.$$('#toneTrialScene option')).length > 0, 'il propose les scenes du personnage');
+    const indispo = await page.isDisabled('#btnToneTrial');
+    dire(!indispo || Boolean(await page.getAttribute('#btnToneTrial', 'title')),
+         indispo ? 'bouton indisponible, et il dit pourquoi' : 'bouton disponible');
 
     console.log('\n[5] un ton inconnu affiche un état vide explicite, pas un crash');
     await page.goto(`${BASE}/bank/tones/edit/ce-ton-n-existe-pas?character=lena`, { waitUntil: 'networkidle' });

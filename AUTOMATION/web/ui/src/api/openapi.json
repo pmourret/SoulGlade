@@ -1497,6 +1497,202 @@
         }
       }
     },
+    "/api/tones/essai": {
+      "post": {
+        "summary": "Essai de rendu d'un ton : même scène, même graine, sans puis avec",
+        "description": "Same guard as /api/run, for the same reason: no `await` between the\n`running` test and the launch, so two requests cannot both pass it.",
+        "operationId": "start_trial_api_tones_essai_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ToneTrialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToneTrialStarted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Un batch tourne déjà"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "État de l'essai de ton du personnage",
+        "operationId": "get_trial_api_tones_essai_get",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ToneTrialResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tones/essai/image/{label}": {
+      "get": {
+        "summary": "Une image de l'essai de ton",
+        "operationId": "get_trial_image_api_tones_essai_image__label__get",
+        "parameters": [
+          {
+            "name": "label",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Label"
+            }
+          },
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pas d'image pour ce libellé"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/img": {
       "get": {
         "summary": "Octets d'une image de tri",
@@ -8343,6 +8539,148 @@
         ],
         "title": "ToneTextRequest",
         "description": "A character's own label and/or prompt fragment for one tone. Absent\nfields are left as they are."
+      },
+      "ToneTrialRequest": {
+        "properties": {
+          "scene": {
+            "type": "string",
+            "title": "Scene"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scene",
+          "tone"
+        ],
+        "title": "ToneTrialRequest",
+        "description": "IT-10: the same scene at the same seed, without and with a tone. No\nseed = a random one, returned so the trial can be replayed."
+      },
+      "ToneTrialResponse": {
+        "properties": {
+          "essai": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToneTrialState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "ToneTrialResponse"
+      },
+      "ToneTrialResult": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "measures": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Measures"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "verdict"
+        ],
+        "title": "ToneTrialResult"
+      },
+      "ToneTrialStarted": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "id",
+          "seed"
+        ],
+        "title": "ToneTrialStarted"
+      },
+      "ToneTrialState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "scene": {
+            "type": "string",
+            "title": "Scene"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "results": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ToneTrialResult"
+            },
+            "type": "object",
+            "title": "Results"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "scene",
+          "tone",
+          "seed",
+          "running"
+        ],
+        "title": "ToneTrialState",
+        "description": "The character's current or last trial. `results` is keyed by label:\n`sans_ton`, then the tone's key. Paths never leave the server."
       },
       "TonesResponse": {
         "properties": {

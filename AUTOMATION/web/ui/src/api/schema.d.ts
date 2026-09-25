@@ -662,6 +662,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/tones/essai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** État de l'essai de ton du personnage */
+        get: operations["get_trial_api_tones_essai_get"];
+        put?: never;
+        /**
+         * Essai de rendu d'un ton : même scène, même graine, sans puis avec
+         * @description Same guard as /api/run, for the same reason: no `await` between the
+         *     `running` test and the launch, so two requests cannot both pass it.
+         */
+        post: operations["start_trial_api_tones_essai_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/tones/essai/image/{label}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Une image de l'essai de ton */
+        get: operations["get_trial_image_api_tones_essai_image__label__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/img": {
         parameters: {
             query?: never;
@@ -3957,6 +3996,66 @@ export interface components {
             /** Prompt Add */
             prompt_add?: string | null;
         };
+        /**
+         * ToneTrialRequest
+         * @description IT-10: the same scene at the same seed, without and with a tone. No
+         *     seed = a random one, returned so the trial can be replayed.
+         */
+        ToneTrialRequest: {
+            /** Scene */
+            scene: string;
+            /** Tone */
+            tone: string;
+            /** Seed */
+            seed?: number | null;
+        };
+        /** ToneTrialResponse */
+        ToneTrialResponse: {
+            essai?: components["schemas"]["ToneTrialState"] | null;
+        };
+        /** ToneTrialResult */
+        ToneTrialResult: {
+            /** Verdict */
+            verdict: string;
+            /** Score */
+            score?: number | null;
+            /** Measures */
+            measures?: {
+                [key: string]: number;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** ToneTrialStarted */
+        ToneTrialStarted: {
+            /** Ok */
+            ok: boolean;
+            /** Id */
+            id: string;
+            /** Seed */
+            seed: number;
+        };
+        /**
+         * ToneTrialState
+         * @description The character's current or last trial. `results` is keyed by label:
+         *     `sans_ton`, then the tone's key. Paths never leave the server.
+         */
+        ToneTrialState: {
+            /** Id */
+            id: string;
+            /** Scene */
+            scene: string;
+            /** Tone */
+            tone: string;
+            /** Seed */
+            seed: number;
+            /** Running */
+            running: boolean;
+            /** Results */
+            results?: {
+                [key: string]: components["schemas"]["ToneTrialResult"];
+            };
+        };
         /** TonesResponse */
         TonesResponse: {
             /** World */
@@ -5474,6 +5573,149 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trial_api_tones_essai_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToneTrialResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_trial_api_tones_essai_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ToneTrialRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ToneTrialStarted"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Un batch tourne déjà */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_trial_image_api_tones_essai_image__label__get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path: {
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Pas d'image pour ce libellé */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

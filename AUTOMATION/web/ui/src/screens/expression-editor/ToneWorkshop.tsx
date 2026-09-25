@@ -32,10 +32,12 @@ import { useSystemState } from '../../state/SystemStateContext'
 import { ParamPanel } from './ParamPanel'
 import { ToneList } from './ToneList'
 import { ToneTextCard } from './ToneTextCard'
+import { ToneTrialPanel } from './ToneTrialPanel'
 import { TrialColumn } from './TrialColumn'
 import { MAX_SELECTED_PHOTOS, useExpressionEditor, type GalleryItem } from './useExpressionEditor'
 import { PARAM_NAMES, useToneList, type ToneRow } from './useToneList'
 import { useToneText } from './useToneText'
+import { useToneTrial } from './useToneTrial'
 
 const BANK_SENTENCE =
   'Les tons viennent du monde · cet écran les ajuste pour ce personnage'
@@ -82,8 +84,9 @@ function ToneWorkshopInner({
   const { qc } = useConfig()
   const { state } = useSystemState()
   const { open: openLightbox } = useLightbox()
-  const { world } = useScenes()
+  const { world, bank } = useScenes()
   const toneText = useToneText()
+  const toneTrial = useToneTrial()
   const {
     tone, params, dirty, reset,
     setTrial, setMin, setMax, toggleIncluded, setAsMin, setAsMax,
@@ -285,6 +288,12 @@ function ToneWorkshopInner({
 
   const neutral = PARAM_NAMES.every((name) => !params[name].included)
   const currentRow = rows.find((row) => row.key === toneKey) ?? null
+  /* The scenes that cite this tone first: they are the ones it was meant for. */
+  const bankScenes = ((bank?.data as { scenes?: unknown } | undefined)?.scenes ?? []) as { id: string; tones?: string[] }[]
+  const trialScenes = [
+    ...bankScenes.filter((scene) => scene.tones?.includes(toneKey ?? '')),
+    ...bankScenes.filter((scene) => !scene.tones?.includes(toneKey ?? '')),
+  ].map((scene) => scene.id)
 
   return (
     <Frame nav={nav} narrow={narrow} rows={listRows} toneKey={toneKey} onSelectTone={onSelectTone}>
@@ -312,6 +321,19 @@ function ToneWorkshopInner({
             world={world}
             onAdjust={(fields) => toneText.adjust(currentRow.key, fields)}
             onRevert={() => toneText.revert(currentRow.key)}
+          />
+        )}
+        {currentRow && (
+          <ToneTrialPanel
+            tone={currentRow}
+            scenes={trialScenes}
+            trial={toneTrial.trial}
+            error={toneTrial.error}
+            comfy={comfy}
+            busy={Boolean(state?.running)}
+            onStart={(scene, seed) => void toneTrial.start(scene, currentRow.key, seed)}
+            imageUrl={toneTrial.imageUrl}
+            openLightbox={openLightbox}
           />
         )}
         <TrialColumn

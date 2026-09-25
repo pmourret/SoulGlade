@@ -7,7 +7,7 @@ import { useMemo } from 'react'
 
 import { useCharacter } from '../character/CharacterContext'
 import {
-  apiFetch, apiPost, apiPostForBlob, imageUrl,
+  apiFetch, apiPost, apiPostForBlob, imageUrl, withCharacter,
   type ActionLike, type BlobResult, type ImageRef,
 } from './client'
 
@@ -16,6 +16,9 @@ export type BoundApi = {
   post: <T>(url: string, body?: unknown) => Promise<T & ActionLike>
   postForBlob: (url: string, body?: unknown) => Promise<BlobResult>
   image: (ref: ImageRef) => string
+  /** A GET address for an `<img src>` outside `/img` (the tone trial's
+      images), bound to the character like every other call. */
+  url: (path: string) => string
 }
 
 export function useApi(): BoundApi {
@@ -26,6 +29,7 @@ export function useApi(): BoundApi {
       post: <T,>(url: string, body?: unknown) => apiPost<T>(url, body, claimed),
       postForBlob: (url: string, body?: unknown) => apiPostForBlob(url, body, claimed),
       image: (ref: ImageRef) => imageUrl(ref, claimed),
+      url: (path: string) => withCharacter(path, claimed),
     }),
     [claimed],
   )
