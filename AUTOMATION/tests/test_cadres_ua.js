@@ -20,12 +20,13 @@
    pour celui du jour — un test transverse plutot qu'une assertion de plus
    dans la fumigation de chaque ecran.
 
-   CE QU'IL NE COUVRE PAS. L'etat de repos de chaque ecran, rien de plus : pas
-   les modales, pas les panneaux qu'un clic ouvre. Les deux occurrences reelles
-   etaient visibles au repos, et un balayage exhaustif demanderait de rejouer
-   chaque parcours — ce que les fumigations d'ecran font deja, chacune pour le
-   sien. Si un cadre apparait un jour dans une modale, ajouter l'etat ici
-   plutot que d'accepter le trou.
+   CE QU'IL COUVRE. Le repos de chaque ecran, et les surimpressions qu'un
+   geste ouvre : modales, menus, confirmations. Il n'a longtemps vu que le
+   repos — les deux occurrences reelles y etaient visibles — mais un bouton
+   dans une modale echappait encore au balayage, et une modale est exactement
+   l'endroit ou une refonte oublie une bordure sans que personne regarde. Ce
+   qu'il ne rejoue pas : les parcours eux-memes, qui sont le travail des
+   fumigations d'ecran, chacune pour le sien.
 
    `outset` est la signature du defaut, et elle est sans ambiguite : aucune
    feuille du depot ne declare ce style. Un faux positif est donc impossible,
@@ -42,47 +43,69 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 /* Un ecran = une route. Les sous-vues d'un meme ecran comptent pour des
    ecrans : ce sont des arbres DOM differents (Banque, Revue/Galerie).
 
-   TROISIEME CASE : LES ETATS OUVERTS (24/09/2026). L'en-tete ci-dessus disait
-   que le balayage ne voyait que l'etat de repos, et que le jour ou un cadre
-   apparaitrait dans une modale, il faudrait ajouter l'etat ici plutot que
-   d'accepter le trou. C'est ce que fait cette case : une liste de
-   [nom de l'etat, le selecteur qui l'ouvre], rejouee apres la sonde de repos.
-   Chaque ecran refondu ajoute les siens en passant.
+   TROISIEME CASE : LES ETATS OUVERTS (24/09/2026, complete le 25/09). Une
+   liste de [nom, le selecteur qui l'ouvre, le marqueur qui dit qu'elle EST
+   ouverte, le geste], rejouee apres la sonde de repos. Chaque ecran refondu
+   ajoute les siens en passant.
+
+   LE MARQUEUR N'EST PAS DECORATIF. Un `<dialog>` vit dans le DOM ferme, et
+   les menus du chrome y vivent en permanence : sans verifier qu'il est
+   AFFICHE, un declencheur qui pourrit ferait sonder l'ecran au repos et rendre
+   vert. Le marqueur est ce qui empeche ce vert menteur.
+
+   LE GESTE, quand ce n'est pas un clic gauche : « survol » pour les menus de
+   categorie (le clic, lui, navigue), « droit » pour le menu contextuel d'une
+   vignette (design-pass screen-5b : le tri passe par ce menu).
 
    TOUS SE FERMENT PAR ECHAP, et c'est volontaire : frontend.md l'exige de
    toute surimpression, donc s'en servir ici teste la regle en meme temps
    qu'il rend l'ecran a son repos pour l'etat suivant.
 
-   Une surimpression SANS <button> (celle du depot d'une photo sur la banque
-   de poses) n'en porte pas : la sonde ne regarde que les boutons, elle n'y
-   trouverait rien a mesurer. */
+   CE QUI N'EST PAS DANS LA LISTE, ET POURQUOI. Une surimpression sans
+   <button> n'a rien a offrir a la sonde : le depot d'une photo sur la banque
+   de poses, et — mesure du 25/09 — la loupe (`#lightbox`), le menu
+   d'identite et les trois menus de categorie, dont les entrees sont des
+   liens. Le menu d'arret, lui, porte deux vrais boutons, donc il y est. Le
+   jour ou l'un des autres gagne un bouton, il rejoint la liste. */
 const ECRANS = [
   ['/characters', 'sas d entree'],
   ['/character', 'fiche du personnage'],
-  ['/produce', 'Produire'],
-  ['/review', 'Revue'],
-  ['/gallery', 'Galerie'],
-  ['/bank/scenes', 'Ateliers, Scenes'],
+  // Le menu d'arret appartient au chrome, le meme sur tous les ecrans : le
+  // sonder une fois suffit, et Produire est l'ecran ou on l'ouvre vraiment.
+  ['/produce', 'Produire', [
+    ['menu « Arrêter »', '#btnHeaderPower', '.pwrmenu.on'],
+  ]],
+  ['/review', 'Revue', [
+    ['menu contextuel d une vignette', '[data-tile]', '#tileMenu', 'droit'],
+  ]],
+  ['/gallery', 'Galerie', [
+    ['menu contextuel d une vignette', '[data-tile]', '#tileMenu', 'droit'],
+  ]],
+  ['/bank/scenes', 'Ateliers, Scenes', [
+    ['modale « Depuis le monde »', '#btnAddFromWorld', 'dialog[open]'],
+  ]],
   ['/bank/poses', 'Ateliers, Poses', [
-    ['modale « Nouvelle depuis un gabarit »', '#btnNewPose'],
+    ['modale « Nouvelle depuis un gabarit »', '#btnNewPose', 'dialog[open]'],
   ]],
   ['/bank/tones', 'Ateliers, Tons', [
-    ['boite « Copier depuis… »', 'button:has-text("Copier depuis")'],
+    ['boite « Copier depuis… »', 'button:has-text("Copier depuis")', 'dialog[open]'],
   ]],
   ['/training', 'Entrainement'],
-  ['/worlds', 'Mondes'],
+  ['/worlds', 'Mondes', [
+    ['modale « Nouveau monde »', 'button:has-text("Nouveau monde")', 'dialog[open]'],
+  ]],
   // Application montre UNE section a la fois depuis le 25/09 (design-pass
   // screen-12) : chaque section est un ecran pour la sonde. Les etats ouverts
   // sont des confirmations, qu'Echap annule sans rien envoyer.
   ['/app', 'Application, ComfyUI', [
-    ['confirmation « Arrêter ComfyUI »', '#btnComfyStop'],
+    ['confirmation « Arrêter ComfyUI »', '#btnComfyStop', 'dialog[open]'],
   ]],
   ['/app/server', 'Application, Serveur', [
-    ['confirmation « Redémarrer »', '#btnAppRestart'],
+    ['confirmation « Redémarrer »', '#btnAppRestart', 'dialog[open]'],
   ]],
   ['/app/adult', 'Application, Contenu adulte', [
-    ['modale d activation', '#btnNsfwOn'],
-    ['confirmation de desactivation', '#btnNsfwOff'],
+    ['modale d activation', '#btnNsfwOn', 'dialog[open]'],
+    ['confirmation de desactivation', '#btnNsfwOff', 'dialog[open]'],
   ]],
   ['/app/appearance', 'Application, Apparence'],
   ['/app/journal', 'Application, Productions'],
@@ -113,12 +136,63 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
   let ko = 0;
   const dire = (bon, quoi) => { console.log(`   ${bon ? 'ok  ' : 'ECHEC'} ${quoi}`); if (!bon) ko++; };
 
+  /* Une surimpression est ouverte quand son marqueur est AFFICHE : un
+     `<dialog>` vit dans le DOM ferme, et les menus du chrome y vivent en
+     permanence — leur seule presence dirait « ouvert » sur un ecran au repos.
+     On cherche donc s'il en existe un REELLEMENT rendu, et on ne regarde pas
+     seulement le premier : `[role="menu"]` tombe d'abord sur les menus du
+     chrome, caches, avant celui que le geste vient d'ouvrir. */
+  const ouvert = async (marqueur) => page.evaluate(
+    (sel) => Array.from(document.querySelectorAll(sel)).some((e) => e.getClientRects().length > 0),
+    marqueur,
+  );
+
   const sonder = async (etiquette) => {
     const nBoutons = await page.$$eval('button', (e) => e.filter((b) => b.offsetParent !== null).length);
     const cadres = await page.evaluate(SONDE);
     dire(cadres.length === 0,
          `${etiquette} : ${nBoutons} bouton(s) visible(s), ${cadres.length} cadre(s) du navigateur`);
     cadres.forEach((c) => console.log(`      « ${c.quoi} » : ${c.largeur} ${c.style}`));
+  };
+
+  /* Ouvre chaque etat, le sonde, le referme. Une seule mecanique pour les
+     trois familles d'ecrans : ceux de la liste, et les deux qui n'ont pas
+     d'adresse fixe (editeur de pose, editeur photo avance). */
+  const jouerEtats = async (nom, etats) => {
+    for (const [etat, ouvre, marqueur, geste] of etats || []) {
+      // Un etat dont le declencheur n'existe pas sur cette machine (« Copier
+      // depuis… » n'apparait que si un AUTRE ton a deja une plage) s'ignore :
+      // la sonde n'a rien a mesurer, ce n'est pas un echec.
+      if (!(await page.locator(ouvre).count())) {
+        console.log(`   IGNORE ${nom}, ${etat} — declencheur absent (${ouvre})`);
+        continue;
+      }
+      const cible = page.locator(ouvre).first();
+      if (geste === 'survol') await cible.hover();
+      else await cible.click({ button: geste === 'droit' ? 'right' : 'left' });
+      await page.waitForTimeout(350);
+
+      // L'ETAT S'EST-IL VRAIMENT OUVERT ? Sans cette verification, un
+      // declencheur qui pourrit (un id renomme, un bouton deplace) laisse la
+      // sonde mesurer l'ecran AU REPOS et rendre vert : le trou se rouvre en
+      // silence, ce qui est exactement ce que ce test doit empecher. Pris sur
+      // le fait le 25/09 : « Copier depuis… » s'ouvrait, et un marqueur mal
+      // choisi le declarait ferme.
+      if (!(await ouvert(marqueur))) {
+        dire(false, `${nom}, ${etat} : le geste n'a rien ouvert (${marqueur} absent)`);
+        continue;
+      }
+      await sonder(`${nom}, ${etat}`);
+
+      await page.keyboard.press('Escape');
+      // La souris quitte le declencheur : un menu qui s'ouvre au survol
+      // resterait ouvert sous elle, et le repos de l'etat suivant serait faux.
+      await page.mouse.move(3, 990);
+      await page.waitForTimeout(300);
+      // frontend.md : Echap ferme toute surimpression. On s'en sert pour rendre
+      // l'ecran a son repos, donc on verifie aussi que ca marche.
+      dire(!(await ouvert(marqueur)), `${nom}, ${etat} : Echap la referme`);
+    }
   };
 
   console.log('\n[1] aucun <button> ne porte le cadre du navigateur, ecran par ecran');
@@ -128,20 +202,7 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
     await page.waitForTimeout(250);
     await sonder(nom);
 
-    for (const [etat, ouvre] of etats || []) {
-      // Un etat dont le declencheur n'existe pas sur cette machine (« Copier
-      // depuis… » n'apparait que si un AUTRE ton a deja une plage) s'ignore :
-      // la sonde n'a rien a mesurer, ce n'est pas un echec.
-      if (!(await page.locator(ouvre).count())) {
-        console.log(`   IGNORE ${nom}, ${etat} — declencheur absent (${ouvre})`);
-        continue;
-      }
-      await page.click(ouvre);
-      await page.waitForTimeout(350);
-      await sonder(`${nom}, ${etat}`);
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(250);
-    }
+    await jouerEtats(nom, etats);
   }
 
   /* Personnages (ecran 14) : le registre filtre sans resultat (le lien
@@ -185,18 +246,34 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
     await page.waitForSelector('#poseEditor svg', { timeout: 8000 }).catch(() => {});
     await page.waitForTimeout(250);
     await sonder('Editeur de pose');
-    for (const [etat, ouvre] of [
-      ['aide des raccourcis', '#btnPoseHelp'],
-      ['menu « Enregistrer sous »', '#btnPoseSave + button'],
-    ]) {
-      await page.click(ouvre);
-      await page.waitForTimeout(250);
-      await sonder(`Editeur de pose, ${etat}`);
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(200);
-    }
+    await jouerEtats('Editeur de pose', [
+      ['aide des raccourcis', '#btnPoseHelp', '#poseShortcuts'],
+      ['menu « Enregistrer sous »', '#btnPoseSave + button', '[role="menu"]'],
+    ]);
   } else {
     console.log('   IGNORE Editeur de pose — aucune pose avec points-cles en banque');
+  }
+
+  /* L'editeur photo avance (ecran 10) non plus n'a pas d'adresse fixe : il
+     lui faut une image validee. On prend la premiere de la galerie SFW, et
+     l'ecran s'ignore si le dossier est vide. C'est l'ecran le plus dense du
+     studio — trois zones, une pile de calques, sept sections de reglage —
+     donc celui ou un cadre a le plus d'endroits ou se cacher. */
+  const images = await page.evaluate(async () => {
+    const r = await fetch('/api/gallery?bucket=OK&space=sfw&character=lena');
+    return r.ok ? (await r.json()).items.map((i) => i.name) : [];
+  });
+  if (images.length) {
+    await page.goto(`${BASE}/photo-editor/${encodeURIComponent(images[0])}`
+                    + '?bucket=OK&space=sfw&character=lena', { waitUntil: 'networkidle' });
+    await page.waitForSelector('#photoEditorAdvanced', { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(400);
+    await sonder('Editeur photo avance');
+    await jouerEtats('Editeur photo avance', [
+      ['modale « Ajouter un calque »', 'button:has-text("+ Ajouter")', 'dialog[open]'],
+    ]);
+  } else {
+    console.log('   IGNORE Editeur photo avance — aucune image validee en galerie');
   }
 
   console.log('\n[2] la sonde sait reconnaitre le defaut (sinon elle dirait vert sur tout)');
