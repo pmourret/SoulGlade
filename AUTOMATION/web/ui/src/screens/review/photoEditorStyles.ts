@@ -99,7 +99,7 @@ export const CLOSE =
    rule, the grain one included. Restoring the intent is a VISIBLE change and
    does not belong in a migration meant to be invisible. */
 export const SEC = 'mb-[20px] border-b border-b-line pb-[18px]'
-export const LAB = 'mb-[10px] text-[11.5px] uppercase tracking-[.5px] text-dim'
+export const LAB = 'lab mb-[10px]'
 
 /* STICKY FOOT of the settings panel. `.edSide` scrolls (the settings are taller
    than the modal from 950 px of window) and used to carry the buttons away with

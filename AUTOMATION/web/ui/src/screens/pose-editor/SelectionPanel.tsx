@@ -104,7 +104,7 @@ export function SelectionPanel({
   return (
     <section className="border-t border-line px-[16px] py-[14px]" aria-labelledby="poseSelectionTitle">
       <div className="mb-[10px] flex items-baseline justify-between">
-        <h2 className="m-0 text-[10.5px] font-semibold uppercase tracking-[0.06em] text-dim2" id="poseSelectionTitle">
+        <h2 className="lab m-0" id="poseSelectionTitle">
           Sélection
         </h2>
         {selected.size > 0 && (

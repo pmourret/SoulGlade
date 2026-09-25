@@ -52,7 +52,7 @@ export function ShortcutsHelp({ onClose }: { onClose: () => void }) {
       aria-label="Raccourcis de l'éditeur de pose"
       id="poseShortcuts"
       tabIndex={-1}
-      className="absolute right-0 top-[calc(100%+6px)] z-[30] w-[320px] rounded-[8px] border border-line2
+      className="absolute right-0 top-[calc(100%+6px)] z-[30] w-[320px] rounded-card border border-line2
                  bg-panel p-[14px] shadow-elev outline-none"
     >
       <h2 className="m-0 mb-[10px] text-[13px] font-semibold text-txt">Raccourcis</h2>

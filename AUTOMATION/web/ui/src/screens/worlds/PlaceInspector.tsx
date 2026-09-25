@@ -22,7 +22,7 @@ import { isValidId } from './slugify'
 import type { PlacePatch } from './usePlaceDraft'
 
 const FIELD = 'flex flex-col gap-[5px]'
-const LABEL = 'text-[11.5px] tracking-[.3px] text-dim uppercase'
+const LABEL = 'lab'
 const HINT = 'text-[11.5px] text-dim2'
 /* A changed field takes a `--warn` border (§S5.3) — which is a SECOND signal,
    never the only one: the row of the list carries a dot, and the banner says

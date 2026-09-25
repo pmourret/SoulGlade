@@ -87,7 +87,7 @@ export function GalleryFilters({
 
   return (
     <div
-      className="flex h-[44px] flex-none items-center gap-[10px] overflow-x-auto border-b
+      className="flex h-[48px] flex-none items-center gap-[10px] overflow-x-auto border-b
                  border-b-line bg-panel px-[16px]"
       id="galleryFilters"
     >

@@ -1,12 +1,9 @@
 /* screens.css — the shared pieces screens are built from: segmented controls,
-   view selectors, tables, empty states. Ported from `static/components.css` and
+   tables, empty states. Ported from `static/components.css` and
    `static/screens.css`.
 
    Nothing here is specific to one screen. A screen that needs a component of its
    own gets it next to its own file; what several screens share lives here. */
-
-/* -------------------------------------------------------- view selector */
-.viewsel{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
 
 /* -------------------------------------------------- segmented control
    NO ACCENT FILL on the active option (design-pass screen-3b §S5, and it is
@@ -143,44 +140,24 @@ details.adjsec[open] > :not(summary){margin:0 0 16px}
    window. */
 td.empty{padding:34px 20px}
 
-/* --------------------------------------------------------- option card
-   `.it` is the pill-less card offered where a choice is among a HANDFUL and the
-   sub-line matters as much as the label — the model family of a type, the tone
-   of a world, the scene count of an intention. Two screens lay one out: the
-   wizard (type, style, world) and Produire (intentions).
+/* WHAT THE DESIGN-PASS TOOK AWAY (bilan graphique, 25/09/2026).
 
-   It came from `screens/wizard.css`, which was the wrong home for something
-   Produire has always used: the produce migration had to write `!` on `.it span`
-   precisely because that rule lived in a sheet it could not reach. The `!` stays
-   correct — `.it span` is a class plus a type, a plain utility loses to it.
+   Three components used to live here and no element carries them any more,
+   in `src/` or in the 23 fumigations:
 
-   `.intents` is its grid, and travels with it: a card of a different width would
-   not be the same component. */
-.intents{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:12px}
-.it{display:block;width:100%;font:inherit;color:inherit;
-    background:var(--panel);border:2px solid var(--line);border-radius:var(--r);
-    padding:16px 14px;cursor:pointer;text-align:left;transition:border-color .12s}
-.it:hover{border-color:var(--line2)}
-.it:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
-.it.on{border-color:var(--acc);background:var(--panel2)}
-.it b{display:block;font-size:14px;font-weight:600}
-.it span{font-size:11.5px;color:var(--dim)}
+     `.it` + `.intents`  the option card and its grid. Produire's intentions
+                         (screen 3b) and the wizard's choices (screen 14) are
+                         both rows of a list now, laid out where their markup
+                         is. The `!` on `.it span`, and the sheet-reach problem
+                         it worked around, went with them.
+     `.launch`           the fixed launch bar of Produire and the wizard. Both
+                         screens ended up making it a ROW OF THEIR GRID
+                         (`produce/LaunchBar.tsx`, `wizard/WizardScreen.tsx`):
+                         a column that scrolls on its own does not need a bar
+                         anchored to the viewport, and a row needs no offset.
+     `.viewsel`          the view picker of the pre-refonte bank.
 
-/* --------------------------------------------------------- launch bar
-   Stuck to the bottom of the two screens that END in a gesture: Produire
-   generates, the wizard creates. It is `fixed`, therefore anchored to the
-   viewport and blind to the two left columns — without this offset it would run
-   under them. `--nav` and `--rail` are 0 wherever their column is not shown, and
-   each is declared with exactly the condition of its display: one condition
-   written twice, never two conditions.
-
-   Same trajectory as `.it`: it lived in `screens/wizard.css` while Produire
-   carried the other half of its markup. */
-.launch{position:fixed;left:calc(var(--nav) + var(--rail));right:0;bottom:0;
-        background:linear-gradient(transparent,var(--bg) 22%);
-        padding:26px 20px 18px;z-index:6}
-.launch .inner{max-width:var(--maxw);margin:0 auto;display:flex;align-items:center;gap:16px;
-        background:var(--panel);border:1px solid var(--line2);border-radius:12px;padding:13px 18px;
-        box-shadow:var(--elev)}
-.launch .sum b{font-size:16px}
-.launch .sum div{font-size:12.5px;color:var(--dim)}
+   `--nav` and `--rail` went with `.launch`, which was their only reader: they
+   measured the two left columns so a `position:fixed` bar could step around
+   them. Kept until now as a seam at zero — a seam nothing crosses is a token
+   that lies about being read. */

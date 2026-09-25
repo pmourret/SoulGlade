@@ -36,7 +36,7 @@ export const REVIEW_BUCKETS = [
   { key: 'ARCHIVE', label: 'Archivées' },
 ]
 
-const TITLE = 'mb-[8px] text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim'
+const TITLE = 'lab mb-[8px]'
 /* `border-0` as well as `bg-transparent`: a <button> that declares neither
    inherits the browser's own light face AND its `2px outset` frame — both
    halves of the guard, the lesson of ProduceSidebar at 2560 px. */

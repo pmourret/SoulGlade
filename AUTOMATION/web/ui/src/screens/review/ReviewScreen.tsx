@@ -445,7 +445,7 @@ export function ReviewScreen({ trade }: { trade: Trade }) {
         /* A banner, not an empty screen: the folder may well have content,
            and it is the REQUEST that failed, not the load. */
         <div
-          className="m-[16px] flex flex-none items-start gap-[12px] rounded-[8px] border
+          className="m-[16px] flex flex-none items-start gap-[12px] rounded-card border
                      border-warn-line bg-warn-bg px-[14px] py-[12px] text-[12.5px]
                      leading-[1.5] text-warn-txt empty"
           data-avis

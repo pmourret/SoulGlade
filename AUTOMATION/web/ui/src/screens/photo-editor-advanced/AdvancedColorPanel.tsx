@@ -52,7 +52,7 @@ export function AdvancedColorPanel({
         />
 
         <div>
-          <div className="tiny mb-[6px] uppercase tracking-[.5px] text-dim">Niveaux</div>
+          <div className="lab mb-[6px]">Niveaux</div>
           {LEVEL_ROWS.map((row) => (
             <AdjustSlider
               id={`pe-${row.key}`}
@@ -95,7 +95,7 @@ function HslBandsTable({
 }) {
   return (
     <div>
-      <div className="tiny mb-[6px] uppercase tracking-[.5px] text-dim">HSL par bande</div>
+      <div className="lab mb-[6px]">HSL par bande</div>
       <div className="sticky top-0 z-[1] flex items-center gap-[4px] bg-panel pb-[4px] text-[10.5px] text-dim2">
         <div className="w-[64px] shrink-0" />
         <span className="w-[46px] shrink-0 text-center">teinte</span>

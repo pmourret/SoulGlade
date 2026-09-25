@@ -139,7 +139,7 @@ export function AdultContentSection({
       />
 
       {failed ? (
-        <div className="rounded-[8px] border border-line2 px-[16px] py-[14px]" role="alert">
+        <div className="rounded-card border border-line2 px-[16px] py-[14px]" role="alert">
           <p className="m-0 text-[13px] text-txt">État indisponible, le serveur n'a pas répondu.</p>
           <button className="btn sm mt-[10px]" type="button" onClick={() => void onReload()}>
             Réessayer
@@ -154,7 +154,7 @@ export function AdultContentSection({
               for all that — arming is the character's decision. */}
           {!tool.has_graph && (
             <p
-              className="mt-0 mb-[20px] flex gap-[10px] rounded-[8px] border border-line2 bg-panel px-[16px] py-[12px] text-[13px] text-dim"
+              className="mt-0 mb-[20px] flex gap-[10px] rounded-card border border-line2 bg-panel px-[16px] py-[12px] text-[13px] text-dim"
               id="nsfwManque"
             >
               <span className="mt-[5px]">

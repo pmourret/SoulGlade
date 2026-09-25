@@ -42,7 +42,7 @@ export function BuildSheetPanel({
                  max-[1100px]:w-auto max-[1100px]:border-t max-[1100px]:border-l-0"
       aria-label="Fiche en construction"
     >
-      <h3 className="m-0 text-[11.5px] uppercase tracking-[.5px] text-dim">Fiche en construction</h3>
+      <h3 className="lab m-0">Fiche en construction</h3>
       {frozenBase ? (
         <img
           className="aspect-[4/5] w-full rounded-card border-2 border-acc object-cover max-[1100px]:w-[200px]"

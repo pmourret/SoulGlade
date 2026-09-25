@@ -228,7 +228,7 @@ export function AppearanceSection() {
             preview. */}
         <div
           aria-hidden="true"
-          className="w-[220px] flex-none overflow-hidden rounded-[8px] border border-line2 bg-bg"
+          className="w-[220px] flex-none overflow-hidden rounded-card border border-line2 bg-bg"
         >
           <div className="flex h-[26px] items-center gap-[6px] border-b border-line bg-panel px-[10px]">
             <i className="h-[7px] w-[7px] rounded-full bg-acc" />

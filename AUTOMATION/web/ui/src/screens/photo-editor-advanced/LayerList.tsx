@@ -134,7 +134,7 @@ export function LayerList({
   return (
     <div>
       <div className="mb-[8px] flex items-center justify-between gap-[8px]">
-        <div className="text-[10.5px] uppercase tracking-[.5px] text-dim">Calques</div>
+        <div className="lab">Calques</div>
         <AddLayerMenu onAdd={onAdd} />
       </div>
 

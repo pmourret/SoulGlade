@@ -40,7 +40,7 @@ export function SectionHeader({
 
 export function SubTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="mt-[28px] mb-[10px] text-[10.5px] font-semibold uppercase tracking-[0.06em] text-dim2">
+    <h2 className="lab mt-[28px] mb-[10px]">
       {children}
     </h2>
   )
@@ -49,7 +49,7 @@ export function SubTitle({ children }: { children: ReactNode }) {
 /* A block of action rows, ruled by 1 px lines. */
 export function ActionRows({ children }: { children: ReactNode }) {
   return (
-    <div className="divide-y divide-line2 rounded-[8px] border border-line2">{children}</div>
+    <div className="divide-y divide-line2 rounded-card border border-line2">{children}</div>
   )
 }
 
@@ -95,7 +95,7 @@ export function StopBlock({
   return (
     <>
       <SubTitle>Arrêt</SubTitle>
-      <div className="flex items-center gap-[20px] rounded-[8px] border border-danger-line bg-danger-bg px-[16px] py-[14px]">
+      <div className="flex items-center gap-[20px] rounded-card border border-danger-line bg-danger-bg px-[16px] py-[14px]">
         <p className="m-0 min-w-0 flex-1 text-[12.5px] text-dim">{consequence}</p>
         <div className="flex-none">{button}</div>
       </div>

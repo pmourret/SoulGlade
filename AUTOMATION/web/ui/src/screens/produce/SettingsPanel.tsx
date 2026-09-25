@@ -104,7 +104,7 @@ export function valuesFor(
    its own ground, border and text. */
 const SECTION =
   'mt-[14px] border-t border-t-line pt-[14px] first:mt-0 first:[border-top:0] first:pt-0'
-const SECTION_TITLE = 'text-[12px] font-semibold uppercase tracking-[.8px] text-dim2'
+const SECTION_TITLE = 'lab'
 const BADGE_BASE = 'rounded-[5px] border px-[6px] py-[2px] text-[10px] uppercase tracking-[.6px]'
 const BADGE_ON = 'border-mes-line bg-mes-bg text-ok'
 const BADGE_OFF = 'border-line bg-transparent text-dim2 opacity-55'

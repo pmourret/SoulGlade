@@ -25,7 +25,7 @@ export function PropertySection({
     <section className="mb-[26px]">
       <div className="flex flex-wrap items-baseline gap-x-[12px] gap-y-[2px]
                       border-b border-line2 pb-[7px]">
-        <h2 className="m-0 text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim">
+        <h2 className="lab m-0">
           {title}
         </h2>
         <span className="text-[12px] text-dim2">{rule}</span>

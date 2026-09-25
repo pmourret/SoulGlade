@@ -652,7 +652,7 @@ export function PoseCanvas({
         className={
           focus
             ? 'absolute inset-x-0 top-[calc(100%+6px)] flex items-center justify-between gap-[2px] rounded-[6px] border border-line2 bg-panel p-[2px]'
-            : 'absolute left-1/2 top-[calc(100%+12px)] flex -translate-x-1/2 items-center gap-[2px] whitespace-nowrap rounded-[8px] border border-line2 bg-panel p-[4px] shadow-elev'
+            : 'absolute left-1/2 top-[calc(100%+12px)] flex -translate-x-1/2 items-center gap-[2px] whitespace-nowrap rounded-card border border-line2 bg-panel p-[4px] shadow-elev'
         }
       >
         <button

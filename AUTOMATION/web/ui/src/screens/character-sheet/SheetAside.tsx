@@ -43,7 +43,7 @@ export function SheetAside({
   return (
     <aside className="sticky top-[24px] self-start">
       <div
-        className={`relative mb-[16px] aspect-[4/5] w-full overflow-hidden rounded-[8px]
+        className={`relative mb-[16px] aspect-[4/5] w-full overflow-hidden rounded-card
                     ${missing
                       ? 'border border-dashed border-danger-line bg-danger-bg'
                       : 'border border-line bg-panel'}`}

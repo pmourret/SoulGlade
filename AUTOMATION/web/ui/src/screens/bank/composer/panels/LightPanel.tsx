@@ -71,7 +71,7 @@ export function LightPanel({
           alternatives à la lumière de base, jamais une tenue
         </p>
         <div
-          className={`flex flex-col gap-[6px] ${changed.has('variants') ? 'rounded-[8px] border border-warn p-[6px]' : ''}`}
+          className={`flex flex-col gap-[6px] ${changed.has('variants') ? 'rounded-card border border-warn p-[6px]' : ''}`}
           data-f="variants"
           data-value={draft.variants}
         >

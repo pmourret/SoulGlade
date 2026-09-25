@@ -235,7 +235,7 @@ export function JsonPanel({
       </div>
 
       {view === 'all' ? (
-        <div className="overflow-x-auto rounded-[8px] border border-line bg-panel py-[8px] font-code text-[12px]">
+        <div className="overflow-x-auto rounded-card border border-line bg-panel py-[8px] font-code text-[12px]">
           {after.map((line, index) => {
             const moved = movedLines.has(index + 1)
             return (
@@ -252,11 +252,11 @@ export function JsonPanel({
           })}
         </div>
       ) : !touched ? (
-        <p className="m-0 rounded-[8px] border border-line bg-panel px-[12px] py-[16px] text-[12.5px] text-dim">
+        <p className="m-0 rounded-card border border-line bg-panel px-[12px] py-[16px] text-[12.5px] text-dim">
           Identique à la version enregistrée.
         </p>
       ) : (
-        <div className="rounded-[8px] border border-line bg-panel">
+        <div className="rounded-card border border-line bg-panel">
           {/* Bandeau de fichier */}
           <div className="flex flex-wrap items-center gap-[10px] border-b border-b-line px-[12px] py-[8px]">
             <code className="font-code text-[12px]">{draft.id || '(sans identifiant)'}</code>

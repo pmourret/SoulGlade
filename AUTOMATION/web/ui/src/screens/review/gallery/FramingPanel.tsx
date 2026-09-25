@@ -43,7 +43,7 @@ export function FramingPanel({
   return (
     <>
       <div className="flex-none border-b border-b-line px-[14px] py-[12px]">
-        <h2 className="mb-[10px] text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim">
+        <h2 className="lab mb-[10px]">
           Cadrage
         </h2>
         <div className="seg w-full" role="radiogroup" aria-label="Cadre" id="frameSel">

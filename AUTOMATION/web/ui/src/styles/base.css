@@ -80,8 +80,29 @@ main{flex:1;min-width:0;overflow:auto;position:relative}
 .screen{height:100%}
 .wrap{max-width:var(--maxw);margin:0 auto;padding:24px 20px 120px}
 
-h2{font-size:13px;text-transform:uppercase;letter-spacing:.9px;color:var(--dim);
-   margin:0 0 12px;font-weight:600}
+/* A TAG SAYS THE RANK, A CLASS SAYS THE LOOK (bilan graphique, 25/09/2026).
+   This rule used to dress `h2` as a section label — 13px, uppercase, .9px,
+   `--dim`. It was the pre-React studio's only kind of heading, and it became a
+   trap the moment screens wanted a real title: four of them had to UNDO the
+   look (`normal-case tracking-normal`), three with a comment explaining the
+   manoeuvre. Four workarounds for one rule means the rule was wrong. What is
+   left is the RESET part: the browser's 1.5em bold and its two margins are
+   still neutralised, because a studio heading takes its size from its context.
+   The look moved to `.lab` below, where an element opts IN. */
+h2{font-size:inherit;font-weight:600;margin:0 0 12px}
+
+/* --------------------------------------------------- text primitives
+   The three sizes of secondary text. `.lab` names a group of controls or of
+   fields inside a panel; it was written by hand 25 times across the fourteen
+   screens of the design-pass and had drifted on four axes at once (10 to 12 px,
+   seven letter-spacings, both dim tokens, two weights — measured in
+   DOCS/design-pass/bilan-graphique.md). The values below are the ones the last
+   two screens of the pass had converged on by themselves.
+
+   `--dim2` on `--panel3` falls to 4.27:1 (see DESIGN.md): a label laid on the
+   current-element ground names its own colour instead. */
+.lab{font-size:10.5px;font-weight:600;text-transform:uppercase;
+     letter-spacing:.06em;color:var(--dim2)}
 .muted{color:var(--dim);font-size:13px}
 .tiny{font-size:12px;color:var(--dim2)}
 

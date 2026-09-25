@@ -215,8 +215,7 @@ export function SceneListPanel({
                 which the two engines draw differently. */}
             <summary
               className="flex cursor-pointer list-none items-center gap-[6px] rounded-[6px]
-                         px-[4px] py-[4px] text-[10.5px] font-semibold uppercase
-                         tracking-[.5px] text-dim2 hover:text-dim
+                         lab px-[4px] py-[4px] hover:text-dim
                          focus-visible:outline-2 focus-visible:outline-focus
                          focus-visible:outline-offset-2
                          [&::-webkit-details-marker]:hidden"

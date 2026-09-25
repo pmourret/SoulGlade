@@ -104,7 +104,7 @@ export function AppNav({
       <div className="flex-1 max-[899px]:hidden">
         {groups.map((group) => (
           <div key={group.title} className="mt-[14px]">
-            <div className="truncate px-[20px] pb-[6px] text-[10.5px] font-semibold uppercase tracking-[0.06em] text-dim2">
+            <div className="lab truncate px-[20px] pb-[6px]">
               {group.title}
             </div>
             {group.disabled ? (

@@ -23,7 +23,7 @@ import { isValidId, slugify } from './slugify'
 import type { NewWorldFields, PackOption } from './useWorldRegistry'
 
 const FIELD = 'flex flex-col gap-[5px]'
-const LABEL = 'text-[11.5px] tracking-[.3px] text-dim uppercase'
+const LABEL = 'lab'
 const HINT = 'text-[11.5px] text-dim2'
 
 export function NewWorldDialog({

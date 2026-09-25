@@ -120,7 +120,7 @@ export function PoseEditorModal({
       <div className="relative min-h-0 flex-1 bg-[var(--pose-stage)] px-[16px] pt-[16px] pb-[64px]">
         {loading && <p className="m-0 text-[13px] text-dim2">chargement…</p>}
         {loadError && (
-          <div className="empty mx-auto mt-[40px] max-w-[440px] rounded-[8px] border border-danger-line bg-panel px-[16px] py-[20px] text-[13px]">
+          <div className="empty mx-auto mt-[40px] max-w-[440px] rounded-card border border-danger-line bg-panel px-[16px] py-[20px] text-[13px]">
             {loadError}
           </div>
         )}

@@ -44,7 +44,7 @@ export function ToneList({
 
   return (
     <div className="flex min-h-0 flex-col border-r border-r-line bg-panel">
-      <div className="flex-none px-[12px] pt-[12px] pb-[8px] text-[10.5px] uppercase tracking-[.6px] text-dim2">
+      <div className="flex-none px-[12px] pt-[12px] pb-[8px] lab">
         Tons · {rows.length}
       </div>
       <ul

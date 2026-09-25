@@ -29,7 +29,7 @@ export function AiPanel({ draft }: { draft: SceneDraft }) {
     /* Un champ et quatre puces : ce panneau garde sa mesure de lecture plutôt
        que de s'étaler sur toute la colonne, il n'a rien à y mettre. */
     <div className="flex max-w-[880px] flex-col gap-[14px]">
-      <div className="rounded-[8px] border border-line bg-panel px-[12px] py-[10px]">
+      <div className="rounded-card border border-line bg-panel px-[12px] py-[10px]">
         <span className={HEAD}>Prompt de départ</span>
         <p className="m-0 mt-[4px] text-[12.5px] text-dim">
           {composed || <span className="text-dim2">— vide —</span>}

@@ -1,12 +1,13 @@
 /* The anchored launch bar of Produire (design-pass screen-3b, §S5): what is
    about to run, at which quality, and the one button that runs it.
 
-   IT IS A ROW OF THE SCREEN GRID, NOT `.launch`. The shared `.launch` class
-   is `position:fixed` and offsets itself by `calc(var(--nav) + var(--rail))`
-   — which is what a CENTRED article needs, and what the wizard still is
-   (`screens/wizard/WizardScreen.tsx`). Produire is no longer that: its three
+   IT IS A ROW OF THE SCREEN GRID. The shared `.launch` class was
+   `position:fixed`, anchored to the viewport and blind to the columns, so it
+   had to step around them by `calc(var(--nav) + var(--rail))`. Produire's three
    columns each scroll on their own, so the bar is simply the last row of the
-   grid and nothing has to be kept in sync with it.
+   grid and nothing has to be kept in sync with it. The wizard reached the same
+   shape with screen 14, which left `.launch` without a carrier; the class and
+   its two seam tokens went with the bilan graphique of 25/09/2026.
 
    `#btnRun.disabled` IS `runDisabled`, RECEIVED AS A PROP (AUDIT §5.6, trap
    3). It is computed once in ProduceScreen and read here — this component

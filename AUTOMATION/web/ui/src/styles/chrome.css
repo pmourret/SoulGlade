@@ -239,16 +239,12 @@ header{display:flex;align-items:center;gap:14px;padding:0 16px;height:48px;
 .prog{height:2px;flex:none;background:var(--panel);overflow:hidden}
 .prog span{display:block;height:100%;background:var(--txt);transition:width .5s}
 
-/* ------------------------------------------------------------ layout vars
-   `--nav` IS ZERO EVERYWHERE now, and kept rather than deleted: `.launch` is
-   position:fixed, so it offsets itself by `calc(var(--nav) + var(--rail))`, and
-   that expression has to resolve on every screen. The side navbar it used to
-   measure is gone (23/09/2026); the token stays as the seam, at zero, so the
-   launch bar keeps one rule instead of gaining a second form. */
-.app{--nav:0px}
-/* Zero wherever the rail is not shown. The launch bar offsets itself by both
-   columns, so the calc has to resolve even on the screens that have no rail. */
-.app{--rail:0px}
+/* NO LAYOUT VARS ANY MORE (bilan graphique, 25/09/2026). `--nav` and `--rail`
+   measured the two left columns for one reader: `.launch`, `position:fixed` and
+   therefore blind to the grid. Both screens that ended in a gesture made their
+   launch bar a row of their own grid during the design-pass, `.launch` went with
+   the change, and a seam nothing crosses is a token that lies about being read.
+   The rail's own width stays where it is measured — on `.rail`, below. */
 
 /* FOCUS MODE — the header goes, the sub-bar stays and takes the mini state and
    the way out. What REMAINS is what drives the work; we remove what says
@@ -285,18 +281,11 @@ header{display:flex;align-items:center;gap:14px;padding:0 16px;height:48px;
       background:var(--panel);border-right:1px solid var(--line);
       padding:16px 12px;gap:22px;flex-direction:column}
 @media(min-width:1101px){
-  .app:not(.no-character):has(.rail){--rail:200px}
   .app:not(.no-character) .rail{display:flex}
-  /* Collapsed, the WIDTH follows: `.launch` is position:fixed and sits on
-     left:var(--rail); a width frozen at 200 px would leave 142 px of void under
-     a rail that is only 58 px wide. The variable and the display carry the same
-     condition — one condition written twice, never two conditions. */
-  .app.rail-mince:not(.no-character):has(.rail){--rail:58px}
-  /* The rail's OWN width, alongside the variable. Two declarations because they
-     say two things: this one is how wide the column is, the one above is how
-     much room the fixed launch bar must leave for it. Missing this, the bar
-     slides left under a rail that is still 200 px wide and swallows its
-     clicks — which is exactly what the fumigation caught. */
+  /* ONE declaration since the bilan graphique (25/09/2026). There were two —
+     this width, and a `--rail` variable that repeated it for the fixed launch
+     bar to step around. The bar is a grid row on both of its screens now, so
+     the column is the only thing that needs to know how wide it is. */
   .app.rail-mince .rail{width:58px;padding:16px 6px}
 }
 .rail-grp{display:flex;flex-direction:column;gap:3px}

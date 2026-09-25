@@ -183,7 +183,7 @@ function ReadRow({
   return (
     <div className="flex items-center gap-[10px]">
       <Step n={n} color={color} />
-      <div className="flex min-w-0 flex-1 items-center gap-[10px] rounded-[8px] border border-line
+      <div className="flex min-w-0 flex-1 items-center gap-[10px] rounded-card border border-line
                       bg-panel px-[10px] py-[8px]">
         <span className={`${HEAD} flex-none`}>{title}</span>
         <span className="min-w-0 flex-1 truncate text-[12.5px] text-dim">

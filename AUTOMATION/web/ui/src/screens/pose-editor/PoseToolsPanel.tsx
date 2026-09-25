@@ -17,7 +17,7 @@ export function PoseToolsPanel({
   const canAlign = selectionSize >= 2
   return (
     <section className="border-t border-line px-[16px] py-[14px]" aria-labelledby="poseToolsTitle">
-      <h2 className="m-0 mb-[12px] text-[10.5px] font-semibold uppercase tracking-[0.06em] text-dim2" id="poseToolsTitle">
+      <h2 className="lab m-0 mb-[12px]" id="poseToolsTitle">
         Outils
       </h2>
       <div className="mb-[6px] text-[12px] text-dim">Symétrie corps</div>

@@ -119,12 +119,11 @@ export function ReviewToolbar({
 
   return (
     <div
-      className="flex h-[44px] flex-none items-center gap-[10px] overflow-x-auto border-b
+      className="flex h-[48px] flex-none items-center gap-[10px] overflow-x-auto border-b
                  border-b-line px-[16px]"
       id="reviewToolbar"
     >
-      <h2 className="m-0 max-w-[280px] flex-none truncate text-[13px] font-semibold normal-case
-                     tracking-normal text-txt">
+      <h2 className="m-0 max-w-[280px] flex-none truncate text-[13px] font-semibold text-txt">
         {title}
       </h2>
       <span className="flex-none text-[12px] whitespace-nowrap text-dim2">{position}</span>

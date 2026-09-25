@@ -22,7 +22,7 @@ import { calibration } from './ScoreBars'
 import { scoreClass, type Band, type GalleryItem } from './useTriage'
 
 const SECTION = 'border-t border-t-line px-[14px] py-[13px] first:[border-top:0]'
-const TITLE = 'mb-[10px] text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim'
+const TITLE = 'lab mb-[10px]'
 
 /* The word that goes with the score, and the shape that goes with the word.
    Three states, never merged: inside the band, under it but still measured,

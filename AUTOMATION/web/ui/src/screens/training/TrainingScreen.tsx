@@ -101,7 +101,7 @@ export function TrainingScreen() {
     return (
       <div className="screen flex h-full items-start justify-center overflow-y-auto p-[48px_32px]"
            id="training">
-        <div className="w-[440px] rounded-[var(--r)] border border-danger-line bg-danger-bg
+        <div className="w-[440px] rounded-card border border-danger-line bg-danger-bg
                         p-[18px]"
              role="alert">
           <b className="flex items-center gap-[8px] text-[15px] font-[650] text-txt">

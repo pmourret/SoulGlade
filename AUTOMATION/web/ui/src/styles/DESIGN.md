@@ -31,6 +31,105 @@ atterrissaient en PREMIER dans le bundle, pas en dernier.
 > permanent) et les feuilles d'écran (ce qui ne l'est pas). Le contrat de tokens
 > ci-dessous n'a pas bougé — c'est lui qui rendait le découpage possible.
 
+## La charte du design-pass
+
+*Écrite le 25/09/2026, au bout des quatorze écrans, en relisant les quatorze
+d'un coup : `DOCS/design-pass/bilan-graphique.md` porte les mesures et ce qui
+a été corrigé. Ce qui suit est la référence d'un écran suivant.*
+**`AUTOMATION/tests/test_charte.js` en tient quatre**, statiquement : une
+charte que rien ne mesure se remet à dériver au deuxième écran.
+
+### Un écran est un poste de travail
+
+Plus de modèle de largeur à choisir : un écran occupe la place, `.screen` fait
+100 % de la hauteur, et **chaque colonne défile pour son compte**. Rien n'est
+`position:fixed` à l'intérieur d'un écran — ce qui était ancré au viewport
+(`.launch`) est devenu une rangée de grille sur les deux écrans qui finissaient
+par un geste. L'article centré (`.wrap`, `--maxw`) ne sert plus que l'état de
+panne de la fiche : c'est une survivance, pas un modèle à reprendre.
+
+La forme récurrente est **trois zones** : une liste ou des filtres à gauche, le
+travail au centre, un inspecteur à droite, sous une barre d'écran.
+
+### Le rythme vertical
+
+48 px (header) · 34 px (sous-barre de modules) · 48 px (barre d'écran). Une
+barre de tête d'écran, une tête de modale et une tête de panneau se lisent sur
+le même pas. L'échelle est close, chaque valeur a son rôle et au moins un
+porteur :
+
+| px | Ce que c'est |
+|---|---|
+| 40 | tête de panneau compacte |
+| **48** | **barre d'écran**, tête de modale, tête de panneau |
+| 52 | tête de panneau large, pied de modale |
+| 60 | barre de lancement (Produire, assistant) |
+| 64 · 72 | panier de la planche, en-tête de scène du composeur |
+
+Cinq écrans portaient 44 px, et la barre de Revue portait **les deux** (44 au
+repos, 48 en sélection : entrer en sélection décalait tout l'écran de 4 px).
+
+### Les largeurs de colonne
+
+Relevé au 25/09/2026, gauche puis inspecteur :
+
+    Produire      248 / 340     Revue (tri)     232 / 320
+    Ateliers      260 / 340     Revue (loupe)     — / 320
+    Tons          220 / 440     Poses             — / 320
+    Éditeur pose  240 / 360     Entraînement      — / 412
+    Assistant     260 / 340     Personnages       — / 360
+    Application   260 /  —      Fiche           300 /  —
+
+Sept largeurs à gauche, six à droite. Elles ne sont **pas** uniformisées :
+chacune a été mesurée contre son contenu (220 tient trois cartes de ton, 440
+tient l'image à sa résolution servie, 412 tient le panneau d'export). La règle
+pour la suite est donc l'échelle, pas la valeur : **240 ou 260 à gauche, 320 ou
+340 à droite**, et si le contenu en demande une autre, la raison s'écrit à côté
+du nombre. Sous 1100 px, une colonne tombe et **jamais le centre** : laquelle
+dépend de l'écran (Produire et Revue perdent l'inspecteur, l'éditeur de pose
+perd son arbre de points), et c'est le geste courant de l'écran qui tranche.
+
+### Le texte
+
+Trois primitives, dans `base.css`, et rien d'autre à réécrire :
+
+| Classe | Ce que c'est |
+|---|---|
+| `.lab` | **le sur-titre** : ce qui nomme un groupe de contrôles ou de champs. 10,5 px / 600 / capitales / `.06em` / `--dim2` |
+| `.muted` | 13 px `--dim`, une phrase qui accompagne. **Un seul porteur** aujourd'hui, dans le même état de panne que `.wrap` |
+| `.tiny` | 12 px `--dim2`, la mention de détail (75 porteurs) |
+
+**Une balise dit le rang, une classe dit l'aspect.** `base.css` habillait `h2`
+en sur-titre ; quatre écrans devaient *défaire* cet habillage pour écrire un
+vrai titre, trois avec un commentaire qui expliquait la manoeuvre. La règle ne
+porte plus que le reset, et un élément qui veut le sur-titre prend `.lab`.
+
+L'échelle de taille est fermée, elle aussi : **10,5 · 11 · 11,5 · 12 · 12,5 ·
+13** pour l'interface, puis **14 · 15 · 17 · 20 · 22** pour ce qui titre. Six
+pas de texte d'interface est déjà beaucoup ; il n'en manque pas un septième.
+
+`th` (11 px) et `.meta dt` (11,5 px) sont la même famille à un cran près, et
+restent où elles sont : chacune est déclarée une seule fois, donc aucune ne
+peut dériver. Le chrome garde de même ses propres libellés (`.rail-lab`,
+`.catmenu-lab`), déclarés une fois dans `chrome.css`.
+
+### Les rayons, deux familles qui ne se mélangent pas
+
+| | Écriture | Qui suit le pack ? |
+|---|---|---|
+| **Surface** — carte, panneau, cadre, corps de modale, menu flottant | `rounded-card` | **oui**, c'est `--r`, le seul jeton qu'un pack redéfinit encore |
+| **Contrôle** — bouton, champ, pastille, plaque posée sur une image | `rounded-[Npx]` (2 à 8) | non, c'est une valeur de contrôle |
+
+Le piège est que `--r` vaut 8 px **et** que le rayon de contrôle vaut 8 px :
+une carte écrite `rounded-[8px]` a l'air juste et ne suit plus rien. Mesuré le
+25/09 en basculant `data-pack` sur le même DOM, 36 surfaces restaient figées.
+Les huit contrôles qui gardent 8 px en dur sont **nommés** dans
+`test_charte.js` : y ajouter une entrée est une décision, en écrire une
+neuvième en silence n'en est pas une.
+
+Un bloc qui *contient* des cartes a le droit d'un cran au-dessus (10 px) — un
+rayon intérieur égal au rayon extérieur se lit comme une erreur d'emboîtement.
+
 ## Contrat de tokens
 
 `base/components/screens` ne référencent l'identité visuelle **que** par
@@ -111,10 +210,13 @@ persisté tant que le bouton n'est pas actionné.
   composants pour la raison habituelle : un univers qui reteint le studio doit
   les reteindre sans rouvrir un fichier de composant.
 - **Typographie** — `--font` (texte courant), `--font-mono` (`.kbd`, raccourcis).
-- **Forme** — `--r` (rayon des cartes), `--maxw` (largeur max du contenu centré).
-  `--maxw` ne gouverne plus **tous** les écrans depuis le 29/08/2026 : Créer est
-  passé en pleine largeur (voir ci-dessous). Les écrans-listes (registre, banque,
-  revue, réglages, wizard) le gardent.
+- **Forme** — `--r` (rayon des cartes, `rounded-card` côté utilitaires : voir
+  « Les rayons » dans la charte, c'est le seul jeton qu'un pack redéfinit
+  encore), `--maxw` (largeur max du contenu centré).
+  *Mis à jour le 25/09/2026 :* `--maxw` a cessé de gouverner **tous** les écrans
+  le 29/08 quand Créer est passé en pleine largeur, et il n'en gouverne plus
+  **aucun** depuis le design-pass — les quatorze sont des postes de travail. Son
+  unique lecteur est `.wrap`, qui ne porte plus qu'un état de panne.
 
 ### Laissé brut, et pourquoi
 
@@ -298,10 +400,14 @@ l'assertion de repli **SPA**, qui n'a jamais porté sur la navbar. Le repli du
 **rail** (`studio.rail-mince`, `#btnRailPli`) est un autre geste et n'a pas
 bougé.
 
-`--nav` est **conservé, à `0px` partout**. `.launch` est `position:fixed` et
-s'écarte de `calc(var(--nav) + var(--rail))` : le jeton reste la couture, à
-zéro, pour que la barre de lancement garde une règle au lieu d'en gagner une
-seconde.
+`--nav` a été conservé à `0px` partout jusqu'au **bilan graphique du
+25/09/2026**, comme couture pour `.launch`, qui était `position:fixed` et
+s'écartait de `calc(var(--nav) + var(--rail))`. Les deux écrans qui finissaient
+par un geste ont fait de leur barre de lancement une rangée de leur grille
+(écrans 3b et 14), `.launch` n'a plus eu de porteur, et les deux jetons sont
+partis avec : une couture que rien ne traverse est un jeton qui ment sur le
+fait d'être lu. La largeur du rail se mesure désormais au seul endroit qui en a
+besoin, sur `.rail`.
 
 ### Le filet de progression
 
@@ -311,26 +417,24 @@ serait du chrome qui ne veut rien dire la plupart du temps. Sa transition de
 0,5 s est neutralisée par le bloc `prefers-reduced-motion` de `base.css`, qui
 couvre déjà toutes les transitions du studio.
 
-## Deux modèles de largeur
+## Un seul modèle de largeur
 
-| Modèle | Écrans | Règle |
-|---|---|---|
-| **Article centré** | registre, banque, revue, réglages, wizard | `.wrap` à `--maxw`, marges auto |
-| **Poste de travail** | **Créer** seulement | `#creer .wrap.split` en pleine largeur ; l'inspecteur touche le bord droit du **viewport**, pas celui d'un wrap |
+*Il y en avait deux jusqu'au design-pass : l'**article centré** (`.wrap` à
+`--maxw`, marges auto) pour le registre, la banque, la revue, les réglages et
+l'assistant, et le **poste de travail** pour Créer seulement, passé en pleine
+largeur le 29/08/2026 parce que `--maxw` y laissait 200 px de gouttière de
+chaque côté et collait l'inspecteur au bord du wrap.*
 
-Depuis le 29/08/2026 les deux modèles vivent à droite d'un **rail** de 200 px
-(voir ci-dessous) : « pleine largeur » et « centré » s'entendent désormais dans
-`<main>`, pas dans le viewport. Le rail est hors de `<main>`, donc hors des deux
-modèles — il ne défile pas et ne participe d'aucun wrap.
+**Les quatorze écrans ont fini par le poste de travail** (voir « La charte du
+design-pass » ci-dessus). `.wrap` ne porte plus qu'un état de panne, et
+`--maxw` n'a plus que `.wrap` comme lecteur. Ni l'un ni l'autre n'est supprimé
+— un écran de panne est exactement le cas d'un texte court qu'on centre — mais
+aucun écran neuf ne part de là.
 
-Créer a changé de modèle le 29/08/2026 : `--maxw` y laissait ~200 px de gouttière
-de chaque côté sur un écran large, et l'inspecteur collait au bord droit du wrap.
-La correction n'est **pas** de monter `--maxw` — ce serait garder le modèle et le
-distendre. Les deux surfaces de chrome qui bordent l'écran suivent
-(`#creer .launch .inner` par portée, `body:has(#creer.on) .intbar .inner` parce
-que la barre d'intensité vit hors des écrans). La colonne de droite est en
-`clamp(280px, 22vw, 420px)` : la borne haute est la largeur réelle de la vignette
-servie, au-delà on afficherait un fichier remonté au-dessus de sa résolution.
+Ce qui n'a pas bougé : tout cela vit à droite du **rail** de 200 px (voir
+ci-dessous), donc « pleine largeur » s'entend dans `<main>` et pas dans le
+viewport. Le rail est hors de `<main>` : il ne défile pas et ne participe
+d'aucune grille d'écran.
 
 ## Le rail d'outils n'est pas une seconde navigation
 
@@ -359,7 +463,7 @@ dessus de 1100 px, personnage chargé, éditeur photo fermé. Sous 1100 px il
 disparaît, et en mode éditeur aussi : ce sont des **outils**, la retouche a les
 siens. La navbar, elle, reste dans les deux cas — c'est la sortie. La condition
 d'affichage est écrite en `@media(min-width:1101px)` avec
-`.app:not(.no-character):has(.rail)`, ce qui fait du masquage le défaut.
+`.app:not(.no-character) .rail`, ce qui fait du masquage le défaut.
 
 *Corrigé le 31/08/2026 :* ce paragraphe annonçait un `:not(.editing)` dans cette
 condition — il n'y en a jamais eu. Le mode éditeur est une **règle à part**
@@ -369,10 +473,12 @@ migration Tailwind), et `.app` y est présent **pour la spécificité** : écrit
 ci-dessus (0,0,3,0) et ne peignait jamais. Sans conséquence visible jusqu'ici,
 `ToolRail` ne montant rien sur les deux écrans d'où l'éditeur s'ouvre.
 
-`--rail` (0, 58 ou 200 px) existe pour **une** raison : `.launch` est
-`position:fixed`, donc aveugle à la grille — sans `left:var(--rail)` la barre de
-lancement passerait sous le rail. La variable porte exactement la même condition
-que l'affichage : une condition écrite deux fois, jamais deux conditions.
+*`--rail` (0, 58 ou 200 px) a existé pour **une** raison : `.launch` était
+`position:fixed`, donc aveugle à la grille, et sans `left:var(--rail)` la barre
+de lancement serait passée sous le rail. La variable portait exactement la même
+condition que l'affichage : une condition écrite deux fois, jamais deux
+conditions. Le bilan graphique du 25/09/2026 l'a supprimée avec `.launch` — la
+largeur ne se déclare plus qu'à l'endroit qui la porte, sur `.rail`.*
 
 **Il se replie** *(30/08/2026)* — `#btnRailPli` au pied de la colonne,
 `body.rail-mince`, retenu en `localStorage` : même geste, même place et même
@@ -387,40 +493,34 @@ du texte libre qu'on ne connaît pas d'avance, alors que la surface est le
 vocabulaire que le rail interprète déjà. Une surface sans icône, ou inconnue,
 prend celle par défaut — un rail replié ne montre jamais un bouton vide.
 
-## La banque a deux sous-vues
+## Les trois ateliers sont trois routes
 
-`#scenes` porte un `.seg` **Scènes | Poses** au-dessus de deux enveloppes
-(`#bankScenes` / `#bankPoses`) que `setBankView()` montre ou masque — aucune
-n'est repeinte à la bascule. Hash partageable : `#scenes` et `#scenes/poses`,
-résolu par `ROUTES` dans `constants.js`, qui allume l'onglet **Banque** dans les
-deux cas. L'onglet Banque rouvre toujours sur **Scènes** : la sous-vue laissée
-au passage précédent n'est écrite nulle part dans l'URL.
+*Réécrit le 25/09/2026.* La banque a eu deux sous-vues (`#scenes` portant un
+`.seg` Scènes | Poses au-dessus de deux enveloppes que `setBankView()` montrait
+ou masquait, hash `#scenes/poses` résolu par `constants.js`). Le design-pass a
+donné à chacune **sa route** : `/bank/scenes`, `/bank/poses`, `/bank/tones`,
+plus `/bank/poses/edit` et `/bank/tones/edit` pour les deux éditeurs. Le `.seg`
+de tête est resté, mais il navigue au lieu de basculer un affichage, et la
+sous-vue ouverte est donc dans l'URL, partageable et rechargeable.
 
-La barre « Enregistrer scenes.json » reste visible sur les deux vues — elle
-enregistre le document de l'écran, et une édition en attente sur l'autre vue
-doit garder son bouton pendant que `#dirtyBar` avertit.
+Ce qui n'a pas bougé : l'enregistrement du document de l'écran reste **visible
+sur les trois vues** pendant que `#dirtyBar` avertit — une édition en attente
+ne doit pas perdre son bouton parce qu'on est allé regarder à côté.
 
-## Collision de noms de classe — la carte est scopée à sa grille
+## Un nom de classe court n'est pas un identifiant global
 
-`sc` et `src` nomment chacun **deux à trois** choses différentes dans l'app : une
-carte cliquable, et une ou deux étiquettes de texte. Tant que la règle de carte
-était écrite `.sc{…}` / `.src{…}`, elle atteignait aussi les étiquettes et leur
-posait `width:100%`, une bordure de 2 px et un curseur main.
+*Historique, et la règle survit à son cas.* `sc` et `src` nommaient chacun deux
+à trois choses différentes : une carte cliquable et une ou deux étiquettes de
+texte. Écrite `.sc{…}` / `.src{…}`, la règle de carte atteignait aussi les
+étiquettes et leur posait `width:100%`, une bordure de 2 px et un curseur main
+— c'est ce qui vidait l'aperçu du prompt de son texte, `.fr .src` prenant toute
+la ligne et chassant le fragment hors du cadre. Corrigé en scopant les règles
+de **bloc** à leur grille (`.scenes .sc`, `.srcgrid .src`).
 
-| Classe | La carte | Les étiquettes qui portaient le même nom |
-|---|---|---|
-| `sc` | `.scenes .sc` (carte de scène) | `.fr.sc` (ligne « scène » de l'aperçu), `.bib .sc` (pastille de score) |
-| `src` | `.srcgrid .src` (vignette de source NSFW) | `.fr .src` (provenance d'un fragment), `#declineBox .src` (sous-titre) |
-
-C'est ce qui vidait l'aperçu du prompt de son texte : l'étiquette `.fr .src`
-prenait toute la ligne et chassait `.fr .tx` hors du cadre — on lisait
-« 5 % TENUE » et rien du fragment. Corrigé en scopant les règles de **bloc** à
-leur grille ; les descendantes (`.sc .ph`, `.src .tick`…) restent non scopées,
-elles ne trouvent rien à mordre ailleurs. Renommer aurait été plus propre mais
-touchait le JS et le sélecteur de fumigation `.fr .src`.
-
-**Règle pour la suite** : une règle de carte se scope à son conteneur. Un nom de
-classe court (`sc`, `src`, `tx`, `fr`) n'est pas un identifiant global.
+Les deux classes ont disparu avec la migration Tailwind : ces cartes vivent en
+utilitaires, à côté de leur balisage, et le problème ne peut plus se poser sous
+cette forme. **La règle reste** : une règle partagée se scope à son conteneur,
+et un nom court (`sc`, `src`, `tx`, `fr`) ne devient jamais global.
 
 ## L'éditeur photo est une modale
 
@@ -432,11 +532,20 @@ travail de **taille connue** : `.edStage` ne dépend plus de ce que `<main>`
 laisse, et `ajusterTailleCanvas` peut le mesurer au lieu de plafonner en dur.
 
 `body.editing` reste posé, et ne sert plus à afficher : il tient les raccourcis
-clavier du studio à l'écart (Échap du tri, « f » du focus) et masque le rail et
-la barre d'intensité plutôt que de les laisser transparaître.
+clavier du studio à l'écart (Échap du tri, « f » du focus) et masque le rail
+plutôt que de le laisser transparaître. C'est le seul état du studio qu'un
+écran pose sur `<body>`, et trois fichiers le lisent (`useLaunchShortcut`,
+`useReviewKeys`, `ReviewScreen`).
 
-**Le cadre de recadrage est ancré sur `.edCanvasWrap`**, une boîte qui épouse le
-canvas au pixel près — jamais sur `.edStage`, qui le centre. `#edCropBox` porte
+**L'éditeur avancé, lui, est une route** (`/photo-editor`, design-pass
+écran 10) : calques, courbes, masques et perspective ne tiennent pas dans une
+modale, et une adresse se recharge. La modale reste la retouche rapide, et
+porte le lien vers l'avancé.
+
+**Le cadre de recadrage est ancré sur la boîte qui épouse le canvas** au pixel
+près — jamais sur le plan de travail, qui le centre. *(Les deux portaient les
+classes `.edCanvasWrap` et `.edStage` ; elles sont en utilitaires depuis la
+migration Tailwind, la distinction est la même.)* `#edCropBox` porte
 des coordonnées **canvas** : les poser dans le repère du plan de travail les
 décalait de la moitié de la gouttière (332 px mesurés). Deux symptômes pour un
 seul bug : le voile assombrissait toute l'image, et le cadre paraissait
@@ -445,28 +554,26 @@ cas où le CSS remettrait le canvas à l'échelle entre deux rendus.
 
 ## Inventaire des composants
 
-**Boutons** — `.btn` (+ `.primary`, `.sm`, `.danger`), `.link`.
-**Contrôles** — `.seg` (segmenté, boutons `.on`/`:disabled`), `.chip-t` (pilule
-à bascule), `.check`, `label.f` (champ + libellé), `input/select/textarea`,
-`input[type=range]` (dans `.rg`).
-**Cartes** — `.it` (intention), `.sc` (scène, avec `.ph`/`.tick`/`.info`/`.aff`),
-`.tile` (vignette de tri), `.prop` (proposition du composeur), `.sceneCard`
-(éditeur de scène), `.posecard` / `.src` (miniatures sélectionnables).
-**Panneau de réglages** — `#gearPanel` > `.rgs` (section, `.pli` = repliée) >
-`.rg` (un réglage : `.rgh`/`.rgv`/`.mes`/`.rge`/`.rgq`, états `.modif`/`.inerte`).
-**Barre de lancement** — `.launch` > `.inner` > `.sum` / `.seg` / `.btn`.
-**Exécution** — `.run` > `.bar` / `.strip` / `pre.log`.
-**Inspecteur de l'écran Créer** *(29/08/2026)* — `#creer .wrap.split` (grille
-deux colonnes) > `.cr-main` / `.cr-side` (collante) ; dans la colonne :
-`.ins-shot` (cadre image, deux calques `.ins-layer` en fondu croisé,
-état `.vide` + `.ins-void`) et `.ins-meta` (une `.meta`).
-**Tri** — `.triage` > `.stage`/`.nav`/`.side`/`.meta`/`.score`/`.acts`/`.kbd`,
-`.grid` de `.tile`, `.bars`/`.b2` (sous-scores), `.tacts` (actions directes),
-`.badge` / `.chip` (score).
-**Modales** — `#armBox` / `#declineBox` (`.card` centrée), `#editorBox`
-(`.edWrap`), `#lightbox`.
-**Bandeaux d'état** (haut d'écran, `flex:none`) — `#panneBar` (panne de
-chargement), `#dirtyBar` (modifications non enregistrées).
+*Refait le 25/09/2026 sur ce que les feuilles déclarent vraiment.* Il listait
+encore une trentaine de classes que le design-pass a dissoutes en utilitaires
+(`.it`, `.sc`, `.tile`, `.triage`, `.launch`, `.prop`, `#gearPanel > .rg…`,
+`#creer .wrap.split > .cr-main`, `.bankview`, `.intbar`) : la mise en page d'un
+écran vit **à côté de son balisage** depuis la migration Tailwind, et seul ce
+que **plusieurs** écrans partagent reste une classe. Un inventaire qui nomme
+des composants sans porteur envoie le lecteur les chercher.
+
+Ce qui existe, en entier :
+
+**Texte** *(base.css)* — `.lab` (sur-titre, voir la charte), `.muted`, `.tiny`.
+**Boutons** *(base.css)* — `.btn` (+ `.primary`, `.sm`, `.danger`), `a.btn`,
+`.link`, et l'anneau `:focus-visible` commun aux trois.
+**Structure** *(base.css)* — `.app` > `.shell` > `.rail` + `<main>` > `.screen` ;
+`.wrap` (l'article centré, réduit à l'état de panne de la fiche).
+**Contrôles partagés** *(screens.css)* — `.seg` (segmenté, `.on` / `:disabled`
+/ `.n`), `.chips` > `.chip-t` (pilule à bascule).
+**Lecture** *(screens.css)* — `table` / `th` / `td.num`, `.meta` > `dt`/`dd`,
+`.kbd`, `.empty` (+ `td.empty`), `details.adv` (repli, avec sa variante
+`#trainingFolds`) et `details.adjsec` (sections du panneau de retouche).
 **Chrome** *(refondu le 23/09/2026)* — `.brand` > `.brand-app` + `.brand-rule` ;
 `.idwrap` > `#btnId` (le bouton EST toute la carte) > `.idcard` >
 `.brand-av` (pastille d'initiale, 26 px, bordée d'accent) + `.idcard-txt`

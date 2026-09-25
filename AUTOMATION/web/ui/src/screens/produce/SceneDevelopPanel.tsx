@@ -150,15 +150,13 @@ export function SceneDevelopPanel({
       {scene ? (
         <div className="flex flex-col gap-[12px]" id="developScene">
           <div>
-            {/* `normal-case` + `tracking-normal` + an explicit colour: the
-                studio's `h2` rule (base.css) uppercases, letter-spaces and
-                greys SECTION TITLES, and this heading carries an IDENTIFIER.
-                Measured on screen: the panel read « CAFE_TERRASSE » while the
-                card two columns left read « cafe_terrasse » — the same id in
-                two spellings, on a screen whose whole job is matching one
+            {/* An IDENTIFIER, so it keeps its own spelling and never takes the
+                section label. Measured on screen, back when `base.css`
+                uppercased every `h2`: the panel read « CAFE_TERRASSE » while
+                the card two columns left read « cafe_terrasse » — the same id
+                in two spellings, on a screen whose whole job is matching one
                 against the other. */}
-            <h2 className="m-0 truncate text-[13.5px] font-semibold normal-case
-                           tracking-normal text-txt">
+            <h2 className="m-0 truncate text-[13.5px] font-semibold text-txt">
               {scene.id}
             </h2>
             <span className="text-[11.5px] text-dim2">
@@ -168,7 +166,7 @@ export function SceneDevelopPanel({
 
           {preview && (
             <div
-              className="aspect-[4/5] w-full rounded-[8px] border border-line bg-panel2 bg-cover bg-center"
+              className="aspect-[4/5] w-full rounded-card border border-line bg-panel2 bg-cover bg-center"
               style={{ backgroundImage: `url('${imageUrl({ ...preview, thumb: true })}')` }}
               aria-hidden="true"
             />

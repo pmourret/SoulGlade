@@ -13,7 +13,7 @@ export function ServerLog({ lines }: { lines: string[] }) {
         </p>
       </div>
       <pre
-        className="m-0 block min-h-[calc(100vh-260px)] overflow-auto whitespace-pre-wrap rounded-[8px]
+        className="m-0 block min-h-[calc(100vh-260px)] overflow-auto whitespace-pre-wrap rounded-card
                    border border-line bg-bg p-[14px] font-code text-[12px] leading-[1.6] text-dim
                    empty:before:text-dim2
                    empty:before:content-['Aucune_action_enregistrée_dans_cette_session.']"

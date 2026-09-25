@@ -107,7 +107,7 @@ export function NewPoseModal({ onClose }: { onClose: () => void }) {
                 key={p.nom}
                 type="button"
                 aria-pressed={chosen}
-                className={`h-[44px] cursor-pointer rounded-[8px] bg-panel2 px-[12px] text-left text-[13px] ${
+                className={`h-[44px] cursor-pointer rounded-card bg-panel2 px-[12px] text-left text-[13px] ${
                   chosen ? 'border-2 border-txt font-semibold text-txt' : 'border border-line2 text-dim hover:border-dim2'
                 }`}
                 onClick={() => setChosenPreset(p.nom)}

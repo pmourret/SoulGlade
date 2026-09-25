@@ -161,7 +161,7 @@ export function SceneComposer({
                  `[hidden]{display:none}` du navigateur ont la même
                  spécificité, et l'utilitaire peut gagner. */
               <div className="@container p-[20px]">
-                <h2 className="m-0 text-[15px] font-[650] normal-case tracking-normal">
+                <h2 className="m-0 text-[15px] font-[650]">
                   {section.label}
                 </h2>
                 <p className="tiny mt-[2px] mb-[16px]">{section.model}</p>

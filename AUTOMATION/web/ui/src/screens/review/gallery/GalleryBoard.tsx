@@ -101,7 +101,7 @@ export function GalleryBoard({
                 cell would be a row that lies about the grid's shape. */}
             <header className="mb-[10px] flex items-baseline gap-[10px] border-b border-b-line pb-[7px]">
               <h2
-                className="m-0 flex-none text-[14px] font-[650] normal-case tracking-normal text-txt"
+                className="m-0 flex-none text-[14px] font-[650] text-txt"
                 id={titleId}
               >
                 {group.label}

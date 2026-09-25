@@ -2,17 +2,17 @@
    it, on ONE line. Shared by four sections and owned by none of them
    (frontend.md), so it lives in its own file.
 
-   `normal-case` is not decorative: `base.css` sets `text-transform:uppercase`
-   on every `h2`, and no utility class resets it — a Tailwind class and a bare
-   element selector have the same specificity, but only the class that exists
-   wins. The sections that ARE uppercase say so; the ones that are not have to
-   say that too. */
+   Two ranks, and the tag says neither: `.lab` when the heading names a group
+   (the studio's one section label, `base.css`), a plain size when it names the
+   thing itself. Until the bilan graphique of 25/09/2026 this file had to write
+   `normal-case` to UNDO the look `base.css` put on every `h2`; that rule now
+   carries the reset only. */
 export function SectionHead({ title, rule, upper = true }:
                             { title: string; rule?: string; upper?: boolean }) {
   return (
     <div className="mb-[12px] flex items-baseline gap-[12px] border-b border-line pb-[7px]">
-      <h2 className={`m-0 shrink-0 font-normal tracking-[.5px] text-dim ${
-        upper ? 'text-[10.5px] uppercase' : 'text-[15px] font-[650] normal-case text-txt'}`}>
+      <h2 className={`m-0 shrink-0 ${
+        upper ? 'lab' : 'text-[15px] font-[650] text-txt'}`}>
         {title}
       </h2>
       {rule ? <span className="min-w-0 truncate text-[12px] text-dim2">{rule}</span> : null}

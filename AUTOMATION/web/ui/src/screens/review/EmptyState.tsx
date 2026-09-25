@@ -95,7 +95,7 @@ export function EmptyState({
       )}
       {empty && Boolean(otherCount) && (
         <div
-          className="mx-auto mt-[22px] flex max-w-[420px] items-center gap-[12px] rounded-[8px]
+          className="mx-auto mt-[22px] flex max-w-[420px] items-center gap-[12px] rounded-card
                      border border-warn-line bg-warn-bg px-[14px] py-[11px] text-left
                      text-[12.5px] leading-[1.45] text-warn-txt"
           id="autreEspace"

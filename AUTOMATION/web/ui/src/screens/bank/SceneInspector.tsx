@@ -265,7 +265,7 @@ export function DocumentPane({
          own scroll, and the same 880 px reading width. */
       className="min-h-0 min-w-0 flex-1 overflow-y-auto p-[20px] [&>*]:max-w-[880px]"
     >
-      <h2 className="mt-0 mb-[4px]">Réglages de l'atelier</h2>
+      <h2 className="lab mt-0 mb-[4px]">Réglages de l'atelier</h2>
       <p className="tiny mt-0 mb-[16px]">
         Ce que les {count} scènes partagent. Ouvre une scène dans la grille pour
         l'éditer.

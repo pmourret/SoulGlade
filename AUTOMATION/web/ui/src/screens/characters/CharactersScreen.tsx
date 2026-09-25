@@ -165,7 +165,7 @@ export function CharactersScreen() {
 
         {!empty && (
           <div
-            className={`${ROW_GRID} border-b border-line px-[12px] pb-[6px] text-[11.5px] uppercase tracking-[.5px] text-dim`}
+            className={`${ROW_GRID} lab border-b border-line px-[12px] pb-[6px]`}
             aria-hidden="true"
           >
             <span />

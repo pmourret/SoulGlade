@@ -151,7 +151,7 @@ export function TileMenu({
       id="tileMenu"
       aria-label="Actions sur cette image"
       onKeyDown={onMenuKeyDown}
-      className="fixed z-[20] min-w-[210px] overflow-hidden rounded-[8px] border border-line2
+      className="fixed z-[20] min-w-[210px] overflow-hidden rounded-card border border-line2
                  bg-panel py-[5px] shadow-elev"
       style={at ? { left: at.x, top: at.y } : { left: '50%', top: '40%' }}
     >

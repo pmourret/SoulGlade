@@ -137,7 +137,7 @@ export function PreviewStage({
       {maskTarget && (
         <div
           className="absolute left-1/2 top-[10px] flex -translate-x-1/2 items-center gap-[10px]
-                     rounded-[8px] border border-line2 bg-panel px-[10px] py-[6px] text-[12px] shadow-[var(--elev)]"
+                     rounded-card border border-line2 bg-panel px-[10px] py-[6px] text-[12px] shadow-[var(--elev)]"
           role="status"
         >
           <span aria-hidden="true" className="h-[8px] w-[8px] shrink-0 rounded-full" style={{ background: 'var(--bad)' }} />

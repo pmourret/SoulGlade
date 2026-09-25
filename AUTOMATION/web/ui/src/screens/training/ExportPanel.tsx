@@ -43,11 +43,10 @@ export function ExportPanel({ character, exportable, trigger, captions,
   const folder = `${repetitions.trim() || 'N'}_${trigger || 'déclencheur'}`
 
   return (
-    <section className="rounded-[var(--r)] border border-line bg-panel p-[15px]">
-      {/* `normal-case`: `base.css` uppercases every h2, and no utility undoes a
-          property no class sets. The section headings of the report ARE
-          uppercase; this title is not. */}
-      <h2 className="m-0 mb-[12px] text-[15px] font-[650] normal-case text-txt">
+    <section className="rounded-card border border-line bg-panel p-[15px]">
+      {/* The report's section headings are labels (`.lab`); this one names the
+          panel itself, so it takes a size of its own. */}
+      <h2 className="m-0 mb-[12px] text-[15px] font-[650] text-txt">
         Exporter le jeu
       </h2>
 

@@ -104,7 +104,7 @@ export function ClothingPanel({
           s'affichent ICI, avec de quoi les ranger, plutôt que de disparaître
           d'un écran qui prétend montrer la tenue. */}
       {extra.length > 0 && (
-        <div className="rounded-[8px] border border-warn-line bg-warn-bg p-[12px]" data-f="wardrobe_extra">
+        <div className="rounded-card border border-warn-line bg-warn-bg p-[12px]" data-f="wardrobe_extra">
           <b className="block text-[12.5px] text-warn-txt">
             {extra.length} ligne{extra.length > 1 ? 's' : ''} hors des quatre niveaux
           </b>
@@ -206,7 +206,7 @@ export function ClothingPanel({
                 title={item}
                 aria-label={`Ajouter « ${item} » au niveau ${active}`}
                 data-piece={item}
-                className="flex cursor-pointer flex-col gap-[4px] rounded-[8px] border border-line2
+                className="flex cursor-pointer flex-col gap-[4px] rounded-card border border-line2
                            bg-transparent p-[5px] text-left hover:border-dim2 focus-visible:outline-2
                            focus-visible:outline-focus focus-visible:outline-offset-2"
                 onClick={() => add(item)}
@@ -265,7 +265,7 @@ export function ClothingPanel({
           </div>
 
           <div
-            className={`flex flex-col gap-[6px] rounded-[8px] p-[8px] ${
+            className={`flex flex-col gap-[6px] rounded-card p-[8px] ${
               warnIf(changed, 'wardrobe') ? 'border border-warn' : 'border border-line'
             }`}
             data-f={`wardrobe_${active}`}
@@ -317,7 +317,7 @@ export function ClothingPanel({
                 <button
                   key={level}
                   type="button"
-                  className="cursor-pointer rounded-[8px] border border-line bg-transparent p-[8px]
+                  className="cursor-pointer rounded-card border border-line bg-transparent p-[8px]
                              text-left hover:border-line2 focus-visible:outline-2
                              focus-visible:outline-focus focus-visible:outline-offset-2"
                   onClick={() => setActive(level)}

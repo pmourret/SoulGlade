@@ -46,7 +46,7 @@ export function CopyFromToneMenu({ sources, onCopy }: { sources: CopySource[]; o
             <button
               key={source.key}
               type="button"
-              className="rounded-[8px] border border-line2 bg-panel px-[12px] py-[8px] text-left text-[13px] hover:border-acc hover:bg-panel2"
+              className="rounded-card border border-line2 bg-panel px-[12px] py-[8px] text-left text-[13px] hover:border-acc hover:bg-panel2"
               onClick={() => {
                 onCopy(source.key)
                 setOpen(false)

@@ -77,7 +77,7 @@ export function Composer() {
     <div
       className="rounded-card border border-line2 bg-panel2 p-[18px]"
     >
-      <h2 className="mb-[10px]">
+      <h2 className="lab mb-[10px]">
         Décrire une intention · le modèle local écrit les scènes
       </h2>
       <textarea

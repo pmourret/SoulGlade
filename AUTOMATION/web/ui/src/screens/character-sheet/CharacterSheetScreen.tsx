@@ -140,7 +140,7 @@ export function CharacterSheetScreen() {
                         max-[1100px]:gap-[28px] max-[1100px]:p-[24px]"
              aria-hidden="true">
           <div>
-            <div className="mb-[16px] aspect-[4/5] w-full rounded-[8px] bg-panel" />
+            <div className="mb-[16px] aspect-[4/5] w-full rounded-card bg-panel" />
             <div className="h-[24px] w-[70%] rounded-[4px] bg-line" />
             <div className="mt-[8px] h-[12px] w-[45%] rounded-[4px] bg-line" />
           </div>

@@ -31,7 +31,7 @@ export type Intention = {
 }
 
 const TITLE =
-  'mb-[8px] text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim'
+  'lab mb-[8px]'
 
 /* `bg-transparent` AND `border-0`, and the second is not optional. A bare
    <button> with no `background` falls back to the browser's own light button
@@ -185,7 +185,7 @@ export function ProduceSidebar({
            badge is the one the fumigation reads for « n'engendre rien ». */
         <div className="flex flex-col gap-[10px]">
           <div
-            className="rounded-[8px] border border-warn-line bg-warn-bg px-[11px] py-[9px]
+            className="rounded-card border border-warn-line bg-warn-bg px-[11px] py-[9px]
                        text-[12px] leading-[1.45] text-warn-txt"
             id="intMode"
           >
@@ -246,8 +246,7 @@ export function ProduceSidebar({
             {empty.length > 0 && (
               <div id="railIntentVides">
                 <div
-                  className="mt-[12px] mb-[6px] flex items-center gap-[8px] text-[10px]
-                             uppercase tracking-[.5px] text-dim2
+                  className="lab mt-[12px] mb-[6px] flex items-center gap-[8px]
                              after:h-px after:flex-1 after:bg-line after:content-['']"
                   data-sep
                 >

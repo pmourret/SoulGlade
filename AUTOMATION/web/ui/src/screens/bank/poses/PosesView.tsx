@@ -200,7 +200,7 @@ export function PosesView({ nav }: { nav: ReactNode }) {
           were fixed, then by 11 px until the line above. « Extraire d'une
           photo » was off-screen every time, and no amount of reading the JSX
           said so. */}
-      <div className="flex h-[44px] flex-none items-center gap-[10px] border-b border-b-line px-[16px]
+      <div className="flex h-[48px] flex-none items-center gap-[10px] border-b border-b-line px-[16px]
                       [&>*]:whitespace-nowrap">
         {nav}
 

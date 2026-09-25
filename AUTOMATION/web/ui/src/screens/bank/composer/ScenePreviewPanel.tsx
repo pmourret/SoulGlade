@@ -57,7 +57,7 @@ export function ScenePreviewPanel({
                 style={{ backgroundColor: fragment.color }}
               />
               <div className="min-w-0">
-                <span className="block text-[10.5px] tracking-[.5px] text-dim2 uppercase">
+                <span className="lab block">
                   {fragment.source}
                 </span>
                 <span className="block text-[12px] break-words">{fragment.text}</span>

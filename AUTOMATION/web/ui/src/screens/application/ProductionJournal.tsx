@@ -74,7 +74,7 @@ export function ProductionJournal({
       </div>
 
       {error ? (
-        <div className="rounded-[8px] border border-line2 px-[16px] py-[14px] text-[13px]" role="alert">
+        <div className="rounded-card border border-line2 px-[16px] py-[14px] text-[13px]" role="alert">
           <p className="m-0 text-txt">{error}</p>
           <button className="btn sm mt-[10px]" type="button" onClick={onRetry}>
             Réessayer

@@ -95,7 +95,7 @@ export function ComfyGauges({ stats }: { stats: ComfyStats | null }) {
   return (
     <>
       <div
-        className="grid grid-cols-3 divide-x divide-line2 rounded-[8px] border border-line2 bg-panel"
+        className="grid grid-cols-3 divide-x divide-line2 rounded-card border border-line2 bg-panel"
         id={online ? 'comfyStats' : undefined}
         data-probes
       >

@@ -81,6 +81,8 @@ TESTS = [
     "test_verdict_labels",  # unitaire pur : verdict du journal en mots et en forme (ecran 12)
     "test_character_filter",  # unitaire pur : recherche du registre (ecran 14)
     "test_wizard_missing",  # unitaire pur : ce qui manque a chaque etape du wizard (ecran 14)
+
+    "test_charte",        # transverse, statique : sur-titre, barres, rayon de pack
     "test_cadres_ua",     # transverse : le cadre du navigateur sur un <button>
 ]
 

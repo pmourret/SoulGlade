@@ -19,7 +19,7 @@ type Props = {
 export function VerdictBanner({ ready, blocking, summary }: Props) {
   return (
     <div
-      className={`mb-[18px] rounded-[var(--r)] border p-[13px_15px] ${
+      className={`mb-[18px] rounded-card border p-[13px_15px] ${
         ready ? 'border-ok-line bg-ok-bg' : 'border-warn-line bg-warn-bg'}`}
       id="trainVerdict"
       role="status"

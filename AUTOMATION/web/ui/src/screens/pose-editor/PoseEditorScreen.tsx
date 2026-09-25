@@ -139,7 +139,7 @@ function PoseEditorInner({
       <div className="screen flex h-full flex-col" id="poseEditor">
         <PlainBar title={title} />
         <div className="flex flex-1 items-start justify-center bg-[var(--pose-stage)] px-[16px] pt-[80px]">
-          <div className="w-[440px] max-w-full rounded-[8px] border border-danger-line bg-panel p-[20px]" role="alert">
+          <div className="w-[440px] max-w-full rounded-card border border-danger-line bg-panel p-[20px]" role="alert">
             <div className="empty flex items-start gap-[10px] p-0 text-left text-[13px] text-txt">
               <i aria-hidden="true" className="mt-[5px] h-[8px] w-[8px] flex-none rotate-45 bg-bad" />
               <span>{loadError || 'squelette introuvable'}</span>
@@ -220,7 +220,7 @@ function PoseEditorInner({
             </button>
             {pointsOpen && (
               <div className="absolute left-0 top-[calc(100%+6px)] z-[30] flex max-h-[70vh] w-[260px] flex-col
-                              rounded-[8px] border border-line2 bg-panel shadow-elev">
+                              rounded-card border border-line2 bg-panel shadow-elev">
                 {outline}
               </div>
             )}

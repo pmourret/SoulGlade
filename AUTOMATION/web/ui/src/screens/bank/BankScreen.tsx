@@ -248,8 +248,10 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
       )}
 
       {/* THE WORKSHOP BAR (§S2): which workshop, which world, and the
-          document-level action — one row, 44 px, above the three columns. */}
-      <div className="flex h-[44px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
+          document-level action — one row above the three columns. §S2 said
+          44 px; the bilan graphique of 25/09/2026 put every screen bar of the
+          studio at 48, the height of the header. */}
+      <div className="flex h-[48px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
         {view === 'scenes' && narrow && (
           /* ECART ASSUME sur §S6, mesure a 1024 : le cadrage appelle ce
              bouton « Scenes », mot que la barre porte deja a 12 px de la —

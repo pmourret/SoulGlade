@@ -41,7 +41,7 @@ export function AddLayerMenu({ onAdd }: { onAdd: (kind: LayerKind, label: string
               key={entry.kind}
               type="button"
               role="menuitem"
-              className="rounded-[8px] border border-line2 bg-panel px-[12px] py-[8px] text-left text-[13px] hover:border-acc hover:bg-panel2"
+              className="rounded-card border border-line2 bg-panel px-[12px] py-[8px] text-left text-[13px] hover:border-acc hover:bg-panel2"
               onClick={() => {
                 onAdd(entry.kind, entry.label)
                 setOpen(false)

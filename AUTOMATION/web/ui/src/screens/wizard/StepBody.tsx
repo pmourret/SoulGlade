@@ -43,7 +43,7 @@ function Frame({ step, children }: { step: Step; children: ReactNode }) {
   const head = HEAD[step]
   return (
     <section aria-labelledby="wizStepTitle">
-      <h2 className="m-0 text-[22px] font-[650] tracking-normal normal-case text-txt" id="wizStepTitle">{head.title}</h2>
+      <h2 className="m-0 text-[22px] font-[650] text-txt" id="wizStepTitle">{head.title}</h2>
       <p className="mt-[6px] mb-0 max-w-[640px] text-[13.5px] text-dim">
         {head.sentence}
         {step === 'base' && (

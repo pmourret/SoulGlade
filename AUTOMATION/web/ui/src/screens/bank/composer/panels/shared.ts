@@ -11,7 +11,7 @@ export const warnIf = (changed: Set<SceneField>, field: SceneField) =>
 
 /** Column and block headings inside a panel — 10,5 px capitals, `--dim2`. */
 export const HEAD =
-  'text-[10.5px] font-semibold uppercase tracking-[.7px] text-dim2'
+  'lab'
 
 /** A comma-separated field (`tones`, `tags`) read as a list, and written back
     as the same comma string the model has always carried. */

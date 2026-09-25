@@ -27,7 +27,7 @@ export function CharacterPreview({ row, onOpen }: { row: CharacterRow; onOpen: (
       />
       <div>
         {/* Only the name is live: a screen reader hears who, not the whole sheet. */}
-        <h2 className="m-0 text-[20px] font-[650] tracking-normal normal-case text-txt" aria-live="polite">{row.name || row.id}</h2>
+        <h2 className="m-0 text-[20px] font-[650] text-txt" aria-live="polite">{row.name || row.id}</h2>
         <code className="font-code text-[12px] leading-[normal] text-dim2">{row.id}</code>
       </div>
       <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-[16px] gap-y-[8px]">

@@ -124,7 +124,7 @@ export function PromptPreview({
         <div id="apEchos">
           {preview.echos.length > 0 && (
             <div className="mt-[12px] border-t border-t-line pt-[10px]">
-              <b className="mb-[8px] block text-[11.5px] uppercase tracking-[.4px] text-dim">
+              <b className="lab mb-[8px] block">
                 mots partagés par plusieurs fragments
               </b>
               {preview.echos.map((echo) => (

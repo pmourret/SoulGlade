@@ -165,7 +165,7 @@ export function PoseTopBar({
         {menuOpen && (
           <div
             role="menu"
-            className="absolute right-0 top-[calc(100%+6px)] z-[30] w-[260px] rounded-[8px] border border-line2
+            className="absolute right-0 top-[calc(100%+6px)] z-[30] w-[260px] rounded-card border border-line2
                        bg-panel p-[4px] shadow-elev"
           >
             {onSaveAsNew ? (

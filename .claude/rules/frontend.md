@@ -119,6 +119,14 @@ dépendent que par `var()`, jamais par une valeur en dur qui encoderait
 un choix de style. Un univers qui veut sa propre ambiance redéfinit ce
 fichier ; le chrome commun ne bouge pas.
 
+**La charte vit dans `ui/src/styles/DESIGN.md`**, section « La charte du
+design-pass » : le modèle d'écran, le rythme vertical des barres,
+l'échelle de largeur des colonnes, les trois primitives de texte (dont
+`.lab`, le sur-titre) et les deux familles de rayon. Un écran neuf la lit
+avant de choisir une valeur — elle est écrite sur la mesure des quatorze
+écrans du design-pass, pas sur un goût. `AUTOMATION/tests/test_charte.js`
+en tient quatre, statiquement.
+
 ## Panel d'outils
 
 Vient du registre univers (tools.json), jamais d'un
@@ -161,7 +169,8 @@ grise du navigateur, sans bordure sur son cadre `2px outset`. Les deux
 moitiés du garde-fou, jamais une seule : l'oubli est passé deux fois
 (`ProduceSidebar`, puis le sélecteur de scènes), les deux fois invisible
 à la relecture. `AUTOMATION/tests/test_cadres_ua.js` le mesure sur les
-onze écrans, et le vérificateur le lance dès que `web/ui/` bouge.
+treize écrans **et sur douze états ouverts** (menus, modales, tiroirs),
+et le vérificateur le lance dès que `web/ui/` bouge.
 
 Un bouton qui n'a **qu'une icône** porte un `aria-label` — le glyphe
 seul s'annonce littéralement (« cœur noir » pour ♥), et `title` ne suffit

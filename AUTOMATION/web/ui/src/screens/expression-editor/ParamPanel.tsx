@@ -64,7 +64,7 @@ export function ParamPanel({
             boundary. Its widths are the row's own widths, written once here
             and once below — kept together on purpose, a few lines apart. */}
         <div className="sticky top-0 z-[1] flex items-center gap-[8px] bg-panel py-[6px]
-                        text-[10.5px] uppercase tracking-[.5px] text-dim2">
+                        lab">
           <span className="w-[150px] shrink-0">Paramètre</span>
           <span className="min-w-[60px] flex-1">Plage</span>
           <span className="w-[52px] shrink-0 text-right">min</span>

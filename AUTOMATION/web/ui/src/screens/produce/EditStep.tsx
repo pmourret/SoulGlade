@@ -84,7 +84,7 @@ export function EditStep({
           two lines AND wrapped its hint next to it, for four lines of heading
           above a one-line field (seen in the capture, audit of the 23/09).
           Stacked it is two. */}
-      <h2 className="block">
+      <h2 className="lab block">
         {number != null && (
           <>
             <i className="not-italic text-acc" data-num>{number}</i> ·{' '}
@@ -104,7 +104,7 @@ export function EditStep({
       <details className="adv mb-[12px]">
         <summary>ce que le graphe garantit déjà, sans que tu l'écrives</summary>
         <pre
-          className="mt-[10px] mb-[6px] rounded-[8px] border border-line bg-panel px-[14px]
+          className="mt-[10px] mb-[6px] rounded-card border border-line bg-panel px-[14px]
                      py-[12px] text-[12px] leading-[1.55] whitespace-pre-wrap text-dim"
           id="preambule"
         >{preamble}</pre>
@@ -125,7 +125,7 @@ export function EditStep({
       <div className="flex flex-col gap-[6px]" id="instrAlertes">
         {alerts.map((alert, index) => (
           <div
-            className="rounded-[8px] border border-warn-line bg-warn-bg px-[12px] py-[9px]
+            className="rounded-card border border-warn-line bg-warn-bg px-[12px] py-[9px]
                        text-[12.5px] leading-[1.5] text-warn-txt
                        before:font-bold before:text-warn before:content-['!_']"
             key={index}

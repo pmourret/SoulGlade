@@ -144,7 +144,7 @@ export function GeneralPanel({
                   key={format}
                   type="button"
                   aria-pressed={on}
-                  className={`flex cursor-pointer flex-col items-center gap-[6px] rounded-[8px]
+                  className={`flex cursor-pointer flex-col items-center gap-[6px] rounded-card
                              border bg-transparent px-[4px] py-[8px] text-[11px]
                              focus-visible:outline-2 focus-visible:outline-focus
                              focus-visible:-outline-offset-2 ${
@@ -291,7 +291,7 @@ export function GeneralPanel({
       </div>
 
       {/* 5. Réglages avancés */}
-      <details className="rounded-[8px] border border-line bg-panel">
+      <details className="rounded-card border border-line bg-panel">
         <summary
           className="cursor-pointer list-none px-[12px] py-[9px] text-[12.5px] text-dim
                      hover:text-txt focus-visible:outline-2 focus-visible:outline-focus
@@ -398,7 +398,7 @@ function TagInput({
 
   return (
     <div
-      className={`mt-[8px] flex flex-wrap items-center gap-[6px] rounded-[8px] border p-[7px] ${
+      className={`mt-[8px] flex flex-wrap items-center gap-[6px] rounded-card border p-[7px] ${
         changed ? 'border-warn' : 'border-line2'
       }`}
       data-f="tags"

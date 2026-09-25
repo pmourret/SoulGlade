@@ -49,7 +49,7 @@ export function ToneWorkshop({ nav }: { nav: ReactNode }) {
   if (!loaded) {
     return (
       <div className="flex h-full min-h-0 flex-col" id="bankTones">
-        <div className="flex h-[44px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
+        <div className="flex h-[48px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
           {nav}
         </div>
         <p className="tiny p-[16px]">chargement…</p>
@@ -347,7 +347,7 @@ function Frame({
 }) {
   return (
     <div className="flex h-full min-h-0 flex-col" id="bankTones">
-      <div className="flex h-[44px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
+      <div className="flex h-[48px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]">
         {nav}
 
         {/* UNDER 1100 px THE LIST BECOMES THIS PICKER (§S6). A 220 px column

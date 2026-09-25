@@ -99,7 +99,7 @@ export function PosePanel({
             {draft.pose ? (
               <div className="flex gap-[12px]">
                 <img
-                  className="h-[140px] w-[112px] flex-none rounded-[8px] border border-line2 bg-black object-contain"
+                  className="h-[140px] w-[112px] flex-none rounded-card border border-line2 bg-black object-contain"
                   src={`/img/pose?name=${encodeURIComponent(draft.pose)}`}
                   alt={currentLabel}
                 />
@@ -140,7 +140,7 @@ export function PosePanel({
                 <span
                   aria-hidden="true"
                   className="flex h-[140px] w-[112px] flex-none items-center justify-center
-                             rounded-[8px] border border-dashed border-line2 text-[11px] text-dim2"
+                             rounded-card border border-dashed border-line2 text-[11px] text-dim2"
                 >
                   aucun
                 </span>
@@ -257,7 +257,7 @@ function Tile({
       type="button"
       title={title}
       aria-pressed={on}
-      className={`flex w-[76px] flex-none cursor-pointer flex-col gap-[4px] rounded-[8px] border
+      className={`flex w-[76px] flex-none cursor-pointer flex-col gap-[4px] rounded-card border
                  bg-transparent p-[4px] focus-visible:outline-2 focus-visible:outline-focus
                  focus-visible:outline-offset-2 ${
                    on ? 'border-acc' : dashed ? 'border-dashed border-line2' : 'border-line2'

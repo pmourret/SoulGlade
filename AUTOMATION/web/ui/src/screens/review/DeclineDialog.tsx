@@ -267,7 +267,7 @@ export function DeclineDialog({
 
           {(modes.ton ?? []).length > 0 && (
             <>
-              <div className="mt-[16px] mb-[8px] text-[12px] font-semibold uppercase
+              <div className="lab mt-[16px] mb-[8px]
                               tracking-[.9px] text-dim">
                 Autre ton
               </div>

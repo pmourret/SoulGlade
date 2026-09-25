@@ -43,7 +43,7 @@ export function MaskPicker({
 }) {
   return (
     <div>
-      <div className="tiny mb-[6px] uppercase tracking-[.5px] text-dim">Masque</div>
+      <div className="lab mb-[6px]">Masque</div>
       <div className="grid grid-cols-3 gap-[4px]" role="radiogroup" aria-label="Mode de masquage">
         {MODES.map((m) => (
           <button
