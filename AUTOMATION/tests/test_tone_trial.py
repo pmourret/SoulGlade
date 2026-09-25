@@ -53,7 +53,9 @@ def poser():
         "id": W, "label": W, "compatible_families": ["flux"], "suggested_styles": ["realiste"],
         "assets": {"lora": None, "lora_strength": None, "prompt_add": ""},
         "tone": "", "ui_skin_token": f"world-{W}", "places": [],
-        "tones": [{"key": "joueur", "label": "Joueur", "prompt_add": "candid movement"}],
+        "tones": [{"key": "joueur", "label": "Joueur", "prompt_add": "candid movement",
+                   "expression": {"smile": [0.28, 0.55]}},
+                  {"key": "doux", "label": "Doux", "prompt_add": "soft light"}],
     }), encoding="utf-8")
     for cid in (CA, CB):
         d = OFM / "CHARACTERS" / cid
@@ -99,16 +101,24 @@ try:
     verifie(r.status_code == 409, f"409 pendant un lot ({r.status_code})")
     ss.STATE["running"] = False
 
-    print("\n[3] deux jobs, seul le ton change")
+    print("\n[3] trois images pour un ton qui pose une expression, deux sinon")
+    # Le 25/09, un essai a deux images (sans / avec) a mis la degradation sur
+    # le compte du fragment alors que c'etait la passe d'expression : l'image
+    # du milieu separe les deux.
     jobs = trial_jobs(CA, "s1", "joueur", 1001)
-    verifie([label for label, _ in jobs] == ["sans_ton", "joueur"], "sans ton, puis le ton")
-    (_, a), (_, b) = jobs
-    verifie(a["seed"] == b["seed"] == 1001 and a["scene"] == b["scene"] == "s1",
+    verifie([(label, expr) for label, _, expr in jobs]
+            == [("sans_ton", True), ("fragment_seul", False), ("joueur", True)],
+            "sans ton, fragment seul (expression coupee), ton complet")
+    (_, a, _), (_, m, _), (_, b, _) = jobs
+    verifie(a["seed"] == m["seed"] == b["seed"] == 1001 and a["scene"] == b["scene"] == "s1",
             "meme scene, meme graine")
-    verifie("candid movement" in b["prompt"] and "candid movement" not in a["prompt"],
-            "le fragment du ton n'est que dans le second prompt")
+    verifie(m["prompt"] == b["prompt"] and "candid movement" in b["prompt"]
+            and "candid movement" not in a["prompt"],
+            "fragment seul et ton complet ont le meme prompt, sans ton ne l'a pas")
     verifie(a["prompt"] == b["prompt"].replace(", candid movement", ""),
-            "et c'est la seule difference entre les deux prompts")
+            "et le fragment est la seule difference de prompt")
+    verifie([label for label, _, _ in trial_jobs(CA, "s1", "doux", 1001)] == ["sans_ton", "doux"],
+            "un ton sans expression n'a pas d'image du milieu")
 
     print("\n[4] isolation : l'essai d'un personnage n'est pas celui d'un autre")
     image = OFM / "PROD" / CA.upper() / "_BENCH" / "essai-ton-probe" / "joueur" / "x.png"

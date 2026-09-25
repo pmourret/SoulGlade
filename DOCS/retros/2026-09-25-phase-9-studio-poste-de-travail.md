@@ -76,19 +76,26 @@ sauf le dernier.
   cheveux crêpés, taches de rousseur qui débordent sur l'épaule. Le LoRA
   est retiré de la config de Léna.
 
-  Le défaut restait visible après le retrait, et c'est une seconde cause.
-  Un A/B à seed fixe (`PROD/LENA/_BENCH/diag-ton-20260925/`) l'isole : sans
-  ton l'image est propre, avec `joueur` les cheveux crêpent et le grain
-  revient. Ce ton ajoute « slight motion blur » au prompt, et Flux le rend
-  comme une image dégradée. Le fragment date d'août ; ce qui l'a rendu
-  omniprésent vient bien du frontend, par un autre chemin que celui qu'on
-  cherchait : depuis la migration, Produire impose toujours un ton, et
-  `selfie` a `joueur` pour défaut. L'intuition de Pierre était juste sur
-  le lieu, pas sur le mécanisme.
+  Le défaut restait visible après le retrait, et c'est une seconde cause :
+  **la passe d'expression** qu'un ton pose après le contrôle d'identité
+  (LivePortrait). Même seed 1001 : sans ton, propre (netteté 86) ; prompt
+  de `joueur` avec l'expression coupée, propre (158) ; `joueur` complet,
+  cheveux crêpés, grain, visage mou (51). Ce qui l'a rendue omniprésente
+  vient bien du frontend : depuis la migration, Produire impose toujours un
+  ton, donc une expression, sur chaque image. L'intuition de Pierre était
+  juste.
 
-  **Ce que ça a ouvert.** L'atelier Tons ne montre pas le fragment de
-  prompt d'un ton et ne permet pas de le corriger : la moitié de ce qu'un
-  ton fait à l'image est invisible dans le studio. IT-9 en a refait la
+  **Une erreur de diagnostic en route, corrigée par l'outil lui-même.** Un
+  premier A/B (sans ton / avec `joueur`) changeait deux choses à la fois,
+  et la dégradation a d'abord été mise sur le compte du fragment
+  « slight motion blur ». L'essai de rendu d'IT-10, passé à trois images
+  (sans ton, fragment seul, ton complet), a séparé les deux : retirer le
+  fragment ne change presque rien. Leçon : un A/B ne varie qu'un facteur,
+  et un ton en porte deux.
+
+  **Ce que ça a ouvert.** L'atelier Tons ne montrait pas le fragment de
+  prompt d'un ton, ni ce que sa passe d'expression fait au rendu : ce
+  qu'un ton fait à l'image était invisible dans le studio. IT-9 en a refait la
   présentation sans le compléter, parce que le cadrage de l'écran 8
   excluait de créer ou modifier un ton. D'où IT-10, ouverte avant IT-3f, et
   une règle ajoutée à `PROJET.md` : un outil livré passe avant toute

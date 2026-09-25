@@ -151,8 +151,8 @@ const NEUF = 'zz_essai_fumigation';
        `le catalogue est revenu a son etat de depart (${fin.length})`);
 
   /* IT-10 (25/09) : un ton se cree avec son monde. Ce que la section tient :
-     le fragment de prompt se LIT dans la liste — c'est lui qui, invisible,
-     a degrade les selfies le 25/09 — ; la cle suit le nom tant qu'on ne la
+     le fragment de prompt se LIT dans la liste — aucun ecran ne le montrait
+     avant le 25/09 — ; la cle suit le nom tant qu'on ne la
      tape pas ; l'aller-retour ecrit vraiment et revient a l'etat de depart. */
   console.log('\n[5] onglet Tons : lire le fragment, creer un ton, le retirer');
   const tons = () => page.$$eval('#worldPlaces [data-tone-row] b', e => e.map(x => x.textContent.trim()));

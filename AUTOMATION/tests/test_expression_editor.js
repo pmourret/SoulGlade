@@ -231,8 +231,8 @@ const TONE = 'doux';
     }
 
     /* IT-10 (25/09) : le fragment de prompt d'un ton se LIT ici, et s'ajuste
-       pour ce personnage. C'est le fragment de `joueur` (« slight motion
-       blur ») qui degradait les selfies sans qu'aucun ecran ne le montre. */
+       pour ce personnage. Avant, la moitie de ce qu'un ton fait a l'image
+       n'etait visible nulle part. */
     console.log('\n[4ter] le fragment du ton se lit, s ajuste pour ce personnage, et revient au monde');
     await page.goto(`${BASE}/bank/tones/edit/joueur?character=lena`, { waitUntil: 'networkidle' });
     await page.waitForSelector('#toneText');

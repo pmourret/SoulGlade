@@ -127,7 +127,7 @@
       "id": "IT-10",
       "state": "now",
       "titre": "Les ateliers font ce qu'ils annoncent",
-      "quoi": "Le fragment d'un ton, invisible dans l'atelier, a dégradé tous les selfies. Le même défaut est ailleurs : des panneaux sans serveur, des catalogues du monde sans créateur, une pose sans son texte. Un outil livré passe avant toute capacité neuve, donc avant IT-3f.",
+      "quoi": "Ce qu'un ton fait à l'image était invisible dans l'atelier, et sa passe d'expression dégradait les selfies que Produire lui imposait. Le même défaut est ailleurs : des panneaux sans serveur, des catalogues du monde sans créateur, une pose sans son texte. Un outil livré passe avant toute capacité neuve.",
       "dod": "Les huit chantiers livrés, chacun avec son audit vérifié en vrai. Aucun panneau n'annonce une capacité qu'aucun serveur ne rend, et un monde neuf reçoit ses tons et ses intentions sans qu'on ouvre un JSON.",
       "epics": "E3",
       "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
@@ -357,10 +357,10 @@
           "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-10",
-          "t": "Le ton joueur corrigé par l'outil",
-          "d": "Cas d'acceptation des tons : « slight motion blur » retiré dans l'onglet Tons de slow-life, vérifié par l'essai de rendu à la même seed.",
+          "t": "L'essai de rendu isole ce que chaque moitié d'un ton fait à l'image",
+          "d": "Remplace le cas « joueur corrigé » : trois images à la même graine, sans ton, fragment seul, ton complet. C'est lui qui a montré que la passe d'expression, pas le fragment, dégradait les selfies.",
           "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
         },
         {
@@ -539,8 +539,13 @@
         {
           "s": "fait",
           "t": "La perte de qualité avait deux causes, aucune dans le rendu du frontend",
-          "d": "Le LoRA lenadaab_v1 à 0.8 ajoutait bruit et cheveux crêpés, retiré le 25/09. Le ton joueur demande « slight motion blur », que Flux rend en image dégradée, et Produire impose un ton depuis la migration : IT-10.",
+          "d": "Le LoRA lenadaab_v1 à 0.8 ajoutait bruit et cheveux crêpés, retiré le 25/09. La passe d'expression d'un ton crêpe les cheveux et amollit le visage, et Produire imposait un ton depuis la migration. Le fragment « motion blur », d'abord soupçonné, n'y est pour rien.",
           "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
+        },
+        {
+          "s": "faire",
+          "t": "La passe d'expression dégrade le rendu",
+          "d": "Même seed : prompt de joueur sans expression, netteté 158 et propre ; avec, 51, cheveux crêpés et visage mou. LivePortrait recompose une large zone autour du visage et la recolle. Phase de recherche ouverte le 25/09."
         }
       ]
     },

@@ -3,13 +3,12 @@
 
    WHAT A TONE DOES, SAID WHERE IT IS EDITED. A tone adds its fragment to the
    prompt of every image produced with it, and poses an expression after the
-   identity check. The fragment is the part that weighs on the render — the
-   one that, invisible anywhere in the studio, degraded every selfie on 25/09
-   (« slight motion blur » on `joueur`). The hint under the field says why.
+   identity check. Until 25/09 no screen showed the fragment at all.
 
-   THE EXPRESSION RANGE IS READ HERE, TUNED IN THE WORKSHOP. Tuning it needs a
-   preview on a character's photos, and a world has no character. The link
-   goes to Ateliers › Tons, where that preview exists. */
+   THE EXPRESSION RANGE IS READ HERE, NOT TUNED. Tuning it needs a preview on
+   a character's photos, and a world has no character: the workshop sets it
+   for ONE character (its own adjustment), and the hint says so rather than
+   suggesting the world's range is edited there. */
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../app/routes'
@@ -163,9 +162,8 @@ export function ToneInspector({
               onChange={(e) => onPatch({ prompt_add: e.target.value })}
             />
             <span className={HINT} id="tonePromptHint">
-              Ajouté au prompt de chaque image produite avec ce ton. Décris une attitude, une
-              lumière, un cadrage — jamais un défaut de prise de vue : « flou », « bougé » ou
-              « grain » s'appliquent à toute la photo, pas au sujet, et la dégradent.
+              Ajouté au prompt de chaque image produite avec ce ton : une attitude, une
+              lumière, un cadrage. L'essai de rendu d'Ateliers › Tons montre ce qu'il change.
             </span>
           </div>
 
@@ -178,11 +176,11 @@ export function ToneInspector({
             </p>
             {!creating && (
               <span className={HINT}>
-                Se règle dans{' '}
+                Plage de base du monde. Chaque personnage l'ajuste pour lui-même dans{' '}
                 <Link className="link" to={`${PATHS.bankTones}/edit/${encodeURIComponent(tone.key)}`}>
                   Ateliers › Tons
                 </Link>
-                , avec un aperçu sur les photos d'un personnage de ce monde.
+                , avec un aperçu sur ses photos.
               </span>
             )}
           </div>

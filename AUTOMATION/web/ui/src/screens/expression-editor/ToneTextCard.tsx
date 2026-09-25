@@ -3,9 +3,9 @@
 
    WHY IT LEADS THE COLUMN. A tone does two things: it adds a fragment to the
    prompt, and it poses an expression after the identity check. This workshop
-   only ever showed the second. The first is the one that weighs on the render
-   — `joueur`'s « slight motion blur » degraded every selfie on 25/09 while no
-   screen displayed it. It is read here first, where the tone is tuned.
+   only ever showed the second, so half of what a tone does to an image could
+   not be read anywhere. It is read here first, where the tone is tuned; the
+   trial below shows what each half does to the render.
 
    WHERE THE TONE COMES FROM, SAID IN WORDS. From the world as is, from the
    world adjusted for this character, or from this character alone. Adjusting
@@ -108,8 +108,8 @@ export function ToneTextCard({
             onChange={(e) => setEditing({ ...editing, prompt_add: e.target.value })}
           />
           <span className="text-[11.5px] text-dim2">
-            Écrit pour ce personnage seulement. Jamais un défaut de prise de vue : « flou »,
-            « bougé » ou « grain » s'appliquent à toute la photo et la dégradent.
+            Écrit pour ce personnage seulement. L'essai de rendu ci-dessous montre ce que ce
+            fragment change à l'image.
           </span>
           <div className="flex items-center gap-[8px]">
             <button

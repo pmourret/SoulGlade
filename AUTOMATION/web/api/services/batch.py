@@ -24,6 +24,7 @@ The level-3 chaining hook is here too: it is not a rule (it decides nothing) but
 a stage of the run, handed to `execute_jobs` as `after=`.
 """
 import asyncio
+import copy
 import logging
 import random
 from datetime import datetime
@@ -234,28 +235,43 @@ def start_batch(jobs, configuration, use_qc, character, header=None):
 
 
 # ------------------------------------------------------------------ tone trial
-# IT-10, 25/09. The same scene at the same seed, WITHOUT and WITH a tone: the
-# gesture that found `joueur`'s « slight motion blur » by hand. It runs as a
-# batch like any other — same STATE, same panel, same single-GPU lock through
-# `_launch` — and through `execute_jobs` (§8.2), but with a `Sink`: the images
-# land under PROD/<CID>/_BENCH/, out of the Revue, the export and the
-# production tables, like the bench's.
+# IT-10, 25/09. The same scene at the same seed, without the tone, with its
+# prompt fragment only, then with the whole tone. It runs as a batch like any
+# other — same STATE, same panel, same single-GPU lock through `_launch` — and
+# through `execute_jobs` (§8.2), but with a `Sink`: the images land under
+# PROD/<CID>/_BENCH/, out of the Revue, the export and the production tables,
+# like the bench's.
+#
+# WHY THREE IMAGES AND NOT TWO. A tone does two things: it adds a fragment to
+# the prompt, and it poses an expression after the identity check. A two-image
+# trial (without / with) changes both at once, and on 25/09 it pinned the
+# damage on `joueur`'s « slight motion blur » when the expression pass was the
+# cause (same seed: fragment only 158 sharpness and clean, whole tone 51 with
+# crimped hair). The middle image separates the two. It is skipped for a tone
+# without an expression, where it would be the whole tone again.
 
 TRIAL_WITHOUT = "sans_ton"
+TRIAL_FRAGMENT_ONLY = "fragment_seul"
 
 
 def trial_jobs(character, scene, tone, seed):
-    """The two jobs of a trial, or [] when the scene does not resolve at the
-    base level. Only the tone differs between them."""
+    """The jobs of a trial as `(label, job, expression)` triples, or [] when
+    the scene does not resolve at the base level. `expression` False runs the
+    job with the expression pass off; everything else is identical."""
+    declared = lb.by_key(lb.load_creative(character).get("tones", []), tone) or {}
+    branches = [(TRIAL_WITHOUT, None, True)]
+    if declared.get("expression"):
+        branches.append((TRIAL_FRAGMENT_ONLY, tone, False))
+    branches.append((tone, tone, True))
     jobs = []
-    for label, tone_key in ((TRIAL_WITHOUT, None), (tone, tone)):
+    for label, tone_key, expression_on in branches:
         filters = SimpleNamespace(scene=[scene], category=None, format=None, count=1,
                                   limit=1, seed=seed, no_variants=True, tone=tone_key,
                                   intention=None, intensity=0)
         built = lb.build_jobs(lb.scenes_path(character), filters, character_id=character)
         if not built:
             return []
-        jobs.append((label, {**built[0], "seed": seed}))
+        jobs.append((label, {**built[0], "seed": seed}, expression_on))
     return jobs
 
 
@@ -274,19 +290,21 @@ def start_tone_trial(character, scene, tone, seed=None):
     configuration["_intensity"] = 0
     apply_tier_rules(configuration, 0, character)
     root = lb.OFM / "PROD" / character.upper() / "_BENCH" / trial_id
-    ss.STATE.update(running=True, stop=False, batch_id=trial_id, index=0, total=2,
+    no_expression = copy.deepcopy(configuration)
+    no_expression["preset"]["expression"] = False
+    ss.STATE.update(running=True, stop=False, batch_id=trial_id, index=0, total=len(jobs),
                     current=None, stats={}, recent=[], intensity=0, character=character,
                     last_error=None, edition=False,
                     started_at=datetime.now().isoformat(timespec="seconds"))
     ss.STATE["essai"] = {"id": trial_id, "character": character, "scene": scene,
                          "tone": tone, "seed": seed, "results": {}}
-    ss.push_log(f"essai de ton {trial_id} — « {scene} », sans ton puis « {tone} », "
-                f"graine {seed} · hors production")
+    ss.push_log(f"essai de ton {trial_id} — « {scene} », {len(jobs)} images "
+                f"(sans ton → « {tone} »), graine {seed} · hors production")
 
     def work():
         checker = ss.checker_partage(configuration)
         total = {"OK": 0, "A_REVOIR": 0, "REJET": 0, "ERREUR": 0}
-        for index, (label, job) in enumerate(jobs, start=1):
+        for index, (label, job, expression_on) in enumerate(jobs, start=1):
             if ss.STATE["stop"]:
                 break
             ss.STATE.update(index=index, current=f"{scene} · {label}")
@@ -297,7 +315,8 @@ def start_tone_trial(character, scene, tone, seed=None):
                     "measures": {k: v for k, v in (reel or {}).items()
                                  if isinstance(v, (int, float))}}
 
-            _, stats = lb.execute_jobs([job], configuration, checker, f"{trial_id}-{label}",
+            _, stats = lb.execute_jobs([job], configuration if expression_on else no_expression,
+                                       checker, f"{trial_id}-{label}",
                                        character_id=character,
                                        should_stop=lambda: ss.STATE["stop"],
                                        sink=Sink(dest_root=root / label, record=record))

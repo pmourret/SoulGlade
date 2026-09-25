@@ -128,6 +128,18 @@ parcours.
 
 ### Ce qui l'a déclenché
 
+> **Corrigé le 25/09 au soir, après l'étape 4.** Le diagnostic ci-dessous
+> attribue la dégradation au fragment « slight motion blur ». C'est faux :
+> l'essai de rendu livré par ce chantier, en séparant le fragment de la
+> passe d'expression, a montré que c'est **la passe d'expression** qui
+> dégrade l'image (même seed 1001 : fragment seul 158 de netteté et propre,
+> ton complet 51 avec les cheveux crêpés ; retirer le fragment ne change
+> presque rien, 4,65 d'écart moyen sur 255). L'A/B du jour changeait deux
+> choses à la fois. Le reste du raisonnement tient : l'outil cachait la
+> moitié de ce qu'un ton fait à l'image, et Produire imposait un ton, donc
+> une passe d'expression, sur chaque image depuis la migration. La cause
+> est ouverte en phase de recherche (`DOCS/recherche/`).
+
 Le diagnostic de la perte de qualité relevée à la rétro d'IT-9
 (`DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md`) a trouvé deux
 causes. La première, le LoRA d'identité, est retirée. La seconde est un ton.
@@ -175,9 +187,10 @@ En plus de créer, modifier et supprimer (ci-dessus) :
    25/09, qui a trouvé le défaut.
 3. **« Aucun ton » dans Produire.** Le ton redevient un choix : l'intention
    propose son ton par défaut, elle ne l'impose plus.
-4. **`joueur` corrigé par l'outil**, dans l'onglet Tons du monde, pas à la
-   main, et vérifié par l'essai de rendu. C'est le cas d'acceptation du
-   chantier.
+4. ~~**`joueur` corrigé par l'outil**~~ — cas d'acceptation abandonné le
+   25/09 : le fragment n'était pas la cause. Le cas qui le remplace est
+   l'essai à trois images (sans ton, fragment seul, ton complet), qui isole
+   ce que chaque moitié d'un ton fait au rendu.
 
 ### Où vit le créateur de tons (tranché le 25/09, A1 inversé)
 
@@ -223,8 +236,7 @@ est construit pour être repris tel quel.
 ### Critère de sortie, complété
 
 Celui de la section précédente, plus : l'atelier montre le fragment de
-`joueur` et sa couche ; un monde neuf crée son premier ton depuis l'état vide ; l'essai de rendu de `joueur` avant correction
-reproduit le défaut à l'écran ; après correction dans l'onglet Tons de `slow-life`, le même essai
-à la même seed rend une image que Pierre juge propre ; Produire lance une
-scène sans ton. Audit `audit-ux-ui` vérifié en vrai en fin de chantier
+`joueur` et sa couche ; un monde neuf crée son premier ton depuis l'état
+vide ; l'essai de rendu de `joueur` montre à l'écran laquelle des deux
+moitiés du ton dégrade l'image ; Produire lance une scène sans ton. Audit `audit-ux-ui` vérifié en vrai en fin de chantier
 (patron 2 du skill `nouvel-outil`).

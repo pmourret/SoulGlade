@@ -3,17 +3,21 @@
 
    WHY A RENDER, AND NOT ONLY THE EXPRESSION PREVIEW BELOW. The preview poses
    an expression on a photo already produced; a tone's prompt fragment only
-   shows at generation. The same scene at the same seed, without then with the
-   tone, is the gesture that found `joueur`'s « slight motion blur » on 25/09:
-   side by side, the crimped hair and the grain were plain. Two measures under
-   each image say it in numbers too — noise in the background, and sharpness,
-   which that day rose because of the noise, not because of detail. */
+   shows at generation, and the expression pass only shows on a full render.
+
+   WHY THREE IMAGES. A tone does two things, and a trial that changes both at
+   once cannot say which one hurts. On 25/09 a two-image trial blamed
+   `joueur`'s « slight motion blur »; the middle image — the fragment with the
+   expression pass off — showed it was the expression (same seed: fragment only
+   clean at 158 sharpness, whole tone crimped at 51). For a tone that poses no
+   expression the middle image would repeat the last one, so it is left out. */
 import { useState } from 'react'
 
 import type { ToneTrial } from './useToneTrial'
 import type { ToneRow } from './useToneList'
 
 const WITHOUT = 'sans_ton'
+const FRAGMENT_ONLY = 'fragment_seul'
 
 export function ToneTrialPanel({
   tone, scenes, trial, error, comfy, busy, onStart, imageUrl, openLightbox,
@@ -34,6 +38,10 @@ export function ToneTrialPanel({
   const [seed, setSeed] = useState('')
   const chosen = scenes.includes(scene) ? scene : (scenes[0] ?? '')
   const mine = trial && trial.tone === tone.key ? trial : null
+  const hasExpression = tone.configuredParams.length > 0
+  const columns = [WITHOUT, ...(hasExpression ? [FRAGMENT_ONLY] : []), tone.key]
+  const caption = (label: string) =>
+    label === WITHOUT ? 'Sans ton' : label === FRAGMENT_ONLY ? 'Fragment seul' : `« ${tone.label} » complet`
   const reason = !comfy
     ? 'nécessite ComfyUI en ligne'
     : busy
@@ -85,10 +93,13 @@ export function ToneTrialPanel({
           title={reason ?? undefined}
           onClick={launch}
         >
-          Sans puis avec « {tone.label} »
+          Essayer « {tone.label} »
         </button>
         <span className="text-[11.5px] text-dim2">
-          {reason ?? 'deux images, même graine, hors production'}
+          {reason ??
+            (hasExpression
+              ? 'trois images, même graine : sans ton, fragment seul, ton complet — hors production'
+              : 'deux images, même graine : sans ton, puis avec — hors production')}
         </span>
       </div>
 
@@ -106,8 +117,8 @@ export function ToneTrialPanel({
               {mine.seed}
             </button>
           </p>
-          <div className="grid grid-cols-2 gap-[10px]">
-            {[WITHOUT, tone.key].map((label) => {
+          <div className={`grid gap-[10px] ${columns.length === 3 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+            {columns.map((label) => {
               const result = mine.results?.[label]
               const measures = result?.measures ?? {}
               return (
@@ -120,7 +131,7 @@ export function ToneTrialPanel({
                     >
                       <img
                         src={imageUrl(label)}
-                        alt={label === WITHOUT ? 'rendu sans ton' : `rendu avec ${tone.label}`}
+                        alt={`rendu : ${caption(label)}`}
                         className="block h-[200px] w-full rounded-[6px] bg-panel2 object-contain"
                       />
                     </button>
@@ -128,9 +139,9 @@ export function ToneTrialPanel({
                     <div className="h-[200px] rounded-[6px] bg-panel2 motion-safe:animate-pulse" />
                   )}
                   <figcaption className="mt-[4px] text-[12px]">
-                    <b className="font-semibold">{label === WITHOUT ? 'Sans ton' : `Avec « ${tone.label} »`}</b>
+                    <b className="font-semibold">{caption(label)}</b>
                     {result && (
-                      <span className="ml-[8px] text-dim tabular-nums">
+                      <span className="block text-dim tabular-nums">
                         bruit de fond {fmt(measures.bruit_fond)} · netteté {fmt(measures.nettete, 0)}
                       </span>
                     )}
@@ -139,6 +150,12 @@ export function ToneTrialPanel({
               )
             })}
           </div>
+          {columns.length === 3 && (
+            <p className="m-0 mt-[6px] text-[11.5px] text-dim2">
+              Entre les deux premières, seul le fragment de prompt change ; entre les deux
+              dernières, seule la passe d'expression.
+            </p>
+          )}
         </div>
       )}
     </section>
