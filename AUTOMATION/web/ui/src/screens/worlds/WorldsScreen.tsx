@@ -28,8 +28,11 @@ import { PATHS, worldPlacesPath } from '../../app/routes'
 import { CatalogueColumn, type CatalogueTab } from './CatalogueColumn'
 import { NewWorldDialog } from './NewWorldDialog'
 import { PlaceInspector } from './PlaceInspector'
+import { ToneInspector } from './ToneInspector'
 import { useCatalogueEditor, type CatalogueEditor } from './useCatalogueEditor'
+import { useToneCatalogue } from './useToneCatalogue'
 import { useWorldPlaces, type Place } from './useWorldPlaces'
+import { useWorldTones, type WorldTone } from './useWorldTones'
 import { useWorldRegistry } from './useWorldRegistry'
 import { WorldList } from './WorldList'
 
@@ -67,6 +70,7 @@ export function WorldsScreen() {
 
   const ordinary = useWorldPlaces(selectedId)
   const adult = useWorldPlaces(selectedId, { adulte: true })
+  const toneList = useWorldTones(selectedId)
 
   /* The same warning for both catalogs: a retired place breaks the frame of
      every character scene that references it, adult or not. */
@@ -86,13 +90,42 @@ export function WorldsScreen() {
     [confirm],
   )
 
+  /* A retired tone breaks no scene: one that still lists it simply stops
+     matching it. What the confirmation must say is the other half — a
+     character that adjusted it keeps that adjustment as a tone of its own. */
+  const confirmToneRemoval = useCallback(
+    (tone: WorldTone) =>
+      confirm({
+        title: `Retirer le ton « ${tone.label || tone.key} » ?`,
+        button: 'Retirer',
+        danger: true,
+        body: (
+          <p>
+            Les personnages de ce monde ne le recevront plus. Les scènes qui le citent restent
+            produisibles ; un personnage qui l'avait ajusté garde son réglage comme ton propre.
+          </p>
+        ),
+      }),
+    [confirm],
+  )
+
   const handlers = useMemo(() => ({ onSaved: toast, confirmRemoval }), [toast, confirmRemoval])
   const ordinaryEditor = useCatalogueEditor(ordinary, handlers)
   const adultEditor = useCatalogueEditor(adult, handlers)
+  const toneCatalogue = useToneCatalogue(toneList, { onSaved: toast, confirmRemoval: confirmToneRemoval })
   const editor: CatalogueEditor = tab === 'adulte' ? adultEditor : ordinaryEditor
+  const onTones = tab === 'tons'
   const file = `WORLDS/${selectedId}${tab === 'adulte' ? '.adulte' : ''}.json`
+  /* What the chrome and the leave guard need, whichever catalog is open. */
+  const pending = onTones
+    ? {
+        dirty: toneCatalogue.dirty,
+        name: toneCatalogue.draft.label || toneCatalogue.draft.key || 'ce ton',
+        reset: toneCatalogue.reset,
+      }
+    : { dirty: editor.dirty, name: editor.draft.label || editor.draft.id || 'ce lieu', reset: editor.reset }
 
-  const saveDraft = useCallback(async () => {
+  const savePlaceDraft = useCallback(async () => {
     const draft = editor.draft
     if (!draft.prompt.trim() || (editor.creatingNew && !draft.id.trim())) {
       toast(
@@ -104,26 +137,27 @@ export function WorldsScreen() {
     }
     return editor.save({ ...draft, id: draft.id.trim(), prompt: draft.prompt.trim() })
   }, [editor, toast])
+  const saveDraft = onTones ? toneCatalogue.save : savePlaceDraft
 
   /** Three honest issues before losing what is typed: write it, drop it, stay. */
   const leaveGuard = useCallback(async (): Promise<boolean> => {
-    if (!editor.dirty) return true
+    if (!pending.dirty) return true
     const outcome = await confirm({
-      title: `Abandonner les modifications de « ${editor.draft.label || editor.draft.id || 'ce lieu'} » ?`,
+      title: `Abandonner les modifications de « ${pending.name} » ?`,
       button: 'Enregistrer puis continuer',
       alt: 'Abandonner',
       body: (
         <p>
-          Ce lieu n'est pas écrit dans <code>{file}</code>. Les personnages de ce monde héritent
-          toujours de ce que le fichier contient.
+          {onTones ? 'Ce ton' : 'Ce lieu'} n'est pas écrit dans <code>{file}</code>. Les
+          personnages de ce monde héritent toujours de ce que le fichier contient.
         </p>
       ),
     })
     if (outcome === false) return false
     if (outcome === true) return await saveDraft()
-    editor.reset()
+    pending.reset()
     return true
-  }, [confirm, editor, file, saveDraft])
+  }, [confirm, pending, onTones, file, saveDraft])
 
   const goToWorld = useCallback(
     async (id: string) => {
@@ -154,20 +188,23 @@ export function WorldsScreen() {
   const onOpenPlace = useCallback(
     async (id: string) => {
       if (!(await leaveGuard())) return
-      editor.open(id)
+      if (onTones) toneCatalogue.open(id)
+      else editor.open(id)
     },
-    [leaveGuard, editor],
+    [leaveGuard, editor, onTones, toneCatalogue],
   )
 
   const onAddPlace = useCallback(async () => {
     if (!(await leaveGuard())) return
-    editor.add()
-  }, [leaveGuard, editor])
+    if (onTones) toneCatalogue.add()
+    else editor.add()
+  }, [leaveGuard, editor, onTones, toneCatalogue])
 
   const onClosePlace = useCallback(async () => {
     if (!(await leaveGuard())) return
-    editor.close()
-  }, [leaveGuard, editor])
+    if (onTones) toneCatalogue.close()
+    else editor.close()
+  }, [leaveGuard, editor, onTones, toneCatalogue])
 
   useEffect(() => {
     if (!freshWorld || freshWorld !== selectedId) return
@@ -193,9 +230,11 @@ export function WorldsScreen() {
   const characters = selectedId ? registry.characterCount(selectedId) : null
   const pendingSave = useMemo<PendingSave | null>(
     () =>
-      editor.dirty && world
+      pending.dirty && world
         ? {
-            title: `Lieu « ${editor.draft.label || editor.draft.id || 'sans nom'} » modifié`,
+            title: onTones
+              ? `Ton « ${pending.name} » modifié`
+              : `Lieu « ${editor.draft.label || editor.draft.id || 'sans nom'} » modifié`,
             body: (
               <>
                 <code>{file}</code>
@@ -205,18 +244,19 @@ export function WorldsScreen() {
                 {characters && characters > 0 ? (
                   <> — {characters} personnage{characters > 1 ? 's' : ''} compose
                     {characters > 1 ? 'nt' : ''} dans ce monde et hérite
-                    {characters > 1 ? 'nt' : ''} de ce cadre.</>
+                    {characters > 1 ? 'nt' : ''} de ce {onTones ? 'ton' : 'cadre'}.</>
                 ) : (
-                  <> — les personnages de ce monde héritent de ce cadre.</>
+                  <> — les personnages de ce monde héritent de ce {onTones ? 'ton' : 'cadre'}.</>
                 )}
               </>
             ),
-            saveLabel: 'Enregistrer le lieu',
+            saveLabel: onTones ? 'Enregistrer le ton' : 'Enregistrer le lieu',
             onSave: () => void saveDraft(),
-            onRevert: () => editor.reset(),
+            onRevert: () => pending.reset(),
           }
         : null,
-    [editor.dirty, editor.draft.label, editor.draft.id, editor.reset, world, file, characters, saveDraft],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [pending.dirty, pending.name, onTones, editor.draft.label, editor.draft.id, world, file, characters, saveDraft],
   )
   useRegisterPendingSave(pendingSave)
 
@@ -305,6 +345,10 @@ export function WorldsScreen() {
               adultEditor={adultEditor}
               ordinaryError={ordinary.error}
               adultError={adult.error}
+              tones={toneList.tones}
+              toneCatalogue={toneCatalogue}
+              tonesError={toneList.error}
+              tonesCount={toneList.tones?.length ?? world.tones_count ?? 0}
               narrow={narrow}
               worlds={worlds}
               onSelectWorld={(id) => void goToWorld(id)}
@@ -314,7 +358,29 @@ export function WorldsScreen() {
           </div>
 
           <div className={RIGHT}>
-            {editor.selected ? (
+            {onTones ? (
+              toneCatalogue.selected ? (
+                <ToneInspector
+                  tone={toneCatalogue.selected}
+                  draft={toneCatalogue.draft}
+                  worldLabel={world.label}
+                  status={toneCatalogue.status}
+                  creating={toneCatalogue.creatingNew}
+                  takenKeys={toneCatalogue.creatingNew ? (toneList.tones ?? []).map((t) => t.key) : []}
+                  onPatch={toneCatalogue.patch}
+                  onRemove={
+                    toneCatalogue.creatingNew
+                      ? undefined
+                      : () => void toneCatalogue.remove(toneCatalogue.selected!.key)
+                  }
+                  onClose={() => void onClosePlace()}
+                />
+              ) : (
+                <div className="flex h-full items-center justify-center p-[24px]">
+                  <div className="empty text-[13px]">Ouvre un ton dans la liste, ou ajoutes-en un.</div>
+                </div>
+              )
+            ) : editor.selected ? (
               <PlaceInspector
                 place={editor.creatingNew ? BLANK : toPatch(editor.selected)}
                 draft={editor.draft}

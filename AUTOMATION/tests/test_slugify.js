@@ -14,7 +14,7 @@
    scenes qui en derivent — il ne se renomme plus jamais apres. C'est le genre
    de regression qu'aucune fumigation navigateur ne verrait, parce que l'ecran
    marche parfaitement avec un mauvais identifiant. */
-import { ID_RE, isValidId, slugify } from '../web/ui/src/screens/worlds/slugify.ts'
+import { ID_RE, isValidId, slugify, TONE_KEY_RE, toneKey } from '../web/ui/src/screens/worlds/slugify.ts'
 
 let ko = 0
 const dire = (bon, quoi) => {
@@ -67,6 +67,15 @@ dire(!isValidId('3collines'), 'commence par un chiffre')
 dire(!isValidId('Terres'), 'une majuscule')
 dire(!isValidId('terres sauvages'), 'un espace')
 dire(isValidId('terres-sauvages_2'), 'mais « terres-sauvages_2 » passe')
+
+console.log('\n[7] la cle d un ton : un mot simple, jamais de tiret (25/09)')
+for (const [nom, attendu] of [['Joueur', 'joueur'], ['Mélancolique', 'melancolique'],
+                              ['slow-life', 'slow_life'], ['3 heures du matin', '3_heures_du_matin']]) {
+  dire(toneKey(nom) === attendu, `« ${nom} » -> « ${toneKey(nom)} »`)
+}
+dire(noms.map(toneKey).filter(Boolean).every((k) => TONE_KEY_RE.test(k)),
+     'toute cle proposee passe la validation du serveur')
+dire(!TONE_KEY_RE.test('slow-life') && !TONE_KEY_RE.test('Joueur'), 'tiret et majuscule refuses')
 
 console.log(`\n${'='.repeat(70)}`)
 console.log(ko === 0 ? 'tout est vert' : `${ko} ECHEC(S)`)

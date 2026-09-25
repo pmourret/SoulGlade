@@ -40,3 +40,14 @@ export function slugify(name: string): string {
      worlds. */
   return /^[a-z]/.test(base) ? base : `id_${base}`
 }
+
+/** What a tone key must match — the mirror of `_TONE_KEY_RE`
+    (`api/services/worlds.py`). No `-`: a tone key travels in scenes, journal
+    rows and export manifests, where it has always been a plain word. */
+export const TONE_KEY_RE = /^[a-z0-9_]+$/
+
+/** The tone key a name proposes — `slugify` with its `-` turned into `_`,
+    and no `id_` prefix (a key may start with a digit). */
+export function toneKey(name: string): string {
+  return slugify(name).replace(/^id_/, '').replace(/-/g, '_')
+}

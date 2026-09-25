@@ -17,10 +17,12 @@ import * as Tabs from '@radix-ui/react-tabs'
 
 import { moveFocusInList, tabIndexInList } from './listKeys'
 import type { CatalogueEditor } from './useCatalogueEditor'
+import type { ToneCatalogue } from './useToneCatalogue'
 import type { Place } from './useWorldPlaces'
+import type { WorldTone } from './useWorldTones'
 import type { WorldSummary } from './useWorldRegistry'
 
-export type CatalogueTab = 'ordinaire' | 'adulte'
+export type CatalogueTab = 'ordinaire' | 'adulte' | 'tons'
 
 const TRIGGER =
   'flex-none cursor-pointer border-0 bg-transparent px-[12px] py-[9px] text-[13px] ' +
@@ -100,6 +102,73 @@ function PlaceRows({
   )
 }
 
+/* The tones of the world (IT-10, 25/09). Same row shape as a place: the name,
+   then the fragment one reads to know what the tone does to an image — the
+   very thing no screen showed before. */
+function ToneRows({
+  tones,
+  catalogue,
+  onOpen,
+  onAdd,
+}: {
+  tones: WorldTone[] | null
+  catalogue: ToneCatalogue
+  onOpen: (key: string) => void
+  onAdd: () => void
+}) {
+  if (tones === null) return <p className="tiny px-[12px] py-[10px]">chargement des tons…</p>
+  if (tones.length === 0 && !catalogue.creatingNew) {
+    return (
+      <div className="empty px-[16px] py-[24px] text-[13px]" id="tonesEmpty">
+        <b>Ce monde n'a pas encore de ton</b>
+        Un ton donne une attitude et une lumière à une scène, et une expression au visage.
+        Sans ton, les personnages de ce monde produisent quand même.
+        <div className="mt-[14px]">
+          <button type="button" className="btn primary sm" onClick={onAdd}>
+            Créer le premier ton
+          </button>
+        </div>
+      </div>
+    )
+  }
+  const selection = !catalogue.creatingNew && catalogue.selectedKey
+  return (
+    <div role="listbox" aria-label="Tons du monde">
+      {tones.map((tone, index) => {
+        const on = selection === tone.key
+        return (
+          <button
+            key={tone.key}
+            type="button"
+            role="option"
+            aria-selected={on}
+            data-tone-row
+            tabIndex={tabIndexInList(on, index === 0, Boolean(selection))}
+            className={`${ROW} ${on ? ROW_ON : ROW_OFF}`}
+            onClick={() => onOpen(tone.key)}
+            onKeyDown={moveFocusInList}
+          >
+            <span className="flex items-baseline gap-[8px]">
+              <b className={`min-w-0 flex-1 truncate text-[13.5px] ${on ? '' : 'font-normal'}`}>
+                {tone.label || tone.key}
+                {on && catalogue.dirty && (
+                  <span className="ml-[6px] text-[9px] text-warn" aria-hidden="true">
+                    ●
+                  </span>
+                )}
+              </b>
+              <code className="font-code flex-none text-[11.5px] leading-[normal] text-dim">{tone.key}</code>
+            </span>
+            <span className="mt-[2px] block truncate text-[12px] text-dim2">
+              {tone.prompt_add || 'aucun fragment de prompt'}
+            </span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
 export function CatalogueColumn({
   world,
   tab,
@@ -112,6 +181,10 @@ export function CatalogueColumn({
   adultEditor,
   ordinaryError,
   adultError,
+  tones,
+  toneCatalogue,
+  tonesError,
+  tonesCount,
   narrow,
   worlds,
   onSelectWorld,
@@ -129,6 +202,10 @@ export function CatalogueColumn({
   adultEditor: CatalogueEditor
   ordinaryError: string | null
   adultError: string | null
+  tones: WorldTone[] | null
+  toneCatalogue: ToneCatalogue
+  tonesError: string | null
+  tonesCount: number
   /* Under 1100 px the registry column is gone (§S8) and its choice comes back
      here as a select — never as a hidden list, which would make the other
      worlds unreachable on a laptop. */
@@ -138,7 +215,7 @@ export function CatalogueColumn({
   onOpenPlace: (id: string) => void
   onAddPlace: () => void
 }) {
-  const error = tab === 'adulte' ? adultError : ordinaryError
+  const error = tab === 'adulte' ? adultError : tab === 'tons' ? tonesError : ordinaryError
 
   return (
     <Tabs.Root
@@ -192,7 +269,7 @@ export function CatalogueColumn({
                          text-[11.5px] text-dim"
               title={world.tone}
             >
-              ton : {world.tone}
+              ambiance : {world.tone}
             </span>
           )}
         </div>
@@ -210,6 +287,12 @@ export function CatalogueColumn({
           className={`${TRIGGER} ${tab === 'adulte' ? TRIGGER_ON_WARN : TRIGGER_OFF}`}
         >
           Adulte <span className="text-[11.5px] tabular-nums opacity-70">{adultCount}</span>
+        </Tabs.Trigger>
+        <Tabs.Trigger
+          value="tons"
+          className={`${TRIGGER} ${tab === 'tons' ? TRIGGER_ON : TRIGGER_OFF}`}
+        >
+          Tons <span className="text-[11.5px] tabular-nums opacity-70">{tonesCount}</span>
         </Tabs.Trigger>
       </Tabs.List>
 
@@ -284,6 +367,19 @@ export function CatalogueColumn({
         </div>
       </Tabs.Content>
 
+      <Tabs.Content value="tons" id="tonsBlock" className="min-h-0 flex-1">
+        <div className="flex h-full min-h-0 flex-col">
+          {tonesError && (
+            <p className="m-0 px-[14px] py-[9px] text-[12px] text-danger-txt" role="alert">
+              {tonesError}
+            </p>
+          )}
+          <div className="min-h-0 flex-1 overflow-y-auto py-[4px]">
+            <ToneRows tones={tones} catalogue={toneCatalogue} onOpen={onOpenPlace} onAdd={onAddPlace} />
+          </div>
+        </div>
+      </Tabs.Content>
+
       <div className="flex-none border-t border-t-line p-[10px]">
         <button
           type="button"
@@ -292,7 +388,7 @@ export function CatalogueColumn({
           onClick={onAddPlace}
           disabled={Boolean(error)}
         >
-          {tab === 'adulte' ? '+ Ajouter un lieu adulte' : '+ Ajouter un lieu'}
+          {tab === 'adulte' ? '+ Ajouter un lieu adulte' : tab === 'tons' ? '+ Ajouter un ton' : '+ Ajouter un lieu'}
         </button>
       </div>
     </Tabs.Root>

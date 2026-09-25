@@ -150,7 +150,50 @@ const NEUF = 'zz_essai_fumigation';
   dire(fin.length === avant.length && !fin.includes('Essai fumigation'),
        `le catalogue est revenu a son etat de depart (${fin.length})`);
 
-  console.log('\n[5] aucune erreur JS sur tout le parcours');
+  /* IT-10 (25/09) : un ton se cree avec son monde. Ce que la section tient :
+     le fragment de prompt se LIT dans la liste — c'est lui qui, invisible,
+     a degrade les selfies le 25/09 — ; la cle suit le nom tant qu'on ne la
+     tape pas ; l'aller-retour ecrit vraiment et revient a l'etat de depart. */
+  console.log('\n[5] onglet Tons : lire le fragment, creer un ton, le retirer');
+  const tons = () => page.$$eval('#worldPlaces [data-tone-row] b', e => e.map(x => x.textContent.trim()));
+  await onglet('Tons').click();
+  await page.waitForSelector('#worldPlaces [data-tone-row]');
+  const tonsAvant = await tons();
+  dire(tonsAvant.length > 0, `les tons du monde sont listes (${tonsAvant.length})`);
+  const fragment = await page.textContent('#worldPlaces [data-tone-row]:has-text("Joueur") span.block');
+  dire(Boolean(fragment && fragment.trim() && fragment.trim() !== 'aucun fragment de prompt'),
+       `le fragment de prompt se lit dans la ligne : « ${(fragment || '').trim().slice(0, 50)} »`);
+  dire(!/ton :/.test(await page.textContent('#worldPlaces')),
+       'l ambiance d interface ne se dit plus « ton : » a cote de l onglet Tons');
+
+  await page.click('#worldPlaces button:has-text("+ Ajouter un ton")');
+  await page.waitForSelector('#toneKey');
+  await page.fill('#toneLabel', 'Essai fumigation');
+  dire(await page.inputValue('#toneKey') === 'essai_fumigation', 'la cle est proposee depuis le nom');
+  await page.fill('#tonePrompt', 'soft window light');
+  await page.waitForSelector('#pendingBar');
+  dire(/Ton/.test(await page.textContent('#pendingBar')), 'le DirtyBar parle d un ton');
+  await page.click('#btnPendingSave');
+  await page.waitForTimeout(700);
+  dire((await tons()).length === tonsAvant.length + 1, 'le ton est enregistre');
+
+  await page.reload({ waitUntil: 'networkidle' });
+  await onglet('Tons').click();
+  await page.waitForSelector('#worldPlaces [data-tone-row]');
+  dire((await tons()).includes('Essai fumigation'), 'il survit au rechargement');
+
+  await page.click('#worldPlaces [data-tone-row]:has-text("Essai fumigation")');
+  await page.waitForSelector('#btnToneRemove');
+  dire(!(await page.$('#toneKey')), 'la cle d un ton existant n est plus editable');
+  await page.click('#btnToneRemove');
+  await page.waitForSelector('#cfOui');
+  await page.click('#cfOui');
+  await page.waitForTimeout(800);
+  const tonsFin = await tons();
+  dire(tonsFin.length === tonsAvant.length && !tonsFin.includes('Essai fumigation'),
+       `les tons sont revenus a leur etat de depart (${tonsFin.length})`);
+
+  console.log('\n[6] aucune erreur JS sur tout le parcours');
   dire(erreurs.length === 0, `${erreurs.length} erreur(s)`);
   erreurs.forEach(e => console.log('      ' + e));
 
