@@ -544,8 +544,10 @@
         },
         {
           "s": "faire",
-          "t": "La passe d'expression dégrade le rendu",
-          "d": "Même seed : prompt de joueur sans expression, netteté 158 et propre ; avec, 51, cheveux crêpés et visage mou. LivePortrait recompose une large zone autour du visage et la recolle. Phase de recherche ouverte le 25/09."
+          "t": "L'expression se transfère en mouvement, pas en pixels",
+          "d": "Cause : LivePortrait régénère tout le recadrage à 512 et le recolle, cheveux compris. Adopté : transférer le mouvement sur l'original en pleine résolution, texture gardée sur 10/10 paires, +2,7 s par image. Reste à construire, et le garde-fou d'identité à repenser.",
+          "it": "IT-10",
+          "ref": "DOCS/cadrage/2026-09-25-expression-par-transfert-de-mouvement.md"
         }
       ]
     },
@@ -1322,6 +1324,11 @@
       "e": "tranche",
       "t": "Un ton se crée avec son monde",
       "d": "Décidé le 25/09. Le créateur de tons vit dans l'éditeur de mondes, à côté des lieux ; l'atelier du personnage ajuste et essaie, il ne crée plus. La plateforme ne livre aucun ton, donc Produire accepte « aucun ton » pour qu'un monde neuf produise."
+    },
+    {
+      "e": "tranche",
+      "t": "L'expression se pose par transfert de mouvement",
+      "d": "Décidé le 25/09 au banc (5 seeds, 2 tons) et à l'œil de Pierre. Le recollage de LivePortrait abîme l'image même à vide ; le flux optique appliqué à l'original garde sa texture. Coût : +2,7 s par image, et environ 0,035 d'identité à expression égale, une baisse qu'une expression franche entraîne de toute façon."
     }
   ],
   "horizon": {
@@ -1455,6 +1462,18 @@
       {
         "t": "Geler le gabarit de mesure en même temps que l'ancre",
         "d": "(9 septembre 2026) Proposition d'un document extérieur soumis par Pierre : le jeu de référence initial et le modèle de mesure sont gelés ensemble. Le principe est juste pour l'ancre et faux pour le gabarit, c'est exactement le défaut mesuré ce jour-là. Impact en l'état : un portillon absolu dont on sait qu'il sous-sépare dès que la production s'éloigne des conditions de l'ancre, et le centroïde évolutif interdit. Le reste du document est repris."
+      },
+      {
+        "t": "Réduire le recadrage de l'expression",
+        "d": "(25 septembre 2026) crop_factor 1.5 : netteté 122 → 130, visage toujours mou. Ne touche pas la cause, le recollage à 512."
+      },
+      {
+        "t": "Recoller seulement les pixels bougés par l'expression",
+        "d": "(25 septembre 2026) Sauve les cheveux, pas le visage : l'expression déplace tout le visage. Remplacé par le transfert de mouvement."
+      },
+      {
+        "t": "Poser l'expression avant les étages de détail",
+        "d": "(25 septembre 2026) Refait la chaîne et la bande d'identité (invariant 5) pour un gain que le transfert de mouvement obtient sans y toucher."
       }
     ]
   }
