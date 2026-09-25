@@ -61,15 +61,45 @@ sauf le dernier.
   composeur à l'ajout de la pose. Reste à trancher ce qui écrit ce texte.
 - **L'amélioration des prompts par IA est un gros chantier**, pas une route
   à brancher. L'entrée d'horizon du 24/09 est complétée plutôt que doublée.
-- **Ajouter des tons dans l'atelier Tons.**
+- **Ajouter des tons dans l'atelier Tons.** Devenu IT-10, voir plus bas.
 - **Enregistrer ses préréglages dans l'éditeur avancé.** Les préréglages
   sont aujourd'hui une constante du code (`PRESETS`).
 - **Une perte de qualité perçue depuis la migration du frontend.** Ce n'est
   pas une envie : si elle est réelle, c'est une régression, priorité 1.
-  Versée en E5 comme travail à faire, pas à l'horizon. Première question :
-  la perte est-elle dans le PNG écrit sous `PROD/` (l'écran enverrait
-  d'autres paramètres au runner) ou seulement à l'affichage (vignettes JPEG
-  de `PROD/.thumbs/` servies à la place de l'original) ?
+  Diagnostiquée le jour même, et le frontend n'y est pour rien : la
+  résolution et les graphes n'ont pas bougé. La coupure tombe le 21/09,
+  premier jour où toute la production de Léna porte le LoRA d'identité
+  `lenadaab_v1` à 0.8. Le banc du 14/09, qui le mesurait déjà sur seeds
+  appariées, donnait bruit de fond 1,6 → 3,5, fond net 0,50 → 0,89, mains
+  0,25 → 0,10, identité +0,02 (dans le bruit). Deux images du 25/09 l'ont
+  confirmé à l'œil de Pierre : trame de bruit sur la peau et les murs,
+  cheveux crêpés, taches de rousseur qui débordent sur l'épaule. Le LoRA
+  est retiré de la config de Léna.
+
+  Le défaut restait visible après le retrait, et c'est une seconde cause.
+  Un A/B à seed fixe (`PROD/LENA/_BENCH/diag-ton-20260925/`) l'isole : sans
+  ton l'image est propre, avec `joueur` les cheveux crêpent et le grain
+  revient. Ce ton ajoute « slight motion blur » au prompt, et Flux le rend
+  comme une image dégradée. Le fragment date d'août ; ce qui l'a rendu
+  omniprésent vient bien du frontend, par un autre chemin que celui qu'on
+  cherchait : depuis la migration, Produire impose toujours un ton, et
+  `selfie` a `joueur` pour défaut. L'intuition de Pierre était juste sur
+  le lieu, pas sur le mécanisme.
+
+  **Ce que ça a ouvert.** L'atelier Tons ne montre pas le fragment de
+  prompt d'un ton et ne permet pas de le corriger : la moitié de ce qu'un
+  ton fait à l'image est invisible dans le studio. IT-9 en a refait la
+  présentation sans le compléter, parce que le cadrage de l'écran 8
+  excluait de créer ou modifier un ton. D'où IT-10, ouverte avant IT-3f, et
+  une règle ajoutée à `PROJET.md` : un outil livré passe avant toute
+  capacité neuve.
+
+  **Leçon.** IT-3d a gardé le LoRA parce qu'il « ne coûte rien », en lisant
+  la netteté 193 → 431 comme un gain de piqué. C'était du bruit : la
+  netteté est une variance de hautes fréquences, et le bruit en est une.
+  Une mesure qui monte n'est un gain que si l'œil le confirme ; c'est la
+  double condition d'adoption, et elle n'avait pas été appliquée au
+  maintien.
 
 ## 4. Ce qui tient pour la suite
 

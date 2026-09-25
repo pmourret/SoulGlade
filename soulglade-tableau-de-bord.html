@@ -340,7 +340,7 @@ const D = {
       "titre": "Le LoRA de Léna existe, ou le renoncement est écrit",
       "state": "done",
       "quoi": "Le jeu est sorti le 10/09, le LoRA entraîné hors plateforme, trois bancs l'ont mesuré le 14/09. Fermée le 20/09 sur un chiffre qui dit non : le LoRA achète du piqué, pas de l'identité. Deux constats sortis du même banc partent en dette, la référence primaire de Léna qui n'a jamais été posée et la chaîne qui n'est pas reproductible à seed fixée.",
-      "dod": "Atteinte, dans le sens du renoncement. Identité contre l'ancre 0.758 sans LoRA contre 0.779 à pleine force, soit le bruit de réplicat du banc ; netteté 193 contre 431 sur les mêmes seeds. Le LoRA reste dans config.json parce qu'il ne coûte rien, et IT-4 ne compte pas sur lui pour desserrer le troc identité/texture.",
+      "dod": "Atteinte, dans le sens du renoncement. Identité contre l'ancre 0.758 sans LoRA contre 0.779 à pleine force, soit le bruit de réplicat du banc. Le LoRA, gardé d'abord parce qu'il semblait ne rien coûter, est retiré le 25/09 : il dégradait le rendu.",
       "epics": "E2",
       "ref": "DOCS/recherche/2026-09-20-la-reference-primaire-n-a-jamais-ete-posee.md — DOCS/cadrage/2026-09-09-lora-identite-par-personnage.md (étage 1)"
     },
@@ -361,6 +361,15 @@ const D = {
       "dod": "Les quatorze étapes sont passées avec leur audit vérifié en vrai, la fumigation des cadres balaie aussi les états ouverts, et la charte de styles/DESIGN.md est tenue par un garde statique.",
       "epics": "E13",
       "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
+    },
+    {
+      "id": "IT-10",
+      "state": "now",
+      "titre": "Les ateliers font ce qu'ils annoncent",
+      "quoi": "Le fragment d'un ton, invisible dans l'atelier, a dégradé tous les selfies. Le même défaut est ailleurs : des panneaux sans serveur, des catalogues du monde sans créateur, une pose sans son texte. Un outil livré passe avant toute capacité neuve, donc avant IT-3f.",
+      "dod": "Les huit chantiers livrés, chacun avec son audit vérifié en vrai. Aucun panneau n'annonce une capacité qu'aucun serveur ne rend, et un monde neuf reçoit ses tons et ses intentions sans qu'on ouvre un JSON.",
+      "epics": "E3",
+      "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
     },
     {
       "id": "IT-3f",
@@ -496,7 +505,7 @@ const D = {
           "s": "fait",
           "it": "IT-3d",
           "t": "LoRA d'identité par personnage",
-          "d": "Le LoRA de Léna est entraîné et branché, `lenadaab_v1` à la force 0.8. Mesuré au banc le 14/09 : il gagne sur la netteté (193 contre 431) et rien sur l'identité (+0.021, dans le bruit de réplicat). Les époques intermédiaires sont toutes sous la v1 finale."
+          "d": "Le LoRA de Léna est entraîné, puis retiré de sa config le 25/09. Le banc du 14/09 : rien sur l'identité (+0.021, dans le bruit), et un bruit de fond doublé que la netteté (193 contre 431) faisait passer pour du piqué. Le mécanisme reste en place."
         },
         {
           "s": "fait",
@@ -549,34 +558,98 @@ const D = {
           "t": "Banque de tons et éditeur d'expression"
         },
         {
-          "s": "faire",
-          "t": "Créer, renommer et supprimer un ton",
-          "d": "Aucun chemin de création d'un ton n'existe dans l'application : l'atelier règle la plage d'un ton déjà déclaré, et la route d'expression refuse une clé inconnue. Cadré le 25/09, construction après IT-9. L'arbitrage à confirmer : un ton créé appartient au personnage, pas à son monde.",
-          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
-        },
-        {
           "s": "fait",
           "t": "Lieux de monde avec héritage live",
           "d": "ADR-0015"
         },
         {
+          "s": "veille",
+          "t": "Le flou de fond, réglable par scène",
+          "d": "auto / net / flou, la seule dimension du rendu qui se décidait sans l'utilisateur. Retiré le 09/09 par son propre critère de sortie : « net » et « flou » ne se séparent pas sur fond_net (0.552 contre 0.561, cinq seeds appariés), et un texte plus fort ne change rien. Le levier n'est pas le prompt."
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Atelier Tons : le ton se lit en entier",
+          "d": "Fragment de prompt et plage d'expression côte à côte, avec la couche : monde, surchargé, ou propre au personnage. L'atelier ajuste, il ne crée plus. Le bandeau cesse de dire creative.json.",
+          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Tons : créateur dans l'éditeur de mondes",
+          "d": "Un ton se crée avec le monde, comme un lieu : onglet Tons dans Référentiel › Mondes, état vide pour un monde neuf. Clé immuable, suppression sans casser une scène qui le cite.",
+          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Atelier Tons : essai de rendu avec et sans le ton",
+          "d": "Même scène, même seed, hors production par le Sink du banc. C'est le geste qui a trouvé le défaut de joueur le 25/09.",
+          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Produire : aucun ton",
+          "d": "L'intention propose son ton par défaut, elle ne l'impose plus. Obligatoire : un monde neuf sans ton doit produire sa première image.",
+          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Le ton joueur corrigé par l'outil",
+          "d": "Cas d'acceptation des tons : « slight motion blur » retiré dans l'onglet Tons de slow-life, vérifié par l'essai de rendu à la même seed.",
+          "ref": "DOCS/cadrage/2026-09-25-creer-un-ton.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Intentions : créateur dans l'éditeur de mondes",
+          "d": "Même trou et même couche que les tons : l'intention est un catalogue du monde sans outil pour la créer. Reprend le patron de l'onglet Tons.",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "Formats : 16:9 et une seule liste",
+          "d": "La liste est recopiée à quatre endroits et ignore le 16:9. Le format libre, qui ferait trancher le modèle, se décide au cadrage.",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-10",
+          "t": "La pose porte son texte",
+          "d": "Un texte déduit à l'extraction, stocké avec le squelette en base, repris par le composeur à l'ajout de la pose. Ce qui écrit ce texte se tranche au cadrage.",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+        },
+        {
+          "s": "faire",
+          "t": "Importeur d'assets",
+          "it": "IT-10",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md",
+          "d": "Aucun chemin pour faire entrer un asset dans le studio. Prérequis des vêtements illustrés ; le fond importé, à l'horizon, en sera le premier client lourd."
+        },
+        {
           "s": "faire",
           "t": "Gestionnaire de vêtements",
-          "d": "La garde-robe est le seul axe créatif sans catalogue héritable : lieux, intentions et tons viennent du monde (ADR-0019), elle vit en texte libre par scène. Le besoin est une tenue réutilisée d'une scène à l'autre, pas un catalogue illustré. À confirmer par la semaine d'IT-4."
+          "d": "Une tenue réutilisée d'une scène à l'autre, héritable comme les lieux, là où la garde-robe vit en texte libre par scène. Le panneau du composeur l'annonce sans rien derrière. Dépend de l'importeur si une tenue porte une image.",
+          "it": "IT-10",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
         },
         {
           "s": "faire",
           "t": "Créateur de lumière",
-          "d": "aujourd'hui le cadrage lumière passe par le prompt du lieu"
+          "d": "Le panneau du composeur dit « bientôt » ; la lumière passe aujourd'hui par le prompt du lieu. À trancher au cadrage : fragment seul, ou graphe de couche pack.",
+          "it": "IT-10",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
         },
         {
           "s": "faire",
-          "t": "Importeur d'assets"
-        },
-        {
-          "s": "veille",
-          "t": "Le flou de fond, réglable par scène",
-          "d": "auto / net / flou, la seule dimension du rendu qui se décidait sans l'utilisateur. Retiré le 09/09 par son propre critère de sortie : « net » et « flou » ne se séparent pas sur fond_net (0.552 contre 0.561, cinq seeds appariés), et un texte plus fort ne change rien. Le levier n'est pas le prompt."
+          "it": "IT-10",
+          "t": "Amélioration des prompts par IA",
+          "d": "Le panneau du composeur l'annonce sans route derrière. Dernier chantier d'IT-10 : il réécrit des fragments que les autres rendent visibles, et le choix du modèle est une décision à part.",
+          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
         }
       ]
     },
@@ -703,9 +776,9 @@ const D = {
           "d": "Quatre lots du 14/09 tournent la même configuration sur les mêmes cinq seeds et rendent quatre images différentes. Étendue des moyennes 0.019 quand `margin.identite` vaut 0.02 : tout verdict d'identité sous 0.03 est illisible. Cause non identifiée, premier candidat `expression_budget`."
         },
         {
-          "s": "faire",
-          "t": "Les rendus ont-ils perdu en qualité depuis la migration du frontend ?",
-          "d": "Perte perçue par Pierre, non mesurée. Trancher d'abord où elle vit : dans le PNG écrit sous PROD/ (l'écran enverrait d'autres paramètres au runner) ou seulement à l'affichage (vignettes JPEG servies à la place de l'original).",
+          "s": "fait",
+          "t": "La perte de qualité avait deux causes, aucune dans le rendu du frontend",
+          "d": "Le LoRA lenadaab_v1 à 0.8 ajoutait bruit et cheveux crêpés, retiré le 25/09. Le ton joueur demande « slight motion blur », que Flux rend en image dégradée, et Produire impose un ton depuis la migration : IT-10.",
           "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
         }
       ]
@@ -1468,31 +1541,26 @@ const D = {
       "e": "tranche",
       "t": "Le LoRA adulte est `nsfw_flux_lora_v1`, à force 0.4",
       "d": "Décidé le 21/09. Deux candidats Flux.1-dev départagés à l'œil, les chiffres les séparant de 0.020, soit le bruit du banc. La force 0.4 bat 0.8 sur tous les axes et cette fois au-dessus du bruit : +0.030 d'identité contre l'ancre, +0.040 contre le gabarit, dont elle franchit le portillon. Le revers est livré avec : la force ne passe qu'au palier déclarant `lora_adulte`."
+    },
+    {
+      "e": "tranche",
+      "t": "Léna produit sans LoRA d'identité",
+      "d": "Décidé le 25/09 à l'œil de Pierre, sur le banc du 14/09 et deux images du jour. À 0.8, lenadaab_v1 n'apporte rien à l'identité et coûte le rendu : bruit de fond doublé, cheveux crêpés, flou de fond perdu. La hausse de netteté qui le faisait garder était ce bruit. Le mécanisme de LoRA par personnage n'est pas en cause, ce LoRA-là l'est."
+    },
+    {
+      "e": "tranche",
+      "t": "Un outil livré passe avant toute capacité neuve",
+      "d": "Décidé le 25/09 par Pierre : les outils de la plateforme sont entièrement fonctionnels avant qu'on en ajoute. Un outil qui cache une part de ce qu'il fait est cassé, pas une envie. IT-10 (les ateliers complets) passe donc avant IT-3f. Reporté dans PROJET.md, règle 2."
+    },
+    {
+      "e": "tranche",
+      "t": "Un ton se crée avec son monde",
+      "d": "Décidé le 25/09. Le créateur de tons vit dans l'éditeur de mondes, à côté des lieux ; l'atelier du personnage ajuste et essaie, il ne crée plus. La plateforme ne livre aucun ton, donc Produire accepte « aucun ton » pour qu'un monde neuf produise."
     }
   ],
   "horizon": {
     "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
     "items": [
-      {
-        "t": "Le serveur derrière les panneaux du composeur",
-        "d": "(24 septembre 2026) Trois panneaux nomment une capacité sans rien derrière : l'amélioration IA, le catalogue de vêtements (vocabulaire statique, sans images) et les templates de lumière. L'état non branché se dit à l'écran. Complété le 25/09 : l'amélioration des prompts par IA est un chantier lourd à part entière, pas une route à brancher. Chacun demande son propre cadrage."
-      },
-      {
-        "t": "Un créateur d'intentions",
-        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. L'intention n'existe que comme champ d'une scène, aucun atelier ne la crée ni ne la décrit. Nouvel écran de studio, donc skill nouvel-outil et cadrage avant code."
-      },
-      {
-        "t": "Le composeur offre le 16:9, et peut-être un format libre",
-        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. La liste 4:5, 2:3, 9:16, 1:1 est recopiée à quatre endroits et chaque format a sa résolution dans le config.json du personnage. Le 16:9 est borné et ramène les quatre listes à une seule. Le format décidé par le modèle fait trancher la plateforme à la place de l'utilisateur : cadrage d'abord."
-      },
-      {
-        "t": "La pose porte son texte",
-        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. Une pose est un squelette OpenPose et une description : le texte se déduit à l'extraction, se stocke avec le squelette en base, et se reporte dans le composeur à l'ajout de la pose. Reste à trancher ce qui écrit ce texte."
-      },
-      {
-        "t": "Ajouter des tons dans l'atelier Tons",
-        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. L'atelier règle les tons existants mais n'en crée pas."
-      },
       {
         "t": "Des préréglages enregistrés dans l'éditeur avancé",
         "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. Les préréglages sont une constante du code (PRESETS) ; l'utilisateur ne peut pas enregistrer les siens."

@@ -187,6 +187,14 @@ Cinq règles matérialisées dans le dépôt, à respecter avant tout code :
    admet aussi la qualité mesurée de la production de l'utilisateur zéro
    (voir « Pour qui »).
 
+   **Amendé le 2026-09-25.** Un outil déjà livré passe avant toute
+   capacité neuve : les outils de la plateforme sont entièrement
+   fonctionnels avant qu'on en ajoute. Un outil qui cache une part de ce
+   qu'il fait, ou qui ne permet pas de la corriger, est un outil cassé, pas
+   une envie. Le cas fondateur est l'atelier Tons : il ne montrait pas le
+   fragment de prompt d'un ton, et ce fragment dégradait toutes les images
+   qui le portaient (`DOCS/cadrage/2026-09-25-creer-un-ton.md`).
+
 3. **Un chantier ambitieux se cadre par écrit avant la première ligne de
    code.** Tout chantier de plus d'une étape dans le tableau de bord a
    son fichier dans `DOCS/cadrage/` avant démarrage. Trois questions : à
