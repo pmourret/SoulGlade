@@ -972,10 +972,11 @@
           "ref": "DOCS/design-pass/screen-12-application.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-9",
           "t": "Éditeur de pose : poste de travail",
-          "d": "Le squelette gagne un poste de travail autour de lui. Présentation seulement : la géométrie de la pose ne change pas."
+          "d": "Une barre d'écran, l'arbre des points à gauche, le corps et sa barre flottante au centre, les mains, la sélection et les outils à droite. Le squelette s'affiche en teintes atténuées ; le PNG écrit reste identique octet pour octet, rendu par le serveur.",
+          "ref": "DOCS/design-pass/screen-13-editeur-pose.md"
         },
         {
           "s": "faire",

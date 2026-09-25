@@ -53,7 +53,7 @@ export const HAND_JOINT_NAMES = [
 
 export type JointGroup = { label: string; indices: readonly number[] }
 
-/* Anatomical groupings for the outliner (PoseInspector) — collapsible so 18
+/* Anatomical groupings for the joint tree (JointOutline) — collapsible so 18
    or 21 flat rows don't have to stay on screen at once. Purely a display
    grouping: doesn't change BODY_LIMBS/HAND_EDGES or anything the renderer
    or the save format depend on. */
@@ -89,7 +89,7 @@ export function parentOf(edges: readonly [number, number][], index: number): num
 
 /** Same as `parentOf`, but picks BODY_LIMBS or HAND_EDGES from `group` —
     the lookup every caller outside this module actually wants, now that
-    there are two of them (PoseInspector's readout, PoseCanvas's Shift-drag
+    there are two of them (SelectionPanel's readout, PoseCanvas's Shift-drag
     rotation): duplicating the `group === 'body' ? BODY_LIMBS : HAND_EDGES`
     ternary a third time would be the sign to extract it, so it's done at
     the second. */

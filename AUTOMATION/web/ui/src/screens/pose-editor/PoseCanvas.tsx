@@ -23,11 +23,14 @@
    guess whether a still Shift+click was a selection gesture or the start of
    an IK drag that just didn't move yet. */
 import {
-  useCallback, useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent,
+  useCallback, useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode,
 } from 'react'
 
 import {
-  angleAndLength, BODY_COLORS, BODY_LIMBS, HAND_EDGES, HAND_JOINT_COLOR, handEdgeColor, handEdgeDash, limbDash,
+  BONE_OPACITY, BONE_WIDTH, fingerEdgeColor, HAND_BONE_WIDTH, jointPaint, limbColor,
+} from './poseCanvasTheme'
+import {
+  angleAndLength, BODY_LIMBS, HAND_EDGES, handEdgeDash, limbDash,
   nameOf, parentIndexOf,
 } from './poseTopology'
 import {
@@ -80,7 +83,7 @@ type PoseKeyEvent = {
     listener moves up to the shared container (§A2 below): without this,
     typing "z" there would fire Undo, and the arrow keys would nudge the
     selected JOINTS instead of stepping the focused number input. */
-function isTextEntry(target: EventTarget | null): boolean {
+export function isTextEntry(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   if (target.tagName === 'TEXTAREA') return true
   if (target.tagName !== 'INPUT') return false
@@ -177,6 +180,7 @@ export function PoseCanvas({
   referenceImage,
   renderPreviewUrl,
   pinned,
+  toolbarExtra,
 }: {
   pose: PoseFrame
   onChange: (pose: PoseFrame) => void
@@ -230,6 +234,11 @@ export function PoseCanvas({
       keyboard nudge skips it too. Screen-only concept, like `selected`:
       the modal doesn't offer pinning, so it never passes this. */
   pinned?: ReadonlySet<string>
+  /** Presentation only (design-pass screen-13 §S4): controls the SCREEN owns
+      (recentre, reference photo) drawn inside this canvas's own floating
+      bar, next to its zoom. The bar's buttons and their state stay this
+      component's; nothing here reads or changes them. */
+  toolbarExtra?: ReactNode
 }) {
   const svgRef = useRef<SVGSVGElement | null>(null)
   // Local to this canvas instance, not to `pose` — a drag that edits the
@@ -549,7 +558,7 @@ export function PoseCanvas({
       <svg
         ref={svgRef}
         viewBox={`${view.x} ${view.y} ${viewBoxWidth} ${viewBoxHeight}`}
-        className="h-full w-full touch-none rounded-[8px] bg-black"
+        className="h-full w-full touch-none rounded-[4px] border border-[var(--pose-frame)] bg-black"
         data-canvas={focus ?? 'full'}
         onPointerDown={onBackgroundPointerDown}
         role="application"
@@ -637,18 +646,27 @@ export function PoseCanvas({
           </text>
         )}
       </svg>
-      <div className="absolute right-[8px] top-[8px] flex gap-[4px]">
+      {/* Floating bar (design-pass screen-13 §S4): under the full canvas,
+          centred; under a hand close-up, as wide as it. */}
+      <div
+        className={
+          focus
+            ? 'absolute inset-x-0 top-[calc(100%+6px)] flex items-center justify-between gap-[2px] rounded-[6px] border border-line2 bg-panel p-[2px]'
+            : 'absolute left-1/2 top-[calc(100%+12px)] flex -translate-x-1/2 items-center gap-[2px] whitespace-nowrap rounded-[8px] border border-line2 bg-panel p-[4px] shadow-elev'
+        }
+      >
         <button
           type="button"
-          className="btn sm"
+          className={TOOL}
           aria-pressed={showGrid}
           onClick={() => setShowGrid((g) => !g)}
         >
           Grille
         </button>
+        <span aria-hidden="true" className="mx-[2px] h-[16px] w-px bg-line2" />
         <button
           type="button"
-          className="btn sm"
+          className={TOOL}
           aria-label="Zoom arrière"
           disabled={view.scale <= MIN_SCALE}
           onClick={() => zoomBy(1 / BUTTON_ZOOM_STEP)}
@@ -657,7 +675,7 @@ export function PoseCanvas({
         </button>
         <button
           type="button"
-          className="btn sm"
+          className={`${TOOL} min-w-[48px] tabular-nums`}
           aria-label="Réinitialiser le zoom"
           disabled={atRest}
           onClick={resetView}
@@ -666,28 +684,46 @@ export function PoseCanvas({
         </button>
         <button
           type="button"
-          className="btn sm"
+          className={TOOL}
           aria-label="Zoom avant"
           disabled={view.scale >= MAX_SCALE}
           onClick={() => zoomBy(BUTTON_ZOOM_STEP)}
         >
           +
         </button>
+        {toolbarExtra}
       </div>
     </div>
   )
 }
 
-/** Selection: solid white ring. Pinned: dashed amber ring, cursor changes to
-    say so — visible on a pinned+selected point too (dashed white), since
-    selection already owns the color and pinning only needed the dash. */
-function jointDecoration(isSelected: boolean, isPinned: boolean) {
-  return {
-    stroke: isSelected ? '#fff' : isPinned ? '#e8a33d' : 'none',
-    strokeDasharray: isPinned ? '2,2' : undefined,
-    className: isPinned ? 'cursor-not-allowed outline-none focus-visible:stroke-white'
-      : 'cursor-grab outline-none focus-visible:stroke-white',
-  }
+/* One look for every button of the floating bar — a bar of quiet tools, not a
+   row of framed buttons. Background AND border declared (frontend.md). */
+const TOOL =
+  'h-[28px] cursor-pointer rounded-[5px] border-0 bg-transparent px-[8px] text-[12.5px] text-dim ' +
+  'hover:bg-panel2 hover:text-txt disabled:cursor-default disabled:opacity-40 ' +
+  'aria-pressed:bg-panel3 aria-pressed:text-txt'
+
+/** The cursor says whether the joint moves; focus shows as a focus-coloured
+    ring (a class, so it outranks the paint's presentation attributes). The
+    paint itself comes from `poseCanvasTheme.jointPaint`. */
+function jointClass(isPinned: boolean) {
+  return `${isPinned ? 'cursor-not-allowed' : 'cursor-grab'} outline-none focus-visible:stroke-[var(--focus)] focus-visible:[stroke-width:3]`
+}
+
+/** A pinned joint carries a small square above its right shoulder — outside
+    the circle, so it reads on a selected (filled) joint too. A `<rect>`, not
+    a `<circle>`: the circles are one per joint, and the fumigation counts on
+    it. */
+function PinMark({ x, y, r }: { x: number; y: number; r: number }) {
+  const side = r * 0.9
+  return (
+    <rect
+      x={x + r * 0.55} y={y - r * 0.55 - side} width={side} height={side}
+      fill="var(--warn)" stroke="var(--bg)" strokeWidth={1} vectorEffect="non-scaling-stroke"
+      pointerEvents="none" data-pin=""
+    />
+  )
 }
 
 /** Design-pass screen-6, §A3 — `aria-label` was on the `<svg>` as a whole
@@ -720,29 +756,35 @@ function BodyLayer({
           <line
             key={i}
             x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-            stroke={BODY_COLORS[i]} strokeWidth={8} strokeOpacity={0.75} strokeLinecap="round"
+            stroke={limbColor(i)} strokeWidth={BONE_WIDTH} strokeOpacity={BONE_OPACITY} strokeLinecap="round"
+            vectorEffect="non-scaling-stroke"
             strokeDasharray={limbDash(i)}
           />
         )
       })}
       {points.map((p, i) => {
         const isPinned = Boolean(pinned?.has(pointKey('body', i)))
-        const deco = jointDecoration(selected.has(pointKey('body', i)), isPinned)
+        const isSelected = selected.has(pointKey('body', i))
+        const paint = jointPaint(isSelected, p.c > 0)
         return (
-          <circle
-            key={i}
-            cx={p.x} cy={p.y} r={JOINT_RADIUS}
-            fill={BODY_COLORS[i]}
-            opacity={p.c > 0 ? 1 : 0.35}
-            stroke={deco.stroke}
-            strokeDasharray={deco.strokeDasharray}
-            strokeWidth={2}
-            tabIndex={0}
-            className={deco.className}
-            aria-label={jointAriaLabel('body', i, p, isPinned)}
-            onPointerDown={startDrag('body', i)}
-            onKeyDown={onJointKeyDown('body', i)}
-          />
+          <g key={i}>
+            <circle
+              cx={p.x} cy={p.y} r={JOINT_RADIUS}
+              fill={paint.fill}
+              stroke={paint.stroke}
+              strokeDasharray={paint.strokeDasharray}
+              strokeWidth={paint.strokeWidth}
+              vectorEffect="non-scaling-stroke"
+              pointerEvents="all"
+              data-selected={isSelected ? '' : undefined}
+              tabIndex={0}
+              className={jointClass(isPinned)}
+              aria-label={jointAriaLabel('body', i, p, isPinned)}
+              onPointerDown={startDrag('body', i)}
+              onKeyDown={onJointKeyDown('body', i)}
+            />
+            {isPinned && <PinMark x={p.x} y={p.y} r={JOINT_RADIUS} />}
+          </g>
         )
       })}
     </g>
@@ -769,29 +811,35 @@ function HandLayer({
           <line
             key={i}
             x1={pa.x} y1={pa.y} x2={pb.x} y2={pb.y}
-            stroke={handEdgeColor(i)} strokeWidth={2.5} strokeLinecap="round"
+            stroke={fingerEdgeColor(i)} strokeWidth={HAND_BONE_WIDTH} strokeOpacity={BONE_OPACITY}
+            strokeLinecap="round" vectorEffect="non-scaling-stroke"
             strokeDasharray={handEdgeDash(i)}
           />
         )
       })}
       {points.map((p, i) => {
         const isPinned = Boolean(pinned?.has(pointKey(group, i)))
-        const deco = jointDecoration(selected.has(pointKey(group, i)), isPinned)
+        const isSelected = selected.has(pointKey(group, i))
+        const paint = jointPaint(isSelected, p.c > 0)
         return (
-          <circle
-            key={i}
-            cx={p.x} cy={p.y} r={HAND_JOINT_RADIUS}
-            fill={HAND_JOINT_COLOR}
-            opacity={p.c > 0 ? 1 : 0.35}
-            stroke={deco.stroke}
-            strokeDasharray={deco.strokeDasharray}
-            strokeWidth={1.5}
-            tabIndex={0}
-            className={deco.className}
-            aria-label={jointAriaLabel(group, i, p, isPinned)}
-            onPointerDown={startDrag(group, i)}
-            onKeyDown={onJointKeyDown(group, i)}
-          />
+          <g key={i}>
+            <circle
+              cx={p.x} cy={p.y} r={HAND_JOINT_RADIUS}
+              fill={paint.fill}
+              stroke={paint.stroke}
+              strokeDasharray={paint.strokeDasharray}
+              strokeWidth={paint.strokeWidth}
+              vectorEffect="non-scaling-stroke"
+              pointerEvents="all"
+              data-selected={isSelected ? '' : undefined}
+              tabIndex={0}
+              className={jointClass(isPinned)}
+              aria-label={jointAriaLabel(group, i, p, isPinned)}
+              onPointerDown={startDrag(group, i)}
+              onKeyDown={onJointKeyDown(group, i)}
+            />
+            {isPinned && <PinMark x={p.x} y={p.y} r={HAND_JOINT_RADIUS} />}
+          </g>
         )
       })}
     </g>

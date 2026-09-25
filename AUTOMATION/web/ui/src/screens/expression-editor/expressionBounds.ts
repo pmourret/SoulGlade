@@ -23,7 +23,7 @@ export const PARAM_BOUNDS: Record<ExpressionParamName, readonly [number, number]
   rotate_roll: [-20, 20],
 }
 
-/* Grouped for display — same spirit as PoseInspector's 60 joints grouped by
+/* Grouped for display — same spirit as JointOutline's 60 joints grouped by
    body part, not a flat list of 12. */
 export const PARAM_GROUPS: readonly { label: string; params: readonly ExpressionParamName[] }[] = [
   { label: 'Bouche', params: ['smile', 'aaa', 'eee', 'woo'] },

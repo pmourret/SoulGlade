@@ -4,19 +4,26 @@
    template, name, "create a template too" — the modal is the only way in
    for a new pose now (2026-09-02): a bare visit to this route with neither
    a name nor that state has nothing to edit, so it bounces to the bank
-   rather than resurrect the old full-screen template picker. */
+   rather than resurrect the old full-screen template picker.
+
+   A WORKSTATION since design-pass screen-13: a bar, then three zones edge to
+   edge — the joint tree, the body view with its floating bar, and a panel
+   holding both hand close-ups, the selection and the tools. Every canvas
+   shares the SAME pose and selection: dragging a fingertip in a close-up and
+   watching it move on the body is one edit, not a sync between two. */
 import { useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { PATHS } from '../../app/routes'
 import { useApi } from '../../api/useApi'
 import { useToast } from '../../chrome/ToastContext'
-import { InfoHint } from '../bank/composer/InfoHint'
-import { handlePoseKeyDown, PoseCanvas } from './PoseCanvas'
-import { PoseInspector } from './PoseInspector'
+import { CanvasToolbarExtra } from './CanvasToolbarExtra'
+import { JointOutline } from './JointOutline'
+import { handlePoseKeyDown, isTextEntry, PoseCanvas } from './PoseCanvas'
 import { alignSelection, mirrorBody, mirrorHand, withPointsMoved, type Point } from './poseFrame'
-import { ReferenceControls } from './ReferenceControls'
-import { UndoRedoButtons } from './UndoRedoButtons'
+import { PoseToolsPanel } from './PoseToolsPanel'
+import { PoseTopBar } from './PoseTopBar'
+import { SelectionPanel } from './SelectionPanel'
 import { usePoseEditor, type PoseEditorSource } from './usePoseEditor'
 import { useReferenceOverlay } from './useReferenceOverlay'
 import { useSelection } from './useSelection'
@@ -36,6 +43,10 @@ export function PoseEditorScreen() {
   return <PoseEditorInner source={source} createTemplateIntent={!name && (intent?.createTemplate ?? false)} />
 }
 
+/* The three zones' widths, shared by the loading skeleton and the editor. */
+const GRID =
+  'grid min-h-0 flex-1 grid-cols-[240px_minmax(0,1fr)_360px] max-[1099px]:grid-cols-[minmax(0,1fr)_360px]'
+
 function PoseEditorInner({
   source, createTemplateIntent = false,
 }: {
@@ -50,6 +61,8 @@ function PoseEditorInner({
   const { selected, onSelect, onToggleSelect, onSelectMany, clearSelection } = useSelection()
   const [recenterTrigger, setRecenterTrigger] = useState(0)
   const [pinned, setPinned] = useState<ReadonlySet<string>>(new Set())
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [pointsOpen, setPointsOpen] = useState(false)
   const navigate = useNavigate()
   const toast = useToast()
   const api = useApi()
@@ -101,24 +114,39 @@ function PoseEditorInner({
     navigate(`${PATHS.poseEditor}/${result.name}`)
   }
 
+  const title = pose?.label || name || (source.kind === 'preset' ? source.initialLabel : '') || 'Nouvelle pose'
+
   if (loading) {
     return (
-      <div className="screen" id="poseEditor">
-        <div className="wrap">
-          <p className="tiny">chargement…</p>
+      <div className="screen flex h-full flex-col" id="poseEditor" aria-busy="true">
+        <PlainBar title={title} />
+        <div className={GRID}>
+          <div className="border-r border-line bg-panel p-[14px] max-[1099px]:hidden">
+            {Array.from({ length: 12 }, (_, i) => (
+              <i key={i} className="mb-[10px] block h-[10px] rounded-[3px] bg-panel2 motion-safe:animate-pulse" />
+            ))}
+          </div>
+          <div className="bg-[var(--pose-stage)]" />
+          <div className="border-l border-line bg-panel p-[14px]">
+            <i className="block aspect-[2/1] rounded-[4px] bg-panel2 motion-safe:animate-pulse" />
+          </div>
         </div>
       </div>
     )
   }
   if (loadError || !pose) {
     return (
-      <div className="screen" id="poseEditor">
-        <div className="wrap">
-          <Link className="btn sm" to={PATHS.bankPoses}>
-            ← Retour aux ateliers
-          </Link>
-          <div className="empty mt-[16px] rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-            {loadError || 'squelette introuvable'}
+      <div className="screen flex h-full flex-col" id="poseEditor">
+        <PlainBar title={title} />
+        <div className="flex flex-1 items-start justify-center bg-[var(--pose-stage)] px-[16px] pt-[80px]">
+          <div className="w-[440px] max-w-full rounded-[8px] border border-danger-line bg-panel p-[20px]" role="alert">
+            <div className="empty flex items-start gap-[10px] p-0 text-left text-[13px] text-txt">
+              <i aria-hidden="true" className="mt-[5px] h-[8px] w-[8px] flex-none rotate-45 bg-bad" />
+              <span>{loadError || 'squelette introuvable'}</span>
+            </div>
+            <Link className="btn sm mt-[16px]" to={PATHS.bankPoses}>
+              Retour aux Poses
+            </Link>
           </div>
         </div>
       </div>
@@ -130,160 +158,167 @@ function PoseEditorInner({
   const onAlign = (axis: 'x' | 'y') => applyAction(alignSelection(pose, selected, axis))
   const onOffset = (origins: ReadonlyMap<string, Point>, dx: number, dy: number) =>
     applyAction(withPointsMoved(pose, origins, dx, dy))
+  const recenter = () => setRecenterTrigger((t) => t + 1)
+
+  const canvasProps = {
+    pose, onChange: update, selected, onSelect, onToggleSelect, onSelectMany, referenceImage, pinned,
+  }
+  const outline = (
+    <JointOutline pose={pose} selected={selected} onSelect={onSelect} onToggleSelect={onToggleSelect} pinned={pinned} />
+  )
 
   return (
-    <div className="screen" id="poseEditor">
-      <div
-        className="wrap flex h-[calc(100vh-24px)] w-full max-w-none gap-[16px]"
-        /* Elevated Undo/Redo/nudge listener (design-pass screen-6, §A2) —
-           replaces PoseCanvas's own removed `<svg onKeyDown>`, not added
-           alongside it: this container wraps every canvas AND the inspector,
-           so a keydown bubbles here regardless of where focus actually is
-           (a joint, or nowhere in particular after clicking Annuler). The
-           guard against text-entry targets (NumberField/OffsetField) lives
-           inside `handlePoseKeyDown` itself. */
-        onKeyDown={(event) =>
-          handlePoseKeyDown(event, { pose, selected, pinned, onChange: update, onUndo: undo, onRedo: redo })
+    <div
+      className="screen flex h-full flex-col"
+      id="poseEditor"
+      /* Elevated Undo/Redo/nudge listener (design-pass screen-6, §A2): this
+         container wraps every canvas AND the panels, so a keydown bubbles
+         here wherever focus is. The text-entry guard lives inside
+         `handlePoseKeyDown` itself; F and ? (screen-13 §S4, §S6) use the same
+         guard before it. */
+      onKeyDown={(event) => {
+        const plain = !event.ctrlKey && !event.metaKey && !event.altKey && !isTextEntry(event.target)
+        if (plain && (event.key === 'f' || event.key === 'F') && selected.size > 0) {
+          event.preventDefault()
+          recenter()
+          return
         }
-      >
-        {/* Both close-ups and the full view share the SAME pose/selected —
-            dragging a fingertip here and watching it move on the full-body
-            canvas is one edit, not a sync between two. Wireframed in
-            session (2026-09-02): hands stacked in their own column rather
-            than, say, a toggle or an overlay — always visible side by side
-            with the view they're a detail OF. */}
-        <div className="flex w-[300px] shrink-0 flex-col gap-[16px]">
-          <LabeledCanvas
-            label="Main gauche"
-            headerExtra={
-              <button type="button" className="btn sm" onClick={() => onMirrorHand('handRight')}>
-                Copier depuis la main droite
-              </button>
-            }
-          >
-            <PoseCanvas
-              pose={pose}
-              onChange={update}
-              selected={selected}
-              onSelect={onSelect}
-              onToggleSelect={onToggleSelect}
-              onSelectMany={onSelectMany}
-              focus="handLeft"
-              referenceImage={referenceImage}
-              pinned={pinned}
-            />
-          </LabeledCanvas>
-          <LabeledCanvas
-            label="Main droite"
-            headerExtra={
-              <button type="button" className="btn sm" onClick={() => onMirrorHand('handLeft')}>
-                Copier depuis la main gauche
-              </button>
-            }
-          >
-            <PoseCanvas
-              pose={pose}
-              onChange={update}
-              selected={selected}
-              onSelect={onSelect}
-              onToggleSelect={onToggleSelect}
-              onSelectMany={onSelectMany}
-              focus="handRight"
-              referenceImage={referenceImage}
-              pinned={pinned}
-            />
-          </LabeledCanvas>
-        </div>
-        <LabeledCanvas
-          label="Corps complet"
-          className="min-w-0"
-          headerExtra={
-            <ReferenceControls
-              referenceUrl={reference.referenceUrl}
-              opacity={reference.opacity}
-              onOpacityChange={reference.setOpacity}
-              onPickFile={reference.setReferenceFile}
-              onClearReference={reference.clearReference}
-              previewUrl={reference.previewUrl}
-              rendering={reference.rendering}
-              onRefreshPreview={() => void reference.refreshPreview()}
-              onClearPreview={reference.clearPreview}
-            />
-          }
-        >
-          <PoseCanvas
-            pose={pose}
-            onChange={update}
-            selected={selected}
-            onSelect={onSelect}
-            onToggleSelect={onToggleSelect}
-            onSelectMany={onSelectMany}
-            recenterTrigger={recenterTrigger}
-            referenceImage={referenceImage}
-            renderPreviewUrl={reference.previewUrl}
-            pinned={pinned}
-          />
-        </LabeledCanvas>
-        <aside className="flex min-h-0 w-[320px] shrink-0 flex-col gap-[10px]">
-          <Link className="link" to={PATHS.bankPoses}>
-            ← Retour aux ateliers
-          </Link>
-          <b className="mt-[4px] truncate text-[13px]">
-            {pose.label || name || 'Nouvelle pose'}
-            <InfoHint
-              text="Glisser un joint le déplace ; le choisir dans la liste ci-dessous fonctionne aussi.
-                    Flèches pour l'ajuster au pixel près (Maj = pas de 10). Maj+glisser un joint tourne un
-                    membre en préservant sa longueur d'os. Ctrl/Cmd+clic ajoute un joint à la sélection,
-                    Maj+glisser le fond du canvas sélectionne un rectangle. Ctrl+Z annule, Ctrl+Maj+Z rétablit."
-            />
-          </b>
-          <UndoRedoButtons canUndo={canUndo} canRedo={canRedo} onUndo={undo} onRedo={redo} />
-          <button className="btn primary" disabled={saving} onClick={() => void onSave()}>
-            Enregistrer
-          </button>
-          {name && (
-            <button className="btn sm" disabled={saving} onClick={() => void onSaveAsNew()}>
-              Enregistrer sous (nouvelle pose)
+        if (plain && event.key === '?') {
+          event.preventDefault()
+          setHelpOpen((open) => !open)
+          return
+        }
+        handlePoseKeyDown(event, { pose, selected, pinned, onChange: update, onUndo: undo, onRedo: redo })
+      }}
+    >
+      <PoseTopBar
+        title={title}
+        fileName={name}
+        dirty={dirty}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={undo}
+        onRedo={redo}
+        rendering={reference.rendering}
+        previewing={Boolean(reference.previewUrl)}
+        onEdit={reference.clearPreview}
+        onRender={() => void reference.refreshPreview()}
+        helpOpen={helpOpen}
+        onToggleHelp={() => setHelpOpen((open) => !open)}
+        saving={saving}
+        onSave={() => void onSave()}
+        onSaveAsNew={name ? () => void onSaveAsNew() : undefined}
+        pointsToggle={
+          <div className="relative min-[1100px]:hidden">
+            <button
+              type="button"
+              className="btn sm"
+              aria-expanded={pointsOpen}
+              onClick={() => setPointsOpen((open) => !open)}
+            >
+              Points
             </button>
-          )}
-          {dirty && <p className="tiny" role="status">Modifications non enregistrées</p>}
-          <PoseInspector
+            {pointsOpen && (
+              <div className="absolute left-0 top-[calc(100%+6px)] z-[30] flex max-h-[70vh] w-[260px] flex-col
+                              rounded-[8px] border border-line2 bg-panel shadow-elev">
+                {outline}
+              </div>
+            )}
+          </div>
+        }
+      />
+
+      <div className={GRID}>
+        <aside className="flex min-h-0 flex-col border-r border-line bg-panel max-[1099px]:hidden" aria-label="Liste des points">
+          {outline}
+        </aside>
+
+        {/* The body view: the canvas keeps the pose's own proportions, centred
+            on a darker stage; its floating bar sits under it. */}
+        <div className="relative flex min-h-0 min-w-0 items-center justify-center bg-[var(--pose-stage)] px-[24px] pt-[24px] pb-[72px]">
+          <span className="absolute left-[12px] top-[10px] z-[1] rounded-[4px] bg-scrim px-[8px] py-[3px] text-[12px] text-dim">
+            Corps complet
+          </span>
+          <div
+            className="relative h-full max-w-full"
+            style={{ aspectRatio: `${pose.canvasWidth} / ${pose.canvasHeight}` }}
+          >
+            <PoseCanvas
+              {...canvasProps}
+              recenterTrigger={recenterTrigger}
+              renderPreviewUrl={reference.previewUrl}
+              toolbarExtra={
+                <CanvasToolbarExtra
+                  canRecenter={selected.size > 0}
+                  onRecenter={recenter}
+                  referenceUrl={reference.referenceUrl}
+                  opacity={reference.opacity}
+                  onOpacityChange={reference.setOpacity}
+                  onPickFile={reference.setReferenceFile}
+                  onClearReference={reference.clearReference}
+                />
+              }
+            />
+          </div>
+        </div>
+
+        <aside className="min-h-0 overflow-y-auto border-l border-line bg-panel" aria-label="Mains, sélection et outils">
+          <div className="grid grid-cols-2 gap-[12px] p-[14px] max-[1099px]:grid-cols-1">
+            <HandView label="Main gauche" copyLabel="Copier la droite" onCopy={() => onMirrorHand('handRight')}>
+              <PoseCanvas {...canvasProps} focus="handLeft" />
+            </HandView>
+            <HandView label="Main droite" copyLabel="Copier la gauche" onCopy={() => onMirrorHand('handLeft')}>
+              <PoseCanvas {...canvasProps} focus="handRight" />
+            </HandView>
+          </div>
+          <SelectionPanel
             pose={pose}
             selected={selected}
-            onSelect={onSelect}
-            onToggleSelect={onToggleSelect}
             onChange={update}
             pinned={pinned}
             onSetPinned={setPinnedMany}
-            onMirrorBody={onMirrorBody}
-            onAlign={onAlign}
             onOffset={onOffset}
-            onRecenter={() => setRecenterTrigger((t) => t + 1)}
+            onRecenter={recenter}
             onClearSelection={clearSelection}
           />
+          <PoseToolsPanel selectionSize={selected.size} onMirrorBody={onMirrorBody} onAlign={onAlign} />
         </aside>
       </div>
     </div>
   )
 }
 
-function LabeledCanvas({
-  label, className = '', headerExtra, children,
+/* The bar of the loading and error states: where one is, and the way back. */
+function PlainBar({ title }: { title: string }) {
+  return (
+    <div className="flex h-[48px] flex-none items-center gap-[12px] border-b border-line bg-panel px-[14px]">
+      <Link className="btn sm" to={PATHS.bankPoses} id="posesBack">
+        Poses
+      </Link>
+      <span className="truncate text-[14px] font-semibold text-txt" id="poseTitle">{title}</span>
+    </div>
+  )
+}
+
+function HandView({
+  label, copyLabel, onCopy, children,
 }: {
   label: string
-  className?: string
-  /** A panel-specific toolbar, on its OWN row below the label — sharing one
-      row between a short label and a toolbar (the reference-photo controls,
-      which grow once a photo is picked) made "Corps complet" wrap across
-      three lines and crowd the label out (audit finding, 2026-09-02). */
-  headerExtra?: ReactNode
+  copyLabel: string
+  /** `mirrorHand`: copy the OTHER hand's shape onto this one. */
+  onCopy: () => void
   children: ReactNode
 }) {
   return (
-    <div className={`flex min-h-0 flex-1 flex-col gap-[4px] ${className}`}>
-      <div className="tiny opacity-70">{label}</div>
-      {headerExtra && <div className="flex flex-wrap items-center gap-[8px]">{headerExtra}</div>}
-      <div className="min-h-0 flex-1">{children}</div>
+    <div className="min-w-0">
+      <div className="mb-[6px] flex flex-wrap items-baseline justify-between gap-x-[8px]">
+        <span className="whitespace-nowrap text-[12px] font-semibold text-txt">{label}</span>
+        <button type="button" className="link whitespace-nowrap text-[12px]" onClick={onCopy}>
+          {copyLabel}
+        </button>
+      </div>
+      {/* Its zoom bar hangs under the square: room is kept for it. */}
+      <div className="mb-[40px] aspect-square">{children}</div>
     </div>
   )
 }

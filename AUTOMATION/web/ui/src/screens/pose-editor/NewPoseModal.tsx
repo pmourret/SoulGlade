@@ -68,63 +68,73 @@ export function NewPoseModal({ onClose }: { onClose: () => void }) {
       className="w-[min(460px,calc(100vw-32px))] max-w-[min(460px,calc(100vw-32px))]"
       cardClassName="w-[min(460px,100%)]! p-[20px]!"
     >
-      <h3 className="mb-[4px]! text-[16px]!">Nouvelle pose</h3>
-      <p className="tiny mb-[14px]">
-        Coordonnées entièrement inventées, jamais issues d'une photo — le point
+      <h3 className="mb-[6px]! text-[16px]!">Nouvelle pose</h3>
+      <p className="mt-0 mb-[16px] text-[13px]!">
+        Coordonnées entièrement inventées, jamais issues d'une photo : le point
         de départ se corrige ensuite point par point.
       </p>
 
-      <label className="tiny mb-[4px] block" htmlFor="newPoseName">
+      <label className="mb-[6px] block text-[12.5px] text-dim" htmlFor="newPoseName">
         Nom
       </label>
       <input
         id="newPoseName"
-        className="mb-[14px] w-full"
+        className="mb-[16px] w-full"
         value={label}
         placeholder="ex. assise sur un tabouret"
         onChange={(event) => setLabel(event.target.value)}
       />
 
-      <div className="tiny mb-[6px]">Gabarit de départ</div>
+      <div className="mb-[6px] text-[12.5px] text-dim" id="newPosePresetsLabel">Gabarit de départ</div>
+      {/* Name only: /api/pose/presets carries no thumbnail (design-pass
+          screen-13 §S8), and none is invented here. */}
       {presets === null ? (
-        <p className="tiny mb-[14px]">chargement…</p>
+        <p className="mb-[16px] text-[13px] text-dim2">chargement…</p>
       ) : presets.length === 0 ? (
-        <div className="empty mb-[14px] rounded-card border border-line bg-panel px-[12px] py-[16px] text-[13px]">
+        <div className="empty mb-[16px] rounded-card border border-line bg-panel px-[12px] py-[16px] text-[13px]">
           aucun gabarit disponible.
         </div>
       ) : (
-        <div className="mb-[14px] grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]">
-          {presets.map((p) => (
-            <button
-              key={p.nom}
-              type="button"
-              aria-pressed={chosenPreset === p.nom}
-              className={`rounded-[8px] border px-[12px] py-[8px] text-[13px] ${
-                chosenPreset === p.nom ? 'border-acc bg-panel2' : 'border-line2 bg-panel'
-              }`}
-              onClick={() => setChosenPreset(p.nom)}
-            >
-              {p.label}
-            </button>
-          ))}
+        <div
+          className="mb-[16px] grid grid-cols-[repeat(auto-fill,minmax(120px,1fr))] gap-[8px]"
+          role="group"
+          aria-labelledby="newPosePresetsLabel"
+        >
+          {presets.map((p) => {
+            const chosen = chosenPreset === p.nom
+            return (
+              <button
+                key={p.nom}
+                type="button"
+                aria-pressed={chosen}
+                className={`h-[44px] cursor-pointer rounded-[8px] bg-panel2 px-[12px] text-left text-[13px] ${
+                  chosen ? 'border-2 border-txt font-semibold text-txt' : 'border border-line2 text-dim hover:border-dim2'
+                }`}
+                onClick={() => setChosenPreset(p.nom)}
+              >
+                {p.label}
+              </button>
+            )
+          })}
         </div>
       )}
 
-      <label className="mb-[16px] flex items-center gap-[8px] text-[13px]">
+      <label className="mb-[20px] flex items-center gap-[8px] text-[13px] text-txt">
         <input
           type="checkbox"
+          className="w-auto shrink-0"
           checked={createTemplate}
           onChange={(event) => setCreateTemplate(event.target.checked)}
         />
         Créer aussi un gabarit réutilisable à partir de cette pose
       </label>
 
-      <div className="flex items-center gap-[12px]">
+      <div className="flex items-center justify-end gap-[14px]">
+        <button type="button" className="link" onClick={onClose}>
+          Annuler
+        </button>
         <button type="button" className="btn primary" disabled={!canCreate} onClick={onCreate}>
           Créer
-        </button>
-        <button type="button" className="link" onClick={onClose}>
-          annuler
         </button>
       </div>
     </Dialog>

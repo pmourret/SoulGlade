@@ -80,7 +80,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.mouse.move(boite.x + boite.width / 2 + 40, boite.y + boite.height / 2 + 20, { steps: 5 });
   await page.mouse.up();
   await page.waitForTimeout(150);
-  dire(Boolean(await page.$('text=modifications non enregistrées')),
+  dire(Boolean(await page.$('#poseEditor [role="status"]:has-text("modifications non enregistrées")')),
        'le drapeau "modifications non enregistrees" apparait');
 
   console.log('\n[5] un joint selectionne se corrige aussi au clavier');
@@ -101,7 +101,9 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
        `2x fleche droite avance le joint de 2px (${cxAvant} -> ${cxApres})`);
 
   console.log('\n[5bis] a11y (design pass ecran 6, §A1) : selection clavier des joints');
-  const stroke = (loc) => loc.evaluate((el) => getComputedStyle(el).stroke);
+  /* Depuis l'ecran 13 tout point porte un contour (--txt) : la selection se
+     lit sur data-selected, que PoseCanvas pose sur le cercle selectionne. */
+  const stroke = (loc) => loc.evaluate((el) => (el.hasAttribute('data-selected') ? 'rgb(255, 255, 255)' : 'none'));
   const tousJoints = await page.$$('#poseEditor svg[data-canvas="full"] circle');
   const jointA = tousJoints[6];
   const jointB = tousJoints[7];
@@ -139,7 +141,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   // La ligne de l'outliner correspondant au MEME joint (7e de la liste
   // "Corps", ordre BODY_JOINT_NAMES) porte le meme etat, pas seulement le
   // glyphe 📌 aria-hidden.
-  const rangeeVisible = page.locator('aside button.btn.sm.justify-start[aria-pressed="true"]').first();
+  const rangeeVisible = page.locator('[role="tree"] [role="treeitem"][aria-selected="true"]').first();
   dire(await rangeeVisible.count() > 0, "l'outliner porte au moins une ligne selectionnee");
   const ariaLabelRangee = await rangeeVisible.getAttribute('aria-label');
   dire(Boolean(ariaLabelRangee) && ariaLabelRangee.includes('épinglé') && ariaLabelRangee.includes('sélectionné'),
@@ -158,14 +160,14 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   const cxApresDrag2 = await tousJoints[0].getAttribute('cx');
   dire(cxApresDrag2 !== cxAvantDrag2, 'le glisser deplace bien le joint (avant de tester l annulation)');
   dire(await page.evaluate(() => {
-    const el = [...document.querySelectorAll('p,span')].find((e) => e.textContent === 'Modifications non enregistrées');
+    const el = [...document.querySelectorAll('p,span')].find((e) => e.textContent.trim() === 'modifications non enregistrées');
     return el?.getAttribute('role') === 'status';
   }), 'a11y §A5 : "Modifications non enregistrees" porte role=status');
 
   // Focus deplace vers un VRAI bouton du panneau, hors du canvas -- jamais
   // clique (aucun effet de bord), juste focus -- le scenario exact du
   // document : "cliquer Annuler/Retablir/Epingler/Miroir puis Ctrl+Z".
-  await page.locator('button:has-text("Copier depuis la main droite")').first().focus();
+  await page.locator('button:has-text("Copier la droite")').first().focus();
   await page.waitForTimeout(100);
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(300);
@@ -245,8 +247,8 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   // coup, du panneau lateral pour le MEME joint -- pas juste "un texte
   // apparait", la bonne valeur.
   const texteInspecteur = await page.evaluate(() => {
-    const p = [...document.querySelectorAll('aside p.tiny')].find((e) => /° · \d+px/.test(e.textContent || ''));
-    return p ? p.textContent.trim() : null;
+    const p = document.getElementById('poseBoneReading');
+    return p && /° · \d+px/.test(p.textContent || '') ? p.textContent.trim() : null;
   });
   dire(Boolean(texteInspecteur) && texteInspecteur.startsWith(texteEnCours),
        `la valeur pendant le drag correspond a celle de l'inspecteur apres coup (« ${texteEnCours} » vs « ${texteInspecteur} »)`);
@@ -269,16 +271,16 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   // l'outliner (boutons plats, pas de superposition) evite le piege des DEUX
   // cotes.
   const montrerLigne = async (texteLigne, texteGroupe) => {
-    const visible = await page.locator(`aside button.btn.sm.justify-start:has-text("${texteLigne}")`).count();
-    if (!visible) await page.click(`aside button:has-text("${texteGroupe}")`);
+    const visible = await page.locator(`[role="tree"] [role="treeitem"][aria-selected]:has-text("${texteLigne}")`).count();
+    if (!visible) await page.click(`[role="tree"] [role="treeitem"][aria-expanded]:has-text("${texteGroupe}")`);
   };
   await montrerLigne('Rsho', 'Bras droit');
   await montrerLigne('Lelb', 'Bras gauche');
   await page.waitForTimeout(150);
-  await page.click('aside button.btn.sm.justify-start:has-text("Rsho")');
+  await page.click('[role="tree"] [role="treeitem"]:has-text("Rsho")');
   await page.waitForTimeout(100);
   await page.keyboard.down('Control');
-  await page.click('aside button.btn.sm.justify-start:has-text("Lelb")');
+  await page.click('[role="tree"] [role="treeitem"]:has-text("Lelb")');
   await page.keyboard.up('Control');
   await page.waitForTimeout(150);
 
@@ -301,7 +303,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(rshoApres.y === rshoAvant.y && lelbApres.y === lelbAvant.y,
        `Aligner X laisse Y inchange (Rsho ${rshoAvant.y}->${rshoApres.y}, Lelb ${lelbAvant.y}->${lelbApres.y})`);
 
-  await page.locator('button:has-text("Copier depuis la main droite")').first().focus();
+  await page.locator('button:has-text("Copier la droite")').first().focus();
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(200);
   const rshoUndo = await lireJoint('Rsho');
@@ -337,7 +339,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
        `dy=25 compose depuis la position deja deplacee par dx, pas l'originale (Rsho ${rshoApresDx.y}->${rshoApresDy.y})`);
   dire(rshoApresDy.x === rshoApresDx.x && lelbApresDy.x === lelbApresDx.x, 'dy laisse X inchange');
 
-  await page.locator('button:has-text("Copier depuis la main droite")').first().focus();
+  await page.locator('button:has-text("Copier la droite")').first().focus();
   await page.keyboard.press('Control+z');
   await page.waitForTimeout(200);
   const apresUndoDy = { Rsho: await lireJoint('Rsho'), Lelb: await lireJoint('Lelb') };
@@ -377,16 +379,41 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await boutonGrille.click(); // desactive, pour ne pas fausser [6]
   await page.waitForTimeout(150);
 
+  console.log('\n[5decies] ecran 13 : arbre, alignement explique, aide, Edition · Rendu');
+  dire(Boolean(await page.$('#poseEditor [role="tree"]')), 'la liste des points est un arbre (role=tree)');
+  // un seul point selectionne : Aligner reste visible, desactive, et dit pourquoi
+  await page.click('[role="tree"] [role="treeitem"]:has-text("Rsho")');
+  await page.waitForTimeout(150);
+  const alignerX = page.locator('button:has-text("Aligner X")').first();
+  dire(await alignerX.isDisabled(), 'un seul point : Aligner X est desactive');
+  const motif = await alignerX.getAttribute('aria-describedby');
+  dire(Boolean(motif) && (await page.$eval(`[id="${motif}"]`, (e) => e.textContent)).includes('au moins deux points'),
+       'et son motif est ecrit, relie par aria-describedby');
+  // l'aide des raccourcis : ? l'ouvre, Echap la ferme
+  await page.click('#btnPoseHelp');
+  await page.waitForSelector('#poseShortcuts');
+  dire((await page.textContent('#poseShortcuts')).includes('Maj + glisser le fond'), "l'aide reprend les gestes");
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(150);
+  dire(!(await page.$('#poseShortcuts')), 'Echap ferme l aide');
+  // Edition -> Rendu -> Edition : le rendu remplace les points, l'edition les rend
+  await page.click('button[aria-pressed]:has-text("Rendu")');
+  await page.waitForFunction(() => !document.querySelector('#poseEditor svg[data-canvas="full"] circle'), null, { timeout: 8000 });
+  dire(Boolean(await page.$('#poseEditor svg[data-canvas="full"] image')), 'Rendu montre le PNG calcule par le serveur');
+  await page.click('button[aria-pressed]:has-text("Édition")');
+  await page.waitForTimeout(200);
+  dire((await circles('full')) === 18 + 21 + 21, 'Edition rend les points editables');
+
   console.log('\n[6] sauvegarde — redirige vers la pose reellement ecrite');
-  await page.click('button:has-text("Enregistrer")');
+  await page.click('#btnPoseSave');
   await page.waitForFunction(() => location.pathname.includes('/bank/poses/edit/'), null, { timeout: 5000 });
   const nouveau = decodeURIComponent(new URL(page.url()).pathname.split('/').pop());
   dire(nouveau.startsWith('pose__') && nouveau.endsWith('.png'), `nom recu : ${nouveau}`);
-  dire((await page.textContent('aside b')).trim() === NOM_POSE,
-       'le panneau affiche le nom saisi dans la modale, pas le nom de fichier');
+  dire((await page.textContent('#poseTitle')).trim() === NOM_POSE,
+       'la barre affiche le nom saisi dans la modale, pas le nom de fichier');
 
   console.log('\n[7] la banque la montre, AVEC son propre lien "editer"');
-  await page.click('a:has-text("Retour aux ateliers")');
+  await page.click('#posesBack');
   await page.waitForSelector('#poseGrid');
   await page.waitForTimeout(300);
   const apres = await squelettes();
@@ -399,7 +426,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(Boolean(lienEditer), 'sa carte porte un lien "editer"');
   await lienEditer.click();
   await page.waitForSelector('#poseEditor svg');
-  dire((await page.textContent('aside b')).trim() === NOM_POSE,
+  dire((await page.textContent('#poseTitle')).trim() === NOM_POSE,
        'suivre ce lien (pas juste la redirection de sauvegarde) rouvre la meme pose, avec son nom');
 
   console.log('\n[8] une pose SANS points-cles (anterieure a cette fonctionnalite) echoue sans crash');

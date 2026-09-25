@@ -62,6 +62,11 @@ const PATHS: Record<string, string> = {
   // standard power-button glyph, same one for both: dashboard and ComfyUI,
   // told apart by their aria-label/hint, not by two different icons.
   power: '<path d="M10 3v6"/><path d="M6.1 5.6a6 6 0 1 0 7.8 0"/>',
+  // --- pose editor (design-pass screen-13)
+  undo: '<path d="M7 5L3.5 8.5 7 12"/><path d="M4 8.5h7.5a4.5 4.5 0 010 9H9"/>',
+  redo: '<path d="M13 5l3.5 3.5L13 12"/><path d="M16 8.5H8.5a4.5 4.5 0 000 9H11"/>',
+  pin: '<path d="M7.5 3.5h5l-.8 4.3 2.8 2.7v1.2h-9v-1.2l2.8-2.7z"/><path d="M10 11.7V17"/>',
+  help: '<circle cx="10" cy="10" r="7.2"/><path d="M8 8a2 2 0 113 1.7c-.7.4-1 .9-1 1.6v.4"/><circle cx="10" cy="14" r=".9" fill="currentColor" stroke="none"/>',
 }
 
 export type IconName = keyof typeof PATHS

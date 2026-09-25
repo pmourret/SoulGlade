@@ -144,6 +144,36 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
     }
   }
 
+  /* L'editeur de pose (ecran 13) n'a pas d'adresse fixe : il lui faut une
+     pose qui porte ses points-cles. On prend la premiere de la banque qui en
+     a, et l'ecran s'ignore si aucune n'en a. */
+  await page.goto(`${BASE}/bank/poses?character=lena`, { waitUntil: 'networkidle' });
+  const poses = await page.$$eval('#poseGrid [data-pose-card]', (e) => e.map((x) => x.dataset.n));
+  let editable = null;
+  for (const n of poses) {
+    const ok = await page.evaluate(
+      async (name) => (await fetch(`/api/pose/keypoints?name=${encodeURIComponent(name)}&character=lena`)).ok, n);
+    if (ok) { editable = n; break; }
+  }
+  if (editable) {
+    await page.goto(`${BASE}/bank/poses/edit/${encodeURIComponent(editable)}?character=lena`, { waitUntil: 'networkidle' });
+    await page.waitForSelector('#poseEditor svg', { timeout: 8000 }).catch(() => {});
+    await page.waitForTimeout(250);
+    await sonder('Editeur de pose');
+    for (const [etat, ouvre] of [
+      ['aide des raccourcis', '#btnPoseHelp'],
+      ['menu « Enregistrer sous »', '#btnPoseSave + button'],
+    ]) {
+      await page.click(ouvre);
+      await page.waitForTimeout(250);
+      await sonder(`Editeur de pose, ${etat}`);
+      await page.keyboard.press('Escape');
+      await page.waitForTimeout(200);
+    }
+  } else {
+    console.log('   IGNORE Editeur de pose — aucune pose avec points-cles en banque');
+  }
+
   console.log('\n[2] la sonde sait reconnaitre le defaut (sinon elle dirait vert sur tout)');
   // Un bouton nu, injecte dans la page : si la sonde ne le voit pas, elle ne
   // verrait pas non plus le vrai defaut, et les verts ci-dessus ne valent rien.

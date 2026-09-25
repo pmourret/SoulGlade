@@ -160,6 +160,13 @@
      reteint avec, sans rouvrir un fichier de composant. */
   --graph:#5a5a5a;     /* barres d'un histogramme sur --panel */
   --tick:#4a4a4a;      /* repere de neutre sur une piste de curseur */
+  /* Squelette de l'editeur de pose, AFFICHAGE seulement (design-pass
+     screen-13 §S4) : une teinte attenuee par membre, reprise par doigt dans
+     les gros plans de mains. Jamais le PNG ecrit : celui-la est dessine par
+     pose_render.py avec les couleurs OpenPose que ControlNet attend. */
+  --pose-arm-r:#b98a8a; --pose-arm-l:#8aa3b9; --pose-leg-r:#a3b98a;
+  --pose-leg-l:#b9a88a; --pose-head:#9a8ab9;
+  --pose-stage:#0e0e0e; --pose-frame:#262626;  /* fond de la vue du corps, cadre du canvas */
 
   /* --- typographie. Base 14 px : une densite de poste de travail, pas de
      page de lecture. Un vrai changement de famille impliquerait d'embarquer
