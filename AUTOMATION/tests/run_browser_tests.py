@@ -79,6 +79,8 @@ TESTS = [
     "test_diff",          # unitaire pur : diff lignes + mots (ecran 6 bis, §7)
     "test_slugify",       # unitaire pur : identifiant propose depuis le nom (ecran 11)
     "test_verdict_labels",  # unitaire pur : verdict du journal en mots et en forme (ecran 12)
+    "test_character_filter",  # unitaire pur : recherche du registre (ecran 14)
+    "test_wizard_missing",  # unitaire pur : ce qui manque a chaque etape du wizard (ecran 14)
     "test_cadres_ua",     # transverse : le cadre du navigateur sur un <button>
 ]
 

@@ -144,6 +144,31 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
     }
   }
 
+  /* Personnages (ecran 14) : le registre filtre sans resultat (le lien
+     « Effacer » est un <button>), et le wizard a chacune de ses etapes, dont
+     les deux faces de la Base. Rien n'est cree : on ne clique ni « Générer »
+     ni « Créer ». */
+  await page.goto(`${BASE}/characters`, { waitUntil: 'networkidle' });
+  await page.fill('#charSearch', 'zzz-aucun');
+  await page.waitForTimeout(150);
+  await sonder('sas, recherche sans resultat');
+  await page.goto(`${BASE}/characters/new`, { waitUntil: 'networkidle' });
+  await sonder('wizard, Identite');
+  await page.fill('#wizName', 'Cadres');
+  await page.fill('#wizCid', 'cadres-ua');
+  for (const etape of ['Type', 'Style', 'Monde']) {
+    await page.click('#wizNext');
+    await page.waitForTimeout(200);
+    if (await page.isDisabled('#wizNext')) await page.click('#wizBody [role="radio"]:first-child');
+    await sonder(`wizard, ${etape}`);
+  }
+  await page.click('#wizNext');
+  await page.waitForTimeout(200);
+  await sonder('wizard, Base (generer)');
+  await page.click('#wizBody button:has-text("Fournir une image")');
+  await page.waitForTimeout(150);
+  await sonder('wizard, Base (fournir)');
+
   /* L'editeur de pose (ecran 13) n'a pas d'adresse fixe : il lui faut une
      pose qui porte ses points-cles. On prend la premiere de la banque qui en
      a, et l'ecran s'ignore si aucune n'en a. */

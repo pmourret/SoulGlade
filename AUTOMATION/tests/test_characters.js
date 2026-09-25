@@ -60,9 +60,31 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(await vu('[data-char-card][data-new]'), '« + Nouveau personnage » est present');
   dire(await page.$$eval('[data-char-card][data-current]', e => e.length) === 0,
        'aucune carte marquee « courante » : rien n est encore ouvert');
-  const tags = await page.$eval('[data-char-card]:not([data-new])',
-                                c => [...c.querySelectorAll('[data-char-tag]')].map(t => t.textContent));
-  dire(tags.length >= 2, `chaque carte porte son type et son monde (${tags.join(' · ')})`);
+  // design-pass screen-14 : type et monde sont des COLONNES de la liste, plus
+  // des pastilles ; data-char-tag ne marque que NSFW et « pack inconnu ».
+  const cols = await page.$eval('[data-char-card]:not([data-new])',
+                                c => ['type', 'world'].map(k => c.querySelector(`[data-col="${k}"]`)?.textContent || ''));
+  dire(cols.every(t => t && t !== '—'), `chaque ligne porte son type et son monde (${cols.join(' · ')})`);
+
+  console.log('\n[2b] recherche, apercu et clavier (ecran 14)');
+  await page.fill('#charSearch', 'zzz-introuvable');
+  await page.waitForTimeout(150);
+  dire((await page.textContent('#charGrid')).includes('Aucun personnage ne correspond'),
+       'une recherche sans resultat le dit');
+  await page.click('#charGrid button:has-text("Effacer")');
+  await page.fill('#charSearch', 'abyss');
+  await page.waitForTimeout(150);
+  const filtres = await page.$$eval('[data-char-card]:not([data-new]) code', e => e.map(x => x.textContent));
+  dire(filtres.join(',') === 'abyssiaelle', `la recherche filtre sur l identifiant (${filtres.join(',')})`);
+  await page.fill('#charSearch', '');
+  await page.hover('[data-char-card][href*="lena"]');
+  await page.waitForTimeout(100);
+  dire((await page.textContent('#registre aside h2')).includes('Léna'), "le survol met a jour l'apercu");
+  await page.focus('[data-char-card]:not([data-new])');
+  await page.keyboard.press('ArrowDown');
+  const focusId = await page.evaluate(() => document.activeElement?.querySelector('code')?.textContent);
+  dire(Boolean(focusId), `la fleche descend d une ligne (${focusId})`);
+  dire((await page.textContent('#registre aside h2')).trim().length > 0, "et l'apercu suit le focus");
 
   console.log('\n[3] choisir un personnage FAIT ENTRER, sans rechargement');
   await page.evaluate(() => { window.__temoinSansRechargement = 'vivant'; });
@@ -72,6 +94,10 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
        'le temoin a survecu : aucun rechargement');
   dire((await page.evaluate(() => location.search)).includes('character=abyssiaelle'),
        '?character= est dans l URL (le lien reste partageable)');
+  // Le miroir URL renvoyait sur /characters apres l'entree (audit ecran 14) :
+  // ?character= etait bien la, mais pas le chemin de Produire.
+  dire(await page.evaluate(() => location.pathname) === '/produce',
+       'on arrive sur Produire, pas de retour au sas');
   dire(await vu('.tabs'), 'les categories apparaissent : on est entre dans l atelier');
   dire(await vu('.modbar'), 'et la sous-barre avec elles');
   dire(await vu('#btnId'), "le menu d'identite aussi");

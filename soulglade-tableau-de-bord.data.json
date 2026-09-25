@@ -979,10 +979,11 @@
           "ref": "DOCS/design-pass/screen-13-editeur-pose.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-9",
           "t": "Personnages : registre en liste et assistant",
-          "d": "Le registre passe en liste avec aperçu, et l'assistant de création en étapes verticales. Une étape Identité s'ajoute, sans toucher à ce qui s'écrit."
+          "d": "Le registre se lit en liste avec recherche, clavier et aperçu du portrait gelé. L'assistant tient cinq étapes verticales, Identité en tête ; la barre du bas dit ce qui manque. Choisir un personnage entre enfin dans Produire au lieu de revenir au sas.",
+          "ref": "DOCS/design-pass/screen-14-personnages.md"
         },
         {
           "s": "faire",

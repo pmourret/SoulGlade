@@ -1,266 +1,222 @@
-/* The body of one wizard step — and only the body: the stepper, the gating and
-   the writes stay in the screen.
+/* The body of one wizard step — and only the body: the steps list, the gating
+   and the writes stay in the screen.
 
-   FOUR STEPS, ONE COMPONENT, on purpose. They share a layout and a way of
-   saying « this choice is frozen at creation » (CLAUDE.md §8.8). Four files
-   would copy that framing four times, and the day it changes three copies get
-   forgotten.
+   Each step opens on a title and one sentence (design-pass screen-14 §S7). The
+   three frozen steps (type, style, world) say ONCE, under that sentence, that
+   the choice is frozen at creation (CLAUDE.md §8.8) — it used to hang on every
+   card. Identity and Base have their own component; the three choice lists
+   share this one, because they share a layout.
 
-   All four `useRovingChoice` calls happen unconditionally at the top, even
-   though only one group is ever shown at a time — the Rules of Hooks forbid
-   calling a hook from inside a branch that might not run, so an empty id list
-   (the groups that do not apply to the current step) is the deliberate,
-   cheap way to keep every call unconditional.
+   All `useRovingChoice` calls happen unconditionally at the top, even though
+   only one group is ever shown — the Rules of Hooks forbid a hook inside a
+   branch; an empty id list is the cheap way to keep every call unconditional.
 
    It renders and it calls back: every `on*` prop is the screen's decision. */
-import type React from 'react'
+import type { ReactNode } from 'react'
 
-import { Icon } from '../../chrome/Icon'
 import { useRovingChoice } from '../../chrome/useRovingChoice'
+import { BaseStep } from './BaseStep'
+import { IdentityStep } from './IdentityStep'
 import { OptionCard } from './OptionCard'
 import {
-  BASE_GRID, CAND, CANDS, CAND_CHOSEN, CAND_ERR, CAND_IDLE, COL_TITLE, FROZEN_HINT,
-  FROZEN_IMG, NOTE_ERR, NOTE_OK, SKELETON_CARD, SPIN, candidateUrl,
+  FROZEN_HINT, NOTE_ERR, NOTE_OK, SKELETON_CARD, candidateUrl,
   type CandidateState, type CharacterType, type Step,
 } from './shared'
+
+const HEAD: Record<Step, { title: string; sentence: string; frozen?: boolean }> = {
+  identity: {
+    title: 'Identité',
+    sentence: "Le nom s'affiche dans le studio. L'identifiant nomme ses dossiers et ne change plus.",
+  },
+  type: { title: 'Type', sentence: 'La machine qui le produira.', frozen: true },
+  style: { title: 'Style', sentence: 'Le rendu de ses images.', frozen: true },
+  world: { title: 'Monde', sentence: 'Là où il vit : ses lieux et ses tons.', frozen: true },
+  base: {
+    title: "Base d'identité",
+    sentence: "Le visage de référence, figé à la création : le verrou d'identité s'y accroche pour toute la production.",
+  },
+}
+
+const LIST = 'flex max-w-[640px] flex-col gap-[8px]'
+
+function Frame({ step, children }: { step: Step; children: ReactNode }) {
+  const head = HEAD[step]
+  return (
+    <section aria-labelledby="wizStepTitle">
+      <h2 className="m-0 text-[22px] font-[650] tracking-normal normal-case text-txt" id="wizStepTitle">{head.title}</h2>
+      <p className="mt-[6px] mb-0 max-w-[640px] text-[13.5px] text-dim">
+        {head.sentence}
+        {step === 'base' && (
+          <>
+            {' '}
+            <b className="font-semibold text-txt">Personnage fictif, jamais la photo d'une personne réelle.</b>
+          </>
+        )}
+      </p>
+      {head.frozen && <p className="mt-[4px] mb-0 text-[12.5px] text-dim2">{FROZEN_HINT}</p>}
+      <div className="mt-[22px]">{children}</div>
+    </section>
+  )
+}
 
 export function StepBody(props: {
   step: Step
   types: CharacterType[]
   currentType: CharacterType | null
+  name: string
+  cid: string
+  cidValid: boolean
+  cidProposal: string
   type: string | null
   style: string | null
   world: string | null
-  cidValid: boolean
   frozenBase: string | null
   basePreview: string
   fileMessage: string
   genMessage: string
   candidates: CandidateState[] | null
+  onName: (value: string) => void
+  onCid: (value: string) => void
   onPickType: (id: string) => void
   onPickStyle: (value: string) => void
   onPickWorld: (value: string) => void
-  onFilePicked: (event: React.ChangeEvent<HTMLInputElement>) => void
+  onFile: (file: File) => void
   onGenerate: () => void
   onFreeze: (file: string) => void
 }) {
   const { step, types, currentType } = props
 
-  const typeIds = types.map((entry) => entry.id)
-  const typeRoving = useRovingChoice(typeIds, props.type)
-
+  const typeRoving = useRovingChoice(types.map((entry) => entry.id), props.type)
   const styles = currentType?.styles ?? []
   const styleRoving = useRovingChoice(styles, props.style)
-
-  const worlds = (currentType?.worlds ?? []).map((entry) => entry.id)
-  const worldRoving = useRovingChoice(worlds, props.world)
-
+  const worldRoving = useRovingChoice((currentType?.worlds ?? []).map((entry) => entry.id), props.world)
   const readyCandidates = (props.candidates ?? []).filter((c) => c.state === 'ready')
   const chosenCandidate =
     readyCandidates.find((c) => candidateUrl(c.file) === props.basePreview)?.file ?? null
-  const candidateRoving = useRovingChoice(
-    readyCandidates.map((c) => c.file),
-    chosenCandidate,
-  )
+  const candidateRoving = useRovingChoice(readyCandidates.map((c) => c.file), chosenCandidate)
+
+  if (step === 'identity') {
+    return (
+      <Frame step={step}>
+        <IdentityStep
+          name={props.name}
+          cid={props.cid}
+          cidValid={props.cidValid}
+          proposal={props.cidProposal}
+          onName={props.onName}
+          onCid={props.onCid}
+        />
+      </Frame>
+    )
+  }
 
   if (step === 'type') {
-    if (!types.length) {
-      return (
-        <p className={NOTE_ERR} data-note>
-          Aucun type de personnage n'est déclaré. Vérifie{' '}
-          <code>PACKS/resolution.json</code> et les <code>universe.json</code> des
-          packs.
-        </p>
-      )
-    }
     return (
-      <div className="intents" role="radiogroup" aria-label="Type de personnage">
-        {types.map((entry) => (
-          <OptionCard
-            key={entry.id}
-            active={props.type === entry.id}
-            title={entry.label}
-            sub={`machine : ${entry.family}`}
-            tabIndex={typeRoving.tabIndexFor(entry.id)}
-            elementRef={typeRoving.registerRef(entry.id)}
-            onClick={() => props.onPickType(entry.id)}
-            onKeyDown={(event) => typeRoving.onKeyDown(event, entry.id, props.onPickType)}
-          />
-        ))}
-      </div>
+      <Frame step={step}>
+        {!types.length ? (
+          <p className={NOTE_ERR} data-note>
+            Aucun type de personnage n'est déclaré. Vérifie <code>PACKS/resolution.json</code> et les{' '}
+            <code>universe.json</code> des packs.
+          </p>
+        ) : (
+          <div className={LIST} role="radiogroup" aria-label="Type de personnage">
+            {types.map((entry) => (
+              <OptionCard
+                key={entry.id}
+                active={props.type === entry.id}
+                title={entry.label}
+                sub={`machine : ${entry.family}`}
+                tabIndex={typeRoving.tabIndexFor(entry.id)}
+                elementRef={typeRoving.registerRef(entry.id)}
+                onClick={() => props.onPickType(entry.id)}
+                onKeyDown={(event) => typeRoving.onKeyDown(event, entry.id, props.onPickType)}
+              />
+            ))}
+          </div>
+        )}
+      </Frame>
     )
   }
 
   if (!currentType) return null
 
   if (step === 'style') {
-    /* A single style is not a choice: we say so instead of showing one card that
-       can only be clicked one way. */
-    if (styles.length === 1) {
-      return (
-        <p className={NOTE_OK} data-note>
-          Ce type ne produit qu'un style : <b>{styles[0]}</b>. Il est fixé à la
-          création — en changer reviendrait à créer un autre personnage.
-        </p>
-      )
-    }
     return (
-      <div className="intents" role="radiogroup" aria-label="Style de sortie">
-        {styles.map((entry) => (
-          <OptionCard
-            key={entry}
-            active={props.style === entry}
-            title={entry}
-            hint={FROZEN_HINT}
-            tabIndex={styleRoving.tabIndexFor(entry)}
-            elementRef={styleRoving.registerRef(entry)}
-            onClick={() => props.onPickStyle(entry)}
-            onKeyDown={(event) => styleRoving.onKeyDown(event, entry, props.onPickStyle)}
-          />
-        ))}
-      </div>
+      <Frame step={step}>
+        {/* A single style is not a choice: say so instead of one card that can
+            only be clicked one way. */}
+        {styles.length === 1 ? (
+          <p className={`${NOTE_OK} max-w-[640px]`} data-note>
+            Ce type ne produit qu'un style : <b className="text-txt">{styles[0]}</b>. Il est fixé à la
+            création.
+          </p>
+        ) : (
+          <div className={LIST} role="radiogroup" aria-label="Style de sortie">
+            {styles.map((entry) => (
+              <OptionCard
+                key={entry}
+                active={props.style === entry}
+                title={entry}
+                tabIndex={styleRoving.tabIndexFor(entry)}
+                elementRef={styleRoving.registerRef(entry)}
+                onClick={() => props.onPickStyle(entry)}
+                onKeyDown={(event) => styleRoving.onKeyDown(event, entry, props.onPickStyle)}
+              />
+            ))}
+          </div>
+        )}
+      </Frame>
     )
   }
 
   if (step === 'world') {
     const worldEntries = currentType.worlds ?? []
-    if (!worldEntries.length) {
-      return <p className={NOTE_OK} data-note>Aucun monde déclaré pour ce type.</p>
-    }
     return (
-      <div className="intents" role="radiogroup" aria-label="Monde">
-        {worldEntries.map((entry) => (
-          <OptionCard
-            key={entry.id}
-            active={props.world === entry.id}
-            title={entry.label}
-            sub={entry.tone ?? undefined}
-            hint={FROZEN_HINT}
-            tabIndex={worldRoving.tabIndexFor(entry.id)}
-            elementRef={worldRoving.registerRef(entry.id)}
-            onClick={() => props.onPickWorld(entry.id)}
-            onKeyDown={(event) => worldRoving.onKeyDown(event, entry.id, props.onPickWorld)}
-          />
-        ))}
-      </div>
-    )
-  }
-
-  /* The frozen base is written under the id: without a valid one there is
-     nothing to name the file after, so the step says that rather than failing
-     on upload. */
-  if (!props.cidValid) {
-    return (
-      <p className={NOTE_OK} data-note>
-        Renseigne d'abord un <b>identifiant</b> valide en haut : la base d'identité
-        est enregistrée sous ce nom.
-      </p>
+      <Frame step={step}>
+        {!worldEntries.length ? (
+          <p className={`${NOTE_OK} max-w-[640px]`} data-note>Aucun monde déclaré pour ce type.</p>
+        ) : (
+          <div className={LIST} role="radiogroup" aria-label="Monde">
+            {worldEntries.map((entry) => (
+              <OptionCard
+                key={entry.id}
+                active={props.world === entry.id}
+                title={entry.label}
+                sub={entry.tone ?? undefined}
+                tabIndex={worldRoving.tabIndexFor(entry.id)}
+                elementRef={worldRoving.registerRef(entry.id)}
+                onClick={() => props.onPickWorld(entry.id)}
+                onKeyDown={(event) => worldRoving.onKeyDown(event, entry.id, props.onPickWorld)}
+              />
+            ))}
+          </div>
+        )}
+      </Frame>
     )
   }
 
   return (
-    <>
-      <p className={NOTE_OK} data-note>
-        Le visage de référence, figé à la création : le verrou d'identité s'y
-        accroche pour toute la production.{' '}
-        <b>Personnage fictif — jamais la photo d'une personne réelle.</b>
-      </p>
-      <div className={BASE_GRID}>
-        <div>
-          <h3 className={COL_TITLE}>Fournir une image</h3>
-          <label className="btn sm" htmlFor="wizFile">
-            Choisir un fichier…
-          </label>
-          <input
-            type="file"
-            id="wizFile"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={props.onFilePicked}
-          />
-          <p className="tiny" id="wizFileMsg">
-            {props.fileMessage}
-          </p>
-        </div>
-        <div>
-          <h3 className={COL_TITLE}>Générer un portrait</h3>
-          <button className="btn sm" id="wizGen" onClick={props.onGenerate}>
-            Générer 4 portraits
-          </button>
-          <p className="tiny" id="wizGenMsg">
-            {props.genMessage}
-          </p>
-          <div
-            className={CANDS}
-            id="wizCands"
-            role="radiogroup"
-            aria-label="Portraits générés"
-          >
-            {(props.candidates ?? []).map((candidate, index) =>
-              candidate.state === 'ready' ? (
-                <button
-                  key={candidate.file}
-                  className={`${CAND} ${
-                    props.basePreview === candidateUrl(candidate.file) ? CAND_CHOSEN : CAND_IDLE
-                  }`}
-                  type="button"
-                  role="radio"
-                  aria-checked={props.basePreview === candidateUrl(candidate.file)}
-                  tabIndex={candidateRoving.tabIndexFor(candidate.file)}
-                  ref={candidateRoving.registerRef(candidate.file)}
-                  data-file={candidate.file}
-                  data-chosen={props.basePreview === candidateUrl(candidate.file) ? '1' : undefined}
-                  onClick={() => props.onFreeze(candidate.file)}
-                  onKeyDown={(event) =>
-                    candidateRoving.onKeyDown(event, candidate.file, props.onFreeze)
-                  }
-                >
-                  <img
-                    className="block h-full w-full object-cover"
-                    alt="portrait candidat"
-                    src={candidateUrl(candidate.file)}
-                  />
-                  {props.basePreview === candidateUrl(candidate.file) && (
-                    <Icon name="check" className="absolute top-[4px] right-[4px] h-[13px] w-[13px] text-acc" />
-                  )}
-                </button>
-              ) : candidate.state === 'error' ? (
-                <div
-                  key={candidate.file || index}
-                  className={`${CAND} ${CAND_ERR}`}
-                  data-cand="error"
-                  title={candidate.detail || ''}
-                >
-                  échec
-                </div>
-              ) : (
-                <div key={candidate.file || index} className={`${CAND} ${CAND_IDLE}`} data-cand="pending">
-                  <span className={SPIN} />
-                </div>
-              ),
-            )}
-          </div>
-        </div>
-      </div>
-      <div className="mt-[18px]" id="wizBasePreview">
-        {props.frozenBase && (
-          <div className="flex items-center gap-[14px]">
-            <img className={FROZEN_IMG} alt="base d'identité" src={props.basePreview} />
-            <span className="text-[12.5px] text-dim">
-              base gelée : <code>{props.frozenBase}</code>
-            </span>
-          </div>
-        )}
-      </div>
-    </>
+    <Frame step={step}>
+      <BaseStep
+        frozenBase={props.frozenBase}
+        basePreview={props.basePreview}
+        fileMessage={props.fileMessage}
+        genMessage={props.genMessage}
+        candidates={props.candidates}
+        candidateRoving={candidateRoving}
+        onFile={props.onFile}
+        onGenerate={props.onGenerate}
+        onFreeze={props.onFreeze}
+      />
+    </Frame>
   )
 }
 
-/** Loading placeholder for the type step, before `/api/wizard/options` answers:
-    the shape of three `.it` cards, not a sentence — used by `WizardScreen`. */
+/** Loading placeholder, before `/api/wizard/options` answers: the shape of
+    three option cards, not a sentence. */
 export function StepBodySkeleton() {
   return (
-    <div className="intents" aria-hidden="true">
+    <div className={LIST} aria-hidden="true">
       <div className={SKELETON_CARD} />
       <div className={SKELETON_CARD} />
       <div className={SKELETON_CARD} />

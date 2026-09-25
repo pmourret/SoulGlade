@@ -87,7 +87,20 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
 
      `replace: true` on the catch-up: rewriting the mirror is not a navigation,
      and pushing an entry for it would put a duplicate in history each time. */
+  /* A switch WITH a destination sets the state and navigates in the same
+     gesture, but the router commits the new location later: one render sees
+     the new character against the OLD URL. Mirroring then would undo the
+     switch — rewriting the query on the old path (the registry sent one back
+     to /characters instead of Produire, measured 25/09/2026, design-pass
+     screen-14 audit). While the requested URL has not arrived, the mirror
+     waits. */
+  const arriving = useRef<string | null>(null)
+
   useEffect(() => {
+    if (arriving.current !== null) {
+      if (fromUrl !== arriving.current) return
+      arriving.current = null
+    }
     if (fromUrl !== null) {
       if (fromUrl !== claimed) setClaimed(fromUrl)
       return
@@ -107,11 +120,15 @@ export function CharacterProvider({ children }: { children: ReactNode }) {
      to the character you came from — which is what a shareable URL implies. */
   const selectCharacter = useCallback(
     (id: string, options?: { to?: string }) => {
-      setClaimed(id)
       const next = new URLSearchParams(searchParams)
       next.set('character', id)
-      if (options?.to) navigate({ pathname: options.to, search: next.toString() })
-      else setSearchParams(next, { replace: false })
+      setClaimed(id)
+      if (options?.to) {
+        arriving.current = id
+        navigate({ pathname: options.to, search: next.toString() })
+        return
+      }
+      setSearchParams(next, { replace: false })
     },
     [navigate, searchParams, setSearchParams],
   )

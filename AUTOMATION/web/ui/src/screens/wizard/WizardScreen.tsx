@@ -1,5 +1,5 @@
-/* Wizard « nouveau personnage » (J7bis) — type → style → monde → base
-   d'identité, puis création. Ported from `static/wizard.js`.
+/* Wizard « nouveau personnage » (J7bis) — identité → type → style → monde →
+   base d'identité, puis création.
 
    THE ONLY SCREEN THAT WRITES A SHEET. Type, output style and world are the
    three HUMAN choices, frozen at creation: changing one means creating another
@@ -12,29 +12,29 @@
    graph with the identity lock BYPASSED, since no reference exists yet — and
    then never changes.
 
-   State stays local to this screen, as it did to the module. The one thing that
-   outlives it is the polling of generated candidates, stopped on unmount.
-
-   LAYOUT (screen-1-wizard design pass, 03/09/2026): moved from the centred
-   `.wrap` model to Produire's two-column workstation grid — the four choices
-   were previously summarised in one line of the launch bar, read only when
-   about to click Next. The right column now shows them building up as they
-   are made. Reuses Produire's REAL pattern (`ProduceScreen.tsx`'s grid +
-   `Inspector`'s sticky classes) — DESIGN.md still names this `.cr-main`/
-   `.cr-side`, a pre-Tailwind naming that matches no class in this build. */
+   LAYOUT (design-pass screen-14, 25/09/2026): a 48 px screen bar, then the
+   steps down a 260 px column, the step in the middle, the sheet being built on
+   the right, and a 60 px bottom bar that is part of the grid — the fixed
+   `.launch` bar used to lie over the content. Name and id became a step of
+   their own, Identité, with the only new gating rule. The writes, the upload
+   guard and the polling are unchanged. */
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 
 import { errorOf, type Schema } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useCharacter } from '../../character/CharacterContext'
+import { useConfirm } from '../../chrome/ConfirmContext'
+import { Icon } from '../../chrome/Icon'
 import { useToast } from '../../chrome/ToastContext'
 import { PATHS } from '../../app/routes'
+import { isValidId, slugify } from '../worlds/slugify'
 import { BuildSheetPanel } from './BuildSheetPanel'
+import { missingFor, missingUpTo, type WizardChoices } from './missingFor'
 import { StepBody, StepBodySkeleton } from './StepBody'
-import {
-  NOTE_ERR, STEPS, candidateUrl,
-  type CandidateState, type CharacterType, type Step,
-} from './shared'
+import { WizardFooter } from './WizardFooter'
+import { WizardSteps } from './WizardSteps'
+import { NOTE_ERR, STEPS, candidateUrl, type CandidateState, type CharacterType } from './shared'
 
 type WizardOptions = Schema<'WizardOptionsResponse'>
 type BaseNameResponse = Schema<'BaseNameResponse'>
@@ -42,17 +42,9 @@ type BaseGenerateResponse = Schema<'BaseGenerateResponse'>
 type BaseCandidatesResponse = Schema<'BaseCandidatesResponse'>
 type CreateCharacterResponse = Schema<'CreateCharacterResponse'>
 
-const LABELS: Record<Step, string> = {
-  type: 'Type',
-  style: 'Style',
-  world: 'Monde',
-  base: "Base d'identité",
-}
-
-/* The id becomes a folder name, a URL parameter and a database key. Same
-   expression the server validates with — a slug refused here is refused there
-   too, and saying so before the round trip is the only reason it is duplicated. */
-const CID_RE = /^[a-z][a-z0-9_-]*$/
+/* The id becomes a folder name, a URL parameter and a database key. `isValidId`
+   is the same expression the server validates with (`slugify.ts`, screen 11) —
+   a slug refused here is refused there too. */
 const MAX_UPLOAD = 20 * 1024 * 1024
 
 /* Candidate polling. 4 s between rounds and 150 rounds at most: a portrait takes
@@ -61,51 +53,23 @@ const MAX_UPLOAD = 20 * 1024 * 1024
 const POLL_MS = 4000
 const POLL_MAX = 150
 
-
-/* ------------------------------------------------------------- appearance
-   The wizard's own sheet is gone. Two of its blocks did NOT come here: `.it`
-   (the option card) and `.launch` (the launch bar) went up into `screens.css`,
-   because Produire lays out the same two components — a sheet named after one
-   screen was the wrong home for a thing two screens share. The one `@keyframes`
-   of the studio went into `base.css`, next to the reduced-motion rule that
-   governs it: a keyframe name is global whatever sheet declares it. */
-const WRAP = 'pb-[130px]'
-/* The workstation grid — same shape as `#creer .wrap.split` (ProduceScreen.tsx):
-   full width, sticky right column, right column moves under the left one below
-   1100 px rather than overlaying it. */
-const SPLIT =
-  'wrap m-0 grid w-full max-w-none gap-[22px] pb-[130px] [align-items:start] ' +
-  'grid-cols-[minmax(0,1fr)_clamp(280px,22vw,420px)] max-[1100px]:grid-cols-[1fr]'
-const ID_GRID = 'mt-[6px] mb-[22px] grid grid-cols-2 gap-[16px] max-[720px]:grid-cols-1'
-
-/* THE STEPPER SHOWS where one is; it is not a control — steps are reached by
-   the bar at the bottom, which is where the gating lives.
-
-   `mt-0 mb-[20px]` and not `m-0 mb-[20px]`: Tailwind emits the LONGHAND before
-   the shorthand (measured on the border of the Revue, previous commit), so a
-   `m-0` would wipe the bottom margin out. A <ol> has no side margin to reset
-   anyway. No colour in the base chain — each state names its own, the trap of
-   every sheet migrated so far. */
-const STEPS_LIST = 'mt-0 mb-[20px] flex list-none flex-wrap gap-[8px] p-0 text-[13px]'
-const STEP = 'flex items-center gap-[7px] rounded-[20px] border px-[12px] py-[6px]'
-const STEP_STATE = {
-  todo: 'border-line text-dim2',
-  on: 'border-acc text-txt',
-  done: 'border-line text-dim',
+function ScreenBar({ onLeave }: { onLeave: (event: React.MouseEvent) => void }) {
+  return (
+    <div className="flex h-[48px] flex-none items-center gap-[12px] border-b border-line bg-panel px-[14px]">
+      <Link className="btn sm inline-flex items-center gap-[6px]" to={PATHS.characters} id="wizLeave" onClick={onLeave}>
+        <Icon name="chevron" className="h-[13px] w-[13px]" />
+        Personnages
+      </Link>
+      <span className="text-[14px] font-semibold text-txt">Nouveau personnage</span>
+    </div>
+  )
 }
-const BULLET = 'flex h-[18px] w-[18px] items-center justify-center rounded-[50%] text-[11px] not-italic'
-const BULLET_STATE = {
-  todo: 'bg-line2 text-txt',
-  on: 'bg-acc text-on-acc',
-  done: 'bg-ok text-on-acc',
-}
-
-
-
 
 export function WizardScreen() {
   const api = useApi()
   const toast = useToast()
+  const confirm = useConfirm()
+  const navigate = useNavigate()
   const { selectCharacter } = useCharacter()
 
   const [types, setTypes] = useState<CharacterType[] | null>(null)
@@ -113,6 +77,8 @@ export function WizardScreen() {
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
   const [cid, setCid] = useState('')
+  /* The id follows the name until it is typed by hand (screen-14 §S7). */
+  const [cidTouched, setCidTouched] = useState(false)
   const [type, setType] = useState<string | null>(null)
   const [style, setStyle] = useState<string | null>(null)
   const [world, setWorld] = useState<string | null>(null)
@@ -139,7 +105,7 @@ export function WizardScreen() {
   // nobody is looking at
   useEffect(() => stopPoll, [stopPoll])
 
-  /* A ref rather than the effect's own closed-over flag: `loadOptions` is now
+  /* A ref rather than the effect's own closed-over flag: `loadOptions` is
      called from two places (mount, and the Retry button), and both must skip
      setting state once the screen is gone. */
   const mounted = useRef(true)
@@ -166,16 +132,22 @@ export function WizardScreen() {
   }, [loadOptions])
 
   const currentType = (types ?? []).find((t) => t.id === type) ?? null
-  const cidValid = CID_RE.test(cid)
+  const cidValid = isValidId(cid)
+
+  /* The id a base write was sent under. Freezing takes seconds (the server
+     checks the face enrols): an id changed meanwhile asked no confirmation,
+     since nothing was frozen yet, and the late answer then attached a base
+     written under the OLD id (audit, 25/09/2026). A reply whose id is no
+     longer the current one is dropped. */
+  const cidNow = useRef(cid)
+  cidNow.current = cid
 
   const pickType = (id: string) => {
     if (type === id) return
     setType(id)
     setWorld(null)
     /* A type with a single style takes it outright: there is no choice to
-       offer. `?? []` because the schema declares `styles` with a default, so
-       OpenAPI marks it optional — a pack that declares none is a real shape, and
-       reading it as absent is how the screen keeps standing. */
+       offer. `?? []` because the schema declares `styles` with a default. */
     const picked = (types ?? []).find((t) => t.id === id)
     const styles = picked?.styles ?? []
     setStyle(styles.length === 1 ? styles[0] : null)
@@ -183,19 +155,35 @@ export function WizardScreen() {
 
   /* Changing the id invalidates the frozen base: it was written under the OLD
      one. Keeping it would attach a file named for a character that will not
-     exist. */
-  const onCidChange = (value: string) => {
-    setCid(value.trim())
+     exist — so the change is asked first when there is a base to lose. */
+  const applyCid = async (value: string) => {
+    const next = value.trim()
+    if (next === cid) return true
     if (frozenBase) {
+      const ok = await confirm({
+        title: "Changer l'identifiant ?",
+        body: "Changer l'identifiant invalide la base d'identité déjà choisie.",
+        button: 'Continuer',
+      })
+      if (!ok) return false
       setFrozenBase(null)
       setBasePreview('')
       setFileMessage('')
     }
+    setCid(next)
+    return true
   }
 
-  const onFilePicked = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+  const onName = (value: string) => {
+    setName(value)
+    if (!cidTouched && !frozenBase) setCid(slugify(value))
+  }
+
+  const onCid = async (value: string) => {
+    if (await applyCid(value)) setCidTouched(true)
+  }
+
+  const onFile = async (file: File) => {
     if (file.size > MAX_UPLOAD) {
       setFileMessage('Image trop lourde (max 20 Mo).')
       return
@@ -209,10 +197,15 @@ export function WizardScreen() {
       reader.onload = () => resolve(String(reader.result))
       reader.readAsDataURL(file)
     })
+    const sentCid = cid
     const response = await api.post<BaseNameResponse>('/api/characters/base/upload', {
       cid,
       image_base64: dataUrl,
     })
+    if (cidNow.current !== sentCid) {
+      setFileMessage('')
+      return
+    }
     const failure = errorOf(response)
     if (failure) {
       setFileMessage('')
@@ -241,8 +234,8 @@ export function WizardScreen() {
       stopPoll()
       setGenMessage(
         results.some((c) => c.state === 'ready')
-          ? 'choisis un portrait ci-dessous.'
-          : 'la génération a échoué — réessaie, ou fournis une image.',
+          ? `${results.filter((c) => c.state === 'ready').length} sur ${results.length} prêts.`
+          : 'La génération a échoué. Relance, ou fournis une image.',
       )
     }
   }, [api, stopPoll])
@@ -265,13 +258,13 @@ export function WizardScreen() {
     const queued = (response.candidates ?? []) as { file: string }[]
     batch.current = { pack: response.pack, items: queued }
     setCandidates(queued.map((c) => ({ ...c, state: 'pending' })))
-    setGenMessage('génération en cours… (≈ 1 à 2 min par portrait)')
+    setGenMessage('')
     stopPoll()
     let rounds = 0
     timer.current = window.setInterval(() => {
       if (++rounds > POLL_MAX) {
         stopPoll()
-        setGenMessage("la génération n'a pas répondu — réessaie, ou fournis une image.")
+        setGenMessage("La génération n'a pas répondu. Relance, ou fournis une image.")
         return
       }
       void poll()
@@ -279,10 +272,15 @@ export function WizardScreen() {
   }
 
   const freeze = async (file: string) => {
+    const sentCid = cid
+    const shown = genMessage
+    setGenMessage('gel du portrait…')
     const response = await api.post<BaseNameResponse>('/api/characters/base/freeze', {
       cid,
       file,
     })
+    setGenMessage(shown)
+    if (cidNow.current !== sentCid) return
     const failure = errorOf(response)
     if (failure) {
       toast(failure || 'échec du gel')
@@ -292,21 +290,14 @@ export function WizardScreen() {
     setBasePreview(candidateUrl(file))
   }
 
-  /* GATING. Each step has exactly one condition, and the last one has the whole
-     list: nothing is created half-chosen. */
-  const stepOk = {
-    type: Boolean(type),
-    style: Boolean(style),
-    world: Boolean(world),
-    base: Boolean(frozenBase),
-  }[STEPS[step]]
-  const readyToCreate = Boolean(
-    name.trim() && cidValid && type && style && world && frozenBase,
-  )
+  /* GATING (`missingFor.ts`): each step has one condition, and the last one
+     has the whole list — nothing is created half-chosen. */
+  const choices: WizardChoices = { name, cidValid, type, style, world, frozenBase }
   const last = step === STEPS.length - 1
+  const missing = last ? missingUpTo(STEPS[step], choices) : missingFor(STEPS[step], choices)
 
   const create = async () => {
-    if (!readyToCreate) return
+    if (missingUpTo('base', choices)) return
     setCreating(true)
     const response = await api.post<CreateCharacterResponse>('/api/characters', {
       cid,
@@ -323,118 +314,98 @@ export function WizardScreen() {
       return
     }
     stopPoll()
-    /* The new character becomes the current one, WITHOUT reloading the page —
-       the legacy wizard ended on `location.href = ?character=<id>`. Its sheet is
-       the honest landing: it shows the three frozen axes and the resolved pack,
-       which is exactly what was just decided. */
+    /* The new character becomes the current one, without reloading. Its sheet
+       is the honest landing: it shows the three frozen axes and the resolved
+       pack, which is exactly what was just decided. */
     selectCharacter(response.id, { to: PATHS.character })
+  }
+
+  /* Leaving with choices made asks first. Only this bar's link does: the
+     router has no navigation guard, and adding one for a single screen is out
+     of scope (screen-14 plan). What stays on disk is said as it is — nothing
+     removes the generated portraits. */
+  const onLeave = async (event: React.MouseEvent) => {
+    if (!(name.trim() || type || frozenBase || candidates)) return
+    event.preventDefault()
+    const ok = await confirm({
+      title: name.trim() ? `Abandonner la création de ${name.trim()} ?` : 'Abandonner la création ?',
+      body: 'Les portraits déjà générés restent dans le dossier de sortie de ComfyUI.',
+      button: 'Abandonner',
+      danger: true,
+    })
+    if (ok) navigate(PATHS.characters)
   }
 
   if (loadFailed) {
     return (
-      <div className="screen" id="wizard">
-        <div className={`wrap ${WRAP}`}>
-          <h2>Nouveau personnage</h2>
-          <p className={NOTE_ERR} data-note>
-            Impossible de charger les choix du wizard.
-          </p>
-          <button className="btn sm" id="wizRetry" onClick={loadOptions}>
-            Réessayer
-          </button>
+      <div className="screen flex flex-col" id="wizard">
+        <ScreenBar onLeave={onLeave} />
+        <div className="flex flex-1 items-center justify-center p-[20px]">
+          <div className="flex max-w-[440px] flex-col items-center gap-[14px] text-center">
+            <p className={NOTE_ERR} data-note>
+              Impossible de charger les choix de l'assistant : le serveur n'a pas répondu, ou sa
+              réponse est illisible.
+            </p>
+            <button type="button" className="btn" id="wizRetry" onClick={loadOptions}>
+              Réessayer
+            </button>
+          </div>
         </div>
       </div>
     )
   }
 
   const worldLabel = currentType?.worlds?.find((entry) => entry.id === world)?.label ?? null
+  const answers = {
+    identity: name.trim() ? `${name.trim()} · ${cid}` : cid || null,
+    type: currentType?.label ?? null,
+    style: style && (currentType?.styles ?? []).length === 1 ? `${style} (seul style du type)` : style,
+    world: worldLabel,
+    base: frozenBase,
+  }
 
   return (
-    <div className="screen" id="wizard">
-      <div className={SPLIT}>
-        <div className="min-w-0">
-          <h2>Nouveau personnage</h2>
-
-          <div className={ID_GRID}>
-            <label className="f">
-              <span>Nom affiché</span>
-              <input
-                id="wizName"
-                autoComplete="off"
-                placeholder="ex : Léna"
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-              />
-            </label>
-            <label className="f">
-              <span>
-                Identifiant{' '}
-                {/* `.wiz-ok` / `.wiz-bad` ARE NOT PORTED: neither ever painted.
-                    `label.f span` (chrome.css, a class plus two types) outweighs
-                    them — and outweighs `.tiny` too. Measured on 31/08/2026: this
-                    hint is `--dim` in BOTH states, valid and invalid. Painting it
-                    now would be a VISIBLE change, which a migration meant to be
-                    invisible does not smuggle in; the ✓ and the sentence carry the
-                    state on their own, as they always have. */}
-                <span className="tiny" id="wizCidHint">
-                  {!cid ? '' : cidValid ? '✓' : '— minuscules, chiffres, - et _'}
-                </span>
-              </span>
-              <input
-                id="wizCid"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder="slug — dossiers, URL, base de données"
-                value={cid}
-                onChange={(event) => onCidChange(event.target.value)}
-              />
-            </label>
-          </div>
-
-          <ol className={STEPS_LIST} id="wizSteps" aria-label="Étapes de création">
-            {STEPS.map((key, index) => {
-              const state = index < step ? 'done' : index === step ? 'on' : 'todo'
-              return (
-                <li
-                  key={key}
-                  className={`${STEP} ${STEP_STATE[state]}`}
-                  data-step={state}
-                  aria-current={index === step ? 'step' : undefined}
-                >
-                  <i className={`${BULLET} ${BULLET_STATE[state]}`}>{index + 1}</i>
-                  {LABELS[key]}
-                </li>
-              )
-            })}
-          </ol>
-
-          <div id="wizBody">
-            {types === null ? (
-              <StepBodySkeleton />
-            ) : (
-              <StepBody
-                step={STEPS[step]}
-                types={types}
-                currentType={currentType}
-                type={type}
-                style={style}
-                world={world}
-                cidValid={cidValid}
-                frozenBase={frozenBase}
-                basePreview={basePreview}
-                fileMessage={fileMessage}
-                genMessage={genMessage}
-                candidates={candidates}
-                onPickType={pickType}
-                onPickStyle={setStyle}
-                onPickWorld={setWorld}
-                onFilePicked={onFilePicked}
-                onGenerate={onGenerate}
-                onFreeze={freeze}
-              />
-            )}
-          </div>
+    <div className="screen flex min-h-0 flex-col" id="wizard">
+      <ScreenBar onLeave={onLeave} />
+      <div className="flex min-h-0 flex-1 max-[1100px]:flex-col max-[1100px]:overflow-y-auto">
+        <nav
+          className="w-[260px] flex-none overflow-y-auto border-r border-line bg-panel p-[14px]
+                     max-[1100px]:w-auto max-[1100px]:border-r-0 max-[1100px]:border-b max-[1100px]:py-[8px]"
+          aria-label="Progression"
+        >
+          <WizardSteps step={step} answers={answers} onGoTo={setStep} />
+        </nav>
+        <div className="min-w-0 flex-1 overflow-y-auto px-[36px] py-[28px] max-[1100px]:overflow-visible max-[1100px]:px-[20px]" id="wizBody">
+          {types === null ? (
+            <StepBodySkeleton />
+          ) : (
+            <StepBody
+              step={STEPS[step]}
+              types={types}
+              currentType={currentType}
+              name={name}
+              cid={cid}
+              cidValid={cidValid}
+              cidProposal={slugify(name)}
+              type={type}
+              style={style}
+              world={world}
+              frozenBase={frozenBase}
+              basePreview={basePreview}
+              fileMessage={fileMessage}
+              genMessage={genMessage}
+              candidates={candidates}
+              onName={onName}
+              onCid={onCid}
+              onPickType={pickType}
+              onPickStyle={setStyle}
+              onPickWorld={setWorld}
+              onFile={onFile}
+              onGenerate={onGenerate}
+              onFreeze={freeze}
+            />
+          )}
         </div>
-
         <BuildSheetPanel
           name={name}
           cid={cid}
@@ -445,23 +416,16 @@ export function WizardScreen() {
           basePreview={basePreview}
         />
       </div>
-
-      <div className="launch">
-        <div className="inner">
-          <div className="flex-1" />
-          <button className="btn" id="wizBack" disabled={step === 0} onClick={() => setStep(step - 1)}>
-            Retour
-          </button>
-          <button
-            className="btn primary"
-            id="wizNext"
-            disabled={last ? !readyToCreate || creating : !stepOk}
-            onClick={() => (last ? create() : setStep(step + 1))}
-          >
-            {last ? (name.trim() ? `Créer ${name.trim()}` : 'Créer le personnage') : 'Suivant'}
-          </button>
-        </div>
-      </div>
+      <WizardFooter
+        missing={missing}
+        last={last}
+        name={name}
+        canGoBack={step > 0}
+        canGoOn={missing === null && types !== null}
+        creating={creating}
+        onBack={() => setStep(step - 1)}
+        onNext={() => (last ? void create() : setStep(step + 1))}
+      />
     </div>
   )
 }
