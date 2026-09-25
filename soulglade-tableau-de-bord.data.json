@@ -1,5 +1,5 @@
 {
-  "maj": "24 septembre 2026",
+  "maj": "25 septembre 2026",
   "source": "dépôt pmourret/SoulGlade, lecture complète du code, des ADR et des cadrages",
   "statuts": {
     "fait": {
@@ -117,11 +117,11 @@
     {
       "id": "IT-9",
       "titre": "Le studio se lit comme un poste de travail",
-      "state": "now",
-      "quoi": "Le chrome portait encore les choix de la migration React : navbar latérale de 208 px, en-tête de 56 px, base 15 px, et un accent qui peignait les boutons alors que l'image est la seule couleur qui compte. Quatorze étapes le reprennent écran par écran, dans l'ordre du parcours, chacune avec son cadrage écrit. Le critère de sortie V1 le demande déjà : chaque écran du parcours nominal passe un audit vérifié en vrai.",
-      "dod": "Les quatorze étapes sont passées, chacune avec son audit audit-ux-ui vérifié en vrai (captures à 1440 et 1024, états réels), typecheck et build verts, et toutes les fumigations navigateur au vert. Le bilan graphique les relit ensuite d'un coup et arrête la charte que les écrans suivants tiendront.",
+      "state": "done",
+      "quoi": "Le chrome portait encore les choix de la migration React, et l'accent peignait les boutons alors que l'image est la seule couleur qui compte. Quatorze écrans ont été repris dans l'ordre du parcours, chacun avec son cadrage écrit, puis relus d'un coup par un bilan graphique.",
+      "dod": "Les quatorze étapes sont passées avec leur audit vérifié en vrai, la fumigation des cadres balaie aussi les états ouverts, et la charte de styles/DESIGN.md est tenue par un garde statique.",
       "epics": "E13",
-      "ref": "DOCS/design-pass/Refonte_UI_UX/ (les quatorze cadrages, un dossier par écran)"
+      "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
     },
     {
       "id": "IT-3f",
@@ -462,6 +462,12 @@
           "s": "dette",
           "t": "Le banc n'est pas reproductible à seed fixée",
           "d": "Quatre lots du 14/09 tournent la même configuration sur les mêmes cinq seeds et rendent quatre images différentes. Étendue des moyennes 0.019 quand `margin.identite` vaut 0.02 : tout verdict d'identité sous 0.03 est illisible. Cause non identifiée, premier candidat `expression_budget`."
+        },
+        {
+          "s": "faire",
+          "t": "Les rendus ont-ils perdu en qualité depuis la migration du frontend ?",
+          "d": "Perte perçue par Pierre, non mesurée. Trancher d'abord où elle vit : dans le PNG écrit sous PROD/ (l'écran enverrait d'autres paramètres au runner) ou seulement à l'affichage (vignettes JPEG servies à la place de l'original).",
+          "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
         }
       ]
     },
@@ -1230,7 +1236,27 @@
     "items": [
       {
         "t": "Le serveur derrière les panneaux du composeur",
-        "d": "(24 septembre 2026) Trois panneaux nomment une capacité sans rien derrière. L'amélioration IA attend une route qui réécrive les trois fragments depuis une consigne ; le catalogue de vêtements n'a qu'un vocabulaire statique, sans images ni dossier d'assets ; les templates de lumière disent « bientôt ». L'interface est en place et l'état non branché se dit à l'écran. Aucun des trois n'est sur le chemin d'une première publication, et chacun demande son propre cadrage."
+        "d": "(24 septembre 2026) Trois panneaux nomment une capacité sans rien derrière : l'amélioration IA, le catalogue de vêtements (vocabulaire statique, sans images) et les templates de lumière. L'état non branché se dit à l'écran. Complété le 25/09 : l'amélioration des prompts par IA est un chantier lourd à part entière, pas une route à brancher. Chacun demande son propre cadrage."
+      },
+      {
+        "t": "Un créateur d'intentions",
+        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. L'intention n'existe que comme champ d'une scène, aucun atelier ne la crée ni ne la décrit. Nouvel écran de studio, donc skill nouvel-outil et cadrage avant code."
+      },
+      {
+        "t": "Le composeur offre le 16:9, et peut-être un format libre",
+        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. La liste 4:5, 2:3, 9:16, 1:1 est recopiée à quatre endroits et chaque format a sa résolution dans le config.json du personnage. Le 16:9 est borné et ramène les quatre listes à une seule. Le format décidé par le modèle fait trancher la plateforme à la place de l'utilisateur : cadrage d'abord."
+      },
+      {
+        "t": "La pose porte son texte",
+        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. Une pose est un squelette OpenPose et une description : le texte se déduit à l'extraction, se stocke avec le squelette en base, et se reporte dans le composeur à l'ajout de la pose. Reste à trancher ce qui écrit ce texte."
+      },
+      {
+        "t": "Ajouter des tons dans l'atelier Tons",
+        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. L'atelier règle les tons existants mais n'en crée pas."
+      },
+      {
+        "t": "Des préréglages enregistrés dans l'éditeur avancé",
+        "d": "(25 septembre 2026) Relevé à la rétro d'IT-9. Les préréglages sont une constante du code (PRESETS) ; l'utilisateur ne peut pas enregistrer les siens."
       },
       {
         "t": "Fond importé, repris entièrement",
