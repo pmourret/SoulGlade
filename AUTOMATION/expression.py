@@ -38,6 +38,24 @@ Trois voies ont ete mesurees :
 Le cout d'identite du warp VARIE d'une image a l'autre — mesure entre -0.007 et
 -0.046 pour un meme reglage sur deux sources. Raison de plus pour que le verdict
 ne dependent pas de lui.
+
+POURQUOI UN TRANSFERT DE MOUVEMENT (25/09/2026)
+
+Le noeud ne pose pas une expression sur l'image : il REGENERE le recadrage du
+visage (visage x crop_factor, cheveux compris) a 512 x 512, l'agrandit et le
+recolle par un masque gabarit. Un aller-retour a vide, tous parametres a zero,
+abimait deja autant qu'une expression : cheveux crepes, peau grenue, visage mou
+(netteté 158 -> 123 sur la meme image). C'est ce que les selfies de Lena
+montraient depuis que Produire imposait un ton a chaque image.
+
+On ne garde donc du noeud que le MOUVEMENT. Deux appels — a vide, puis avec
+l'expression — ont subi le meme reechantillonnage ; le flux optique entre les
+deux sorties est l'expression seule, sans le dommage. Il est applique a
+l'image d'origine, en pleine resolution. Seul ce qu'une deformation ne peut pas
+creer (les dents d'une bouche qui s'ouvre) vient de la sortie du noeud.
+Mesure : 5 seeds x 2 tons, texture de la source gardee 10/10 (la passe
+directe en perdait 10/10), +2,7 s par image. Verdict :
+DOCS/recherche/2026-09-25-l-expression-se-transfere-en-mouvement-pas-en-pixels.md
 """
 import json
 import random
@@ -68,6 +86,20 @@ BORNES = {
 }
 DEFAUTS = {k: 0.0 for k in BORNES}
 DEFAUTS.update({"src_ratio": 1.0, "sample_ratio": 1.0, "crop_factor": 2.0})
+NEUTRE = {k: 0.0 for k in BORNES}
+
+# Reglages du transfert de mouvement : des constantes de METHODE, comme BORNES,
+# pas un gout ni un reglage de personnage. Fixes au banc du 25/09 (verdict cite
+# en tete) : c'est avec eux que la texture a ete gardee sur 10 paires sur 10.
+# Flux de Farneback : pyr_scale, levels, winsize, iterations, poly_n, poly_sigma.
+FLUX = (0.5, 5, 21, 5, 7, 1.5)
+# Ce que la deformation ne peut pas creer : ecart (sur 255, moyenne des trois
+# canaux) entre la sortie expressive et la sortie neutre deformee de la meme
+# facon. Au-dessous, c'est le bruit commun du reechantillonnage.
+RECOLLAGE_SEUIL = 14
+RECOLLAGE_OUVERTURE = 5       # retire les points isoles (px)
+RECOLLAGE_DILATATION = 11     # deborde un peu autour des dents (px)
+RECOLLAGE_FONDU = 5           # sigma du fondu du masque (px)
 
 
 def tirage(creative, ton, seed):
@@ -138,31 +170,88 @@ def _nettoyer_scratch():
         d.rmdir()
 
 
+def transferer_mouvement(source, neutre, expressive):
+    """Pose sur `source` le mouvement qui separe `neutre` de `expressive`.
+
+    Trois images BGR de meme taille : l'original, et les deux sorties du noeud
+    — a vide, puis avec l'expression. Rend (image, part_recollee) : l'image
+    composee, et la part de l'image (0..1) prise dans `expressive` parce qu'une
+    deformation ne pouvait pas la creer. Fonction pure, sans ComfyUI : c'est ce
+    qui la rend testable sur des images synthetiques.
+    """
+    import cv2
+    import numpy as np
+    gris = lambda im: cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    flux = cv2.calcOpticalFlowFarneback(gris(expressive), gris(neutre), None, *FLUX, 0)
+    h, w = source.shape[:2]
+    gx, gy = np.meshgrid(np.arange(w, dtype=np.float32), np.arange(h, dtype=np.float32))
+    carte_x, carte_y = gx + flux[..., 0], gy + flux[..., 1]
+    deformee = cv2.remap(source, carte_x, carte_y, cv2.INTER_CUBIC,
+                         borderMode=cv2.BORDER_REFLECT)
+    # Le neutre deforme de la meme facon porte le meme dommage de
+    # reechantillonnage que l'expressive : ce qui les separe encore est ce que
+    # le mouvement n'explique pas.
+    neutre_def = cv2.remap(neutre, carte_x, carte_y, cv2.INTER_CUBIC,
+                           borderMode=cv2.BORDER_REFLECT)
+    residu = np.abs(neutre_def.astype(np.float32) - expressive.astype(np.float32)).mean(axis=2)
+    masque = (residu > RECOLLAGE_SEUIL).astype(np.uint8) * 255
+    masque = cv2.morphologyEx(masque, cv2.MORPH_OPEN,
+                              np.ones((RECOLLAGE_OUVERTURE,) * 2, np.uint8))
+    masque = cv2.dilate(masque, np.ones((RECOLLAGE_DILATATION,) * 2, np.uint8))
+    masque = cv2.GaussianBlur(masque, (0, 0), RECOLLAGE_FONDU).astype(np.float32)[..., None] / 255
+    image = deformee.astype(np.float32) * (1 - masque) + expressive.astype(np.float32) * masque
+    return np.clip(np.rint(image), 0, 255).astype(np.uint8), float(masque.mean())
+
+
+def _poser(path, params, comfy_url, timeout):
+    """Le coeur partage par la production et l'apercu : deux appels du noeud
+    (a vide, puis avec `params`), puis le transfert de mouvement sur l'image
+    d'origine. Rend l'image composee (tableau BGR). Leve sur un echec.
+
+    UN NOM D'ENTREE UNIQUE PAR APPEL : ComfyUI met en cache un graphe deja vu et
+    renvoie le fichier qu'il a produit la premiere fois — fichier que le
+    `finally` ci-dessous vient de supprimer (piege trouve dans l'apercu, voir
+    sa docstring). L'appel neutre est le meme graphe pour toutes les images :
+    sans suffixe, il tomberait dessus des la deuxieme.
+    """
+    import shutil
+    import cv2
+    path = Path(path)
+    temporaires = []
+    try:
+        sorties = []
+        for jeu in (NEUTRE, params):
+            tmp = COMFY_INPUT / f"{PREFIXE}{uuid.uuid4().hex[:8]}_{path.name}"
+            temporaires.append(tmp)
+            shutil.copy(path, tmp)
+            sortie = _generer(tmp.name, jeu, comfy_url, timeout)
+            temporaires.append(sortie)
+            sorties.append(cv2.imread(str(sortie)))
+        source = cv2.imread(str(path))
+        if source is None or any(s is None for s in sorties):
+            raise RenderError("image illisible avant ou apres le noeud d'expression")
+        image, _ = transferer_mouvement(source, *sorties)
+        return image
+    finally:
+        for f in temporaires:
+            Path(f).unlink(missing_ok=True)
+        _nettoyer_scratch()
+
+
 def appliquer(path, params, comfy_url, timeout=300):
     """Pose l'expression sur une image, en place. Retourne True si c'est fait.
 
     Ne leve jamais : une expression ratee ne doit pas faire perdre une image deja
     produite et deja jugee. L'appelant journalise.
     """
-    import shutil
+    import cv2
     path = Path(path)
     if not params:
         return False
-    tmp = COMFY_INPUT / (PREFIXE + path.name)
-    sortie = None
     try:
-        shutil.copy(path, tmp)
-        sortie = _generer(tmp.name, params, comfy_url, timeout)
-        shutil.move(str(sortie), str(path))          # ecrase l'image d'origine
-        sortie = None
-        return True
+        return bool(cv2.imwrite(str(path), _poser(path, params, comfy_url, timeout)))
     except Exception:
         return False
-    finally:
-        tmp.unlink(missing_ok=True)
-        if sortie is not None:
-            Path(sortie).unlink(missing_ok=True)
-        _nettoyer_scratch()
 
 
 def apercu(path, params, comfy_url, mesurer=None, timeout=300):
@@ -181,36 +270,36 @@ def apercu(path, params, comfy_url, mesurer=None, timeout=300):
     relisant le code : cliquer deux fois « Rendre l'apercu » SANS changer un
     seul parametre echouait a coup sur (4/4). ComfyUI met en cache le graphe
     (meme image d'entree, memes reglages) et renvoie le nom du fichier deja
-    genere au premier appel — sauf que ce fichier vient d'etre supprime par
-    le `finally` ci-dessous. Un suffixe different a chaque appel fait du
-    LoadImage un noeud « neuf » aux yeux du cache, ce qui force tout le
-    graphe (jusqu'a SaveImage) a se re-executer plutot que de renvoyer une
-    reference perimee. `appliquer()` (production) n'a pas besoin de ce
-    suffixe : elle n'est jamais rappelee coup sur coup avec des entrees
-    identiques comme l'est un editeur interactif.
+    genere au premier appel — sauf que ce fichier vient d'etre supprime. Un
+    suffixe different a chaque appel fait du LoadImage un noeud « neuf » aux
+    yeux du cache. Depuis le 25/09 c'est `_poser` qui le pose, pour la
+    production aussi : son appel neutre est le meme graphe pour toutes les
+    images, il y tomberait des la deuxieme.
     """
-    import shutil
+    import cv2
     path = Path(path)
-    tmp = COMFY_INPUT / (PREFIXE + f"apercu_{uuid.uuid4().hex[:8]}_" + path.name)
-    sortie = None
     try:
-        shutil.copy(path, tmp)
+        image = _poser(path, params, comfy_url, timeout)
+    except RenderError:
+        raise
+    except Exception as e:
+        raise RenderError(str(e)) from e
+    ok, png = cv2.imencode(".png", image)
+    if not ok:
+        raise RenderError("encodage PNG de l'apercu impossible")
+    # Le score se mesure sur l'image COMPOSEE, celle que l'utilisateur voit et
+    # que la production ecrirait — jamais sur la sortie brute du noeud.
+    score = None
+    if mesurer:
+        mesure = COMFY_OUTPUT / f"{PREFIXE}apercu_{uuid.uuid4().hex[:8]}.png"
         try:
-            sortie = _generer(tmp.name, params, comfy_url, timeout)
-        except RenderError:
-            raise
-        except Exception as e:
-            raise RenderError(str(e)) from e
-        try:
-            score = mesurer(sortie) if mesurer else None
+            mesure.write_bytes(png.tobytes())
+            score = mesurer(mesure)
         except Exception:
             score = None
-        return sortie.read_bytes(), score
-    finally:
-        tmp.unlink(missing_ok=True)
-        if sortie is not None:
-            Path(sortie).unlink(missing_ok=True)
-        _nettoyer_scratch()
+        finally:
+            mesure.unlink(missing_ok=True)
+    return png.tobytes(), score
 
 
 def attenuer(params, facteur):
