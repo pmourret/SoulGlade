@@ -32,11 +32,10 @@ import { TrainingScreen } from '../screens/training/TrainingScreen'
 import { WorldsScreen } from '../screens/worlds/WorldsScreen'
 import { GalleryRoute, ReviewRoute } from '../screens/review/ReviewScreen'
 import { ProduceScreen } from '../screens/produce/ProduceScreen'
-import { ApplicationScreen } from '../screens/ApplicationScreen'
+import { ApplicationScreen } from '../screens/application/ApplicationScreen'
 import { CharactersScreen } from '../screens/CharactersScreen'
 import { WizardScreen } from '../screens/wizard/WizardScreen'
 import { CharacterSheetScreen } from '../screens/character-sheet/CharacterSheetScreen'
-import { JournalScreen } from '../screens/JournalScreen'
 import { PATHS } from './routes'
 
 /* The entry gate (J7bis): with no `?character=` the studio opens on the
@@ -73,12 +72,14 @@ export function App() {
                 <Route element={<Shell />}>
                   <Route path="/" element={<HomeRedirect />} />
 
-                  <Route path={PATHS.journal} element={<JournalScreen />} />
                   {/* The two halves of the legacy `#registre`, switched by a
                       `data-vue` attribute, are two routes now. */}
                   <Route path={PATHS.characters} element={<CharactersScreen />} />
                   <Route path={PATHS.character} element={<CharacterSheetScreen />} />
-                  <Route path={PATHS.application} element={<ApplicationScreen />} />
+                  {/* One route for every section (design-pass screen-12 §S1):
+                      /app is ComfyUI, /app/journal the production journal,
+                      the address the fault banner has always linked to. */}
+                  <Route path={`${PATHS.application}/:section?`} element={<ApplicationScreen />} />
                   <Route path={PATHS.wizard} element={<WizardScreen />} />
                   {/* `#scenes` and `#scenes/poses` become two routes: the slash
                       always meant « sub-view of », and now the router says it. */}

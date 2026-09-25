@@ -26,6 +26,10 @@
         cancelled, and the wrong-word attempt is REFUSED SERVER-SIDE — that is
         the assertion, and it writes nothing.
 
+   SECTIONS SINCE 25/09/2026 (design-pass screen-12). The screen shows ONE
+   section at a time, `/app/:section`: each block below goes to the section it
+   tests, through the nav links where the path matters.
+
    NOT COVERED HERE: the three coupling traps of AUDIT §5.6. This screen shows no
    image (`v`), plans no run (/api/plan) and does not drive #btnRun.
 
@@ -63,6 +67,26 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(allume.length === 0, `aucune categorie allumee (${allume.join(',') || 'aucune'})`);
   dire(await page.getAttribute('#btnApplication', 'aria-current') === 'page',
        "le bouton Application de l'en-tete porte aria-current");
+
+  console.log('\n[1b] la navigation par portee : Machine, Personnage, Journaux');
+  const NAV = 'nav[aria-label="Sections de l\'application"]';
+  const liens = await page.$$eval(`${NAV} a`, els => els.map(e => e.getAttribute('href')));
+  dire(['/app/server', '/app', '/app/adult', '/app/appearance', '/app/journal', '/app/log']
+         .every(h => liens.includes(h)), `six sections atteignables (${liens.join(' ')})`);
+  dire(await page.getAttribute(`${NAV} a[href="/app"]`, 'aria-current') === 'page',
+       '/app ouvre ComfyUI, et son entree porte aria-current');
+  dire((await texte(NAV)).includes('Personnage · Léna'), 'le groupe Personnage nomme le personnage ouvert');
+  dire(await page.isVisible(`${NAV} a[href="/produce"]`), 'le pied renvoie vers Produire');
+  // replace : Precedent ne rejoue pas chaque clic de section
+  const avant = await page.evaluate(() => history.length);
+  await page.click(`${NAV} a[href="/app/server"]`);
+  await page.click(`${NAV} a[href="/app/log"]`);
+  await page.waitForSelector("#appliLog", { state: "attached" });
+  await page.click(`${NAV} a[href="/app"]`);
+  dire(await page.evaluate(() => history.length) === avant,
+       "changer de section n'empile rien dans l'historique");
+  await page.goto(BASE + '/app/inconnue?character=lena', { waitUntil: 'networkidle' });
+  dire(await page.evaluate(() => location.pathname) === '/app', 'une section inconnue retombe sur /app');
 
   console.log('\n[2] les deux surfaces de sonde montrent LE MEME etat');
   /* `--no-comfy` veut dire « ne le demarre pas », pas « fais comme s'il etait
@@ -132,6 +156,10 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   console.log('\n[5] « Décharger la mémoire » suit l etat, et dit pourquoi quand il refuse');
   const inerte = await page.isDisabled('#btnComfyUnload');
   const raison = (await page.getAttribute('#btnComfyUnload', 'title')) || '';
+  // le motif est ECRIT sous la phrase, pas seulement dans un title
+  const decrit = await page.getAttribute('#btnComfyUnload', 'aria-describedby');
+  if (inerte) dire(Boolean(decrit) && (await page.$eval(`[id="${decrit}"]`, e => e.textContent)).includes(raison),
+                   'le motif est ecrit, et relie au bouton par aria-describedby');
   dire(inerte !== enLigne,
        `ComfyUI ${enLigne ? 'en ligne' : 'hors ligne'} -> bouton ${inerte ? 'inerte' : 'actif'}`);
   // un grisage muet reste une invitation : s'il refuse, il DIT pourquoi
@@ -139,12 +167,13 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
        inerte ? `il donne la raison : « ${raison} »` : 'actif, donc aucune raison a donner');
 
   console.log('\n[6] les boutons de cycle de vie confirment — et on ANNULE toujours');
-  for (const [bouton, attendu] of [
-    ['#btnAppRestart', 'Redémarrer le tableau de bord'],
-    ['#btnAppStop', 'Arrêter le tableau de bord'],
-    ['#btnComfyStop', 'Arrêter ComfyUI'],
-    ['#btnComfyRestart', 'Redémarrer ComfyUI'],
+  for (const [section, bouton, attendu] of [
+    ['/app/server', '#btnAppRestart', 'Redémarrer le tableau de bord'],
+    ['/app/server', '#btnAppStop', 'Arrêter le tableau de bord'],
+    ['/app', '#btnComfyStop', 'Arrêter ComfyUI'],
+    ['/app', '#btnComfyRestart', 'Redémarrer ComfyUI'],
   ]){
+    await page.click(`${NAV} a[href="${section}"]`);
     await page.click(bouton);
     await page.waitForSelector('#armBox[open]');
     const t = await texte('#armBox h3');
@@ -156,6 +185,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   }
 
   console.log('\n[7] Echap annule aussi — la boite ne se referme pas sur un oui');
+  await page.click(`${NAV} a[href="/app/server"]`);
   await page.click('#btnAppStop');
   await page.waitForSelector('#armBox[open]');
   await page.keyboard.press('Escape');
@@ -164,6 +194,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(await vu('#appli'), "et l'ecran est toujours la : rien n'a ete envoye");
 
   console.log('\n[8] l arret de ComfyUI annonce ce que Windows ne sait pas faire');
+  await page.click(`${NAV} a[href="/app"]`);
   await page.click('#btnComfyStop');
   await page.waitForSelector('#armBox[open]');
   const corps = await texte('#armBox');
@@ -173,6 +204,8 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.waitForTimeout(200);
 
   console.log('\n[9] contenu adulte : la section nomme SON personnage');
+  await page.click(`${NAV} a[href="/app/adult"]`);
+  await page.waitForSelector('#btnNsfwOff, #btnNsfwOn');
   dire((await texte('#nsfwQui')).includes('Léna'),
        "l'interrupteur est celui d'un personnage, et il le dit");
   dire(await vu('#btnNsfwOff'), 'Léna est armee : la section propose de desactiver');
@@ -204,23 +237,36 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   const rituel = await texte('#armBoxNsfw');
   dire(rituel.includes('ARMER'), 'la boite demande de recopier le mot ARMER');
   dire(rituel.includes('jamais exportées'), 'elle enonce les consequences reelles');
-  // mot FAUX : le serveur refuse, et rien n'est ecrit sur le disque. C'est
-  // l'assertion — ce test n'arme aucun personnage reel.
+  /* Mot FAUX : le bouton reste inerte et AUCUNE requete ne part. Depuis le
+     25/09 le refus est dans l'interface (le serveur refuse toujours, c'est la
+     regle) ; ce test n'arme aucun personnage reel, il ne clique donc jamais
+     un Activer actif. */
+  let armements = 0;
+  page.on('request', r => { if (r.url().includes('/api/nsfw/arm')) armements++; });
+  dire(await page.isDisabled('#btnArm2'), 'champ vide : Activer est inerte');
   await page.fill('#armWord2', 'oui');
-  await page.click('#btnArm2');
-  await page.waitForTimeout(700);
-  dire((await texte('#toast')).includes('recopie exactement'),
-       'un mot faux est refuse, et le dit');
+  dire(await page.isDisabled('#btnArm2'), 'mot faux : Activer reste inerte');
+  dire(Boolean(await page.getAttribute('#btnArm2', 'aria-describedby')),
+       'le bouton inerte est relie a la consigne');
+  await page.press('#armWord2', 'Enter');
+  await page.waitForTimeout(300);
+  dire(armements === 0, 'Entree sur un mot faux n envoie rien');
+  await page.fill('#armWord2', 'ARMER');
+  dire(!(await page.isDisabled('#btnArm2')), 'le mot exact rend Activer actif (on ne clique pas)');
   await page.click('#armClose');
   await page.waitForTimeout(250);
   dire(await vu('#btnNsfwOn'), "Abyssiaelle est restee desarmee : rien n'a ete ecrit");
 
   console.log('\n[13] le journal du serveur, et le renvoi vers celui des productions');
+  await page.click(`${NAV} a[href="/app/log"]`);
+  await page.waitForSelector("#appliLog", { state: "attached" });
   dire(await vu('#appliLog'), 'le journal du serveur est present');
   dire((await page.$eval('#appliLog', e => e.textContent)) === '',
        'vide au demarrage — aucune action de cycle de vie dans cette session');
-  const lien = await page.getAttribute('a.link[href="/app/journal"]', 'href');
-  dire(lien === '/app/journal', 'le renvoi mene au journal des productions');
+  await page.click(`${NAV} a[href="/app/journal"]`);
+  await page.waitForSelector('#journal');
+  dire(await page.evaluate(() => location.pathname) === '/app/journal',
+       'l entree Productions mene au journal des productions, a son adresse de toujours');
 
   console.log('\n[14] Apparence : la roue de fond repeint en direct, avertit pres d un verdict, et persiste');
   /* Tourne sur le personnage ACTIF a ce point du parcours (Abyssiaelle, depuis
@@ -231,6 +277,8 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   const cssVar = nom => page.evaluate(
     n => getComputedStyle(document.documentElement).getPropertyValue(n).trim(), nom);
 
+  await page.click(`${NAV} a[href="/app/appearance"]`);
+  await page.waitForSelector('#appearanceBox');
   dire(await vu('#appearanceBox'), 'le panneau Apparence est present');
   const bgAvant = await cssVar('--bg');
   dire(await page.isDisabled('#btnAppearanceReset'),
@@ -254,7 +302,8 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(await cssVar('--bg') === bgAvant,
        'a intensite 0, tourner la teinte ne repeint rien : le chroma est nul');
 
-  await page.fill('#appearanceIntensity', '0.05');
+  // le curseur partage (AdjustSlider) court en pourcentage du plafond : 100 = 0,05
+  await page.fill('#appearanceIntensity', '100');
   await page.dispatchEvent('#appearanceIntensity', 'change');
   await page.waitForTimeout(150);
   const bgEnDirect = await cssVar('--bg');

@@ -147,6 +147,11 @@ const JOURNAL = `${BASE}/app/journal?character=lena`;
   dire(Number(okInfo.match(/(\d+) ligne/)[1]) === okLignes, 'le compte suit le filtre');
   const verdicts = await page.$$eval('#jt tbody tr td:nth-child(6)', c => c.map(x => x.textContent));
   dire(verdicts.every(v => v === 'OK' || v === ''), 'toutes les lignes portent le verdict filtre');
+  // chaque segment porte son compteur, calcule sur les lignes chargees
+  const compteOk = Number(await page.textContent('#jFilter button[data-f="OK"] .n'));
+  dire(compteOk === okLignes, `le compteur du segment OK annonce ses lignes (${compteOk})`);
+  const aRevoir = await page.$$eval('#jt tbody tr td:nth-child(6)', c => c.map(x => x.textContent));
+  dire(!aRevoir.some(v => v.includes('A_REVOIR')), 'le code brut A_REVOIR n est plus affiche');
   await page.click('#jFilter button[data-f=""]');
   await page.waitForTimeout(150);
   dire(await lignes() === total, 'revenir a « Tout » rend la table entiere');

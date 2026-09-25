@@ -71,7 +71,22 @@ const ECRANS = [
   ]],
   ['/training', 'Entrainement'],
   ['/worlds', 'Mondes'],
-  ['/app', 'Application'],
+  // Application montre UNE section a la fois depuis le 25/09 (design-pass
+  // screen-12) : chaque section est un ecran pour la sonde. Les etats ouverts
+  // sont des confirmations, qu'Echap annule sans rien envoyer.
+  ['/app', 'Application, ComfyUI', [
+    ['confirmation « Arrêter ComfyUI »', '#btnComfyStop'],
+  ]],
+  ['/app/server', 'Application, Serveur', [
+    ['confirmation « Redémarrer »', '#btnAppRestart'],
+  ]],
+  ['/app/adult', 'Application, Contenu adulte', [
+    ['modale d activation', '#btnNsfwOn'],
+    ['confirmation de desactivation', '#btnNsfwOff'],
+  ]],
+  ['/app/appearance', 'Application, Apparence'],
+  ['/app/journal', 'Application, Productions'],
+  ['/app/log', 'Application, Serveur (journal)'],
 ];
 
 /* Tout controle rendu, et le style que le navigateur lui calcule. On ne

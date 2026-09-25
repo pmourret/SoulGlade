@@ -42,6 +42,17 @@ export const PATHS = {
   journal: '/app/journal',
 } as const
 
+/** The sections of Application (design-pass screen-12 §S1), in nav order.
+    `journal` keeps `/app/journal` — the address the fault banner, the sheet
+    and Entraînement already link to. */
+export const APP_SECTIONS = ['server', 'comfy', 'adult', 'appearance', 'journal', 'log'] as const
+export type AppSection = (typeof APP_SECTIONS)[number]
+
+/** `/app/<section>` — the default section (ComfyUI) is plain `/app`. */
+export function appSectionPath(section: AppSection): string {
+  return section === 'comfy' ? PATHS.application : `${PATHS.application}/${section}`
+}
+
 /** `/worlds/<id>/places` — the catalog editor of one world (ADR-0016). A
     function and not a PATHS entry: it needs an id, like `characterPath`
     needs a claim state. */

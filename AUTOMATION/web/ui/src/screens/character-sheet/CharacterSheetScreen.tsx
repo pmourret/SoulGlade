@@ -31,7 +31,7 @@ import { Link } from 'react-router-dom'
 import { useCharacter } from '../../character/CharacterContext'
 import { useChrome } from '../../chrome/ChromeContext'
 import { useSystemState } from '../../state/SystemStateContext'
-import { PATHS, worldPlacesPath } from '../../app/routes'
+import { PATHS, appSectionPath, worldPlacesPath } from '../../app/routes'
 import { PropertyRow, PropertySection, StatusDot } from './PropertySection'
 import { SheetAside } from './SheetAside'
 import {
@@ -270,7 +270,7 @@ export function CharacterSheetScreen() {
           >
             <PropertyRow
               term="État"
-              action={<RowLink to={PATHS.application}>Régler</RowLink>}
+              action={<RowLink to={appSectionPath('adult')}>Régler</RowLink>}
             >
               {/* `id` as a test hook, like `#ficheAutres` and `#ficheRetry`:
                   « Désactivé » CONTAINS « activé », so a substring assertion on
