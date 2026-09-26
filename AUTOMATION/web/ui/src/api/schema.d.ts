@@ -507,6 +507,130 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/assets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Bibliothèque d'assets de ce personnage
+         * @description The world's assets, adjusted by this character, plus its own.
+         */
+        get: operations["get_library_api_assets_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Faire entrer une image dans le studio
+         * @description An image in, an asset out — with the fragment the vision model read.
+         *
+         *     ComfyUI offline does NOT refuse the import: the asset is born without a
+         *     fragment and « Analyser » retries later. The import runs in an executor,
+         *     like every other blocking call to ComfyUI (the 2005 ms measured on 24/08).
+         */
+        post: operations["import_asset_api_assets_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/analyse": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Relire l'image d'un asset
+         * @description Rewrites the fragment from the image. Asked for, so its failure is
+         *     shown — unlike the silent attempt made at import.
+         */
+        post: operations["analyse_asset_api_assets_analyse_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajuster le libellé ou le fragment d'un asset
+         * @description Writes this character's adjustment — or the world's own entry with
+         *     `au_monde`, which only an asset the world owns accepts.
+         */
+        post: operations["save_asset_api_assets_save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/assets/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirer un asset
+         * @description Removes the asset from the layer it lives in. On an adjusted world
+         *     asset only the adjustment goes — the world's asset comes back.
+         */
+        post: operations["delete_asset_api_assets_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/img/asset": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Image d'un asset */
+        get: operations["serve_asset_img_asset_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/scenes": {
         parameters: {
             query?: never;
@@ -1817,6 +1941,145 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * AssetClass
+         * @description A class of asset, as the table in `AUTOMATION/assets.py` declares it.
+         *     `champ` is the scene field the fragment lands in — `null` means the
+         *     library only, no destination yet. The picker reads this list, so a panel
+         *     never has to spell a class out (invariant 7).
+         */
+        AssetClass: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Champ */
+            champ?: string | null;
+        };
+        /**
+         * AssetDeleteResponse
+         * @description `couche` is what was actually removed: `surcharge` means only this
+         *     character's tweak went, and the world's asset came back.
+         */
+        AssetDeleteResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Couche */
+            couche: string;
+        };
+        /**
+         * AssetEntry
+         * @description One asset as the library shows it. `couche` says where it comes from:
+         *     `monde` (inherited as is), `surcharge` (the world's, adjusted here) or
+         *     `personnage`.
+         */
+        AssetEntry: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Classe
+             * @default reference
+             */
+            classe: string;
+            /**
+             * Fragment
+             * @default
+             */
+            fragment: string;
+            /**
+             * Fichier
+             * @default
+             */
+            fichier: string;
+            /**
+             * Couche
+             * @default personnage
+             */
+            couche: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AssetFragmentResponse */
+        AssetFragmentResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Fragment */
+            fragment: string;
+        };
+        /**
+         * AssetImportRequest
+         * @description An image the user brings in. `au_monde` files it in the character's
+         *     WORLD instead of the character — that is how a world ends up shipping its
+         *     own illustrated garments.
+         */
+        AssetImportRequest: {
+            /**
+             * Data Base64
+             * @default
+             */
+            data_base64: string;
+            /**
+             * Filename
+             * @default asset.png
+             */
+            filename: string;
+            /**
+             * Classe
+             * @default reference
+             */
+            classe: string;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** AssetImportResponse */
+        AssetImportResponse: {
+            /** Ok */
+            ok: boolean;
+            asset: components["schemas"]["AssetEntry"];
+        };
+        /** AssetKeyRequest */
+        AssetKeyRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * AssetSaveRequest
+         * @description Label and/or fragment. Omitted field = untouched, so adjusting one of
+         *     the two never freezes a copy of the other.
+         */
+        AssetSaveRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            /** Label */
+            label?: string | null;
+            /** Fragment */
+            fragment?: string | null;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * BaseCandidate
          * @description One queued portrait: its seed and its ComfyUI prompt_id.
          */
@@ -3073,6 +3336,13 @@ export interface components {
              * @default
              */
             aiPrompt: string;
+        };
+        /** LibraryResponse */
+        LibraryResponse: {
+            /** Assets */
+            assets: components["schemas"]["AssetEntry"][];
+            /** Classes */
+            classes: components["schemas"]["AssetClass"][];
         };
         /**
          * Mask
@@ -5419,6 +5689,282 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_library_api_assets_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LibraryResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_asset_api_assets_import_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetImportRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetImportResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyse_asset_api_assets_analyse_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetFragmentResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description ComfyUI hors ligne */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    save_asset_api_assets_save_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetFragmentResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_asset_api_assets_delete_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssetKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssetDeleteResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    serve_asset_img_asset_get: {
+        parameters: {
+            query?: {
+                /** @description Clé de l'asset */
+                key?: string;
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Absent de la bibliothèque de ce personnage */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

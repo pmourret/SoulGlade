@@ -238,6 +238,17 @@ def tones(wid):
     return list(load_world(wid).get("tones", []))
 
 
+def library(wid):
+    """Assets importes livres par le monde (IT-10 chantier 5) : une image
+    classee et son fragment de prompt. Un personnage en herite et les ajuste
+    (`merge_library`) — le fichier, lui, reste celui du monde.
+
+    Ce n'est pas la garde-robe d'une scene, que `CHARACTER_ONLY_SCENE_KEYS`
+    interdit au monde : un catalogue n'habille personne tout seul, c'est
+    l'utilisateur qui va y chercher une tenue."""
+    return list(load_world(wid).get(CLE_LIBRARY, []))
+
+
 def _merge_by_key(base, overrides):
     """base et overrides : listes d'entrees `{"key": ..., ...}`. Une entree
     d'`overrides` de meme `key` REMPLACE ENTIEREMENT celle de `base` (jamais
@@ -294,14 +305,34 @@ def merge_creative_vocab(wid, character_intentions, character_tones):
             _merge_fields_by_key(tones(wid), character_tones or []))
 
 
+def merge_library(wid, character_library):
+    """Fusion monde + personnage de la bibliotheque d'assets, CHAMP PAR CHAMP
+    comme les tons : un personnage ajuste le libelle ou le fragment d'un asset
+    du monde sans en reimporter le fichier, et une correction faite dans le
+    monde continue de l'atteindre."""
+    return _merge_fields_by_key(library(wid), character_library or [])
+
+
+def _layers(cles_du_monde, propres):
+    """Couche de chaque entree resolue, par cle : `monde` (heritee telle
+    quelle), `surcharge` (du monde, ajustee par le personnage) ou
+    `personnage` (propre au personnage)."""
+    a_lui = {e.get("key") for e in propres or [] if isinstance(e, dict)}
+    return {k: ("surcharge" if k in a_lui else "monde") for k in cles_du_monde} | {
+        k: "personnage" for k in a_lui - cles_du_monde}
+
+
 def tone_layers(wid, character_tones):
-    """Couche de chaque ton resolu, par cle : `monde` (herite tel quel),
-    `surcharge` (du monde, ajuste par le personnage) ou `personnage` (propre
-    au personnage). `wid` None = aucun monde, tout ton est au personnage."""
-    du_monde = {t.get("key") for t in (tones(wid) if wid else [])}
-    propres = {t.get("key") for t in character_tones or [] if isinstance(t, dict)}
-    return {k: ("surcharge" if k in propres else "monde") for k in du_monde} | {
-        k: "personnage" for k in propres - du_monde}
+    """Couche de chaque ton resolu. `wid` None = aucun monde, tout ton est au
+    personnage."""
+    return _layers({t.get("key") for t in (tones(wid) if wid else [])},
+                   character_tones)
+
+
+def library_layers(wid, character_library):
+    """Couche de chaque asset resolu. `wid` None = aucun monde."""
+    return _layers({a.get("key") for a in (library(wid) if wid else [])},
+                   character_library)
 
 
 # Reglages qui appartiennent au PERSONNAGE, jamais au catalogue d'un monde
@@ -321,6 +352,9 @@ SCENE_OVERLAY_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("tones", "tags", "intensity", 
 # (une intention dans un decor, avec ce qui s'y passe) et des tons.
 CLE_PLACES = "places"
 CLE_SCENES = "scenes"
+# Bibliotheque d'assets importes (IT-10 chantier 5). `assets` etait pris : il
+# porte le STYLE du monde (lora, prompt_add), pas ce qu'on y importe.
+CLE_LIBRARY = "library"
 # Branche ADULTE du monde (21/09, ADR-0027 §6) : des scenes, qui puisent dans
 # les memes decors et les memes intentions que les autres. Separation de
 # LIVRAISON, pas de sous-systeme (invariant 9) : un monde vendu peut porter
@@ -438,6 +472,11 @@ def save_tones(wid, new_tones):
     """Le monde cree ses tons comme ses scenes (25/09,
     `DOCS/cadrage/2026-09-25-creer-un-ton.md`)."""
     _save_key(wid, "tones", new_tones)
+
+
+def save_library(wid, new_library):
+    """Le monde ecrit sa bibliotheque d'assets comme ses tons."""
+    _save_key(wid, CLE_LIBRARY, new_library)
 
 
 def save_scenes_adulte(wid, new_scenes):

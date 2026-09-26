@@ -24,6 +24,9 @@ from .routers import app as app_router
 from .routers import (
     bank, images, photo_editor, production, review, state, training,
 )
+# aliased: this module's own name would otherwise shadow AUTOMATION/assets.py,
+# which routers/assets.py itself already imports as the bare `assets` module
+from .routers import assets as assets_router
 # aliased: this module's own name would otherwise shadow AUTOMATION/expression.py,
 # which routers/expression.py itself already imports as the bare `expression` module
 from .routers import expression as expression_router
@@ -74,6 +77,7 @@ def create_app() -> FastAPI:
 
     app.include_router(state.router)
     app.include_router(app_router.router)
+    app.include_router(assets_router.router)
     app.include_router(bank.router)
     app.include_router(expression_router.router)
     app.include_router(images.router)
