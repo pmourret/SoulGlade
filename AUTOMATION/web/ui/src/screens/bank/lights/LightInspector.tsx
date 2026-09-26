@@ -16,7 +16,7 @@ import { composeLight, SETTINGS, type EffectDef, type Setup, type Vocabulary } f
 import type { LightEffectEntry, LightEntry, LightFields } from './useLights'
 
 /** The sheet as it is on screen, saved or not: what a render trial tries. */
-export type LightDraft = { label: string; setup: Setup; text: string; sentence: string }
+export type LightDraft = { label: string; setup: Setup; text: string; sentence: string; dirty: boolean }
 
 const LAYER: Record<string, { label: string; hint: string }> = {
   monde: {
@@ -95,12 +95,6 @@ export function LightInspector({
   const composed = vocabulary ? composeLight(setup, vocabulary, custom) : { text: '', problem: '' }
   const sentence = hand ?? composed.text
 
-  const draftKey = JSON.stringify([label, setup, hand, sentence])
-  useEffect(() => {
-    onDraft({ label: label.trim(), setup, text: (hand ?? '').trim(), sentence: sentence.trim() })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [draftKey])
-
   const isNew = light === null
   const layer = LAYER[light?.couche ?? 'personnage'] ?? LAYER.personnage
   const changed = {
@@ -109,6 +103,12 @@ export function LightInspector({
     text: (hand ?? '').trim() !== (light?.text ?? ''),
   }
   const dirty = isNew ? Boolean(label.trim() || sentence.trim()) : changed.label || changed.setup || changed.text
+
+  const draftKey = JSON.stringify([label, setup, hand, sentence, dirty])
+  useEffect(() => {
+    onDraft({ label: label.trim(), setup, text: (hand ?? '').trim(), sentence: sentence.trim(), dirty })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey])
   const problem = hand !== null && hand.trim().startsWith(marker)
     ? `le texte d'une lumière ne commence pas par « ${marker} »`
     : hand === null ? composed.problem : ''

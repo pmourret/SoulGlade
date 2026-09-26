@@ -37,12 +37,27 @@ export function LightsView({ nav }: { nav: ReactNode }) {
   const { state } = useSystemState()
   const { open: openLightbox } = useLightbox()
   const trial = useRenderTrial('/api/lights/essai')
-  const [draft, setDraft] = useState<LightDraft | null>(null)
   const {
     lights, effects, vocabulary, marker, loaded, busy, create, save, remove, createEffect, removeEffect,
   } = useLights()
 
   const [selected, setSelected] = useState<string | null>(null)
+  const [draft, setDraft] = useState<LightDraft | null>(null)
+  /* A sheet takes a while to adjust: leaving it with unsaved changes asks
+     first (audit 26/09 — it was dropped without a word). Read through a ref:
+     the drawer's Escape keeps the close callback of the moment it opened. */
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const choose = async (key: string | null) => {
+    if (key === selected) return
+    if (draftRef.current?.dirty && !(await confirm({
+      title: 'Abandonner les réglages de cette lumière ?',
+      button: 'Abandonner',
+      body: <p>La fiche a des réglages non enregistrés ; ils seront perdus.</p>,
+    }))) return
+    setDraft(null)
+    setSelected(key)
+  }
   const selectedLight = lights.find((l) => l.key === selected) ?? null
   const inspecting = selected === NEW || selectedLight !== null
 
@@ -64,7 +79,9 @@ export function LightsView({ nav }: { nav: ReactNode }) {
   const myTrial = trial.trial && trial.trial.light === trialKey ? trial.trial : null
 
   const drawerRef = useRef<HTMLDivElement | null>(null)
-  useOverlayPanel(narrow && inspecting, () => setSelected(null), drawerRef)
+  /* Escape is deferred past its own keydown: a confirmation opened inside it
+     is a native <dialog> that the same Escape would cancel at once. */
+  useOverlayPanel(narrow && inspecting, () => void window.setTimeout(() => void choose(null)), drawerRef)
 
   const onCreate = async (label: string, fields: { text: string; setup: Setup | null }, toWorld: boolean) => {
     const result = await create(label, fields, toWorld)
@@ -147,7 +164,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
           className="btn primary sm flex-none"
           id="btnLightNew"
           disabled={busy}
-          onClick={() => setSelected(NEW)}
+          onClick={() => void choose(NEW)}
         >
           Nouvelle lumière
         </button>
@@ -158,7 +175,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
           inspecting && !narrow ? 'grid-cols-[minmax(0,1fr)_340px]' : 'grid-cols-1'
         }`}
       >
-        <div className="flex min-h-0 flex-col overflow-y-auto">
+        <div className={`flex min-h-0 flex-col overflow-y-auto ${narrow && inspecting ? 'pr-[340px]' : ''}`}>
           {inspecting && (
             <RenderTrialPanel
               kind="light"
@@ -197,7 +214,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
                 </p>
                 {/* Secondaire : « Nouvelle lumière », dans la barre, reste le
                     seul appel primaire de la vue (même règle que les tenues). */}
-                <button type="button" className="btn sm" onClick={() => setSelected(NEW)}>
+                <button type="button" className="btn sm" onClick={() => void choose(NEW)}>
                   Créer une lumière
                 </button>
               </div>
@@ -212,7 +229,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
                                 py-[9px] text-left ${light.key === selected ? 'border-txt' : 'border-line'}`}
                     data-light={light.key}
                     aria-pressed={light.key === selected}
-                    onClick={() => setSelected(light.key)}
+                    onClick={() => void choose(light.key)}
                   >
                     <span className="flex items-center gap-[6px] text-[13px]">
                       <b className="truncate font-medium">{light.label || light.key}</b>
@@ -252,7 +269,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
                 type="button"
                 className="ml-auto block border-0 bg-transparent px-[12px] py-[8px] text-[16px] text-dim hover:text-txt"
                 aria-label="Fermer la fiche"
-                onClick={() => setSelected(null)}
+                onClick={() => void choose(null)}
               >
                 ×
               </button>
