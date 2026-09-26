@@ -6,6 +6,8 @@
     POST /api/lights/create   a new light, character or world side
     POST /api/lights/save     its label, text and/or sheet
     POST /api/lights/delete   drops the light, or only this character's tweak
+    GET  /api/light-effects   the user's own effects (7 bis), layered
+    POST /api/light-effects/create|save|delete   the same three verbs
 
 A scene wears a light through its `light` field or a variant line
 « @<key> », resolved before the prompt assembler (`lights.resolve_bank`).
@@ -22,8 +24,10 @@ import shared_state as ss
 from ..dependencies import RequiredCharacterId
 from ..schemas.common import ERROR_RESPONSES
 from ..schemas.lights import (
-    LightCreateRequest, LightDeleteResponse, LightingVocabulary, LightKeyRequest,
-    LightResponse, LightSaveRequest, LightsResponse,
+    LightCreateRequest, LightDeleteResponse, LightEffectCreateRequest,
+    LightEffectResponse, LightEffectSaveRequest, LightEffectsResponse,
+    LightingVocabulary, LightKeyRequest, LightResponse, LightSaveRequest,
+    LightsResponse,
 )
 
 router = APIRouter(responses=ERROR_RESPONSES)
@@ -98,4 +102,56 @@ async def delete_light(payload: LightKeyRequest, character_id: RequiredCharacter
     except lights.LightError as e:
         return _refus(str(e))
     ss.push_log(f"lumière {payload.key!r} retirée ({couche})")
+    return {"ok": True, "couche": couche}
+
+
+# ------------------------------------------------ the user's own effects (7 bis)
+@router.get("/api/light-effects", response_model=LightEffectsResponse,
+            summary="Effets de lumière de ce personnage")
+async def get_light_effects(character_id: RequiredCharacterId):
+    """The world's effects, adjusted by this character, plus its own — offered
+    next to the platform's in a light's sheet."""
+    return {"effects": lights.effects(character_id)}
+
+
+@router.post("/api/light-effects/create", response_model=LightEffectResponse,
+             summary="Créer un effet de lumière")
+async def create_light_effect(payload: LightEffectCreateRequest,
+                              character_id: RequiredCharacterId):
+    try:
+        entry = lights.create_effect(character_id, payload.label, payload.fragment,
+                                     to_world=payload.au_monde)
+    except lights.LightError as e:
+        return _refus(str(e))
+    ss.push_log(f"effet de lumière créé : {entry['key']} ({entry['couche']})")
+    return {"ok": True, "effect": entry}
+
+
+@router.post("/api/light-effects/save", response_model=LightEffectResponse,
+             summary="Ajuster un effet de lumière")
+async def save_light_effect(payload: LightEffectSaveRequest,
+                            character_id: RequiredCharacterId):
+    fields = {k: v for k, v in (("label", payload.label), ("fragment", payload.fragment))
+              if v is not None}
+    if not fields:
+        return _refus("rien à enregistrer")
+    try:
+        entry = lights.save_effect(character_id, payload.key.strip(), fields,
+                                   to_world=payload.au_monde)
+    except lights.LightError as e:
+        return _refus(str(e))
+    ss.push_log(f"effet de lumière {payload.key!r} ajusté ({', '.join(fields)})"
+                + (" dans le monde" if payload.au_monde else ""))
+    return {"ok": True, "effect": entry}
+
+
+@router.post("/api/light-effects/delete", response_model=LightDeleteResponse,
+             summary="Retirer un effet de lumière")
+async def delete_light_effect(payload: LightKeyRequest, character_id: RequiredCharacterId):
+    """Refused while a light's sheet carries it."""
+    try:
+        couche = lights.delete_effect(character_id, payload.key.strip())
+    except lights.LightError as e:
+        return _refus(str(e))
+    ss.push_log(f"effet de lumière {payload.key!r} retiré ({couche})")
     return {"ok": True, "couche": couche}

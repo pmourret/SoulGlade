@@ -32,6 +32,11 @@ silently disappears from the render.
 
 WHO OWNS. The world owns, the character overrides, field by field
 (`layered_catalog.Catalog`, the mechanism the outfits wrote first).
+
+THE USER'S OWN EFFECTS. An effect the platform does not ship is created in
+the workshop — a French label, an English fragment, `{color}` where a colour
+goes — in a second layered catalogue, `light_effects` (`EFFECTS`). A sheet
+offers them next to the platform's; an effect a light carries is not deleted.
 """
 import json
 from pathlib import Path
@@ -130,8 +135,9 @@ def text(light, effects=()):
     return value
 
 
-def resolve(line, lights):
-    """A free line comes back as is; `@<key>` becomes the text of its light."""
+def resolve(line, lights, effects=()):
+    """A free line comes back as is; `@<key>` becomes the text of its light.
+    `effects` are the user's own effects its sheet may carry."""
     if not layered_catalog.is_reference(line):
         return line
     key = layered_catalog.key_of(line)
@@ -139,26 +145,26 @@ def resolve(line, lights):
                  None)
     if light is None:
         raise LightError(f"lumière inconnue : « {key} »")
-    return text(light)
+    return text(light, effects)
 
 
-def resolve_scene(scene, lights):
+def resolve_scene(scene, lights, effects=()):
     """A copy of the scene whose variants and `light` are text — kept apart
     from the prompt, so that a variant can take the light's place
     (`build_jobs`). An empty `light` is dropped: the scene carries none.
     Without `light` nor reference, equal to the input."""
     out = dict(scene)
     if "variants" in out and isinstance(out["variants"], list):
-        out["variants"] = [resolve(v, lights) for v in out["variants"]]
+        out["variants"] = [resolve(v, lights, effects) for v in out["variants"]]
     if "light" in out:
-        light = str(resolve(out.pop("light"), lights) or "").strip()
+        light = str(resolve(out.pop("light"), lights, effects) or "").strip()
         out["prompt"] = str(out.get("prompt") or "").strip()
         if light:
             out["light"] = light
     return out
 
 
-def resolve_bank(data, lights):
+def resolve_bank(data, lights, effects=()):
     """Resolves, in place, the light of every scene of the bank, and returns
     `data`. The error names the scene."""
     scenes = data.get("scenes", [])
@@ -166,7 +172,7 @@ def resolve_bank(data, lights):
         if not isinstance(s, dict) or ("light" not in s and not references(s)):
             continue
         try:
-            scenes[i] = resolve_scene(s, lights)
+            scenes[i] = resolve_scene(s, lights, effects)
         except LightError as e:
             raise LightError(f"scène {s.get('id')!r} : {e}") from e
     return data
@@ -174,12 +180,22 @@ def resolve_bank(data, lights):
 
 # ------------------------------------------------------------- catalogue (I/O)
 def _resolver(cid):
-    return text
+    effects = EFFECTS.merged(cid)
+    return lambda light: text(light, effects)
+
+
+def _effects_for(cid, to_world):
+    """The user's effects a sheet may carry: its world's for a world light —
+    a character's own effect would not resolve for the others."""
+    if not to_world:
+        return EFFECTS.merged(cid)
+    wid = CATALOG.world_of(cid)
+    return worlds.catalog(wid, worlds.CLE_LIGHT_EFFECTS) if wid else []
 
 
 def _validate(cid, fields, to_world):
     if "setup" in fields:
-        compose(fields["setup"])
+        compose(fields["setup"], _effects_for(cid, to_world))
     if "text" in fields:
         # empty = back to the sheet: the sentence is composed again
         value = str(fields["text"] or "").strip()
@@ -194,6 +210,51 @@ CATALOG = layered_catalog.Catalog(
     worlds.CLE_LIGHTS, "lumière", LightError, FIELDS,
     resolver=_resolver, validate=_validate,
     uses=lambda scene, key: key in references(scene))
+
+
+# ------------------------------------------------------ the user's own effects
+EFFECT_FIELDS = ("label", "fragment")
+
+
+def effect_text(effect):
+    value = str(effect.get("fragment") or "").strip()
+    if not value:
+        raise LightError(f"effet « {effect.get('label') or effect.get('key')} » : "
+                         f"aucun fragment")
+    return value
+
+
+def _validate_effect(cid, fields, to_world):
+    if "fragment" in fields:
+        from runner.prompt import FORBIDDEN_FACE     # runner.prompt imports this module
+        value = " ".join(str(fields["fragment"] or "").split())
+        if not value:
+            raise LightError("un effet porte un fragment")
+        if layered_catalog.is_reference(value):
+            raise LightError(f"le fragment d'un effet ne commence pas par "
+                             f"« {layered_catalog.MARKER} »")
+        face = FORBIDDEN_FACE.search(value)
+        if face:
+            raise LightError(f"ce fragment décrit le visage (« {face.group(0)} ») : "
+                             f"c'est le verrou d'identité qui le porte")
+        fields = {**fields, "fragment": value}
+    return fields
+
+
+def _lights_carrying(cid, key, to_world=False):
+    """« <character>/<light> » of every light whose sheet carries the effect:
+    this character's, or its whole world's when the effect comes from it."""
+    return [f"{c}/{light.get('key')}" for c in CATALOG.concerned(cid, to_world)
+            for light in CATALOG.merged(c)
+            if any(isinstance(e, dict) and e.get("key") == key
+                   for e in (light.get("setup") or {}).get("effects") or [])]
+
+
+EFFECTS = layered_catalog.Catalog(
+    worlds.CLE_LIGHT_EFFECTS, "effet", LightError, EFFECT_FIELDS,
+    resolver=lambda cid: effect_text, validate=_validate_effect,
+    masculine=True, in_use=_lights_carrying, holder="lumière",
+    reserved=lambda: [e["key"] for e in vocabulary()["effects"]])
 
 
 def merged(cid):
@@ -224,3 +285,20 @@ def save(cid, key, fields, to_world=False):
 
 def delete(cid, key):
     return CATALOG.delete(cid, key)
+
+
+def effects(cid):
+    """The user's own effects, with their layer."""
+    return EFFECTS.listing(cid)
+
+
+def create_effect(cid, label, fragment, to_world=False):
+    return EFFECTS.create(cid, label, {"fragment": fragment}, to_world)
+
+
+def save_effect(cid, key, fields, to_world=False):
+    return EFFECTS.save(cid, key, fields, to_world)
+
+
+def delete_effect(cid, key):
+    return EFFECTS.delete(cid, key)

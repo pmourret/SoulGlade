@@ -374,6 +374,61 @@ try:
             "une lumiere de fiche est remplacee comme une lumiere ecrite")
     ecrire_scenes(CA, [])
 
+    # =========================================== [10] les effets de l'utilisateur
+    print("\n[10] effets personnalises : catalogue a couches, portes, isoles")
+    r = CLIENT.post(f"/api/light-effects/create?character={CA}",
+                    json={"label": "Lueur de bougie", "fragment": " {color}  candle glow "})
+    verifie(r.status_code == 200 and r.json()["effect"]["key"] == "lueur-de-bougie"
+            and r.json()["effect"]["fragment"] == "{color} candle glow",
+            f"POST /api/light-effects/create, cote personnage ({r.status_code})")
+    r = CLIENT.post(f"/api/light-effects/create?character={CA}",
+                    json={"label": "Gel", "fragment": "a gel"})
+    verifie(r.json()["effect"]["key"] == "gel-2",
+            "une cle de la plateforme n'est jamais prise (« gel » -> « gel-2 »)")
+    bougie = {"source": "lamp", "effects": [{"key": "lueur-de-bougie", "color": "amber"}]}
+    r = CLIENT.post(f"/api/lights/create?character={CA}",
+                    json={"label": "Bougie", "setup": bougie})
+    verifie(r.status_code == 200 and r.json()["light"]["texte"] == "lamplight, amber candle glow",
+            f"une fiche porte l'effet de l'utilisateur, en couleur ({r.json()})")
+    ecrire_scenes(CA, [scene("s1", light="@bougie")])
+    verifie(prompts(CA)[0].endswith("lamplight, amber candle glow, film grain"),
+            "et la scene qui porte la lumiere le recoit")
+    ecrire_scenes(CA, [])
+    r = CLIENT.post(f"/api/light-effects/delete?character={CA}",
+                    json={"key": "lueur-de-bougie"})
+    verifie(r.status_code == 400 and f"{CA}/bougie" in r.json()["erreur"]
+            and "porté par 1 lumière(s)" in r.json()["erreur"],
+            f"un effet porte ne se supprime pas ({r.json().get('erreur')})")
+    try:
+        lights.EFFECTS.find(CA, "nulle-part")
+    except lights.LightError as e:
+        verifie(str(e) == "effet inconnu : « nulle-part »", f"accorde au masculin ({e})")
+    for cas, corps_ in (("fragment vide", {"label": "Rien", "fragment": " "}),
+                        ("fragment qui decrit le visage",
+                         {"label": "Yeux", "fragment": "glowing eyes"}),
+                        ("libelle vide", {"label": "", "fragment": "x"})):
+        r = CLIENT.post(f"/api/light-effects/create?character={CA}", json=corps_)
+        verifie(r.status_code == 400, f"{cas} : refuse ({r.status_code})")
+    r = CLIENT.post(f"/api/lights/create?character={CA}",
+                    json={"label": "Monde bougie", "setup": bougie, "au_monde": True})
+    verifie(r.status_code == 400,
+            "une lumiere du monde ne porte pas un effet propre au personnage")
+    r = CLIENT.post(f"/api/light-effects/create?character={CB}",
+                    json={"label": "Brume", "fragment": "{color} mist", "au_monde": True})
+    verifie(r.status_code == 200 and r.json()["effect"]["couche"] == "monde",
+            "un effet cree au monde de B")
+    verifie({e["key"] for e in CLIENT.get(f"/api/light-effects?character={CA}")
+             .json()["effects"]} == {"lueur-de-bougie", "gel-2"}
+            and CLIENT.get(f"/api/light-effects?character={CA2}").json()["effects"] == [],
+            "A ne voit pas l'effet du monde de B ; A2 ne voit pas ceux de A")
+    r = CLIENT.post(f"/api/lights/create?character={CA}",
+                    json={"label": "Brume", "setup": {"effects": [{"key": "brume"}]}})
+    verifie(r.status_code == 400, "A ne peut pas porter l'effet d'un autre monde")
+    CLIENT.post(f"/api/lights/delete?character={CA}", json={"key": "bougie"})
+    r = CLIENT.post(f"/api/light-effects/delete?character={CA}",
+                    json={"key": "lueur-de-bougie"})
+    verifie(r.status_code == 200, "plus porte, il part")
+
 finally:
     for c in (CA, CA2, CB):
         shutil.rmtree(OFM / "CHARACTERS" / c, ignore_errors=True)

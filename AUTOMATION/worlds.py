@@ -404,6 +404,8 @@ CLE_LIBRARY = "library"
 CLE_OUTFITS = "outfits"
 # Lumieres (IT-10 chantier 7) : un catalogue, la scene pose la sienne.
 CLE_LIGHTS = "lights"
+# Effets de lumiere de l'utilisateur (7 bis) : a cote de ceux de la plateforme.
+CLE_LIGHT_EFFECTS = "light_effects"
 # Branche ADULTE du monde (21/09, ADR-0027 §6) : des scenes, qui puisent dans
 # les memes decors et les memes intentions que les autres. Separation de
 # LIVRAISON, pas de sous-systeme (invariant 9) : un monde vendu peut porter

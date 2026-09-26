@@ -325,7 +325,10 @@ def load_creative(character_id):
                     world, data.get(worlds.CLE_LIBRARY, [])),
                 # Lumieres (IT-10 c7) : `lights.resolve_bank`.
                 worlds.CLE_LIGHTS: worlds.merge_catalog(
-                    world, worlds.CLE_LIGHTS, data.get(worlds.CLE_LIGHTS, []))}
+                    world, worlds.CLE_LIGHTS, data.get(worlds.CLE_LIGHTS, [])),
+                worlds.CLE_LIGHT_EFFECTS: worlds.merge_catalog(
+                    world, worlds.CLE_LIGHT_EFFECTS,
+                    data.get(worlds.CLE_LIGHT_EFFECTS, []))}
     return data
 
 
@@ -461,7 +464,8 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     # « @cle » deviennent du texte (IT-10 c7). La lumiere reste a part : elle se
     # place apres le decor, et une variante prend sa place (7 bis). Sans `light`
     # ni reference, la banque ne change pas.
-    catalogue_lumieres.resolve_bank(data, creative.get(worlds.CLE_LIGHTS, []))
+    catalogue_lumieres.resolve_bank(data, creative.get(worlds.CLE_LIGHTS, []),
+                                    creative.get(worlds.CLE_LIGHT_EFFECTS, []))
     style = character_style(character_id)               # fige a la creation (J5)
 
     brut = getattr(args, "intensity", None)

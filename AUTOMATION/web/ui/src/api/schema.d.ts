@@ -1268,6 +1268,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/light-effects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Effets de lumière de ce personnage
+         * @description The world's effects, adjusted by this character, plus its own — offered
+         *     next to the platform's in a light's sheet.
+         */
+        get: operations["get_light_effects_api_light_effects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/light-effects/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Créer un effet de lumière */
+        post: operations["create_light_effect_api_light_effects_create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/light-effects/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ajuster un effet de lumière */
+        post: operations["save_light_effect_api_light_effects_save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/light-effects/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirer un effet de lumière
+         * @description Refused while a light's sheet carries it.
+         */
+        post: operations["delete_light_effect_api_light_effects_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/outfits": {
         parameters: {
             query?: never;
@@ -3579,6 +3654,92 @@ export interface components {
              * @default
              */
             color: string;
+        };
+        /** LightEffectCreateRequest */
+        LightEffectCreateRequest: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Fragment
+             * @default
+             */
+            fragment: string;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * LightEffectEntry
+         * @description One of the user's own effects (`light_effects`), with its layer.
+         *     `{color}` in `fragment` marks where the chosen colour goes.
+         */
+        LightEffectEntry: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Fragment
+             * @default
+             */
+            fragment: string;
+            /**
+             * Couche
+             * @default personnage
+             */
+            couche: string;
+            /**
+             * Texte
+             * @default
+             */
+            texte: string;
+            /**
+             * Erreur
+             * @default
+             */
+            erreur: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LightEffectResponse */
+        LightEffectResponse: {
+            /** Ok */
+            ok: boolean;
+            effect: components["schemas"]["LightEffectEntry"];
+        };
+        /** LightEffectSaveRequest */
+        LightEffectSaveRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            /** Label */
+            label?: string | null;
+            /** Fragment */
+            fragment?: string | null;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LightEffectsResponse */
+        LightEffectsResponse: {
+            /** Effects */
+            effects: components["schemas"]["LightEffectEntry"][];
         };
         /**
          * LightEntry
@@ -7794,6 +7955,182 @@ export interface operations {
         };
     };
     delete_light_api_lights_delete_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightDeleteResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_light_effects_api_light_effects_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightEffectsResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_light_effect_api_light_effects_create_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightEffectCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightEffectResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_light_effect_api_light_effects_save_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightEffectSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightEffectResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_light_effect_api_light_effects_delete_post: {
         parameters: {
             query?: {
                 /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */

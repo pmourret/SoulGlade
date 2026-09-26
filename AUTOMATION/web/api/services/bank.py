@@ -140,7 +140,8 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
             problems.append(f"{where} : « light » doit être un texte")
         elif creative is not None:
             try:
-                lights.resolve_scene(s, creative.get(worlds.CLE_LIGHTS, []))
+                lights.resolve_scene(s, creative.get(worlds.CLE_LIGHTS, []),
+                                     creative.get(worlds.CLE_LIGHT_EFFECTS, []))
             except lights.LightError as e:
                 problems.append(f"{where} : {e}")
         # pose (26/08/2026): a file name that does not exist in INPUTS/POSE/

@@ -128,3 +128,42 @@ class LightingVocabulary(BaseModel):
     palette: List[LightingColor]
     effects: List[LightingEffect]
     schemes: List[LightingScheme]
+
+
+class LightEffectEntry(BaseModel):
+    """One of the user's own effects (`light_effects`), with its layer.
+    `{color}` in `fragment` marks where the chosen colour goes."""
+    model_config = ConfigDict(extra="allow")
+
+    key: str
+    label: str = ""
+    fragment: str = ""
+    couche: str = "personnage"
+    texte: str = ""
+    erreur: str = ""
+
+
+class LightEffectsResponse(BaseModel):
+    effects: List[LightEffectEntry]
+
+
+class LightEffectCreateRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    label: str = ""
+    fragment: str = ""
+    au_monde: bool = False
+
+
+class LightEffectSaveRequest(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    key: str = ""
+    label: Optional[str] = None
+    fragment: Optional[str] = None
+    au_monde: bool = False
+
+
+class LightEffectResponse(BaseModel):
+    ok: bool
+    effect: LightEffectEntry

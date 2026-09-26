@@ -18,8 +18,13 @@ WHAT STAYS WITH EACH CATALOGUE. What an entry holds and how it reads as text
 `@<key>` in a scene string (`MARKER`), shared by every catalogue so that one
 rule reads them all.
 
-Error messages are French, for the screen, and take the catalogue's noun: a
-feminine noun (« tenue », « lumière »), which the messages agree with.
+Error messages are French, for the screen, and take the catalogue's noun,
+which they agree with: feminine by default (« tenue », « lumière »),
+`masculine=True` for « effet » (chantier 7 bis).
+
+WHAT HOLDS AN ENTRY. Scenes, by default: an entry a scene refers to is not
+deleted. A catalogue whose entries are held by something else (an effect, by
+the lights whose sheet carries it) passes `in_use` and its `holder` noun.
 """
 import json
 import re
@@ -53,10 +58,14 @@ class Catalog:
     - `fields`: the fields a save may write, `label` included;
     - `resolver(cid)`: a function entry -> text, raising `error`;
     - `validate(cid, fields, to_world)`: the checked fields, raising `error`;
-    - `uses(scene, key)`: whether a scene refers to the entry `key`.
+    - `uses(scene, key)`: whether a scene refers to the entry `key`;
+    - `in_use(cid, key, to_world)`: « <character>/<holder> » of what holds the
+      entry, `scenes_using` by default, and `holder` what that is called;
+    - `reserved()`: keys a new entry never takes (the platform's own).
     """
 
-    def __init__(self, world_key, noun, error, fields, resolver, validate, uses):
+    def __init__(self, world_key, noun, error, fields, resolver, validate, uses=None,
+                 masculine=False, in_use=None, holder="scène", reserved=tuple):
         self.world_key = world_key
         self.noun = noun
         self.error = error
@@ -64,6 +73,11 @@ class Catalog:
         self.resolver = resolver
         self.validate = validate
         self.uses = uses
+        self.in_use = in_use or self.scenes_using
+        self.holder = holder
+        self.reserved = reserved   # keys a new entry never takes (callable)
+        # agreement: « tenue inconnue », « effet inconnu »
+        self.e, self.a, self.the = ("", "un", "le") if masculine else ("e", "une", "la")
 
     # `runner` is imported inside the methods: `runner.prompt` imports the
     # catalogues to resolve a bank before assembling it.
@@ -113,13 +127,13 @@ class Catalog:
     def find(self, cid, key):
         entry = next((e for e in self.listing(cid) if e.get("key") == key), None)
         if entry is None:
-            raise self.error(f"{self.noun} inconnue : « {key} »")
+            raise self.error(f"{self.noun} inconnu{self.e} : « {key} »")
         return entry
 
     def _label(self, label):
         label = str(label or "").strip()
         if not label:
-            raise self.error(f"une {self.noun} porte un libellé")
+            raise self.error(f"{self.a} {self.noun} porte un libellé")
         return label
 
     def create(self, cid, label, fields, to_world=False):
@@ -127,10 +141,10 @@ class Catalog:
         label = self._label(label)
         wid = self.world_of(cid)
         if to_world and not wid:
-            raise self.error(f"ce personnage n'a pas de monde : la {self.noun} "
+            raise self.error(f"ce personnage n'a pas de monde : {self.the} {self.noun} "
                              f"ne peut appartenir qu'à lui")
         fields = self.validate(cid, dict(fields), to_world)
-        taken = {e.get("key") for e in self.merged(cid)}
+        taken = {e.get("key") for e in self.merged(cid)} | set(self.reserved())
         base = slug(label) or slug(self.noun)
         key, n = base, 1
         while key in taken:
@@ -207,17 +221,17 @@ class Catalog:
         - `surcharge`: only the adjustments go, the world entry comes back;
         - `monde`: the entry leaves the world.
 
-        Refused while a scene refers to it (precedent of the place a scene
-        uses, IT-11 chantier 4). A dropped override is not concerned: the
-        entry stays, only its version changes."""
+        Refused while something holds it — a scene by default (precedent of
+        the place a scene uses, IT-11 chantier 4). A dropped override is not
+        concerned: the entry stays, only its version changes."""
         entry = self.find(cid, key)
         layer = entry["couche"]
         if layer != "surcharge":
-            used = self.scenes_using(cid, key, to_world=layer == "monde")
+            used = self.in_use(cid, key, to_world=layer == "monde")
             if used:
-                raise self.error(f"« {entry.get('label') or key} » est portée par "
-                                 f"{len(used)} scène(s) : {', '.join(used)} — la "
-                                 f"retirer de ces scènes d'abord")
+                raise self.error(f"« {entry.get('label') or key} » est porté{self.e} par "
+                                 f"{len(used)} {self.holder}(s) : {', '.join(used)} — "
+                                 f"{self.the} retirer de ces {self.holder}s d'abord")
         if layer == "monde":
             wid = self.world_of(cid)
             worlds.save_catalog(wid, self.world_key,
