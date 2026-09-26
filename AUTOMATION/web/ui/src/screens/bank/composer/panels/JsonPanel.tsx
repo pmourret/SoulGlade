@@ -51,16 +51,15 @@ function ownerKeys(lines: string[]): string[] {
 }
 
 /* Où va-t-on quand on clique une ligne modifiée. `prompt` est la seule clé
-   dont la section dépend de CE QUI a changé : les trois fragments s'y
-   joignent, et renvoyer toujours vers le décor enverrait au mauvais champ
-   celui qui vient de toucher la lumière. */
+   dont la section dépend de CE QUI a changé : deux fragments s'y joignent, et
+   renvoyer toujours vers le texte enverrait au mauvais champ celui qui vient
+   de toucher la pose. La lumière a sa propre clé depuis IT-10 c7. */
 function sectionFor(key: string, changed: Set<SceneField>): SectionKey {
   if (key === 'prompt') {
-    if (changed.has('promptLight')) return 'light'
     if (changed.has('promptPose')) return 'pose'
     return 'recap'
   }
-  if (key === 'variants') return 'light'
+  if (key === 'light' || key === 'variants') return 'light'
   if (key === 'wardrobe') return 'clothing'
   if (key === 'pose') return 'pose'
   return 'general'

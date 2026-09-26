@@ -20,7 +20,7 @@ const fold = (text: string) =>
 
 function matches(draft: SceneDraft, needle: string) {
   if (!needle) return true
-  const hay = fold([draft.id, composePrompt(draft), draft.tags, draft.intention].join(' '))
+  const hay = fold([draft.id, composePrompt(draft), draft.promptLight, draft.tags, draft.intention].join(' '))
   return fold(needle)
     .split(/\s+/)
     .filter(Boolean)

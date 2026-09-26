@@ -11,17 +11,22 @@ const dire = (bon, quoi) => {
   console.log(`   ${bon ? 'ok  ' : 'ECHEC'} ${quoi}`)
   if (!bon) ko++
 }
-const RIEN = { name: '', cidValid: false, type: null, style: null, world: null, frozenBase: null }
-const TOUT = { name: 'Léna', cidValid: true, type: 't', style: 's', world: 'w', frozenBase: 'LENA_BASE.png' }
+const RIEN = { name: '', cidValid: false, anchor: '', type: null, style: null, world: null, frozenBase: null }
+const TOUT = { name: 'Léna', cidValid: true, anchor: 'a woman', type: 't', style: 's', world: 'w', frozenBase: 'LENA_BASE.png' }
 
 console.log('\n[1] cinq etapes, Identite en premier')
 dire(STEPS.join(',') === 'identity,type,style,world,base', STEPS.join(','))
 
-console.log('\n[2] Identite : un nom, puis un identifiant valide')
+console.log('\n[2] Identite : un nom, un identifiant valide, puis une ancre d identite')
 dire(missingFor('identity', RIEN) === 'un nom affiché', 'sans nom : le nom')
 dire(missingFor('identity', { ...RIEN, name: '  ' }) === 'un nom affiché', 'des espaces ne sont pas un nom')
 dire(missingFor('identity', { ...RIEN, name: 'Léna' }) === 'un identifiant valide', 'avec nom : l identifiant')
-dire(missingFor('identity', { ...RIEN, name: 'Léna', cidValid: true }) === null, 'les deux : rien ne manque')
+dire(missingFor('identity', { ...RIEN, name: 'Léna', cidValid: true }) === "une ancre d'identité",
+     'nom et identifiant : l ancre (26/09 — un personnage sans ancre ne pouvait pas enregistrer sa banque)')
+dire(missingFor('identity', { ...RIEN, name: 'Léna', cidValid: true, anchor: '  ' }) === "une ancre d'identité",
+     'des espaces ne sont pas une ancre')
+dire(missingFor('identity', { ...RIEN, name: 'Léna', cidValid: true, anchor: 'a woman' }) === null,
+     'les trois : rien ne manque')
 
 console.log('\n[3] chaque etape de choix a sa seule condition')
 dire(missingFor('type', RIEN) === 'choisir un type', 'type')

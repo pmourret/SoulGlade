@@ -17,10 +17,11 @@
 
    LE PROMPT EST DÉCOUPÉ ICI, ASSEMBLÉ NULLE PART AILLEURS. `scenes.json`
    porte toujours UNE chaîne `prompt`, lue par `build_jobs` comme avant (test
-   à l'octet près, CLAUDE.md §3). `promptBase`/`promptLight`/`promptPose` sont
-   des fragments de brouillon, joints par `composePrompt` à l'enregistrement ;
-   `sceneFragments` les redécoupe pour les vues colorées, sans jamais les
-   rejoindre. `wardrobe` n'est pas un quatrième fragment : la tenue est
+   à l'octet près, CLAUDE.md §3). `promptBase`/`promptPose` sont des fragments
+   de brouillon, joints par `composePrompt` à l'enregistrement. La lumière
+   n'en est plus un (IT-10 c7) : elle vit dans `scene.light`, et le lancement
+   l'ajoute après le décor. `sceneFragments` découpe pour les vues colorées,
+   sans jamais rejoindre. `wardrobe` n'est pas un quatrième fragment : la tenue est
    injectée par niveau à la génération, jamais fondue dans le prompt. */
 import { useEffect, useRef, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
@@ -31,8 +32,10 @@ import type { Creative } from '../../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../worlds/useWorldCatalog'
 import type { LibraryPick } from '../assets/libraryPicks'
+import type { LightEntry } from '../lights/useLights'
 import type { OutfitEntry } from '../outfits/useOutfits'
 import type { SceneField } from '../sceneChanges'
+import { decorOf } from './sceneFragments'
 import { SECTIONS, type SectionKey } from './sections'
 import { SectionRail } from './SectionRail'
 import { AiPanel } from './panels/AiPanel'
@@ -52,6 +55,8 @@ export function SceneComposer({
   library,
   outfits,
   outfitMarker,
+  lights,
+  lightMarker,
   produced,
   worldLinked,
   changed,
@@ -74,6 +79,10 @@ export function SceneComposer({
       and the marker of a wardrobe line that wears one. */
   outfits: OutfitEntry[]
   outfitMarker: string
+  /** The lights a scene may wear, resolved by the server (IT-10 chantier 7),
+      and the marker of a line that refers to one. */
+  lights: LightEntry[]
+  lightMarker: string
   produced: number | null
   /* A scene bound to a world place (ADR-0015): its frame — décor, lumière and
      the pose prose — is re-derived server-side on every save, so those three
@@ -199,6 +208,9 @@ export function SceneComposer({
                 {section.key === 'light' && (
                   <LightPanel
                     draft={draft}
+                    decor={decorOf(places, draft.place)}
+                    lights={lights}
+                    marker={lightMarker}
                     worldLinked={worldLinked}
                     lockedNote={lockedNote}
                     changed={changed}
@@ -230,6 +242,8 @@ export function SceneComposer({
                   <RecapPanel
                     draft={draft}
                     places={places}
+                    lights={lights}
+                    lightMarker={lightMarker}
                     library={library.filter((pick) => pick.champ === 'prompt')}
                     worldLinked={worldLinked}
                     lockedNote={lockedNote}

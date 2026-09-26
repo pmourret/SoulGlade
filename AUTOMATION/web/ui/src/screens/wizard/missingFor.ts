@@ -13,6 +13,8 @@ export type Step = (typeof STEPS)[number]
 export type WizardChoices = {
   name: string
   cidValid: boolean
+  /** The identity anchor: what follows « photo of » in every prompt. */
+  anchor: string
   type: string | null
   style: string | null
   world: string | null
@@ -24,7 +26,8 @@ export function missingFor(step: Step, choices: WizardChoices): string | null {
   switch (step) {
     case 'identity':
       if (!choices.name.trim()) return 'un nom affiché'
-      return choices.cidValid ? null : 'un identifiant valide'
+      if (!choices.cidValid) return 'un identifiant valide'
+      return choices.anchor.trim() ? null : "une ancre d'identité"
     case 'type':
       return choices.type ? null : 'choisir un type'
     case 'style':

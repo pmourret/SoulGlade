@@ -8,18 +8,22 @@
 
    IT ASSEMBLES NOTHING (CLAUDE.md §3). `sceneFragments` cuts — the same
    function the Prompt global panel uses for its own tinted preview — and the
-   décor of the scene's place comes last, as `worlds.materialize` joins it at
-   launch. This panel only draws them. */
+   décor of the scene's place then its light come last, as the launch joins
+   them. This panel only draws them. */
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../../app/routes'
 import type { SceneDraft } from '../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../worlds/useWorldCatalog'
+import { lightPromptText } from '../lights/lightText'
+import type { LightEntry } from '../lights/useLights'
 import { decorOf, sceneFragments } from './sceneFragments'
 
 export function ScenePreviewPanel({
   draft,
   places,
+  lights,
+  lightMarker,
   stats,
   changed,
   className,
@@ -27,13 +31,20 @@ export function ScenePreviewPanel({
   draft: SceneDraft
   /** The world's places: the décor joins the scene's text at launch. */
   places: WorldPlace[]
+  /** The lights of the catalogue: a scene's light may be a key. */
+  lights: LightEntry[]
+  lightMarker: string
   /** The scene's produced shots, as `/api/scenes` counts them. */
   stats: { n: number; avg: number | null } | undefined
   /** Unsaved edits: Produire reads scenes.json, so it would not see them. */
   changed: boolean
   className?: string
 }) {
-  const fragments = sceneFragments(draft, decorOf(places, draft.place))
+  const fragments = sceneFragments(
+    draft,
+    decorOf(places, draft.place),
+    lightPromptText(draft.promptLight, lights, lightMarker),
+  )
   const composed = fragments.map((f) => f.text).join(', ')
 
   return (

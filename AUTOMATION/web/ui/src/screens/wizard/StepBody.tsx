@@ -67,6 +67,7 @@ export function StepBody(props: {
   cid: string
   cidValid: boolean
   cidProposal: string
+  anchor: string
   type: string | null
   style: string | null
   world: string | null
@@ -77,6 +78,7 @@ export function StepBody(props: {
   candidates: CandidateState[] | null
   onName: (value: string) => void
   onCid: (value: string) => void
+  onAnchor: (value: string) => void
   onPickType: (id: string) => void
   onPickStyle: (value: string) => void
   onPickWorld: (value: string) => void
@@ -103,6 +105,8 @@ export function StepBody(props: {
           cid={props.cid}
           cidValid={props.cidValid}
           proposal={props.cidProposal}
+          anchor={props.anchor}
+          onAnchor={props.onAnchor}
           onName={props.onName}
           onCid={props.onCid}
         />

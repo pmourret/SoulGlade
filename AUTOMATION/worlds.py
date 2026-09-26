@@ -254,7 +254,20 @@ def outfits(wid):
     pieces, texte ou asset. Meme lecture que `library` : un catalogue
     n'habille personne tout seul, c'est la scene du personnage qui y choisit
     une tenue et la pose a un niveau (ADR-0014 §2 tient)."""
-    return list(load_world(wid).get(CLE_OUTFITS, []))
+    return catalog(wid, CLE_OUTFITS)
+
+
+def lights(wid):
+    """Lumieres livrees par le monde (IT-10 chantier 7) : un libelle et un
+    texte. Un catalogue, comme les tenues : c'est la scene du personnage qui
+    y choisit sa lumiere."""
+    return catalog(wid, CLE_LIGHTS)
+
+
+def catalog(wid, cle):
+    """Un catalogue a couches du monde (`layered_catalog`) : tenues,
+    lumieres."""
+    return list(load_world(wid).get(cle, []))
 
 
 def _merge_by_key(base, overrides):
@@ -325,7 +338,12 @@ def merge_outfits(wid, character_outfits):
     """Fusion monde + personnage des tenues, champ par champ comme la
     bibliotheque : un personnage qui ajuste les pieces d'une tenue du monde
     garde les corrections de libelle qu'on y fait ensuite."""
-    return _merge_fields_by_key(outfits(wid), character_outfits or [])
+    return merge_catalog(wid, CLE_OUTFITS, character_outfits)
+
+
+def merge_catalog(wid, cle, character_entries):
+    """Fusion monde + personnage d'un catalogue a couches, champ par champ."""
+    return _merge_fields_by_key(catalog(wid, cle), character_entries or [])
 
 
 def _layers(cles_du_monde, propres):
@@ -352,8 +370,14 @@ def library_layers(wid, character_library):
 
 def outfit_layers(wid, character_outfits):
     """Couche de chaque tenue resolue. `wid` None = aucun monde."""
-    return _layers({o.get("key") for o in (outfits(wid) if wid else [])},
-                   character_outfits)
+    return catalog_layers(wid, CLE_OUTFITS, character_outfits)
+
+
+def catalog_layers(wid, cle, character_entries):
+    """Couche de chaque entree resolue d'un catalogue. `wid` None = aucun
+    monde."""
+    return _layers({e.get("key") for e in (catalog(wid, cle) if wid else [])},
+                   character_entries)
 
 
 # Reglages qui appartiennent au PERSONNAGE, jamais au catalogue d'un monde
@@ -378,6 +402,8 @@ CLE_SCENES = "scenes"
 CLE_LIBRARY = "library"
 # Tenues (IT-10 chantier 6) : un catalogue, jamais la garde-robe d'une scene.
 CLE_OUTFITS = "outfits"
+# Lumieres (IT-10 chantier 7) : un catalogue, la scene pose la sienne.
+CLE_LIGHTS = "lights"
 # Branche ADULTE du monde (21/09, ADR-0027 §6) : des scenes, qui puisent dans
 # les memes decors et les memes intentions que les autres. Separation de
 # LIVRAISON, pas de sous-systeme (invariant 9) : un monde vendu peut porter
@@ -504,7 +530,12 @@ def save_library(wid, new_library):
 
 def save_outfits(wid, new_outfits):
     """Le monde ecrit ses tenues comme sa bibliotheque."""
-    _save_key(wid, CLE_OUTFITS, new_outfits)
+    save_catalog(wid, CLE_OUTFITS, new_outfits)
+
+
+def save_catalog(wid, cle, entries):
+    """Le monde ecrit un catalogue a couches (tenues, lumieres)."""
+    _save_key(wid, cle, entries)
 
 
 def save_scenes_adulte(wid, new_scenes):

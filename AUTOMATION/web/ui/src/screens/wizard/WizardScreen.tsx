@@ -79,6 +79,9 @@ export function WizardScreen() {
   const [cid, setCid] = useState('')
   /* The id follows the name until it is typed by hand (screen-14 §S7). */
   const [cidTouched, setCidTouched] = useState(false)
+  /* The identity anchor (26/09): the pack leaves it empty, and a character
+     born without it had a broken prompt and a bank it could not save. */
+  const [anchor, setAnchor] = useState('')
   const [type, setType] = useState<string | null>(null)
   const [style, setStyle] = useState<string | null>(null)
   const [world, setWorld] = useState<string | null>(null)
@@ -248,6 +251,7 @@ export function WizardScreen() {
       style,
       world,
       n: 4,
+      anchor: anchor.trim(),
     })
     const failure = errorOf(response)
     if (failure) {
@@ -292,7 +296,7 @@ export function WizardScreen() {
 
   /* GATING (`missingFor.ts`): each step has one condition, and the last one
      has the whole list — nothing is created half-chosen. */
-  const choices: WizardChoices = { name, cidValid, type, style, world, frozenBase }
+  const choices: WizardChoices = { name, cidValid, anchor, type, style, world, frozenBase }
   const last = step === STEPS.length - 1
   const missing = last ? missingUpTo(STEPS[step], choices) : missingFor(STEPS[step], choices)
 
@@ -306,6 +310,7 @@ export function WizardScreen() {
       style,
       world,
       base_gelee: frozenBase,
+      anchor: anchor.trim(),
     })
     const failure = errorOf(response)
     if (failure) {
@@ -387,6 +392,8 @@ export function WizardScreen() {
               cid={cid}
               cidValid={cidValid}
               cidProposal={slugify(name)}
+              anchor={anchor}
+              onAnchor={setAnchor}
               type={type}
               style={style}
               world={world}

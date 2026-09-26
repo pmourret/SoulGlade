@@ -90,6 +90,11 @@ const ECRANS = [
   ['/bank/tones', 'Ateliers, Tons', [
     ['boite « Copier depuis… »', 'button:has-text("Copier depuis")', 'dialog[open]'],
   ]],
+  // Les ateliers d'IT-10 (chantiers 5 a 7) : une liste et un inspecteur, sans
+  // etat ouvert qu'Echap refermerait au-dessus de 1100 px.
+  ['/bank/assets', 'Ateliers, Assets'],
+  ['/bank/outfits', 'Ateliers, Tenues'],
+  ['/bank/lights', 'Ateliers, Lumieres'],
   ['/training', 'Entrainement'],
   ['/worlds', 'Mondes', [
     ['modale « Nouveau monde »', 'button:has-text("Nouveau monde")', 'dialog[open]'],
@@ -216,6 +221,8 @@ const SONDE = () => Array.from(document.querySelectorAll('button'))
   await page.goto(`${BASE}/characters/new`, { waitUntil: 'networkidle' });
   await sonder('wizard, Identite');
   await page.fill('#wizName', 'Cadres');
+  // l'ancre d'identite est exigee a l'etape Identite depuis le 26/09
+  await page.fill('#wizAnchor', 'a woman in her thirties, auburn hair');
   await page.fill('#wizCid', 'cadres-ua');
   for (const etape of ['Type', 'Style', 'Monde']) {
     await page.click('#wizNext');

@@ -27,6 +27,8 @@ from .routers import (
 # aliased: this module's own name would otherwise shadow AUTOMATION/assets.py,
 # which routers/assets.py itself already imports as the bare `assets` module
 from .routers import assets as assets_router
+# aliased like assets: AUTOMATION/lights.py is the core module of the same name
+from .routers import lights as lights_router
 # aliased: this module's own name would otherwise shadow AUTOMATION/expression.py,
 # which routers/expression.py itself already imports as the bare `expression` module
 from .routers import expression as expression_router
@@ -81,6 +83,7 @@ def create_app() -> FastAPI:
     app.include_router(bank.router)
     app.include_router(expression_router.router)
     app.include_router(images.router)
+    app.include_router(lights_router.router)
     app.include_router(outfits.router)
     app.include_router(photo_editor.router)
     app.include_router(production.router)

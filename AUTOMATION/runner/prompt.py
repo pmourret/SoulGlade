@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from . import OFM, load_json
 
 import env_config  # noqa: E402  (AUTOMATION/ sur le path via runner/__init__.py)
+import lights as catalogue_lumieres  # noqa: E402
 import tenues as catalogue_tenues  # noqa: E402  (`tenues` est une locale de build_jobs)
 import universe    # noqa: E402
 import worlds      # noqa: E402
@@ -98,7 +99,8 @@ def _write_json(path, data):
                     encoding="utf-8")
 
 
-def create_character(cid, name, character_type, output_style, world, base_gelee):
+def create_character(cid, name, character_type, output_style, world, base_gelee,
+                     anchor):
     """Cree CHARACTERS/<cid>/ pour le wizard « nouveau personnage » (J7bis).
 
     Ecrit character.json + config.json (aux DEFAUTS du pack, jamais mesures ici
@@ -113,6 +115,12 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     Leve avant toute ecriture : ValueError (cid invalide, style absent du pack),
     FileExistsError (cid deja pris), UnresolvedPackError / UnknownWorldError /
     IncompatibleWorldError. Rend le cid.
+
+    `anchor` est l'ancre d'identite : ce qui suit le prefixe du pack (« raw
+    candid smartphone photo of ») dans chaque prompt. Le gabarit du pack la
+    laisse vide, et c'est au wizard de la demander : un personnage ne nait
+    jamais avec un prompt casse (« photo of , at home... »), ni avec une banque
+    que la Banque refuserait d'enregistrer (constate le 26/09).
     """
     if not _CID_RE.match(cid or ""):
         raise ValueError(f"character_id invalide : {cid!r} — attendu un slug "
@@ -132,6 +140,10 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     if not base_gelee:
         raise ValueError("base_gelee requis : image d'identite gelee (fournie "
                          "ou generee), c'est ce que le verrou charge")
+    anchor = (anchor or "").strip()
+    if not anchor:
+        raise ValueError("ancre d'identite vide : decrire le personnage en "
+                         "quelques mots (ex. a woman in her thirties, auburn hair)")
 
     dft = universe.load_character_defaults(pack)
 
@@ -182,7 +194,7 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     # par la Banque.
     scenes = {
         "prefix": seed.get("prefix", ""),
-        "anchor": seed.get("anchor", ""),
+        "anchor": anchor,
         "texture": seed.get("texture", ""),
         "direction": seed.get("direction", ""),
         "world": world,
@@ -310,7 +322,10 @@ def load_creative(character_id):
                 worlds.CLE_OUTFITS: worlds.merge_outfits(
                     world, data.get(worlds.CLE_OUTFITS, [])),
                 worlds.CLE_LIBRARY: worlds.merge_library(
-                    world, data.get(worlds.CLE_LIBRARY, []))}
+                    world, data.get(worlds.CLE_LIBRARY, [])),
+                # Lumieres (IT-10 c7) : `lights.resolve_bank`.
+                worlds.CLE_LIGHTS: worlds.merge_catalog(
+                    world, worlds.CLE_LIGHTS, data.get(worlds.CLE_LIGHTS, []))}
     return data
 
 
@@ -442,6 +457,10 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     # du texte. Sans reference, la banque ne change pas (IT-10 c6).
     catalogue_tenues.resoudre_banque(data, creative.get(worlds.CLE_OUTFITS, []),
                                      creative.get(worlds.CLE_LIBRARY, []))
+    # La lumiere d'une scene (`light`, texte ou « @cle ») rejoint la fin de son
+    # prompt, apres le decor, et une variante « @cle » devient du texte (IT-10
+    # c7). Sans `light` ni reference, la banque ne change pas.
+    catalogue_lumieres.resolve_bank(data, creative.get(worlds.CLE_LIGHTS, []))
     style = character_style(character_id)               # fige a la creation (J5)
 
     brut = getattr(args, "intensity", None)

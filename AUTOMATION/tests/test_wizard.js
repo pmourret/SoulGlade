@@ -54,7 +54,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
        `les cinq etapes, dans l'ordre : ${pas.join(' > ')}`);
   dire(await etape() === 'Identité', "on demarre sur l'Identite (ecran 14)");
 
-  console.log('\n[2] GATING de l Identite : un nom, puis un identifiant valide');
+  console.log('\n[2] GATING de l Identite : un nom, un identifiant valide, une ancre d identite');
   dire(!(await suivantArme()), '« Suivant » est inerte sans nom');
   dire(await page.isDisabled('#wizBack'), '« Retour » aussi, a la premiere etape');
   dire((await texte('#wizMissing')).includes('un nom affiché'), 'la barre du bas dit ce qui manque');
@@ -64,6 +64,12 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.waitForTimeout(150);
   dire(await page.inputValue('#wizCid') === 'fumigation', "l'identifiant suit le nom tant qu'on ne l'a pas tape");
   dire((await texte('#wizCidHint')).includes('valide'), 'et il est annonce valide, en mots');
+  // L'ancre d'identite (26/09) : sans elle, un personnage naissait avec un
+  // prompt casse et une banque que la Banque refusait d'enregistrer.
+  dire(!(await suivantArme()), '« Suivant » reste inerte sans ancre d identite');
+  dire((await texte('#wizMissing')).includes("ancre d'identité"), 'et la barre dit que c est elle qui manque');
+  await page.fill('#wizAnchor', 'a woman in her thirties, auburn hair');
+  await page.waitForTimeout(150);
   dire(await suivantArme(), '« Suivant » s arme');
 
   console.log('\n[3] l identifiant est valide a la frappe, et un slug est propose');

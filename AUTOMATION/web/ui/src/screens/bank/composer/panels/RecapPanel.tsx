@@ -11,13 +11,16 @@
    lisent, et « Modifier » mène à leur panneau.
 
    LA CHAÎNE 1-2-3-4 est l'ordre exact de la jointure : `composePrompt` pour
-   les trois fragments de la scène, puis le décor du lieu, que
-   `worlds.materialize` ajoute au lancement. Les couleurs et le découpage
+   le texte et la pose, puis le décor du lieu, que `worlds.materialize`
+   ajoute au lancement, puis la lumière de la scène, qui les suit depuis
+   IT-10 c7 (`lights.resolve_bank`). Les couleurs et le découpage
    viennent de `sceneFragments`, comme pour l'aperçu de droite (invariant 3). */
 import { useToast } from '../../../../chrome/ToastContext'
 import type { SceneDraft } from '../../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../../worlds/useWorldCatalog'
 import type { LibraryPick } from '../../assets/libraryPicks'
+import { lightPromptText } from '../../lights/lightText'
+import type { LightEntry } from '../../lights/useLights'
 import type { SceneField } from '../../sceneChanges'
 import { PromptField } from '../PromptField'
 import { FRAGMENT_COLORS, decorOf, sceneFragments } from '../sceneFragments'
@@ -27,6 +30,8 @@ import { HEAD } from './shared'
 export function RecapPanel({
   draft,
   places,
+  lights,
+  lightMarker,
   library,
   worldLinked,
   lockedNote,
@@ -37,6 +42,9 @@ export function RecapPanel({
   draft: SceneDraft
   /** The places of the character's world (IT-11 chantier 5). */
   places: WorldPlace[]
+  /** The light catalogue: the scene's light may be a key (IT-10 c7). */
+  lights: LightEntry[]
+  lightMarker: string
   /** Imported assets whose fragment lands in `prompt` (IT-10 chantier 5). */
   library: LibraryPick[]
   worldLinked: boolean
@@ -47,7 +55,8 @@ export function RecapPanel({
 }) {
   const toast = useToast()
   const decor = decorOf(places, draft.place)
-  const fragments = sceneFragments(draft, decor)
+  const lightText = lightPromptText(draft.promptLight, lights, lightMarker)
+  const fragments = sceneFragments(draft, decor, lightText)
   const composed = fragments.map((fragment) => fragment.text).join(', ')
   /* A key the world no longer carries stays listed, rather than vanish from
      the selector — hence from the scene; the save then names it. */
@@ -128,17 +137,9 @@ export function RecapPanel({
           </div>
         </div>
 
-        {/* 2 et 3 — en lecture, avec le chemin vers leur panneau */}
+        {/* 2 — la pose, en lecture, avec le chemin vers son panneau */}
         <ReadRow
           n={2}
-          color={FRAGMENT_COLORS.light}
-          title="Lumière"
-          text={draft.promptLight}
-          changed={changed.has('promptLight')}
-          onGoto={() => onGoto('light')}
-        />
-        <ReadRow
-          n={3}
           color={FRAGMENT_COLORS.pose}
           title="Pose"
           text={draft.promptPose}
@@ -146,11 +147,11 @@ export function RecapPanel({
           onGoto={() => onGoto('pose')}
         />
 
-        {/* 4 — le lieu : un décor du monde, choisi par sa clé. Son texte
-            rejoint la chaîne au lancement, en dernier (ADR-0027 §4) : une
-            correction du lieu atteint donc aussi cette scène. */}
+        {/* 3 — le lieu : un décor du monde, choisi par sa clé. Son texte
+            rejoint la chaîne au lancement (ADR-0027 §4) : une correction du
+            lieu atteint donc aussi cette scène. */}
         <div className="flex gap-[10px]">
-          <Step n={4} color={FRAGMENT_COLORS.place} />
+          <Step n={3} color={FRAGMENT_COLORS.place} />
           <div className="flex min-w-0 flex-1 flex-col gap-[6px]">
             <label className={HEAD} htmlFor="scenePlace">
               Lieu
@@ -175,11 +176,22 @@ export function RecapPanel({
               {worldLinked
                 ? 'lieu repris du monde'
                 : places.length
-                  ? 'le décor du monde, ajouté à la fin du prompt au lancement'
+                  ? 'le décor du monde, ajouté au prompt au lancement, avant la lumière'
                   : 'ce monde ne porte encore aucun lieu (Référentiel › Mondes)'}
             </p>
           </div>
         </div>
+
+        {/* 4 — la lumière, en lecture, avec le chemin vers son panneau : elle
+            rejoint la chaîne après le décor (IT-10 c7). */}
+        <ReadRow
+          n={4}
+          color={FRAGMENT_COLORS.light}
+          title="Lumière"
+          text={lightText}
+          changed={changed.has('promptLight')}
+          onGoto={() => onGoto('light')}
+        />
       </div>
 
       {/* Le prompt tel que le lancement le compose, décor du lieu compris */}

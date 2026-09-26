@@ -10,6 +10,8 @@ export function IdentityStep({
   cid,
   cidValid,
   proposal,
+  anchor,
+  onAnchor,
   onName,
   onCid,
 }: {
@@ -18,6 +20,9 @@ export function IdentityStep({
   cidValid: boolean
   /** `slugify(name)`, or '' when the name holds nothing usable. */
   proposal: string
+  /** The identity anchor, written into every prompt after the pack's prefix. */
+  anchor: string
+  onAnchor: (value: string) => void
   onName: (value: string) => void
   onCid: (value: string) => void
 }) {
@@ -71,6 +76,27 @@ export function IdentityStep({
             </button>
           </p>
         )}
+      </div>
+      {/* The anchor is asked HERE, before the base: the generated portraits
+          describe the person the prompts will (26/09). In English, like every
+          prompt fragment — the example says it without a rule to read. */}
+      <div>
+        <label className="f" htmlFor="wizAnchor">
+          <span>Ancre d'identité · qui c'est, en quelques mots anglais</span>
+        </label>
+        <textarea
+          id="wizAnchor"
+          className="min-h-[64px] w-full resize-y"
+          placeholder="ex : a woman in her thirties, auburn hair, freckles"
+          aria-describedby="wizAnchorHint"
+          value={anchor}
+          onChange={(event) => onAnchor(event.target.value)}
+        />
+        <p className="mt-[6px] mb-0 text-[12.5px] text-dim" id="wizAnchorHint">
+          Suit « photo of » dans chaque prompt, et décrit les portraits de base. Le visage
+          lui-même vient de la base d'identité : n'écrire ici que ce qu'elle ne porte pas
+          (âge, cheveux, silhouette). Modifiable ensuite dans Réglages de l'atelier.
+        </p>
       </div>
     </div>
   )

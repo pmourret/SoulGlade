@@ -2,35 +2,43 @@
    composé, et ce qu'il y a autour (design-pass screen-7c §2.1).
 
    POURQUOI. Un panneau qui montre UN champ ne dit pas ce que le prompt final
-   dira : on écrit une lumière sans voir le décor qu'elle éclaire. Les trois
-   cases disent l'ordre de la jointure et ce que portent les deux voisins, et
-   un clic y mène. C'est le même découpage que l'aperçu de droite, jamais une
+   dira : on écrit une lumière sans voir le décor qu'elle éclaire. Les cases
+   disent l'ordre de la jointure au lancement — scène, pose, lieu, lumière
+   (IT-10 c7) — et ce que portent les voisins, et un clic y mène. C'est le même découpage que l'aperçu de droite, jamais une
    concaténation locale : `sceneFragments`, et rien d'autre (invariant 3). */
 import type { SceneDraft } from '../../../state/ScenesStoreContext'
 import { FRAGMENT_COLORS, sceneFragments } from './sceneFragments'
 import type { SectionKey } from './sections'
 
-/** Where each fragment is edited — the trail's own click target. The décor of
-    the place is not a fragment of this form: the Prompt panel shows it. */
-type FormFragment = Exclude<keyof typeof FRAGMENT_COLORS, 'place'>
+/** Where each fragment is edited — the trail's own click target. The place
+    is chosen in the Prompt panel, which also holds the scene's text. */
+type FormFragment = keyof typeof FRAGMENT_COLORS
 const HOME: Record<FormFragment, { section: SectionKey; label: string }> = {
   base: { section: 'recap', label: 'scène' },
-  light: { section: 'light', label: 'lumière' },
   pose: { section: 'pose', label: 'pose' },
+  place: { section: 'recap', label: 'lieu' },
+  light: { section: 'light', label: 'lumière' },
 }
 
 export function FragmentTrail({
   draft,
   here,
+  decor = '',
+  light,
   onGoto,
 }: {
   draft: SceneDraft
   /** The fragment this panel edits: its box is marked « ici » and is not a
       link to somewhere one already is. */
   here: FormFragment
+  /** The décor of the scene's place, looked up by the caller. */
+  decor?: string
+  /** The light's TEXT when the field holds a reference — what the scene
+      receives, never `@<key>`. Defaults to the field as typed. */
+  light?: string
   onGoto: (section: SectionKey) => void
 }) {
-  const found = sceneFragments(draft)
+  const found = sceneFragments(draft, decor, light)
 
   return (
     <div className="flex items-stretch gap-[6px]" aria-label="Place de ce fragment dans le prompt">

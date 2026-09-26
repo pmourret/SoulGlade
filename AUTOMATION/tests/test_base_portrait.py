@@ -130,6 +130,10 @@ try:
     verifie(p.startswith(base_portrait.BASE_PROMPT)
             and "painterly fantasy" in p,
             "prompt de base = portrait neutre + prompt_add du style")
+    p = base_portrait._base_prompt("rpg-personnage", "fantastique", "terres-sauvages",
+                                   "  a woman in her thirties, auburn hair ")
+    verifie(p.startswith(base_portrait.BASE_PROMPT + ", a woman in her thirties, auburn hair,"),
+            "l'ancre du wizard decrit le portrait, juste apres le cadrage (26/09)")
 
     # ------------------------------- [4] freeze / apercu : chemin borne a output/
     print("\n[4] freeze() et l'apercu ne sortent jamais de output/")

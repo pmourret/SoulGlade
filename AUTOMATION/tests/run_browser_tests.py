@@ -76,6 +76,7 @@ TESTS = [
     "test_expression_editor",  # Ateliers Tons : liste, plage, rendu d essai (ecran 8)
     "test_assets",        # Ateliers Assets : import, fragment, reprise au composeur
     "test_outfits",       # Ateliers Tenues : creation, pose par reference, piece qui complete
+    "test_lights",        # Ateliers Lumieres : creation, pose en variante et en champ, aller-retour
 
     "test_board_layout",  # unitaire pur : mise en page de la planche (ecran 5c)
     "test_diff",          # unitaire pur : diff lignes + mots (ecran 6 bis, §7)

@@ -31,6 +31,7 @@ import worlds         # noqa: E402
 
 KO = 0
 CREES = []            # cids a nettoyer
+ANCRE = "a woman in her thirties, auburn hair"
 
 
 def verifie(ok, texte):
@@ -60,7 +61,7 @@ try:
     # --------------------------------------------------------- [1] chemin heureux
     print("[1] une fiche rpg-personnage complete et coherente")
     cree("wiztest_rpg", "Wiz RPG", "rpg-personnage", "realiste",
-         "terres-sauvages", "WIZ_BASE.png")
+         "terres-sauvages", "WIZ_BASE.png", ANCRE)
     d = OFM / "CHARACTERS" / "wiztest_rpg"
     for f in ("character.json", "config.json", "scenes.json", "creative.json"):
         verifie((d / f).is_file(), f"{f} ecrit")
@@ -119,7 +120,7 @@ try:
     # ------------------------------------------------------- [2] chemin insta
     print("\n[2] une fiche instagram-influenceur (autre pack, autre graphe)")
     cree("wiztest_insta", "Wiz Insta", "instagram-influenceur", "realiste",
-         "slow-life", "WIZ2.png")
+         "slow-life", "WIZ2.png", ANCRE)
     cf2 = json.loads((OFM / "CHARACTERS" / "wiztest_insta" / "config.json")
                      .read_text(encoding="utf-8"))
     verifie(cf2["workflow"] == universe.capability_graph("instagram-influenceur", universe.PRODUCE)
@@ -132,33 +133,63 @@ try:
     print("\n[3] un choix invalide est refuse AVANT toute ecriture")
     attend(FileExistsError,
            lambda: lb.create_character("wiztest_rpg", "x", "rpg-personnage",
-                                       "realiste", "terres-sauvages", "b.png"),
+                                       "realiste", "terres-sauvages", "b.png", ANCRE),
            "cid deja pris")
     for mauvais in ("Wiz", "../x", "", "a b"):
         attend(ValueError,
                lambda m=mauvais: lb.create_character(m, "x", "rpg-personnage",
                                                      "realiste", "terres-sauvages",
-                                                     "b.png"),
+                                                     "b.png", ANCRE),
                f"cid invalide {mauvais!r}")
     attend(universe.UnresolvedPackError,
            lambda: lb.create_character("wiztest_bad1", "x", "does-not-exist",
-                                       "realiste", "terres-sauvages", "b.png"),
+                                       "realiste", "terres-sauvages", "b.png", ANCRE),
            "type sans pack")
     attend(ValueError,
            lambda: lb.create_character("wiztest_bad2", "x", "instagram-influenceur",
-                                       "manga", "slow-life", "b.png"),
+                                       "manga", "slow-life", "b.png", ANCRE),
            "style absent du pack (instagram ne fait que realiste)")
     attend(worlds.IncompatibleWorldError,
            lambda: lb.create_character("wiztest_bad3", "x", "rpg-personnage",
-                                       "realiste", "slow-life", "b.png"),
+                                       "realiste", "slow-life", "b.png", ANCRE),
            "monde d'une autre famille (slow-life est flux)")
     attend(ValueError,
            lambda: lb.create_character("wiztest_bad4", "x", "rpg-personnage",
-                                       "realiste", "terres-sauvages", ""),
+                                       "realiste", "terres-sauvages", "", ANCRE),
            "base_gelee vide")
-    for cid in ("wiztest_bad1", "wiztest_bad2", "wiztest_bad3", "wiztest_bad4"):
+    for vide in ("", "   "):
+        attend(ValueError,
+               lambda v=vide: lb.create_character("wiztest_bad5", "x", "rpg-personnage",
+                                                  "realiste", "terres-sauvages",
+                                                  "b.png", v),
+               f"ancre d'identite vide {vide!r} (26/09)")
+    for cid in ("wiztest_bad1", "wiztest_bad2", "wiztest_bad3", "wiztest_bad4",
+                "wiztest_bad5"):
         verifie(not (OFM / "CHARACTERS" / cid).exists(),
                 f"{cid} : aucun dossier laisse derriere un refus")
+
+    # ------------------------------ [3bis] une banque neuve s'enregistre (26/09)
+    print("\n[3bis] la banque d'un personnage neuf passe la garde de la Banque")
+    # Constate le 26/09 : un personnage fraichement cree ne pouvait pas
+    # enregistrer sa banque depuis l'interface. Trois refus en chaine : ancre
+    # vide (ici), puis deux cote frontend, verrouilles par test_bank.js sur un
+    # personnage neuf : la tenue d'amorce « 0: », et `tones: []` retires par
+    # le brouillon, que la garde du 25/08 comptait comme 17 pertes.
+    sys.path.insert(0, str(AUTOMATION / "web"))
+    from api.services.bank import validate_scene_bank          # noqa: E402
+    ins = OFM / "CHARACTERS" / "wiztest_insta"
+    banque = json.loads((ins / "scenes.json").read_text(encoding="utf-8"))
+    verifie(banque["anchor"] == ANCRE, "l'ancre du wizard est ecrite dans la banque")
+    formats = list(json.loads((ins / "config.json").read_text(encoding="utf-8"))["formats"])
+    regles = dict(world="slow-life", formats=formats,
+                  creative=lb.load_creative("wiztest_insta"))
+    verifie(validate_scene_bank(banque, **regles) == [],
+            f"telle que nee, elle passe ({validate_scene_bank(banque, **regles)[:1]})")
+    verifie(validate_scene_bank(banque, previous=banque, **regles) == [],
+            "et se reenregistre telle quelle sur elle-meme")
+    sans_ancre = {**banque, "anchor": " "}
+    verifie(any("Réglages de l'atelier" in p for p in validate_scene_bank(sans_ancre, **regles)),
+            "une ancre videe a la main est refusee en disant ou la decrire")
 
     # --------------------------------------- [4] §11 : deux mondes, meme pack
     print("\n[4] deux personnages meme pack, mondes differents : pas de fuite")
@@ -173,8 +204,8 @@ try:
                 "scenes": [{"id": scene, "intention": "portrait",
                                     "prompt": f"prompt for {scene}"}],
             }), encoding="utf-8")
-        cree("wiztest_wa", "WA", "rpg-personnage", "realiste", "monde-a", "a.png")
-        cree("wiztest_wb", "WB", "rpg-personnage", "realiste", "monde-b", "b.png")
+        cree("wiztest_wa", "WA", "rpg-personnage", "realiste", "monde-a", "a.png", ANCRE)
+        cree("wiztest_wb", "WB", "rpg-personnage", "realiste", "monde-b", "b.png", ANCRE)
         a = json.loads((OFM / "CHARACTERS" / "wiztest_wa" / "character.json").read_text("utf-8"))
         b = json.loads((OFM / "CHARACTERS" / "wiztest_wb" / "character.json").read_text("utf-8"))
         verifie(a["universe"] == b["universe"] == "rpg-personnage",

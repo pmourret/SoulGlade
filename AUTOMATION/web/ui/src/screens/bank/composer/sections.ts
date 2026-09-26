@@ -34,7 +34,7 @@ export const SECTIONS: Section[] = [
     label: 'Lumière',
     icon: 'bulb',
     fields: ['promptLight', 'variants'],
-    model: 'champ prompt_light · repère vert dans l’aperçu',
+    model: 'champ light · ajouté après le décor · repère vert dans l’aperçu',
   },
   {
     key: 'clothing',

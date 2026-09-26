@@ -26,9 +26,10 @@
    `bank/composer/`). A `data-f` control only exists in the DOM while ITS
    section is open — the `onglet()` helper below switches sections the same
    way a person would. The scene's `prompt` is not one field: it is composed
-   from three fragments (`prompt_base`, `prompt_light`, `prompt_pose`), joined
-   with `, ` on save exactly like `build_jobs` joins its own — see the round
-   trip in [11].
+   from two fragments (`prompt_base`, `prompt_pose`), joined with `, ` on save
+   exactly like `build_jobs` joins its own. `prompt_light` is the scene's own
+   `light` key since IT-10 chantier 7, added after the décor at launch — see
+   the round trip in [11].
 
    THE SEVEN PANELS WERE REWORKED ON 24/09/2026 (design-pass screen-7c). What
    this file had to follow: a control that is no longer a single `<input>`
@@ -142,8 +143,9 @@ async function allerA(page, categorie, module) {
   dire(await vu('#bankScenes'), 'la sous-vue Scenes est montee');
   dire(!(await vu('#bankPoses')), 'la sous-vue Poses ne l est pas — une route, pas un attribut');
   const onglets = await page.$$eval('#bankView [data-vue]', e => e.map(x => x.dataset.vue));
-  // Cinq depuis IT-10 chantier 6 : les tenues ont rejoint la bibliotheque d'assets.
-  dire(onglets.join(',') === 'scenes,poses,tones,assets,outfits', 'les cinq sous-vues sont offertes');
+  // Six depuis IT-10 chantier 7 : les tenues (c6) puis les lumieres ont
+  // rejoint la bibliotheque d'assets.
+  dire(onglets.join(',') === 'scenes,poses,tones,assets,outfits,lights', 'les six sous-vues sont offertes');
   const allume = await page.$$eval('.tabs .cat.on', e => e.map(x => x.dataset.s));
   dire(allume.join(',') === 'atelier', "la categorie Atelier est allumee");
   const mod = await page.$$eval('.modbar .mod.on', e => e.map(x => x.dataset.m));
@@ -361,7 +363,9 @@ async function allerA(page, categorie, module) {
        `le panneau ne porte que deux champs editables : la scene et son lieu (${editables})`);
   dire((await page.textContent('[data-tabpanel="recap"]')).includes(marqueurSync),
        'la rangee Lumiere montre bien ce qui vient d etre tape dans l onglet Lumiere');
-  const rangeeLumiere = await page.$('[data-tabpanel="recap"] >> text=Lumière');
+  // `text="…"` : le titre EXACT de la rangee, pas une sous-chaine (la note du
+  // lieu dit « avant la lumiere » depuis IT-10 c7)
+  const rangeeLumiere = await page.$('[data-tabpanel="recap"] >> text="Lumière"');
   await (await rangeeLumiere.evaluateHandle(
     e => e.closest('div').querySelector('button'))).asElement().click();
   await page.waitForTimeout(200);
@@ -622,8 +626,19 @@ async function allerA(page, categorie, module) {
        `${avant.scenes.length} scene(s) d origine + edite = ${apres.scenes.length} — aucune perdue`);
   const edite = apres.scenes.find(s => s.id === idEdite);
   dire(Boolean(edite), 'edite est bien arrivee sur le disque');
-  dire(edite && edite.prompt === promptAttendu,
-       'les 2 fragments tapes dans des onglets differents ont bien ete joints, virgule separee');
+  // IT-10 c7 : la lumiere n'est plus un fragment fondu dans `prompt` — elle
+  // revenait vide a la reouverture, son texte passe au bout du decor. Elle a
+  // son champ, que le lancement ajoute apres le decor (`lights.resolve_bank`).
+  dire(edite && edite.prompt === marque && edite.light === eclairage,
+       `le texte va dans « prompt », la lumiere dans « light » (${edite && JSON.stringify([edite.prompt, edite.light])})`);
+  await (await carteDe(idEdite)).click();
+  await page.waitForSelector('#sceneInspector');
+  await onglet('light');
+  dire((await page.$eval(champ('prompt_light'), e => e.value)) === eclairage,
+       'rouverte, la scene rend sa lumiere a l onglet Lumiere, pas au decor');
+  await onglet('recap');
+  dire((await page.$eval(champ('prompt_base'), e => e.value)) === marque,
+       'et le texte de la scene ne la porte pas');
   dire(edite && edite.world === avant.world, `elle porte le monde du personnage (${edite && edite.world})`);
   dire(edite && edite.origin === 'manual', 'et son origine dit d ou elle vient');
   // NEW_SCENE nait avec `wardrobe: {"0": "everyday clothing"}` (ScenesStoreContext) :
