@@ -1168,6 +1168,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/lights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lumières de ce personnage
+         * @description The world's lights, adjusted by this character, plus its own.
+         */
+        get: operations["get_lights_api_lights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lights/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Créer une lumière */
+        post: operations["create_light_api_lights_create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lights/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajuster le libellé ou le texte d'une lumière
+         * @description Writes this character's adjustment — or the world's own entry with
+         *     `au_monde`, which only a light the world owns accepts.
+         */
+        post: operations["save_light_api_lights_save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lights/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirer une lumière
+         * @description Removes the light from the layer it lives in — refused while a scene
+         *     wears it. On an adjusted world light only the adjustment goes.
+         */
+        post: operations["delete_light_api_lights_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/outfits": {
         parameters: {
             query?: never;
@@ -3433,6 +3512,121 @@ export interface components {
             assets: components["schemas"]["AssetEntry"][];
             /** Classes */
             classes: components["schemas"]["AssetClass"][];
+        };
+        /** LightCreateRequest */
+        LightCreateRequest: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * LightDeleteResponse
+         * @description `couche` is what was actually removed: `surcharge` means only this
+         *     character's tweak went, and the world's light came back.
+         */
+        LightDeleteResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Couche */
+            couche: string;
+        };
+        /**
+         * LightEntry
+         * @description One light as the catalogue shows it. `couche` says where it comes from
+         *     (`monde`, `surcharge`, `personnage`); `texte` is what a scene that wears
+         *     it receives; `erreur` says why it does not resolve, and `texte` is then
+         *     empty.
+         */
+        LightEntry: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /**
+             * Couche
+             * @default personnage
+             */
+            couche: string;
+            /**
+             * Texte
+             * @default
+             */
+            texte: string;
+            /**
+             * Erreur
+             * @default
+             */
+            erreur: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LightKeyRequest */
+        LightKeyRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LightResponse */
+        LightResponse: {
+            /** Ok */
+            ok: boolean;
+            light: components["schemas"]["LightEntry"];
+        };
+        /**
+         * LightSaveRequest
+         * @description Label and/or text. Omitted field = untouched, so adjusting one of the
+         *     two never freezes a copy of the other.
+         */
+        LightSaveRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            /** Label */
+            label?: string | null;
+            /** Text */
+            text?: string | null;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** LightsResponse */
+        LightsResponse: {
+            /** Lights */
+            lights: components["schemas"]["LightEntry"][];
+            /** Marqueur */
+            marqueur: string;
         };
         /**
          * Mask
@@ -7281,6 +7475,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageNotFound"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lights_api_lights_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightsResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_light_api_lights_create_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_light_api_lights_save_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_light_api_lights_delete_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightDeleteResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

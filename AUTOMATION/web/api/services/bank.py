@@ -21,6 +21,7 @@ No HTTP here: the router catches the returned problems and decides the status.
 """
 import shutil
 
+import lights
 import pose_tools
 import shared_state as ss
 import tenues
@@ -61,7 +62,7 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
     render time on a KeyError. The route always passes it, like `world`.
 
     `creative` is the character's merged creative vocabulary
-    (`lb.load_creative`): passed in, every outfit a scene references
+    (`lb.load_creative`): passed in, every outfit and light a scene references
     (« @key », IT-10 chantier 6) must resolve — an unknown outfit, an unknown
     asset or an asset without a fragment is refused HERE, not at render time.
     """
@@ -132,6 +133,16 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
                                     creative.get(worlds.CLE_LIBRARY, []))
                 except tenues.TenueError as e:
                     problems.append(f"{where} : {e}")
+        # light (IT-10 c7): its own field, free text or « @key »; a variant may
+        # also be « @key ». A dangling one would fail at launch.
+        light = s.get("light")
+        if light is not None and not isinstance(light, str):
+            problems.append(f"{where} : « light » doit être un texte")
+        elif creative is not None:
+            try:
+                lights.resolve_scene(s, creative.get(worlds.CLE_LIGHTS, []))
+            except lights.LightError as e:
+                problems.append(f"{where} : {e}")
         # pose (26/08/2026): a file name that does not exist in INPUTS/POSE/
         # would fail at execution time, very far from the screen where the scene
         # was saved — same reasoning as prefix/texture.

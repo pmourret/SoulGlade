@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from . import OFM, load_json
 
 import env_config  # noqa: E402  (AUTOMATION/ sur le path via runner/__init__.py)
+import lights as catalogue_lumieres  # noqa: E402
 import tenues as catalogue_tenues  # noqa: E402  (`tenues` est une locale de build_jobs)
 import universe    # noqa: E402
 import worlds      # noqa: E402
@@ -321,7 +322,10 @@ def load_creative(character_id):
                 worlds.CLE_OUTFITS: worlds.merge_outfits(
                     world, data.get(worlds.CLE_OUTFITS, [])),
                 worlds.CLE_LIBRARY: worlds.merge_library(
-                    world, data.get(worlds.CLE_LIBRARY, []))}
+                    world, data.get(worlds.CLE_LIBRARY, [])),
+                # Lumieres (IT-10 c7) : `lights.resolve_bank`.
+                worlds.CLE_LIGHTS: worlds.merge_catalog(
+                    world, worlds.CLE_LIGHTS, data.get(worlds.CLE_LIGHTS, []))}
     return data
 
 
@@ -453,6 +457,10 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     # du texte. Sans reference, la banque ne change pas (IT-10 c6).
     catalogue_tenues.resoudre_banque(data, creative.get(worlds.CLE_OUTFITS, []),
                                      creative.get(worlds.CLE_LIBRARY, []))
+    # La lumiere d'une scene (`light`, texte ou « @cle ») rejoint la fin de son
+    # prompt, apres le decor, et une variante « @cle » devient du texte (IT-10
+    # c7). Sans `light` ni reference, la banque ne change pas.
+    catalogue_lumieres.resolve_bank(data, creative.get(worlds.CLE_LIGHTS, []))
     style = character_style(character_id)               # fige a la creation (J5)
 
     brut = getattr(args, "intensity", None)

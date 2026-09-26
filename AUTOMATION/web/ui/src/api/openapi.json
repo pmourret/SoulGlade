@@ -2845,6 +2845,271 @@
         }
       }
     },
+    "/api/lights": {
+      "get": {
+        "summary": "Lumières de ce personnage",
+        "description": "The world's lights, adjusted by this character, plus its own.",
+        "operationId": "get_lights_api_lights_get",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lights/create": {
+      "post": {
+        "summary": "Créer une lumière",
+        "operationId": "create_light_api_lights_create_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LightCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lights/save": {
+      "post": {
+        "summary": "Ajuster le libellé ou le texte d'une lumière",
+        "description": "Writes this character's adjustment — or the world's own entry with\n`au_monde`, which only a light the world owns accepts.",
+        "operationId": "save_light_api_lights_save_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LightSaveRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lights/delete": {
+      "post": {
+        "summary": "Retirer une lumière",
+        "description": "Removes the light from the layer it lives in — refused while a scene\nwears it. On an adjusted world light only the adjustment goes.",
+        "operationId": "delete_light_api_lights_delete_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LightKeyRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightDeleteResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/outfits": {
       "get": {
         "summary": "Tenues de ce personnage",
@@ -7837,6 +8102,177 @@
           "classes"
         ],
         "title": "LibraryResponse"
+      },
+      "LightCreateRequest": {
+        "properties": {
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "au_monde": {
+            "type": "boolean",
+            "title": "Au Monde",
+            "default": false
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "LightCreateRequest"
+      },
+      "LightDeleteResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "couche": {
+            "type": "string",
+            "title": "Couche"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "couche"
+        ],
+        "title": "LightDeleteResponse",
+        "description": "`couche` is what was actually removed: `surcharge` means only this\ncharacter's tweak went, and the world's light came back."
+      },
+      "LightEntry": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "couche": {
+            "type": "string",
+            "title": "Couche",
+            "default": "personnage"
+          },
+          "texte": {
+            "type": "string",
+            "title": "Texte",
+            "default": ""
+          },
+          "erreur": {
+            "type": "string",
+            "title": "Erreur",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "LightEntry",
+        "description": "One light as the catalogue shows it. `couche` says where it comes from\n(`monde`, `surcharge`, `personnage`); `texte` is what a scene that wears\nit receives; `erreur` says why it does not resolve, and `texte` is then\nempty."
+      },
+      "LightKeyRequest": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "default": ""
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "LightKeyRequest"
+      },
+      "LightResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "light": {
+            "$ref": "#/components/schemas/LightEntry"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "light"
+        ],
+        "title": "LightResponse"
+      },
+      "LightSaveRequest": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "default": ""
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "au_monde": {
+            "type": "boolean",
+            "title": "Au Monde",
+            "default": false
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "LightSaveRequest",
+        "description": "Label and/or text. Omitted field = untouched, so adjusting one of the\ntwo never freezes a copy of the other."
+      },
+      "LightsResponse": {
+        "properties": {
+          "lights": {
+            "items": {
+              "$ref": "#/components/schemas/LightEntry"
+            },
+            "type": "array",
+            "title": "Lights"
+          },
+          "marqueur": {
+            "type": "string",
+            "title": "Marqueur"
+          }
+        },
+        "type": "object",
+        "required": [
+          "lights",
+          "marqueur"
+        ],
+        "title": "LightsResponse"
       },
       "Mask": {
         "properties": {
