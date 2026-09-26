@@ -31,6 +31,7 @@ import type { Creative } from '../../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../worlds/useWorldCatalog'
 import type { LibraryPick } from '../assets/libraryPicks'
+import type { OutfitEntry } from '../outfits/useOutfits'
 import type { SceneField } from '../sceneChanges'
 import { SECTIONS, type SectionKey } from './sections'
 import { SectionRail } from './SectionRail'
@@ -49,6 +50,8 @@ export function SceneComposer({
   poses,
   places,
   library,
+  outfits,
+  outfitMarker,
   produced,
   worldLinked,
   changed,
@@ -67,6 +70,10 @@ export function SceneComposer({
   /** Imported assets, already reduced to what a panel shows. Each panel
       takes the ones whose fragment lands in the field it edits. */
   library: LibraryPick[]
+  /** The character's outfits, resolved by the server (IT-10 chantier 6),
+      and the marker of a wardrobe line that wears one. */
+  outfits: OutfitEntry[]
+  outfitMarker: string
   produced: number | null
   /* A scene bound to a world place (ADR-0015): its frame — décor, lumière and
      the pose prose — is re-derived server-side on every save, so those three
@@ -203,6 +210,8 @@ export function SceneComposer({
                   <ClothingPanel
                     draft={draft}
                     library={library.filter((pick) => pick.champ === 'wardrobe')}
+                    outfits={outfits}
+                    marker={outfitMarker}
                     changed={changed}
                     onPatch={onPatch}
                   />

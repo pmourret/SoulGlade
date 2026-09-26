@@ -35,6 +35,7 @@ sys.path.insert(0, str(HERE))
 import llm_local                 # noqa: E402
 import pose_texte                # noqa: E402
 import runner as lb              # noqa: E402
+import tenues                    # noqa: E402
 import worlds                    # noqa: E402
 
 OFM = HERE.parent
@@ -288,6 +289,14 @@ def supprimer(cid, key):
     """
     entree = trouver(cid, key)
     couche = entree["couche"]
+    # Un asset qu'une tenue porte ne part pas : la tenue ne se resoudrait plus
+    # (IT-10 c6). Une surcharge retiree n'est pas concernee, l'asset reste.
+    if couche != "surcharge":
+        portee = tenues.tenues_qui_portent(cid, key, au_monde=couche == "monde")
+        if portee:
+            raise AssetError(f"« {entree.get('label') or key} » est porté par "
+                             f"{len(portee)} tenue(s) : {', '.join(portee)} — "
+                             f"l'en retirer d'abord")
     if couche == "monde":
         wid = _monde(cid)
         worlds.save_library(wid, [e for e in worlds.library(wid)

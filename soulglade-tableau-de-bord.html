@@ -676,11 +676,11 @@ const D = {
           "d": "Atelier /bank/assets : une image classée (vêtement, décor, référence) dont le modèle vision local écrit le fragment de prompt, possédée par le monde et surchargée par le personnage. Le composeur y puise dans Vêtements et Scène et lieu."
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Gestionnaire de vêtements",
-          "d": "Une tenue réutilisée d'une scène à l'autre, héritable comme les lieux, là où la garde-robe vit en texte libre par scène. Le panneau du composeur l'annonce sans rien derrière. Dépend de l'importeur si une tenue porte une image.",
+          "d": "Atelier /bank/outfits : une tenue faite de pièces écrites ou d'assets, possédée par le monde et surchargée par le personnage. La scène la pose par sa clé, le lancement la résout. Une pièce cliquée complète la tenue du niveau, elle n'en fait plus une de plus.",
           "it": "IT-10",
-          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+          "ref": "DOCS/cadrage/2026-09-26-it10-c6-tenues.md"
         },
         {
           "s": "faire",
@@ -1731,6 +1731,10 @@ const D = {
       {
         "t": "Le minimum d'une scène reprise suit le monde",
         "d": "26/09. Enregistrer la Banque réécrit le niveau minimum d'une scène reprise du monde : une correction de ce minimum dans le monde ne l'atteint plus. Le composeur ne l'écrirait que s'il diffère du monde. Vu au chantier 5 d'IT-11, sans usage qui le réclame encore."
+      },
+      {
+        "t": "Un personnage neuf enregistre sa banque",
+        "d": "26/09. Un personnage fraîchement créé ne peut pas enregistrer sa banque depuis l'interface : anchor vide, tenues d'amorce vides (« 0: », hors des quatre niveaux) et tons vides perdus d'un coup, refusés à la sauvegarde. Vu au chantier 6 d'IT-10 sur un personnage d'essai. Touche le parcours nominal."
       }
     ]
   },

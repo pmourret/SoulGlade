@@ -28,6 +28,9 @@ export const PATHS = {
   /** The asset library (IT-10 chantier 5): what one brings INTO the studio,
       next to the poses one extracts and the tones one adjusts. */
   bankAssets: '/bank/assets',
+  /** The outfit catalogue (IT-10 chantier 6): garment sets a scene wears by
+      their key, corrected once for every scene that wears them. */
+  bankOutfits: '/bank/outfits',
   expressionEditor: '/bank/tones/edit',
   /** The Lightroom-style layered editor (design-pass screen-photo-editor,
       §7b) — reached from the simplified modal's "Éditeur avancé →" link.

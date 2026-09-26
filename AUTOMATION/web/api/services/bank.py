@@ -23,6 +23,7 @@ import shutil
 
 import pose_tools
 import shared_state as ss
+import tenues
 import worlds
 
 
@@ -42,7 +43,7 @@ KNOWN_ORIGINS = ("world", "copy", "manual", "compose")
 
 
 def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
-                        formats=None):
+                        formats=None, creative=None):
     """Returns the list of a scene bank's problems. Empty list = good.
 
     What we refuse here is what would break production later and for no
@@ -58,6 +59,11 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
     `formats` is the character's `config.formats`, the one list of what it can
     render (IT-10, chantier 3): a scene in any other format would crash at
     render time on a KeyError. The route always passes it, like `world`.
+
+    `creative` is the character's merged creative vocabulary
+    (`lb.load_creative`): passed in, every outfit a scene references
+    (« @key », IT-10 chantier 6) must resolve — an unknown outfit, an unknown
+    asset or an asset without a fragment is refused HERE, not at render time.
     """
     if not isinstance(data, dict):
         return ["le corps n'est pas un objet JSON"]
@@ -114,6 +120,12 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
                     if not isinstance(v, (str, list)):
                         problems.append(f"{where} : tenue du niveau {level} : ni texte "
                                         f"ni liste")
+            if creative is not None and isinstance(wardrobe, dict):
+                try:
+                    tenues.resoudre(wardrobe, creative.get(worlds.CLE_OUTFITS, []),
+                                    creative.get(worlds.CLE_LIBRARY, []))
+                except tenues.TenueError as e:
+                    problems.append(f"{where} : {e}")
         # pose (26/08/2026): a file name that does not exist in INPUTS/POSE/
         # would fail at execution time, very far from the screen where the scene
         # was saved — same reasoning as prefix/texture.

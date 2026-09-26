@@ -1,53 +1,11 @@
-/* A small, static starter vocabulary for the wardrobe quick-add chips
-   (ClothingPanel, in SceneComposer.tsx). NOT a real illustrated asset catalog
-   — no images, no backend, no `INPUTS/WARDROBE/` — just descriptive fragments
-   grouped by garment, in the exact "N: description" syntax the wardrobe
-   textarea already reads (`textToWardrobe`). Growing this list is a content
-   edit; a real illustrated catalog (the composer's "Sélecteur de vêtement"
-   empty state before this list existed) would replace it wholesale rather
-   than extend it — see the composer's architecture Q&A for why that catalog
-   was deferred. */
-export const WARDROBE_CATALOG: { category: string; items: string[] }[] = [
-  {
-    category: 'Haut',
-    items: [
-      'a beige knit sweater',
-      'a white cotton t-shirt',
-      'a linen button-up shirt',
-      'a fitted turtleneck',
-    ],
-  },
-  {
-    category: 'Bas',
-    items: [
-      'light blue denim jeans',
-      'a pleated midi skirt',
-      'tailored wide-leg trousers',
-      'jersey shorts',
-    ],
-  },
-  {
-    category: 'Une pièce',
-    items: ['a wrap dress', 'a linen jumpsuit', 'a slip dress'],
-  },
-  {
-    category: 'Sous-vêtements',
-    items: [
-      'a simple cotton bra and briefs set',
-      'a lace bralette',
-      'a seamless nude underwear set',
-    ],
-  },
-  {
-    category: 'Chaussures',
-    items: ['white canvas sneakers', 'leather ankle boots', 'simple leather sandals'],
-  },
-  {
-    category: 'Accessoires',
-    items: ['a delicate gold necklace', 'a wide-brim straw hat', 'a canvas tote bag'],
-  },
-]
-
+/* The wardrobe text of a scene, level by level. The static starter chips that
+   lived here (a beige knit sweater, light blue denim jeans…) are gone since
+   IT-10 chantier 6: the Vêtements catalogue shows what the server holds — the
+   character's outfits and the garments of its asset library — and nothing
+   written into the frontend (`DOCS/cadrage/2026-09-26-it10-c6-tenues.md`).
+   What remains is the round trip between the flat "N: description" text of a
+   draft and the four level fields. A line may be an outfit reference
+   (`@<key>`); these helpers carry it like any other line. */
 /** The 4 levels the composer edits as separate fields (design pass écran 7,
     §V2) — `wardrobe_for` (backend) reads whichever of these a scene
     declares, walking down to the first non-empty one it finds. */

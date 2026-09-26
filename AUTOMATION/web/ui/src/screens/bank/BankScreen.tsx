@@ -45,6 +45,8 @@ import { ToneWorkshop } from '../expression-editor/ToneWorkshop'
 import { AssetsView } from './assets/AssetsView'
 import { libraryPicks } from './assets/libraryPicks'
 import { useAssetLibrary } from './assets/useAssetLibrary'
+import { OutfitsView } from './outfits/OutfitsView'
+import { useOutfits } from './outfits/useOutfits'
 import { PosesView } from './poses/PosesView'
 import { SceneListPanel, type ScenePreview } from './SceneList'
 import { DocumentPane, SceneInspector } from './SceneInspector'
@@ -67,7 +69,7 @@ const RETURN_TO_WORLD_CONFIRM = {
   button: 'Revenir au monde',
 }
 
-export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'assets' }) {
+export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'assets' | 'outfits' }) {
   const api = useApi()
   const toast = useToast()
   const confirm = useConfirm()
@@ -133,6 +135,9 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
                        (key) => api.url(`/img/asset?key=${encodeURIComponent(key)}`)),
     [assets, assetClasses, api],
   )
+  /* Les tenues (IT-10 chantier 6) : le panneau Vêtements les pose par leur
+     clé et les montre par leur texte, résolu par le serveur. */
+  const { outfits, marker: outfitMarker } = useOutfits()
   // « Proposer… » (IT-11 chantier 6): the scene composer, redefined
   const [proposeOpen, setProposeOpen] = useState(false)
   const proposer = useSceneProposals()
@@ -211,6 +216,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
       <SubViewLink to={PATHS.bankPoses} label="Poses" active={view === 'poses'} vue="poses" />
       <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
       <SubViewLink to={PATHS.bankAssets} label="Assets" active={view === 'assets'} vue="assets" />
+      <SubViewLink to={PATHS.bankOutfits} label="Tenues" active={view === 'outfits'} vue="outfits" />
     </nav>
   )
 
@@ -220,6 +226,16 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
     return (
       <div className="screen flex h-full flex-col" id="scenes">
         <AssetsView nav={subViewNav} />
+      </div>
+    )
+  }
+
+  /* Tenues, the same: its bar carries « Nouvelle tenue », which belongs to
+     that view's selection (IT-10 chantier 6). */
+  if (view === 'outfits') {
+    return (
+      <div className="screen flex h-full flex-col" id="scenes">
+        <OutfitsView nav={subViewNav} />
       </div>
     )
   }
@@ -491,6 +507,8 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
                 poses={poses}
                 places={places}
                 library={library}
+                outfits={outfits}
+                outfitMarker={outfitMarker}
                 produced={stats[bench.selected.base.id]?.n ?? null}
                 changed={changed}
                 narrow={narrow}
@@ -572,4 +590,7 @@ export function BankTonesScreen() {
 }
 export function BankAssetsScreen() {
   return <BankScreen view="assets" />
+}
+export function BankOutfitsScreen() {
+  return <BankScreen view="outfits" />
 }

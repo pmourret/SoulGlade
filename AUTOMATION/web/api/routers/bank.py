@@ -109,7 +109,8 @@ async def save_scene_bank(payload: SceneBankSaveRequest, character_id: RequiredC
     data = worlds.refresh_scene_bank(data)
     problems = validate_scene_bank(data, previous=ss.scenes_data(cid),
                                    allow_losses=payload.autoriser_pertes,
-                                   world=world, formats=list(ss.cfg(cid)["formats"]))
+                                   world=world, formats=list(ss.cfg(cid)["formats"]),
+                                   creative=lb.load_creative(cid))
     if problems:
         ss.push_log(f"scenes.json REFUSE — {problems[0]}")
         return JSONResponse({"ok": False, "erreur": problems[0],
