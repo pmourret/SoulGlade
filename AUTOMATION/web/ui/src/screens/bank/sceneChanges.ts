@@ -64,5 +64,8 @@ export function changedFields(draft: SceneDraft, saved: Map<string, Scene>): Set
 /** Whether the SCENE owes anything to the next save — a modified one, or one
     the bank has never seen at all. */
 export function hasChanges(draft: SceneDraft, saved: Map<string, Scene>): boolean {
-  return !saved.has(draft.base.id ?? '') || changedFields(draft, saved).size > 0
+  const counterpart = saved.get(draft.base.id ?? '')
+  // `origin` is not a form field: copying a scene or taking it back to the
+  // world changes nothing else, and still owes the next save (ADR-0027 §5).
+  return !counterpart || counterpart.origin !== draft.base.origin || changedFields(draft, saved).size > 0
 }

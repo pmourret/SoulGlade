@@ -274,7 +274,7 @@ async function allerA(page, categorie, module) {
   dire(Math.abs(larges.liste - 260) < 2, `la liste tient ses 260 px (${Math.round(larges.liste)})`);
   dire(Math.abs(larges.apercu - 340) < 2, `l apercu tient ses 340 px (${Math.round(larges.apercu)})`);
   const enTete = await page.$eval('#scenePreviewThumb', e => e.closest('#sceneInspector') === null);
-  dire(enTete, "l'en-tete de scene est AU-DESSUS du compositeur, pas dedans : il survit a l onglet Monde");
+  dire(enTete, "l'en-tete de scene est AU-DESSUS du compositeur, pas dedans : il reste en place d une section a l autre");
   dire((await page.$$eval('#sceneInspector [role="tab"]', e => e.length)) === 7,
        'le compositeur ouvre sur ses 7 sections (wireframe 31/08/2026, en rail depuis le 23/09)');
   const railVertical = await page.$eval('#sceneInspector [role="tablist"]',

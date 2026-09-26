@@ -4,7 +4,7 @@
 
    TWO SHAPES, ONE RULE. The frame — label, intention, prompt — always comes
    from the place, and the server re-derives it on every load and save anyway
-   (`refresh_world_scenes`, ADR-0015): what is written here is a starting
+   (`worlds.refresh_scene_bank`, ADR-0027): what is written here is a starting
    point, never a fork. What differs between an ordinary place and an adult
    one is the CHARACTER's overlay, which is where it belongs (ADR-0014):
 

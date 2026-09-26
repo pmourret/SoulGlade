@@ -113,7 +113,7 @@ export function SceneComposer({
   }, [draft.uid])
 
   const lockedNote =
-    "hérité du lieu — s'édite dans l'onglet Monde, ce qui serait tapé ici ne survit pas à l'enregistrement (ADR-0015)."
+    'repris du monde — « Modifier pour ce personnage », en tête de scène, en fait sa copie.'
 
   return (
     <Tabs.Root

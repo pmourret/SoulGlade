@@ -399,6 +399,14 @@ def tone_affinity(scene, tone):
 
 
 # ------------------------------------------------------------------- plan batch
+def load_scene_bank(scenes_file):
+    """La banque d'un personnage telle que `build_jobs` l'assemble : le
+    fichier, dont chaque scene reprise du monde est relue depuis le monde
+    (ADR-0027 §4-§5, `worlds.refresh_scene_bank`). C'est la lecture, en amont
+    de l'assemblage : l'assembleur ne compose jamais une scene lui-meme."""
+    return worlds.refresh_scene_bank(load_json(scenes_file))
+
+
 def build_jobs(scenes_file, args, character_id, creative=None):
     """Construit la liste des jobs.
 
@@ -412,7 +420,7 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     qu'implicite, J2) et sert de repli pour charger `creative` si l'appelant
     ne le fournit pas.
     """
-    data = load_json(scenes_file)
+    data = load_scene_bank(scenes_file)
     prefix, anchor, texture = data["prefix"], data["anchor"], data["texture"]
     direction = (data.get("direction") or "").strip()   # note de direction globale
     creative = load_creative(character_id) if creative is None else creative

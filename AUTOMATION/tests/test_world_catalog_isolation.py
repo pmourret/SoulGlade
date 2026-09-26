@@ -29,6 +29,7 @@ import json
 import shutil
 import sys
 from pathlib import Path
+from types import SimpleNamespace
 
 HERE = Path(__file__).resolve().parent
 AUTOMATION = HERE.parent
@@ -36,8 +37,9 @@ OFM = AUTOMATION.parent
 sys.path.insert(0, str(AUTOMATION / "web"))
 sys.path.insert(0, str(AUTOMATION))
 
+import runner as lb                           # noqa: E402
 import worlds                                 # noqa: E402
-from api.main import app                      # noqa: E402
+from api.main import app                     # noqa: E402
 from fastapi.testclient import TestClient      # noqa: E402
 
 WORLD = "probe-iso-world"
@@ -140,6 +142,64 @@ try:
             f"{CHAR_A} garde SA tenue, celle sauvee en [1] ({sa['wardrobe']})")
     verifie(sb["wardrobe"] == {"0": "a red dress"},
             f"{CHAR_B} garde SA tenue a lui, jamais celle de {CHAR_A} ({sb['wardrobe']})")
+
+    # ============================================ [4] copie a la modification (ADR-0027 §5)
+    print("\n[4] A copie la scene ; une correction du monde atteint B au lancement, pas A")
+
+    def prompt_lance(cid):
+        """Le prompt que `build_jobs` assemble, lu depuis le disque — sans
+        passer par la Banque, qui rafraichit deja d'elle-meme."""
+        args = SimpleNamespace(scene=["p1"], category=None, format=None, count=1,
+                               limit=None, seed=1, no_variants=True, intensity=0,
+                               tone=None, intention=None)
+        return lb.build_jobs(lb.scenes_path(cid), args, character_id=cid)[0]["prompt"]
+
+    bank_a = CLIENT.get(f"/api/scenes?character={CHAR_A}").json()
+    copie = {**bank_a["data"]["scenes"][0], "origin": "copy",
+             "prompt": "a quiet room, CANDLE light — la copie de A"}
+    avant_monde = WORLD_PATH.read_bytes()
+    r = CLIENT.post(f"/api/scenes?character={CHAR_A}",
+                    json={"data": {**bank_a["data"], "scenes": [copie]}})
+    verifie(r.status_code == 200, f"A enregistre sa copie ({r.status_code} — {r.text[:200]})")
+    verifie(WORLD_PATH.read_bytes() == avant_monde,
+            "copier une scene n'ecrit rien dans WORLDS/<monde>.json")
+    disque_a = json.loads((OFM / "CHARACTERS" / CHAR_A / "scenes.json").read_text("utf-8"))
+    sa = disque_a["scenes"][0]
+    verifie(sa["origin"] == "copy" and sa["world_ref"] == "p1" and "CANDLE" in sa["prompt"],
+            f"la copie garde son texte et sa provenance ({sa['origin']}, {sa['world_ref']})")
+
+    # le monde est corrige, par sa route a lui, sans qu'aucune Banque ne rouvre
+    r = CLIENT.post(f"/api/worlds/{WORLD}/scenes", json={"scenes": [
+        {"id": "p1", "label": "Lieu 1", "intention": "lifestyle",
+         "prompt": "a quiet room, NIGHT light — correction du monde"},
+    ]})
+    verifie(r.status_code == 200, f"la correction du monde est acceptee ({r.status_code})")
+    pa, pb = prompt_lance(CHAR_A), prompt_lance(CHAR_B)
+    verifie("NIGHT light" in pb,
+            f"{CHAR_B} (scene reprise) porte la correction au lancement")
+    verifie("CANDLE" in pa and "NIGHT" not in pa,
+            f"{CHAR_A} (copie) garde sa copie au lancement")
+
+    # revenir a la scene du monde : la copie disparait, la correction arrive
+    bank_a = CLIENT.get(f"/api/scenes?character={CHAR_A}").json()
+    retour = {**bank_a["data"]["scenes"][0], "origin": "world"}
+    r = CLIENT.post(f"/api/scenes?character={CHAR_A}",
+                    json={"data": {**bank_a["data"], "scenes": [retour]}})
+    verifie(r.status_code == 200, f"A revient a la scene du monde ({r.status_code})")
+    pa = prompt_lance(CHAR_A)
+    verifie("NIGHT light" in pa and "CANDLE" not in pa,
+            f"{CHAR_A} revenu a la scene du monde porte la correction")
+    sa = json.loads((OFM / "CHARACTERS" / CHAR_A / "scenes.json").read_text("utf-8"))["scenes"][0]
+    verifie(sa["wardrobe"] == {"0": "a beige sweater, autumn palette"},
+            f"{CHAR_A} garde sa tenue a travers copie et retour ({sa['wardrobe']})")
+
+    # une copie sans provenance n'est pas une copie
+    orpheline = {**retour, "origin": "copy"}
+    orpheline.pop("world_ref")
+    r = CLIENT.post(f"/api/scenes?character={CHAR_A}",
+                    json={"data": {**bank_a["data"], "scenes": [orpheline]}})
+    verifie(r.status_code == 400 and "world_ref" in r.text,
+            f"une copie sans world_ref est refusee ({r.status_code})")
 
 finally:
     shutil.rmtree(OFM / "CHARACTERS" / CHAR_A, ignore_errors=True)

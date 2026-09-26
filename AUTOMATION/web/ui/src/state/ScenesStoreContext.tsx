@@ -56,10 +56,11 @@ export type Scene = {
   pose?: string
   world?: string
   origin?: string
-  /* Id of the WORLDS/<world>.json place this scene inherits its frame from
-     (ADR-0015). Set only when `origin === 'world'`; `label`/`intention`/
-     `prompt` are then re-derived server-side from the live catalog on every
-     load and save — editing them here would be discarded, never forked. */
+  /* Id of the world scene this one comes from (ADR-0027 §5). With
+     `origin === 'world'`, `label`/`intention`/`prompt` are re-read from the
+     world on every load, save and launch — editing them here is discarded.
+     With `origin === 'copy'` it only keeps the provenance: the copy owns its
+     frame and no longer follows the world. */
   world_ref?: string
   [key: string]: unknown
 }

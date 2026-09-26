@@ -135,6 +135,29 @@ async function ouvrir(nav, { arme }) {
        'Echap rend le focus au bouton qui a ouvert la boite');
   await q.close();
 
+  /* ADR-0027 §5, tranché le 26/09 : une scène reprise du monde garde son
+     cadre verrouillé, et devient la copie du personnage par un geste
+     explicite. L'onglet Monde, qui écrivait le monde depuis la Banque, n'existe
+     plus. Rien n'est enregistré ici : [4] le vérifie. */
+  console.log('\n[3b] scene du monde : copie par un geste, retour confirme, pas d onglet Monde');
+  const c = (await ouvrir(nav, { arme: true }));
+  toutesErreurs.push(...c.erreurs);
+  const r = c.page;
+  await r.goto(BASE + '/bank/scenes?character=lena&scene=salon_lecture', { waitUntil: 'networkidle' });
+  await r.waitForSelector('#sceneCopy');
+  dire(!(await r.$('button[aria-pressed]:has-text("Monde")')), 'plus d onglet Monde dans l en-tete');
+  dire(await r.$eval('#sceneIntention', e => e.disabled), 'l intention reprise du monde est verrouillee');
+  await r.click('#sceneCopy');
+  dire(!(await r.$eval('#sceneIntention', e => e.disabled)),
+       '« Modifier pour ce personnage » la deverrouille');
+  dire(Boolean(await r.$('#sceneReturnToWorld')), 'et l en-tete dit « copie de … » avec le retour');
+  await r.click('#sceneReturnToWorld');
+  await r.click('dialog button:has-text("Revenir au monde")');
+  await r.waitForSelector('#sceneCopy');
+  dire(await r.$eval('#sceneIntention', e => e.disabled),
+       'revenue a la scene du monde, l intention est de nouveau verrouillee');
+  await r.close();
+
   console.log('\n[4] rien n a ete ecrit sur le disque');
   const apres = await (await fetch(BASE + '/api/scenes?character=lena')).json();
   const idsApres = (apres.data?.scenes || apres.scenes || []).map(s => s.id);

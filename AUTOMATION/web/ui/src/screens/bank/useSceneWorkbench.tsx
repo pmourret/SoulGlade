@@ -33,11 +33,6 @@ export function useSceneWorkbench() {
   const [selectedUid, setSelectedUid] = useState<string | null>(null)
   const [filter, setFilter] = useState('')
   const listRef = useRef<HTMLDivElement | null>(null)
-  /* Monde | Personnage (ADR-0015) — only meaningful for a scene bound to a
-     world place (`origin === 'world'`), reset to 'character' on every new
-     selection so opening a different scene never inherits the previous
-     one's tab. */
-  const [inspectorMode, setInspectorMode] = useState<'character' | 'world'>('character')
 
   /* Derived, never stored: a selection that outlives the scene it points at is
      how an inspector ends up editing a draft the grid no longer has. Switching
@@ -86,7 +81,6 @@ export function useSceneWorkbench() {
   const select = useCallback((uid: string | null) => {
     if (!uid) wanted.current = null
     setSelectedUid(uid)
-    setInspectorMode('character')
   }, [])
 
   /* Scene-to-scene stepping (design pass écran 7, §B2) — the composer's own
@@ -186,7 +180,6 @@ export function useSceneWorkbench() {
   const add = useCallback(() => {
     setFilter('')
     setSelectedUid(addScene())
-    setInspectorMode('character')
   }, [addScene])
 
   /* A scene taken from the world's catalog (21/09) — the scene is BUILT by
@@ -197,8 +190,7 @@ export function useSceneWorkbench() {
     (scene: Scene) => {
       setFilter('')
       setSelectedUid(addScene(scene))
-      setInspectorMode('character')
-    },
+      },
     [addScene],
   )
 
@@ -210,8 +202,7 @@ export function useSceneWorkbench() {
     (index: number) => {
       setFilter('')
       setSelectedUid(duplicateScene(index))
-      setInspectorMode('character')
-    },
+      },
     [duplicateScene],
   )
 
@@ -263,7 +254,5 @@ export function useSceneWorkbench() {
     duplicate,
     remove,
     onListKeyDown,
-    inspectorMode,
-    setInspectorMode,
   }
 }

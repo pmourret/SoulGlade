@@ -112,7 +112,7 @@ export function GeneralPanel({
         </div>
         <p className="tiny mt-[8px] mb-0">
           nom de fichier et dossier d'export
-          {worldLinked && <> · intention <b>héritée du lieu</b>, s'édite dans l'onglet Monde</>}
+          {worldLinked && <> · intention <b>reprise du monde</b></>}
         </p>
         {/* Renommer une scène déjà produite détache ses images : c'est la
             seule conséquence de cet écran qui touche des fichiers sur le

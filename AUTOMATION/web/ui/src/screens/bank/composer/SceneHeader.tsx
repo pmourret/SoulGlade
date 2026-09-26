@@ -5,15 +5,22 @@
    in a three-line clamp because nothing else on the screen showed it. Both
    moved: the living preview is the right-hand panel now
    (`ScenePreviewPanel`), and this header is rendered by `BankScreen` ABOVE
-   the composer — so it stays put when the Monde tab replaces the whole centre
-   with the place's own inspector, which is exactly when one most needs to see
-   which scene is open.
+   the composer.
+
+   IT SAYS WHERE THE SCENE COMES FROM (ADR-0027 §5). A scene taken from the
+   world follows the world's corrections; « Modifier pour ce personnage »
+   makes it the character's copy, which stops following. A copy can go back.
+   The world itself is never edited from here: the link opens Mondes, where
+   a correction reaches every character of the world (tranché le 26/09).
 
    THE THREE FULL-WIDTH BARS AT THE BOTTOM OF THE FORM ARE GONE with it
    (Suivant, Dupliquer, Supprimer). Suivant walked the sections, which the
    labelled rail now does in one click; the other two were a destructive act
    and a constructive one sharing the bottom of a scrolled form. They are
    header actions, where the scene's own identity is. */
+import { Link } from 'react-router-dom'
+
+import { worldPlacesPath } from '../../../app/routes'
 import type { Creative } from '../../../state/TaxonomyContext'
 import type { SceneDraft } from '../../../state/ScenesStoreContext'
 import type { ScenePreview } from '../SceneList'
@@ -25,9 +32,8 @@ export function SceneHeader({
   preview,
   imageUrl,
   changed,
-  worldLinked,
-  inspectorMode,
-  onInspectorMode,
+  onCopy,
+  onReturnToWorld,
   onPrevScene,
   onNextScene,
   onDuplicate,
@@ -40,9 +46,10 @@ export function SceneHeader({
   imageUrl: (ref: Record<string, unknown>) => string
   /** The scene holds edits `scenes.json` does not have yet (`sceneChanges`). */
   changed: boolean
-  worldLinked: boolean
-  inspectorMode: 'character' | 'world'
-  onInspectorMode: (mode: 'character' | 'world') => void
+  /** Makes a scene taken from the world the character's own copy. */
+  onCopy: () => void
+  /** Confirms, then turns a copy back into the world's scene. */
+  onReturnToWorld: () => void
   /** `undefined` at either end of the (filtered) list — same "only render what
       is possible" rule the chevrons always followed. */
   onPrevScene: (() => void) | undefined
@@ -87,29 +94,13 @@ export function SceneHeader({
         <span className="truncate text-[12px] text-dim2">{meta}</span>
       </div>
 
-      {worldLinked && (
-        /* A GROUP of two buttons, not a tablist: it toggles which panel of the
-           SAME centre column shows, no navigation and no `tabpanel` on either
-           side. */
-        <div role="group" aria-label="Cadre du lieu ou réglages du personnage" className="seg flex-none">
-          <button
-            type="button"
-            className={inspectorMode === 'character' ? 'on' : undefined}
-            aria-pressed={inspectorMode === 'character'}
-            onClick={() => onInspectorMode('character')}
-          >
-            Personnage
-          </button>
-          <button
-            type="button"
-            className={inspectorMode === 'world' ? 'on' : undefined}
-            aria-pressed={inspectorMode === 'world'}
-            onClick={() => onInspectorMode('world')}
-          >
-            Monde
-          </button>
-        </div>
-      )}
+      <Provenance
+        origin={draft.base.origin}
+        worldRef={draft.base.world_ref}
+        world={draft.base.world}
+        onCopy={onCopy}
+        onReturnToWorld={onReturnToWorld}
+      />
 
       <div className="flex flex-none items-center gap-[8px]">
         <button type="button" className="btn sm" onClick={onDuplicate}>
@@ -169,5 +160,52 @@ function StepButton({
     >
       {glyph}
     </button>
+  )
+}
+
+function Provenance({
+  origin,
+  worldRef,
+  world,
+  onCopy,
+  onReturnToWorld,
+}: {
+  origin: string | undefined
+  worldRef: string | undefined
+  world: string | undefined
+  onCopy: () => void
+  onReturnToWorld: () => void
+}) {
+  if (origin !== 'world' && origin !== 'copy') return null
+  return (
+    <div className="flex flex-none flex-col items-end gap-[2px] text-[12px]">
+      {origin === 'world' ? (
+        <>
+          <span className="text-dim2">
+            scène du monde
+            {world && (
+              <>
+                {' · '}
+                <Link className="text-dim2 underline hover:text-txt" to={worldPlacesPath(world)}>
+                  ouvrir dans Mondes
+                </Link>
+              </>
+            )}
+          </span>
+          <button type="button" id="sceneCopy" className="btn sm" onClick={onCopy}>
+            Modifier pour ce personnage
+          </button>
+        </>
+      ) : (
+        <>
+          <span className="text-dim2">
+            copie de <code className="font-code text-[11.5px]">{worldRef}</code>
+          </span>
+          <button type="button" id="sceneReturnToWorld" className="btn sm" onClick={onReturnToWorld}>
+            Revenir à la scène du monde…
+          </button>
+        </>
+      )}
+    </div>
   )
 }

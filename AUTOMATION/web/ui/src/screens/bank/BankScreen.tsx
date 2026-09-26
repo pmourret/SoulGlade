@@ -40,9 +40,6 @@ import { useToast } from '../../chrome/ToastContext'
 import { useScenes } from '../../state/ScenesStoreContext'
 import { useTaxonomy } from '../../state/TaxonomyContext'
 import { PATHS } from '../../app/routes'
-import { PlaceInspector } from '../worlds/PlaceInspector'
-import { usePlaceDraft } from '../worlds/usePlaceDraft'
-import { useWorldPlaces } from '../worlds/useWorldPlaces'
 import { useOverlayPanel } from '../produce/useOverlayPanel'
 import { ToneWorkshop } from '../expression-editor/ToneWorkshop'
 import { PosesView } from './poses/PosesView'
@@ -57,6 +54,12 @@ import { WorldBanner, WorldDriftBand, worldDrift } from './WorldBanner'
 import { WorldCatalogueDialog } from './WorldCatalogueDialog'
 
 const NO_CHANGES: Set<SceneField> = new Set()
+
+const RETURN_TO_WORLD_CONFIRM = {
+  title: 'Revenir à la scène du monde ?',
+  body: "Cette copie est effacée à l'enregistrement : le texte, l'intention et la lumière de la scène du monde la remplacent, et suivront de nouveau ses corrections. Les tenues et la pose de ce personnage restent.",
+  button: 'Revenir au monde',
+}
 
 export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   const api = useApi()
@@ -119,37 +122,17 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   const closeList = () => setListOpen(false)
   useOverlayPanel(narrow && listOpen, closeList, listPanelRef, '#sceneFilter')
 
-  // Monde | Personnage (ADR-0015) — the catalog of the CHARACTER's world,
-  // loaded once and shared by every scene the Banque opens.
-  const worldPlaces = useWorldPlaces(world?.id ?? null)
-  const [placeStatus, setPlaceStatus] = useState<string | null>(null)
-  const [placeSaving, setPlaceSaving] = useState(false)
-  const worldLinked = bench.selected?.base.origin === 'world'
-  const selectedPlace =
-    worldLinked && bench.selected
-      ? (worldPlaces.places?.find((p) => p.id === bench.selected!.base.world_ref) ?? null)
-      : null
-
-  /* The draft of the open place lives in `usePlaceDraft` since the design-pass
-     screen-11: `PlaceInspector` became controlled there, so the Mondes screen
-     could hand its dirty state to the chrome's banner. The Banque keeps its own
-     immediate save, which is its contract — one place tied to one scene, not a
-     document one composes. */
-  const placeDraft = usePlaceDraft(selectedPlace)
-
-  const onSavePlace = async () => {
-    if (!selectedPlace || !worldPlaces.places) return
-    const patch = { ...placeDraft.draft, prompt: placeDraft.draft.prompt.trim() }
-    setPlaceSaving(true)
-    // `idEditable` is not set below, so `patch.id` always equals `selectedPlace.id` here.
-    const next = worldPlaces.places.map((p) => (p.id === selectedPlace.id ? { ...p, ...patch } : p))
-    const result = await worldPlaces.save(next)
-    setPlaceSaving(false)
-    setPlaceStatus(result.ok ? 'lieu enregistré · hérité par tous les personnages du monde' : (result.erreur ?? 'échec'))
-    if (result.ok) {
-      toast('catalogue du monde enregistré')
-      await load() // le prompt affiché côté Personnage doit suivre tout de suite
-    }
+  /* Provenance (ADR-0027 §5) — a scene taken from the world becomes the
+     character's copy by an explicit gesture, and a copy can go back. Both
+     only change the draft's `origin`: the save does the rest, the server
+     re-reading the world's frame for every `origin: 'world'` scene. */
+  const setOrigin = (origin: 'world' | 'copy') => {
+    if (!bench.selected) return
+    patchDraft(bench.selectedIndex, { base: { ...bench.selected.base, origin } })
+  }
+  const onReturnToWorld = async () => {
+    if (!(await confirm(RETURN_TO_WORLD_CONFIRM))) return
+    setOrigin('world')
   }
 
   const previews = (bank?.previews ?? {}) as Record<string, ScenePreview>
@@ -424,10 +407,8 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
               retrecit au lieu de pousser le defilement — le formulaire se
               retrouvait a defiler dans 340 px sous l'apercu. */}
           <div className="flex min-h-0 min-w-0 flex-col bg-bg max-[1100px]:shrink-0">
-            {/* The header is HERE and not inside the composer: the Monde tab
-                replaces the whole column below it, and losing sight of which
-                scene is open at that exact moment is the one thing it must
-                not do (§S4.1). */}
+            {/* The header is HERE and not inside the composer, above every
+                section of it (§S4.1). */}
             {bench.selected && (
               <SceneHeader
                 draft={bench.selected}
@@ -436,9 +417,8 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                 preview={previews[bench.selected.base.id]}
                 imageUrl={api.image}
                 changed={pending}
-                worldLinked={worldLinked}
-                inspectorMode={bench.inspectorMode}
-                onInspectorMode={bench.setInspectorMode}
+                onCopy={() => setOrigin('copy')}
+                onReturnToWorld={() => void onReturnToWorld()}
                 onPrevScene={bench.hasPrevScene ? () => bench.stepScene(-1) : undefined}
                 onNextScene={bench.hasNextScene ? () => bench.stepScene(1) : undefined}
                 onDuplicate={() => bench.duplicate(bench.selectedIndex)}
@@ -446,31 +426,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
               />
             )}
 
-            {bench.selected && worldLinked && bench.inspectorMode === 'world' ? (
-              <div className="min-h-0 flex-1 overflow-y-auto p-[20px] [&>*]:max-w-[880px]">
-                {selectedPlace ? (
-                  <PlaceInspector
-                    place={{
-                      id: selectedPlace.id ?? '',
-                      label: selectedPlace.label ?? '',
-                      intention: selectedPlace.intention ?? '',
-                      prompt: selectedPlace.prompt ?? '',
-                    }}
-                    draft={placeDraft.draft}
-                    worldLabel={world?.label ?? bench.selected.base.world ?? ''}
-                    saving={placeSaving}
-                    status={placeStatus}
-                    onPatch={placeDraft.patch}
-                    onSave={() => void onSavePlace()}
-                    onClose={bench.close}
-                  />
-                ) : (
-                  <div className="empty rounded-card border border-line bg-panel px-[16px] py-[28px] text-[13px]">
-                    {worldPlaces.error ?? 'lieu introuvable dans le catalogue du monde'}
-                  </div>
-                )}
-              </div>
-            ) : bench.selected ? (
+            {bench.selected ? (
               <SceneInspector
                 draft={bench.selected}
                 saved={saved.get(bench.selected.base.id ?? '')}

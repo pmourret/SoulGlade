@@ -83,12 +83,12 @@ export function SceneInspector({
       the JSON panel. */
   onRevert: () => void
 }) {
-  /* A scene bound to a world place (ADR-0015) never owns its frame: `prompt`
-     and `intention` are always re-derived from the live catalog server-side,
-     so letting them be typed here would edit a value the next save discards
-     — the Monde tab (`PlaceInspector`) is where that text actually lives.
-     Wardrobe levels and the pose skeleton are OVERLAY keys (ADR-0015 §2):
-     never locked by this, whatever the composer decides for its own fields. */
+  /* A scene taken from the world (ADR-0027 §5) never owns its frame: `prompt`
+     and `intention` are re-read from the world server-side on every save, so
+     letting them be typed here would edit a value the next save discards.
+     « Modifier pour ce personnage » (SceneHeader) turns it into a copy, which
+     owns them. Wardrobe levels and the pose skeleton are OVERLAY keys
+     (ADR-0014): never locked by this. */
   const worldLinked = draft.base.origin === 'world'
 
   /* Undo stack for `onPatch` (design pass écran 7, §B3) — bounded, in

@@ -21,6 +21,7 @@ import nsfw_batch
 import pose_tools
 import runner as lb
 import shared_state as ss
+import worlds
 
 from ..dependencies import RequiredCharacterId
 from ..schemas.bank import (
@@ -29,7 +30,7 @@ from ..schemas.bank import (
 )
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
 from ..services.bank import (
-    category_order, refresh_world_scenes, rotate_backup, scene_previews,
+    category_order, rotate_backup, scene_previews,
     scene_stats, stamp_world, validate_scene_bank,
 )
 from ..services.creative import (
@@ -45,7 +46,7 @@ router = APIRouter(responses=ERROR_RESPONSES)
 async def get_scene_bank(character_id: RequiredCharacterId):
     """The bank, plus everything the Créer screen's cards need in ONE call."""
     cid = character_id
-    data = refresh_world_scenes(ss.scenes_data(cid))
+    data = worlds.refresh_scene_bank(ss.scenes_data(cid))
     categories = sorted({lb.scene_intention(s) for s in data["scenes"]},
                         key=category_order)
     # journey metadata, computed here so the frontend does not have to
@@ -100,12 +101,12 @@ async def save_scene_bank(payload: SceneBankSaveRequest, character_id: RequiredC
     # Passing it here is what turns the world lock on — the service refuses,
     # then stamps what is legitimately new.
     world = lb.character_world(cid)
-    # Live merge (ADR-0015), BEFORE validation: a world-linked scene arrives
-    # with no trustworthy prompt of its own, and this is what fills it in
-    # from the current catalog — so the empty-prompt check below judges the
-    # inherited text, not the client's silence. It is also the point that
-    # makes the write below what `build_jobs` will read verbatim.
-    data = refresh_world_scenes(data)
+    # World scenes are re-read BEFORE validation (ADR-0027 §5): a scene taken
+    # from the world (`origin == "world"`) arrives with no trustworthy frame
+    # of its own, and this fills it in from the current world — so the
+    # empty-prompt check below judges the inherited text, not the client's
+    # silence. A copy (`origin == "copy"`) keeps what the client sent.
+    data = worlds.refresh_scene_bank(data)
     problems = validate_scene_bank(data, previous=ss.scenes_data(cid),
                                    allow_losses=payload.autoriser_pertes,
                                    world=world)

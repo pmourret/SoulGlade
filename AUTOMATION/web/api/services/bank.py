@@ -23,7 +23,6 @@ import shutil
 
 import pose_tools
 import shared_state as ss
-import worlds
 
 
 KNOWN_FORMATS = ("4:5", "2:3", "9:16", "1:1")
@@ -37,7 +36,9 @@ WATCHED_KEYS = ("intention", "intensity", "tags", "tones", "wardrobe", "pose")
 # Where a scene comes from (ADR-0014 §3). It keeps nothing, it EXPLAINS: a bank
 # of twenty scenes where nobody remembers which ones came from the world's
 # starter set is unreadable in Réglages.
-KNOWN_ORIGINS = ("world", "manual", "compose")
+# `copy` (ADR-0027 §5) : une scene du monde que le personnage a modifiee ;
+# son `world_ref` garde la scene dont elle vient.
+KNOWN_ORIGINS = ("world", "copy", "manual", "compose")
 
 
 def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
@@ -188,6 +189,10 @@ def _world_problems(data, scenes, previous, world):
         if origin is not None and origin not in KNOWN_ORIGINS:
             problems.append(f"{where} : origine inconnue « {origin} » — "
                             f"attendu : {', '.join(KNOWN_ORIGINS)}")
+        elif origin in ("world", "copy") and not s.get("world_ref"):
+            problems.append(f"{where} : « world_ref » manquant — une scène "
+                            f"{'reprise' if origin == 'world' else 'copiée'} "
+                            "du monde dit de quelle scène elle vient")
     return problems
 
 
@@ -207,42 +212,6 @@ def stamp_world(data, world):
         if isinstance(s, dict):
             s.setdefault("world", world)
             s.setdefault("origin", "manual")
-    return data
-
-
-def refresh_world_scenes(data):
-    """Live merge of ADR-0015, applied in place: every scene bound to a world
-    scene (`origin == "world"` and a `world_ref`) has its FRAME
-    (`label`/`intention`/`prompt`) re-derived from the CURRENT catalog —
-    never trusted from what the client sent. The character's overlay
-    (`worlds.SCENE_OVERLAY_KEYS`) is untouched either way, since
-    `merge_scene` only ever reads it back from the scene itself.
-
-    Called on every `GET /api/scenes` (so the screen shows the live catalog)
-    and on every `POST /api/scenes`, BEFORE `validate_scene_bank` (so the
-    inherited prompt already exists when the empty-prompt check runs) and
-    before the file is written — that write is what makes the merge visible
-    to `build_jobs`, which reads `scenes.json` verbatim and knows nothing of
-    this function (ADR-0014 §5, ADR-0015).
-
-    A world, scene or décor that no longer exists (`UnknownWorldError` /
-    `UnknownSceneError` / `UnknownPlaceError`) is NOT an error here: the scene is left exactly as
-    it was, and `validate_scene_bank`'s "prompt vide" refusal is what
-    surfaces the break at the next save — this function never repairs, never
-    crashes the whole bank for one dangling reference.
-    """
-    for scene in data.get("scenes", []):
-        if not isinstance(scene, dict) or scene.get("origin") != "world":
-            continue
-        wid, ref = scene.get("world"), scene.get("world_ref")
-        if not wid or not ref:
-            continue
-        try:
-            merged = worlds.merge_scene(wid, ref, scene)
-        except (worlds.UnknownWorldError, worlds.UnknownSceneError,
-                worlds.UnknownPlaceError):
-            continue
-        scene.update(merged)
     return data
 
 

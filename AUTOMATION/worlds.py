@@ -452,8 +452,8 @@ def merge_scene(wid, scene_id, overlay):
     le defaut de l'overlay. Leve UnknownWorldError / UnknownSceneError /
     UnknownPlaceError : a l'appelant de decider quoi en faire.
 
-    Heritage vivant d'ADR-0015 tant que le chantier 2 d'IT-11 n'a pas pose la
-    copie a la modification (ADR-0027 §5)."""
+    Seule une scene `origin == "world"` passe ici : une copie du personnage
+    (`origin == "copy"`) garde son cadre, voir `refresh_scene_bank`."""
     s = scene(wid, scene_id)
     merged = {
         "id": overlay.get("id") or s["id"],
@@ -470,6 +470,36 @@ def merge_scene(wid, scene_id, overlay):
         if k in overlay:
             merged[k] = overlay[k]
     return merged
+
+
+def refresh_scene_bank(data):
+    """Relit depuis le monde le cadre de chaque scene REPRISE d'une banque de
+    personnage (`origin == "world"` et un `world_ref`), en place, et rend
+    `data`. Les overlays du personnage ne bougent pas.
+
+    ADR-0027 §5 : une scene reprise suit le monde, une copie (`origin ==
+    "copy"`, `world_ref` garde sa provenance) ne le suit plus, une scene
+    propre (`manual`, `compose`) n'a rien a suivre. Appelee au chargement et
+    a la sauvegarde de la Banque, ET a la lecture de la banque par
+    `build_jobs` (`runner.prompt.load_scene_bank`) : une correction du monde
+    atteint le lancement sans attendre qu'on rouvre la Banque.
+
+    Une scene ou un decor disparus ne sont PAS une erreur ici : la scene
+    reste telle quelle, et c'est le refus « prompt vide » de la Banque qui
+    signale la rupture. Cette fonction ne repare rien, et ne fait jamais
+    tomber toute une banque pour une reference pendante.
+    """
+    for s in data.get("scenes", []):
+        if not isinstance(s, dict) or s.get("origin") != "world":
+            continue
+        wid, ref = s.get("world"), s.get("world_ref")
+        if not wid or not ref:
+            continue
+        try:
+            s.update(merge_scene(wid, ref, s))
+        except (UnknownWorldError, UnknownSceneError, UnknownPlaceError):
+            continue
+    return data
 
 
 def is_compatible(wid, family):
