@@ -19,10 +19,23 @@ Un rapport vide est un bon rapport.
 3. `DOCS/architecture.md` **seulement** si le diff touche la création
    d'un personnage, un pack, l'identité ou le NSFW.
 
-Le diff :
+Le diff — d'abord la carte, puis fichier par fichier, jamais d'un bloc :
 
-    git diff HEAD
     git status --porcelain
+    git diff HEAD --stat
+    git diff HEAD -- <fichier>
+
+Un `git diff HEAD` nu déverse tout d'un coup : 150 Ko sur un chantier
+ordinaire (IT-11, 26/09), tronqués à 30 000 caractères, et tu relis
+ensuite tout un par un. Ne lis pas le diff de :
+
+- `openapi.json`, `schema.d.ts`, `soulglade-tableau-de-bord.html`,
+  `package-lock.json` : sorties générées. Il suffit qu'elles figurent dans
+  le `--stat` à côté de leur source ;
+- un fichier supprimé : son contenu ne peut plus enfreindre rien ;
+- une donnée (`WORLDS/*.json`, `PACKS/**/*.json`) : cherche-y ce qu'un
+  invariant interdit (`grep` d'une clé comme `wardrobe`), ne la lis pas
+  en entier.
 
 ## Les pièges qui passent le plus souvent
 
