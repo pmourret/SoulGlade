@@ -1,9 +1,11 @@
 /* The light catalogue — the sixth sub-view of the Atelier (IT-10 chantier 7).
 
-   WHAT A LIGHT IS HERE: a label and one sentence of prompt. A scene wears it
-   by its key, in its Lumière field or as a variant, and the launch resolves
-   it into text after the décor (`DOCS/cadrage/2026-09-26-it10-c7-lumieres.md`).
-   Correcting a light here corrects every scene that wears it.
+   WHAT A LIGHT IS HERE: a label and a studio sheet, whose English sentence
+   the launch composes from the platform's vocabulary (7 bis,
+   `DOCS/cadrage/2026-09-26-it10-c7bis-studio-lumiere.md`). A scene wears it by
+   its key, in its Lumière field or as a variant, and the launch resolves it
+   into text after the décor. Correcting a light here corrects every scene
+   that wears it.
 
    THE SHAPE IS THE OUTFITS' next door: the same workshop bar handed down by
    `BankScreen`, the same list and 340 px inspector that becomes a drawer
@@ -18,7 +20,8 @@ import { useToast } from '../../../chrome/ToastContext'
 import { useScenes } from '../../../state/ScenesStoreContext'
 import { useOverlayPanel } from '../../produce/useOverlayPanel'
 import { LightInspector } from './LightInspector'
-import { useLights, type LightEntry } from './useLights'
+import type { Setup } from './lightCompose'
+import { useLights, type LightEffectEntry, type LightEntry, type LightFields } from './useLights'
 
 const NEW = '\u0000new'
 
@@ -27,7 +30,9 @@ export function LightsView({ nav }: { nav: ReactNode }) {
   const confirm = useConfirm()
   const { narrow } = useChrome()
   const { world } = useScenes()
-  const { lights, marker, loaded, busy, create, save, remove } = useLights()
+  const {
+    lights, effects, vocabulary, marker, loaded, busy, create, save, remove, createEffect, removeEffect,
+  } = useLights()
 
   const [selected, setSelected] = useState<string | null>(null)
   const selectedLight = lights.find((l) => l.key === selected) ?? null
@@ -42,8 +47,8 @@ export function LightsView({ nav }: { nav: ReactNode }) {
   const drawerRef = useRef<HTMLDivElement | null>(null)
   useOverlayPanel(narrow && inspecting, () => setSelected(null), drawerRef)
 
-  const onCreate = async (label: string, text: string, toWorld: boolean) => {
-    const result = await create(label, text, toWorld)
+  const onCreate = async (label: string, fields: { text: string; setup: Setup | null }, toWorld: boolean) => {
+    const result = await create(label, fields, toWorld)
     if (!result.ok) {
       toast(result.erreur)
       return
@@ -52,7 +57,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
     toast(toWorld ? 'lumière créée dans le monde' : 'lumière créée')
   }
 
-  const onSave = async (key: string, fields: { label: string; text: string }, toWorld: boolean) => {
+  const onSave = async (key: string, fields: LightFields, toWorld: boolean) => {
     const result = await save(key, fields, toWorld)
     toast(result.ok ? 'lumière enregistrée — les scènes qui la portent suivent' : result.erreur)
   }
@@ -79,6 +84,31 @@ export function LightsView({ nav }: { nav: ReactNode }) {
     if (!ok) return
     const result = await remove(light.key)
     toast(result.ok ? (adjusted ? 'rendue au monde' : 'lumière retirée') : result.erreur)
+  }
+
+  const onCreateEffect = async (label: string, fragment: string, toWorld: boolean) => {
+    const result = await createEffect(label, fragment, toWorld)
+    toast(result.ok ? (toWorld ? 'effet créé dans le monde' : 'effet créé') : result.erreur)
+    return result.ok
+  }
+
+  const onDeleteEffect = async (effect: LightEffectEntry) => {
+    const adjusted = effect.couche === 'surcharge'
+    const ok = await confirm({
+      title: adjusted ? 'Rendre cet effet au monde ?' : 'Retirer cet effet ?',
+      button: adjusted ? 'Rendre au monde' : 'Retirer',
+      danger: !adjusted,
+      body: (
+        <p>
+          <b>{effect.label || effect.key}</b>{' '}
+          {adjusted ? 'revient à ce que le monde en dit.'
+            : `quitte ${effect.couche === 'monde' ? 'le monde' : 'ce personnage'}. Un effet qu'une lumière porte encore ne part pas : le studio dit laquelle.`}
+        </p>
+      ),
+    })
+    if (!ok) return
+    const result = await removeEffect(effect.key)
+    toast(result.ok ? 'effet retiré' : result.erreur)
   }
 
   return (
@@ -118,9 +148,9 @@ export function LightsView({ nav }: { nav: ReactNode }) {
                 id="lightsEmpty"
               >
                 <p className="m-0">
-                  Aucune lumière. Une lumière est une phrase du prompt — « soft window light from the
-                  left » — qui se pose ensuite dans une scène, onglet Lumière, ou en variante. La
-                  corriger ici corrige toutes les scènes qui la portent.
+                  Aucune lumière. Une lumière se règle comme en studio — d'où elle vient, dure ou
+                  douce, sa couleur, ses effets — et se pose ensuite dans une scène, onglet Lumière,
+                  ou en variante. La corriger ici corrige toutes les scènes qui la portent.
                 </p>
                 {/* Secondaire : « Nouvelle lumière », dans la barre, reste le
                     seul appel primaire de la vue (même règle que les tenues). */}
@@ -189,7 +219,11 @@ export function LightsView({ nav }: { nav: ReactNode }) {
               busy={busy}
               marker={marker}
               worldLabel={world ? world.label : null}
-              onCreate={(label, text, toWorld) => void onCreate(label, text, toWorld)}
+              vocabulary={vocabulary}
+              customEffects={effects}
+              onCreate={(label, fields, toWorld) => void onCreate(label, fields, toWorld)}
+              onCreateEffect={onCreateEffect}
+              onDeleteEffect={(effect) => void onDeleteEffect(effect)}
               onSave={(fields, toWorld) => selectedLight && void onSave(selectedLight.key, fields, toWorld)}
               onDelete={() => selectedLight && void onDelete(selectedLight)}
             />

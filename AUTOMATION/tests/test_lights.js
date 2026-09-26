@@ -1,8 +1,14 @@
 /* Browser smoke test of the light catalogue — /bank/lights and the Lumière
-   tab of the composer (IT-10 chantier 7).
+   tab of the composer (IT-10 chantier 7, and the studio sheet of 7 bis).
 
    WHAT IT LOCKS, in the order a user meets it:
-     1. a light is created in the workshop, with its text and its layer;
+     1. a light is created in the workshop from a scheme, its direction moved
+        on the diagram, the colour of an effect changed (palette and free), a
+        user's own effect created and carried — and the English sentence under
+        the sheet follows, IDENTICAL to the one the server gives the saved
+        light (the screen composes it with the served vocabulary, the server
+        at launch: two grammars that must not drift). Then rewritten by hand,
+        the sheet says so;
      2. in the Lumière tab the catalogue replaces the « bientôt » line, and a
         light is added as a variant — ONE line, shown by its label and its
         text, never by `@key` — and, when the scene is not bound to the world,
@@ -27,6 +33,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 const CID = process.env.SMOKE_CHARACTER || 'lena';
 const LABEL = 'Lumière de fumigation';
 const TEXTE = 'fumigation dusk light from the left';
+const EFFET = 'Fumée de fumigation';
 
 (async () => {
   const nav = await chromium.launch();
@@ -46,6 +53,11 @@ const TEXTE = 'fumigation dusk light from the left';
   await page.waitForSelector('#bankLights');
   const avant = await cles();
   const banqueAvant = await banque();
+  const effets = () => page.evaluate(async (cid) =>
+    ((await (await fetch(`/api/light-effects?character=${cid}`)).json()).effects || [])
+      .map((e) => e.key), CID);
+  const effetsAvant = await effets();
+  const phrase = () => page.textContent('#lightPhrase');
   let cle = null;
   let sceneTouchee = false;
 
@@ -53,11 +65,31 @@ const TEXTE = 'fumigation dusk light from the left';
     console.log('\n[1] la sous-vue existe et se nomme dans la barre des ateliers');
     dire(await page.isVisible('#bankView [data-vue="lights"]'), 'l\'onglet « Lumières » est là');
 
-    console.log('\n[2] créer une lumière');
+    console.log('\n[2] créer une lumière depuis un schéma, la phrase suit sous les yeux');
     await page.click('#btnLightNew');
-    await page.waitForSelector('#lightInspector');
+    await page.waitForSelector('#lightSchemes [data-scheme="cyberpunk"]');
     await page.fill('#lightLabel', LABEL);
-    await page.fill('#lightText', TEXTE);
+    await page.click('#lightSchemes [data-scheme="cyberpunk"]');
+    const depart = await phrase();
+    dire(depart.startsWith('hard cool neon light from the side'),
+         `le schéma « néon cyberpunk » remplit la fiche (${depart})`);
+    await page.click('#lightSetup [data-light-setting="direction"] [data-option="back"]');
+    dire((await phrase()).includes('from behind the subject'), 'la direction, choisie sur le schéma, suit');
+    await page.click('[data-light-effect="neon_reflections"] [data-color="green"]');
+    dire((await phrase()).includes('green neon reflections'), 'la couleur de palette d\'un effet suit');
+    await page.fill('#lightFx-wet_floor-free', 'deep violet');
+    dire((await phrase()).includes('wet ground reflecting deep violet lights'), 'une couleur libre aussi');
+    await page.click('#btnLightEffectNew');
+    await page.fill('#lightEffectLabel', EFFET);
+    await page.fill('#lightEffectFragment', '{color} smoke haze');
+    await page.click('#btnLightEffectCreate');
+    await page.waitForFunction(() => !document.querySelector('#lightEffectNew'), null, { timeout: 10000 });
+    const cleEffet = (await effets()).find((k) => !effetsAvant.includes(k));
+    dire(Boolean(cleEffet), `un effet à soi est créé depuis la fiche (${cleEffet})`);
+    await page.check(`#lightFx-${cleEffet}`);
+    await page.click(`[data-light-effect="${cleEffet}"] [data-color="amber"]`);
+    const ecran = await phrase();
+    dire(ecran.endsWith('amber smoke haze'), `et la fiche le porte, en couleur (${ecran})`);
     await page.click('#btnLightSave');
     await page.waitForFunction(
       (n) => document.querySelectorAll('#bankLights [data-light]').length > n,
@@ -65,10 +97,23 @@ const TEXTE = 'fumigation dusk light from the left';
     const nouvelles = (await cles()).filter((k) => !avant.includes(k));
     dire(nouvelles.length === 1, `une lumière et une seule est créée (${nouvelles})`);
     cle = nouvelles[0];
-    dire((await page.textContent(`#bankLights [data-light="${cle}"]`)).includes(TEXTE),
-         'la ligne dit le texte que la scène recevra');
+    const serveur = await page.evaluate(async ({ cid, k }) =>
+      ((await (await fetch(`/api/lights?character=${cid}`)).json()).lights || [])
+        .find((l) => l.key === k), { cid: CID, k: cle });
+    dire(serveur && serveur.texte === ecran && !serveur.text,
+         `la phrase de l'écran est celle du serveur, à l'octet près (« ${serveur && serveur.texte} »)`);
     dire((await page.textContent('[data-light-layer]')).includes('Propre au personnage'),
          'la couche est dite : propre au personnage');
+
+    console.log('\n[2 bis] réécrite à la main, elle prime et la fiche le dit');
+    await page.click('#btnLightHand');
+    await page.fill('#lightText', TEXTE);
+    dire(await page.isVisible('[data-light-hand]'), 'la fiche dit « texte écrit à la main »');
+    await page.click('#btnLightSave');
+    await page.waitForFunction((k) => ((document.querySelector(`#bankLights [data-light="${k}"]`)
+      || {}).textContent || '').includes('fumigation dusk'), cle, { timeout: 10000 });
+    dire((await page.textContent(`#bankLights [data-light="${cle}"]`)).includes(TEXTE),
+         'la ligne dit le texte que la scène recevra');
 
     console.log('\n[3] l\'onglet Lumière la pose en variante, montrée par son libellé');
     await page.goto(`${BASE}/bank/scenes?character=${CID}`, { waitUntil: 'networkidle' });
@@ -161,6 +206,13 @@ const TEXTE = 'fumigation dusk light from the left';
     const final = await cles();
     dire(final.length === avant.length && avant.every((k) => final.includes(k)),
          `le catalogue est revenu exactement à son état de départ (${final.length})`);
+    for (const k of (await effets()).filter((k) => !effetsAvant.includes(k))) {
+      await page.evaluate(async ({ cid, k }) => fetch(`/api/light-effects/delete?character=${cid}`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ key: k }) }), { cid: CID, k });
+    }
+    const effetsFin = await effets();
+    dire(effetsFin.length === effetsAvant.length, `les effets aussi (${effetsFin.length})`);
   }
 
   console.log('\n[6] aucune erreur JS réelle sur tout le parcours');
