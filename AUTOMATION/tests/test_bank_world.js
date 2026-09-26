@@ -30,7 +30,7 @@ const FAUX = 'zz_essai_banque';
 const LIEU_FAUX = { id: FAUX, label: 'Essai banque', intention: 'lifestyle',
                     prompt: 'a plain room, wide shot' };
 
-async function ouvrir(nav, { arme }) {
+async function ouvrir(nav, { arme, tenu }) {
   const page = await nav.newPage({ viewport: { width: 1500, height: 950 } });
   const erreurs = [];
   page.on('pageerror', e => erreurs.push('pageerror: ' + e.message));
@@ -46,7 +46,10 @@ async function ouvrir(nav, { arme }) {
     if (route.request().method() !== 'GET') return route.continue();
     const vraie = await route.fetch();
     const corps = await vraie.json();
-    corps.scenes = [...(corps.scenes || []), LIEU_FAUX];
+    corps.scenes = [...(corps.scenes || []), LIEU_FAUX,
+                    // un lieu que la banque tient DEJA (par son world_ref) :
+                    // jamais une hypothese sur les scenes reelles de Lena
+                    ...(tenu ? [{ ...LIEU_FAUX, id: tenu, label: 'Deja tenu' }] : [])];
     await route.fulfill({ response: vraie, json: corps });
   });
   if (!arme) {
@@ -73,7 +76,8 @@ async function ouvrir(nav, { arme }) {
   const idsAvant = (avant.data?.scenes || avant.scenes || []).map(s => s.id);
 
   console.log('\n[1] personnage ARME : les lieux adultes manquants sont proposes');
-  const arme = await ouvrir(nav, { arme: true });
+  const tenu = (avant.data?.scenes || avant.scenes || []).find(s => s.world_ref)?.world_ref;
+  const arme = await ouvrir(nav, { arme: true, tenu });
   toutesErreurs.push(...arme.erreurs);
   const p = arme.page;
   await p.click('#btnAddFromWorld');
@@ -92,8 +96,8 @@ async function ouvrir(nav, { arme }) {
        `la section annonce le cran natif : « ${(note.match(/cran natif \(niveau \d+\)/) || [''])[0]} »`);
   const dejaTenus = await p.$$eval('#worldCatalogueBox [data-pick-place]',
                                    e => e.map(x => x.dataset.pickPlace));
-  dire(!dejaTenus.includes('chambre_lumiere_matin'),
-       'un lieu adulte que la banque tient deja n est pas repropose');
+  dire(Boolean(tenu) && !dejaTenus.includes(tenu),
+       `un lieu adulte que la banque tient deja (${tenu}) n est pas repropose`);
 
   console.log('\n[2] le choisir cree une scene AU NIVEAU NATIF, sans tenue');
   await faux.click();
