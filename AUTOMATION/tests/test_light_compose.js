@@ -21,6 +21,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { composeLight } from '../web/ui/src/screens/bank/lights/lightCompose.ts'
+import { lightWordsIn } from '../web/ui/src/screens/bank/lights/lightText.ts'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const OFM = join(HERE, '..', '..')
@@ -70,6 +71,13 @@ dire(composeLight({ source: 'torche', effects: [] }, vocab, custom).problem === 
      'une source inconnue')
 dire(composeLight({ effects: [{ key: 'laser', color: '' }] }, vocab, custom).problem === 'effet inconnu : « laser »',
      'un effet inconnu')
+
+console.log('\n[3] une lumière déjà écrite dans le texte d\'une scène se reconnaît')
+const words = raw.watch_words
+dire(JSON.stringify(lightWordsIn('Reading at the café, Golden Hour, long shadows', words))
+     === JSON.stringify(['golden hour', 'long shadows']), 'les mots du vocabulaire, en entier, sans casse')
+dire(lightWordsIn('a lampshade and a glowing screen, lightweight coat', words).length === 0,
+     'pas au milieu d\'un mot (lampshade, glowing, lightweight)')
 
 console.log('\n' + '='.repeat(70))
 console.log(ko ? `${ko} ECHEC(S)` : 'tout est vert')

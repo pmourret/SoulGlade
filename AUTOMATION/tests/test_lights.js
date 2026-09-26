@@ -14,7 +14,10 @@
         text, never by `@key` — and, when the scene is not bound to the world,
         posed as the scene's light;
      3. saved, the scene carries the reference on disk, and reopened it still
-        shows the light where it was put: in the Lumière tab.
+        shows the light where it was put: in the Lumière tab;
+     4. (7 bis) a scene that carries a light calls its variants « autres
+        lumières », and a scene text that already describes a light is
+        flagged in the Lumière tab.
 
    IT TOUCHES REAL DATA (the character's creative.json and scenes.json) and
    cleans up behind itself, with the guard frontend.md asks for: the scene
@@ -153,6 +156,21 @@ const EFFET = 'Fumée de fumigation';
            'posée comme lumière de la scène, le champ porte sa référence');
       dire((await page.textContent('#scenePromptPreview')).includes(TEXTE),
            'l\'aperçu du prompt montre son texte, pas sa clé');
+      dire((await page.textContent('#lightVariantsHead')) === 'Autres lumières',
+           'la scène porte une lumière : ses variantes se disent « autres lumières »');
+
+      // une lumière écrite dans le texte de la scène se signale, puis le texte revient
+      await page.click('[data-tab="recap"]');
+      const texte = await page.$eval(champ('prompt_base'), (e) => e.value);
+      await page.fill(champ('prompt_base'), `${texte}, golden hour`);
+      await page.click('[data-tab="light"]');
+      await page.waitForSelector('#lightCatalog');
+      dire(((await page.textContent('#lightAlreadyWritten').catch(() => '')) || '').includes('golden hour'),
+           'le texte de la scène décrit déjà une lumière : l\'onglet le dit');
+      await page.click('[data-tab="recap"]');
+      await page.fill(champ('prompt_base'), texte);
+      await page.click('[data-tab="light"]');
+      await page.waitForSelector('#lightCatalog');
     } else {
       console.log('   IGNORE — lumière verrouillée, et aucune copie possible');
     }

@@ -8978,6 +8978,14 @@
             },
             "type": "array",
             "title": "Schemes"
+          },
+          "watch_words": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Watch Words",
+            "default": []
           }
         },
         "type": "object",

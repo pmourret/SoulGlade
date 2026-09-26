@@ -57,6 +57,7 @@ export function SceneComposer({
   outfitMarker,
   lights,
   lightMarker,
+  lightWords,
   produced,
   worldLinked,
   changed,
@@ -83,6 +84,8 @@ export function SceneComposer({
       and the marker of a line that refers to one. */
   lights: LightEntry[]
   lightMarker: string
+  /** The platform's light words: a scene text holding one already lights it. */
+  lightWords: string[]
   produced: number | null
   /* A scene bound to a world place (ADR-0015): its frame — décor, lumière and
      the pose prose — is re-derived server-side on every save, so those three
@@ -211,6 +214,7 @@ export function SceneComposer({
                     decor={decorOf(places, draft.place)}
                     lights={lights}
                     marker={lightMarker}
+                    words={lightWords}
                     worldLinked={worldLinked}
                     lockedNote={lockedNote}
                     changed={changed}

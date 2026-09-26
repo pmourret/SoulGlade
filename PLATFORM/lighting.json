@@ -94,6 +94,12 @@
     {"key": "cyberpunk", "label": "Néon cyberpunk", "term": "cyberpunk neon",
      "setup": {"source": "neon", "direction": "side", "quality": "hard", "temperature": "cool", "mood": "low_key", "effects": [{"key": "neon_reflections", "color": "magenta"}, {"key": "wet_floor", "color": "cyan"}]}}
   ],
+  "watch_words": [
+    "sunlight", "sunlit", "sunset", "sunrise", "golden hour", "blue hour", "daylight",
+    "moonlight", "lamp", "lamplight", "candlelight", "neon", "backlit", "backlight",
+    "rim light", "window light", "soft light", "hard light", "lighting", "spotlight",
+    "long shadows", "overcast", "glow"
+  ],
   "_notes": [
     "Vocabulaire de la lumière, couche PLATEFORME (IT-10 chantier 7 bis,",
     "DOCS/cadrage/2026-09-26-it10-c7bis-studio-lumiere.md). Le même pour tous,",
@@ -108,6 +114,10 @@
     "",
     "Aucun fragment ne décrit le visage (FORBIDDEN_FACE, runner/prompt.py) :",
     "tests/test_lights.py le vérifie. `angle` place une direction sur le schéma",
-    "vu du dessus (0 = face à l'appareil, 180 = derrière le sujet, null = au-dessus)."
+    "vu du dessus (0 = face à l'appareil, 180 = derrière le sujet, null = au-dessus).",
+    "",
+    "`watch_words` : les mots qui disent qu'un texte de scène décrit déjà une",
+    "lumière. L'onglet Lumière le signale — un avertissement, pas un refus : une",
+    "lumière posée sur la scène s'ajouterait à celle du texte."
   ]
 }

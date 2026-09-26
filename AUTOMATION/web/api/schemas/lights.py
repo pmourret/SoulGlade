@@ -128,6 +128,8 @@ class LightingVocabulary(BaseModel):
     palette: List[LightingColor]
     effects: List[LightingEffect]
     schemes: List[LightingScheme]
+    # words that say a scene's text already describes a light (warning only)
+    watch_words: List[str] = []
 
 
 class LightEffectEntry(BaseModel):

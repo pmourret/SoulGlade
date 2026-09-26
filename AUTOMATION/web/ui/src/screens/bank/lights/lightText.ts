@@ -40,3 +40,12 @@ export function lightPromptText(line: string, lights: LightEntry[], marker: stri
   const view = lightLine(line, lights, marker)
   return view.reference && !view.text ? line.trim() : view.text
 }
+
+/** The platform's light words a scene's own text already holds (7 bis). A
+    light posed on the scene would add to them: the Lumière tab says so, it
+    does not refuse. Whole words, any case. */
+export function lightWordsIn(text: string, words: string[]): string[] {
+  const lower = text.toLowerCase()
+  const escape = (word: string) => word.toLowerCase().replace(/[.*+?^$()|[\]\\{}]/g, '\\$&')
+  return words.filter((word) => new RegExp('\\b' + escape(word) + '\\b').test(lower))
+}

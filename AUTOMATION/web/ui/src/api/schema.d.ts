@@ -3926,6 +3926,11 @@ export interface components {
             effects: components["schemas"]["LightingEffect"][];
             /** Schemes */
             schemes: components["schemas"]["LightingScheme"][];
+            /**
+             * Watch Words
+             * @default []
+             */
+            watch_words: string[];
         };
         /** LightsResponse */
         LightsResponse: {

@@ -59,6 +59,7 @@ export function SceneInspector({
   outfitMarker,
   lights,
   lightMarker,
+  lightWords,
   produced,
   changed,
   narrow,
@@ -86,6 +87,8 @@ export function SceneInspector({
       and the marker of a line that refers to one. */
   lights: LightEntry[]
   lightMarker: string
+  /** The platform's light words: a scene text holding one already lights it. */
+  lightWords: string[]
   produced: number | null
   /** Draft fields differing from the saved scene (`sceneChanges`). */
   changed: Set<SceneField>
@@ -255,6 +258,7 @@ export function SceneInspector({
         outfitMarker={outfitMarker}
         lights={lights}
         lightMarker={lightMarker}
+        lightWords={lightWords}
         produced={produced}
         worldLinked={worldLinked}
         changed={changed}

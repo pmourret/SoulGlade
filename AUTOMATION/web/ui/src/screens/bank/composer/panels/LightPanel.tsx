@@ -10,7 +10,14 @@
 
    LES VARIANTES sont des lignes numérotées, une image de plus chacune, qu'on
    ajoute et qu'on retire. Une ligne peut aussi être une lumière du
-   catalogue. Stockage : `draft.variants`, une variante par ligne.
+   catalogue. Stockage : `draft.variants`, une variante par ligne. Quand la
+   scène porte une lumière, une variante en prend la place (7 bis) : elles se
+   disent alors « autres lumières ».
+
+   UNE LUMIÈRE DÉJÀ ÉCRITE dans le texte de la scène ou son décor (les scènes
+   des mondes portent la leur ainsi) se signale, par les mots du vocabulaire
+   de la plateforme : une lumière posée ici s'y ajouterait. Un avertissement,
+   pas un refus.
 
    LE CATALOGUE remplace la ligne « Templates de lumière : bientôt ». Il ne
    crée rien ici : une lumière se crée dans l'atelier (Lumières), d'où la
@@ -18,8 +25,9 @@
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../../../app/routes'
-import type { SceneDraft } from '../../../../state/ScenesStoreContext'
-import { lightLine, lightPromptText, type LightLine } from '../../lights/lightText'
+import { Icon } from '../../../../chrome/Icon'
+import { composePrompt, type SceneDraft } from '../../../../state/ScenesStoreContext'
+import { lightLine, lightPromptText, lightWordsIn, type LightLine } from '../../lights/lightText'
 import type { LightEntry } from '../../lights/useLights'
 import type { SceneField } from '../../sceneChanges'
 import { FragmentTrail } from '../FragmentTrail'
@@ -32,6 +40,7 @@ export function LightPanel({
   decor,
   lights,
   marker,
+  words,
   worldLinked,
   lockedNote,
   changed,
@@ -45,6 +54,8 @@ export function LightPanel({
   lights: LightEntry[]
   /** The marker of a line that refers to a light of the catalogue. */
   marker: string
+  /** The platform's light words (`/api/lighting`, watch_words). */
+  words: string[]
   worldLinked: boolean
   lockedNote: string
   changed: Set<SceneField>
@@ -59,6 +70,8 @@ export function LightPanel({
     onPatch({ variants: next.filter((line) => line.trim() !== '').join('\n') })
   const reference = (key: string) => `${marker}${key}`
   const base = lightLine(draft.promptLight, lights, marker)
+  const carries = draft.promptLight.trim() !== ''
+  const written = lightWordsIn(`${composePrompt(draft)} ${decor}`, words)
 
   return (
     <div className="flex flex-col gap-[16px]">
@@ -81,6 +94,16 @@ export function LightPanel({
             {changed.has('promptLight') && <b className="ml-[8px] text-warn-txt">modifié</b>}
           </span>
         </div>
+        {written.length > 0 && (
+          <p className="m-0 mb-[8px] flex items-start gap-[6px] text-[12px] text-warn-txt" role="status"
+             id="lightAlreadyWritten">
+            <Icon name="warn" className="mt-[2px] h-[11px] w-[11px] flex-none" aria-hidden="true" />
+            <span>
+              Ce texte décrit déjà une lumière ({written.map((w) => `« ${w} »`).join(', ')}) : une
+              lumière posée ici, ou une variante, s'y ajoute.
+            </span>
+          </p>
+        )}
         {base.reference ? (
           <div
             className={`flex flex-col gap-[8px] rounded-card border p-[10px] ${
@@ -125,10 +148,11 @@ export function LightPanel({
       </div>
 
       <div className="min-w-0">
-        <span className={HEAD}>Variantes</span>
+        <span className={HEAD} id="lightVariantsHead">{carries ? 'Autres lumières' : 'Variantes'}</span>
         <p className="tiny mt-[2px] mb-[8px]">
-          une image de plus chacune : elle prend la place de la lumière de base, ou, si la scène
-          n'en porte pas, s'ajoute à la fin du prompt — jamais une tenue
+          {carries
+            ? 'une image de plus chacune, sous une autre lumière : elle prend la place de celle de la scène — jamais une tenue'
+            : "une image de plus chacune : son texte s'ajoute à la fin du prompt — jamais une tenue"}
         </p>
         <div
           className={`flex flex-col gap-[6px] ${changed.has('variants') ? 'rounded-card border border-warn p-[6px]' : ''}`}
@@ -149,7 +173,7 @@ export function LightPanel({
                 ) : (
                   <>
                     <label className="sr-only" htmlFor={`variant-${index}`}>
-                      variante {index + 1}
+                      {carries ? 'autre lumière' : 'variante'} {index + 1}
                     </label>
                     <input
                       id={`variant-${index}`}
@@ -168,7 +192,7 @@ export function LightPanel({
                   className="cursor-pointer rounded-[6px] border-0 bg-transparent px-[6px] text-[15px]
                              leading-none text-dim2 hover:text-bad focus-visible:outline-2
                              focus-visible:outline-focus focus-visible:outline-offset-2"
-                  aria-label={`Retirer la variante ${index + 1}`}
+                  aria-label={`Retirer ${carries ? "l'autre lumière" : 'la variante'} ${index + 1}`}
                   onClick={() => writeVariants(variants.filter((_, i) => i !== index))}
                 >
                   ×
@@ -183,7 +207,7 @@ export function LightPanel({
                        focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             onClick={() => onPatch({ variants: [...variants, ''].join('\n') })}
           >
-            <span aria-hidden="true">+ </span>Ajouter une variante
+            <span aria-hidden="true">+ </span>{carries ? 'Ajouter une autre lumière' : 'Ajouter une variante'}
           </button>
         </div>
       </div>
@@ -250,10 +274,10 @@ export function LightPanel({
                     className="btn sm flex-none"
                     data-light-use="variant"
                     disabled={unusable}
-                    aria-label={`Ajouter « ${light.label || light.key} » en variante`}
+                    aria-label={`Ajouter « ${light.label || light.key} » ${carries ? 'comme autre lumière' : 'en variante'}`}
                     onClick={() => writeVariants([...variants, reference(light.key)])}
                   >
-                    + variante
+                    {carries ? '+ autre lumière' : '+ variante'}
                   </button>
                 </li>
               )

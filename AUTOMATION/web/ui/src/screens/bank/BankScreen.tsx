@@ -142,7 +142,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
   const { outfits, marker: outfitMarker } = useOutfits()
   /* Les lumières (IT-10 chantier 7) : l'onglet Lumière les pose par leur clé,
      l'aperçu les montre par leur texte. */
-  const { lights, marker: lightMarker } = useLights()
+  const { lights, marker: lightMarker, vocabulary: lightVocabulary } = useLights()
   // « Proposer… » (IT-11 chantier 6): the scene composer, redefined
   const [proposeOpen, setProposeOpen] = useState(false)
   const proposer = useSceneProposals()
@@ -525,6 +525,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
                 outfitMarker={outfitMarker}
                 lights={lights}
                 lightMarker={lightMarker}
+                lightWords={lightVocabulary?.watch_words ?? []}
                 produced={stats[bench.selected.base.id]?.n ?? null}
                 changed={changed}
                 narrow={narrow}
