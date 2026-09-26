@@ -518,6 +518,23 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
     await page.click(`${bande} button:has-text("aucune")`);
     await choisir(nouveau);
     dire((await page.inputValue(enMots)) === TEXTE, 'un champ vide recoit le texte de la pose choisie');
+    // retouchee sans reecriture, la pose porte un texte « a revoir » : il ne
+    // remplit plus rien seul, et le lien le dit (audit du 26/09)
+    await page.evaluate(async (n) => {
+      const q = '&character=lena';
+      const f = await (await fetch(`/api/pose/keypoints?name=${encodeURIComponent(n)}${q}`)).json();
+      f.people[0].pose_keypoints_2d[13] -= 300;
+      await fetch(`/api/pose/save?character=lena`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                                    body: JSON.stringify({ name: n, keypoints: f }) });
+    }, nouveau);
+    await page.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
+    await page.click('#btnAddScene');
+    await page.waitForSelector('#sceneInspector');
+    await page.click('[data-tab="pose"]');
+    await choisir(nouveau);
+    dire((await page.inputValue(enMots)) === '', 'un texte « a revoir » ne remplit pas un champ vide');
+    dire(await page.isVisible('[data-tabpanel="pose"] button:has-text("Reprendre le texte de la pose (à revoir)")'),
+         'le lien dit que le texte est a revoir');
   } else {
     console.log('   (ignore — scene liee au monde, « En mots » verrouille)');
     await choisir(nouveau);

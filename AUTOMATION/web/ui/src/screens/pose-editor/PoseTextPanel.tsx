@@ -29,7 +29,7 @@ export function PoseTextPanel({
   }
   return (
     <section
-      className={inline ? 'flex flex-none items-start gap-[12px] border-t border-line px-[16px] py-[10px]' : 'border-t border-line px-[16px] py-[14px]'}
+      className={inline ? 'flex flex-none items-start gap-[12px] border-t border-line px-[16px] py-[10px]' : 'border-b border-line px-[16px] py-[14px]'}
       aria-labelledby={`${fieldId}-title`}
     >
       <div className={inline ? 'flex w-[150px] flex-none flex-col gap-[6px] pt-[2px]' : 'mb-[8px] flex items-center gap-[8px]'}>

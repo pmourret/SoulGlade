@@ -106,6 +106,7 @@ export function SceneComposer({
     name,
     label: poseEntries[name]?.label ?? null,
     text: poseEntries[name]?.texte ?? '',
+    stale: Boolean(poseEntries[name]?.texte) && !poseEntries[name]?.texte_a_jour,
   }))
 
   /* Opening a DIFFERENT scene always starts on Général and puts the cursor in

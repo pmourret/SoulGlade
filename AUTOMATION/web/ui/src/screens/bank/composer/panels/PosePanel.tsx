@@ -26,14 +26,14 @@ import { HEAD } from './shared'
 
 /** Filename + human label — the same shape `usePoseBank`/`PoseCard` resolve
     for the Poses screen — plus the pose's own text (IT-10, chantier 4). */
-export type PoseSummary = { name: string; label: string | null; text: string }
+export type PoseSummary = { name: string; label: string | null; text: string; stale: boolean }
 
 /* Skeletons of INPUTS/POSE/, served by /api/scenes. A scene pointing at a
    missing skeleton (file moved, renamed) KEEPS it in the list rather than lose
    it in silence — same rule as an out-of-taxonomy intention. */
 function poseOptions(poses: PoseSummary[], current: string) {
   return current && !poses.some((p) => p.name === current)
-    ? [...poses, { name: current, label: null, text: '' }]
+    ? [...poses, { name: current, label: null, text: '', stale: false }]
     : poses
 }
 
@@ -58,12 +58,13 @@ export function PosePanel({
   const currentLabel = current?.label || draft.pose
   const currentText = current?.text ?? ''
   /* The skeleton brings its text only into an EMPTY « En mots »: never over
-     words the user wrote. Otherwise « Reprendre le texte de la pose » does it
-     on request. A world-linked scene gets neither: its prose is locked. */
+     words the user wrote, and never a text « à revoir » (retouched since it
+     was written). Otherwise the link does it on request, and says when the
+     text is stale. A world-linked scene gets neither: its prose is locked. */
   const pick = (name: string) => {
-    const text = options.find((p) => p.name === name)?.text ?? ''
-    const fill = text && !worldLinked && !draft.promptPose.trim()
-    onPatch(fill ? { pose: name, promptPose: text } : { pose: name })
+    const chosen = options.find((p) => p.name === name)
+    const fill = chosen?.text && !chosen.stale && !worldLinked && !draft.promptPose.trim()
+    onPatch(fill ? { pose: name, promptPose: chosen.text } : { pose: name })
   }
   const [editing, setEditing] = useState(false)
   const [picking, setPicking] = useState(!draft.pose)
@@ -106,7 +107,7 @@ export function PosePanel({
                 data-hint-text={currentText}
                 onClick={() => onPatch({ promptPose: currentText })}
               >
-                Reprendre le texte de la pose
+                {current?.stale ? 'Reprendre le texte de la pose (à revoir)' : 'Reprendre le texte de la pose'}
               </button>
             )}
           </div>

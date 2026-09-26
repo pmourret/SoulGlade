@@ -264,6 +264,15 @@ function PoseEditorInner({
         </div>
 
         <aside className="min-h-0 overflow-y-auto border-l border-line bg-panel" aria-label="Mains, sélection et outils">
+          {/* First: after a retouch its « à revoir » must be seen without
+              scrolling past the two hand views (audit 26/09, 1024 px). */}
+          <PoseTextPanel
+            text={text}
+            stale={textStale}
+            rewriting={rewriting}
+            onChange={setText}
+            onRewrite={rewriteText}
+          />
           <div className="grid grid-cols-2 gap-[12px] p-[14px] max-[1099px]:grid-cols-1">
             <HandView label="Main gauche" copyLabel="Copier la droite" onCopy={() => onMirrorHand('handRight')}>
               <PoseCanvas {...canvasProps} focus="handLeft" />
@@ -283,13 +292,6 @@ function PoseEditorInner({
             onClearSelection={clearSelection}
           />
           <PoseToolsPanel selectionSize={selected.size} onMirrorBody={onMirrorBody} onAlign={onAlign} />
-          <PoseTextPanel
-            text={text}
-            stale={textStale}
-            rewriting={rewriting}
-            onChange={setText}
-            onRewrite={rewriteText}
-          />
         </aside>
       </div>
     </div>
