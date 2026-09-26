@@ -55,29 +55,46 @@ _propre = pose_texte.propre
 # ou le fragment atterrit ; None = bibliotheque seule, aucune destination
 # aujourd'hui. C'est cette table que lit le selecteur, jamais un `if` sur la
 # classe dans un panneau (invariant 7).
+#
+# LA CONSIGNE DEMANDE DU JSON, et ce n'est pas une preference de forme. Mesure
+# du 26/09 sur une image reelle, consigne en prose : le modele REPETE la
+# demande et raisonne a voix haute (« The user has requested a description of
+# the garment... »), 500 caracteres inutilisables comme fragment. C'est le meme
+# echec que `legende.py` le 10/09 et que `pose_texte` le 26/09, et le meme
+# remede, deja mesure : une consigne cadree, une reponse JSON, rien d'autre.
+CONSIGNE = """You write prompt fragments for an image generation model.
+
+Describe %(quoi)s: %(cles)s.
+Do not describe %(sans)s.
+
+Answer with one JSON object and nothing else, no explanation, no repetition of this task:
+{"fragment": "<short comma-separated phrase>"}
+"""
+
 CLASSES = {
     "vetement": {
         "label": "Vêtement",
         "champ": "wardrobe",
-        "consigne": (
-            "Describe only the garment in this image as a short comma-separated "
-            "phrase for an image prompt: type, cut, fabric, colour, pattern, "
-            "notable details. No person, no face, no pose, no background."),
+        "consigne": CONSIGNE % {
+            "quoi": "the garment worn in this image",
+            "cles": "type, cut, fabric, colour, pattern, notable details",
+            "sans": "the person, the face, the pose, the background"},
     },
     "decor": {
         "label": "Décor",
         "champ": "prompt",
-        "consigne": (
-            "Describe only the place in this image as a short comma-separated "
-            "phrase for an image prompt: location, architecture or landscape, "
-            "objects, time of day, light. No person, no face, no clothing."),
+        "consigne": CONSIGNE % {
+            "quoi": "the place in this image",
+            "cles": "location, architecture or landscape, objects, time of day, light",
+            "sans": "any person, any face, any clothing"},
     },
     "reference": {
         "label": "Référence",
         "champ": None,
-        "consigne": (
-            "Describe this image as a short comma-separated phrase for an image "
-            "prompt: subject, materials, colours, style, light. No face."),
+        "consigne": CONSIGNE % {
+            "quoi": "this image",
+            "cles": "subject, materials, colours, style, light",
+            "sans": "any face"},
     },
 }
 
@@ -169,11 +186,13 @@ def _cle_libre(base, cid):
 def analyser_fichier(fichier, classe, comfy_url=None):
     """Fragment lu sur l'image par le modele vision local. LEVE si le modele
     echoue : les deux appelants n'en font pas la meme chose."""
-    consigne = CLASSES[classe]["consigne"]
-    brut = llm_local.texte(consigne, image=fichier, comfy_url=comfy_url,
-                           seed=1, max_length=120, temperature=0.3,
-                           client_id="assets")
-    fragment = _propre(brut)
+    brut = llm_local.texte(CLASSES[classe]["consigne"], image=fichier,
+                           comfy_url=comfy_url, seed=1, max_length=160,
+                           temperature=0.3, client_id="assets")
+    # Le JSON est LU, jamais espere : hors de ses accolades, la reponse est le
+    # raisonnement du modele, pas un fragment (mesure du 26/09).
+    m = re.search(r'"fragment"\s*:\s*"([^"]*)"', brut or "")
+    fragment = _propre(m.group(1)) if m else ""
     if not fragment:
         raise llm_local.LLMError(
             f"réponse illisible du modèle local : « {(brut or '')[:80]} »")

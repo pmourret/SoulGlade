@@ -47,11 +47,17 @@ KO = 0
 CLIENT = TestClient(app, base_url="http://127.0.0.1")
 
 # Le modele local, remplace : `texte()` est le seul point par lequel
-# `analyser_fichier` lui parle. Une clause de visage dedans EXPRES — c'est
-# `_propre` (invariant 6) qui doit la retirer, pas le bouchon. « green eyes »
-# est du vocabulaire INTERDIT (`runner.FORBIDDEN_FACE`) ; les cheveux, eux,
-# sont seulement signales (`WATCH_FACE`) et passent, comme partout ailleurs.
-REPONSE = "a red linen dress, green eyes, soft daylight"
+# `analyser_fichier` lui parle. Il rend du JSON comme la consigne le demande,
+# NOYE DANS DU BAVARDAGE — c'est l'echec mesure le 26/09 (le modele repete la
+# demande avant de repondre), et ce test verrouille qu'on lit les accolades
+# plutot que la reponse entiere.
+#
+# Une clause de visage dedans EXPRES : c'est `_propre` (invariant 6) qui doit
+# la retirer, pas le bouchon. « green eyes » est du vocabulaire INTERDIT
+# (`runner.FORBIDDEN_FACE`) ; les cheveux, eux, sont seulement signales
+# (`WATCH_FACE`) et passeraient, comme partout ailleurs.
+REPONSE = ('Sure! Here is the description you asked for. '
+           '{"fragment": "a red linen dress, green eyes, soft daylight"}')
 
 
 def bouchon(*a, **k):
@@ -148,6 +154,8 @@ try:
     verifie("eyes" not in a1["fragment"] and "red linen dress" in a1["fragment"]
             and "soft daylight" in a1["fragment"],
             f"la clause de visage tombe, le reste reste ({a1['fragment']})")
+    verifie("Sure" not in a1["fragment"] and "description" not in a1["fragment"],
+            "le bavardage autour du JSON ne passe pas dans le fragment")
     verifie([e["key"] for e in propres(CA)] == ["robe-rouge"],
             "la fiche est dans creative.json du personnage")
     verifie(du_monde(W1) == [], "et nulle part dans le monde")
