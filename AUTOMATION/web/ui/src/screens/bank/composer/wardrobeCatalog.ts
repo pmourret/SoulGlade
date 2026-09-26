@@ -27,10 +27,11 @@ export function splitWardrobeByLevel(text: string): { byLevel: Record<number, st
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line) => {
-      const match = line.match(/^([0-3])\s*:\s*(.+)$/)
+      const match = line.match(/^([0-3])\s*:\s*(.*)$/)
       if (match) {
         const level = Number(match[1])
-        ;(grouped[level] ??= []).push(match[2].trim())
+        // « 0: » alone: the level is declared, it holds no outfit to show
+        if (match[2].trim()) (grouped[level] ??= []).push(match[2].trim())
       } else {
         extra.push(line)
       }

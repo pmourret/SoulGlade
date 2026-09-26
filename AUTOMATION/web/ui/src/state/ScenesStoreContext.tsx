@@ -166,7 +166,11 @@ export function textToWardrobe(text: string): Record<string, string | string[]> 
     .map((line) => line.trim())
     .filter(Boolean)
     .forEach((line) => {
-      const match = line.match(/^(\d+)\s*:\s*(.+)$/)
+      /* « N: » with nothing after it is a level DECLARED without an outfit —
+         what a fresh character's scenes are born with (`wardrobe: {"0": ""}`,
+         `create_character`): the scene exists at that level and wears nothing
+         added. It round-trips as "", never as a malformed line (26/09). */
+      const match = line.match(/^(\d+)\s*:\s*(.*)$/)
       if (match) (out[match[1]] = out[match[1]] ?? []).push(match[2].trim())
     })
   const collapsed: Record<string, string | string[]> = {}
@@ -187,7 +191,7 @@ export function invalidOutfits(drafts: SceneDraft[]): string[] {
       .map((line) => line.trim())
       .filter(Boolean)
       .forEach((line) => {
-        if (!/^\d+\s*:\s*.+$/.test(line)) bad.push(`${draft.id} → « ${line} »`)
+        if (!/^\d+\s*:/.test(line)) bad.push(`${draft.id} → « ${line} »`)
       })
   })
   return bad
@@ -283,9 +287,15 @@ export function draftsToScenes(drafts: SceneDraft[]): Scene[] {
 
   return drafts.map((draft) => {
     const scene: Scene = { ...draft.base } // <- the merge
+    /* An empty value REMOVES the key only when the disk held a value there:
+       that is the user clearing a field. When the disk already held it empty
+       (`tones: []`, `variants: []` — a fresh character's scenes are born so),
+       the merge above has kept it as it was. Dropping it anyway altered 34
+       keys of a fresh bank on its first save, and the 25/08 guard counted 17
+       scenes « losing » their tones (26/09). */
     const put = (key: string, value: unknown) => {
-      if (empty(value)) delete scene[key]
-      else scene[key] = value
+      if (!empty(value)) scene[key] = value
+      else if (!empty(draft.base[key])) delete scene[key]
     }
     scene.id = draft.id.trim()
     scene.format = draft.format
