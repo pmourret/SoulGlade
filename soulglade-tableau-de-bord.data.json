@@ -416,11 +416,11 @@
           "ref": "DOCS/cadrage/2026-09-26-it11-c6-composeur-de-scenes.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-10",
           "t": "Formats : 16:9 et une seule liste",
-          "d": "La liste est recopiée à quatre endroits et ignore le 16:9. Le format libre, qui ferait trancher le modèle, se décide au cadrage.",
-          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+          "d": "Les formats d'un personnage sont ceux de sa config, la seule liste que lisent Banque, composeur et Produire ; un format hors liste est refusé avant le rendu. Le 16:9 entre au pack Instagram. Pas de format libre : l'utilisateur choisit toujours.",
+          "ref": "DOCS/cadrage/2026-09-26-it10-c3-formats.md"
         },
         {
           "s": "faire",
