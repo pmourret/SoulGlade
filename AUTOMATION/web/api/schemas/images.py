@@ -57,6 +57,10 @@ class PoseSaveRequest(BaseModel):
 
     name: Optional[str] = None
     keypoints: dict = {}
+    # The pose's text, edited by hand: saved AND dated to these keypoints.
+    # Omitted: the text the frame already carries keeps its old date, so a
+    # retouch leaves it « à revoir » rather than silently vouching for it.
+    texte: Optional[str] = None
 
 
 class PoseRenderRequest(BaseModel):
@@ -121,6 +125,26 @@ class PoseBankEntry(BaseModel):
     label: Optional[str] = None
     source: Optional[str] = None
     created_at: Optional[str] = None
+    # What the composer puts in « En mots » when this skeleton is picked.
+    # `texte_a_jour` is False once a retouch moved a point after the text was
+    # written (`pose_texte.a_jour`) — the text stays, marked « à revoir ».
+    texte: str = ""
+    texte_a_jour: bool = False
+
+
+class PoseTextRequest(BaseModel):
+    """The CURRENT frame, unsaved retouch included, its old `texte` inside:
+    the rewrite answers for what the editor shows, not for what is on disk,
+    and a from-scratch pose with no name yet gets one too. Nothing is
+    written: the save dates the text."""
+    model_config = ConfigDict(extra="allow")
+
+    keypoints: dict = {}
+
+
+class PoseTextResponse(BaseModel):
+    ok: bool
+    texte: str
 
 
 class PoseBankResponse(BaseModel):

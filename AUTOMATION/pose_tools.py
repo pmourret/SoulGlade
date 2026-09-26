@@ -21,6 +21,7 @@ sys.path.insert(0, str(HERE))
 
 import env_config                # noqa: E402
 import pose_render                # noqa: E402
+import pose_texte                 # noqa: E402
 import runner as lb              # noqa: E402
 import ui_to_api                 # noqa: E402
 
@@ -55,7 +56,8 @@ def poses_disponibles():
 
 
 def poses_disponibles_detail():
-    """`[{"nom", "label", "source", "created_at"}]` pour chaque squelette de
+    """`[{"nom", "label", "source", "created_at", "texte", "texte_a_jour"}]`
+    pour chaque squelette de
     POSE_DIR — le nom de fichier PNG, plus le libelle, la provenance et la
     date de naissance lus dans le JSON soeur QUAND il existe. Une pose
     extraite avant ce chantier n'en a pas (voir `charger_points`) :
@@ -66,7 +68,8 @@ def poses_disponibles_detail():
         return []
     sortie = []
     for f in sorted(POSE_DIR.glob("*.png")):
-        entree = {"nom": f.name, "label": None, "source": None, "created_at": None}
+        entree = {"nom": f.name, "label": None, "source": None, "created_at": None,
+                  "texte": "", "texte_a_jour": False}
         chemin = _chemin_points(f.name)
         if chemin.exists():
             try:
@@ -74,6 +77,8 @@ def poses_disponibles_detail():
                 entree["label"] = frame.get("label")
                 entree["source"] = frame.get("source")
                 entree["created_at"] = frame.get("created_at")
+                entree["texte"] = frame.get("texte") or ""
+                entree["texte_a_jour"] = pose_texte.a_jour(frame)
             except Exception:
                 pass
         sortie.append(entree)
@@ -130,7 +135,7 @@ def charger_points(nom):
     return lb.load_json(path)[0]
 
 
-def enregistrer_points(frame, nom=None):
+def enregistrer_points(frame, nom=None, texte=None):
     """Rend `frame` en PNG (pose_render, local — jamais ComfyUI) et ecrit la
     paire PNG+JSON.
 
@@ -140,7 +145,13 @@ def enregistrer_points(frame, nom=None):
     ("preset" ou "extraction") ; repli sur "preset" si absent (le seul cas
     ou une pose neuve n'en porte pas est un depart de zero, jamais une
     extraction).
+
+    `texte` fourni : le texte de la pose, corrige a la main, date des
+    points-cles enregistres (il redevient « a jour »). Absent : celui que le
+    frame porte deja, avec sa date — une retouche le laisse « a revoir ».
     """
+    if texte is not None:
+        frame = pose_texte.avec_texte(frame, texte)
     POSE_DIR.mkdir(parents=True, exist_ok=True)
     if nom is None:
         pris = {f.name for f in POSE_DIR.glob("*.png")}
@@ -317,6 +328,10 @@ def extraire(photo_bytes, nom_fichier_original, comfy_url, timeout=180):
         # _ramasser_points_extraits) — le PNG reste le seul contrat dur.
         frame_extrait = _ramasser_points_extraits()
         if frame_extrait is not None:
+            # La photo est encore la : seule fenetre pour la lire.
+            texte = pose_texte.depuis_photo(tmp_path, comfy_url)
+            if texte:
+                frame_extrait = pose_texte.avec_texte(frame_extrait, texte)
             _ecrire_points(nom, frame_extrait, source="extraction")
         return nom
     finally:

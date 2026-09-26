@@ -998,6 +998,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/pose/texte": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Réécrire le texte d'une pose depuis son squelette
+         * @description After a retouch, no photo is left to read: the skeleton's geometry
+         *     gives the facts, the local model rewrites the old text to match them
+         *     (`pose_texte.reecrire`, measured 26/09). Writes nothing: see
+         *     `PoseTextRequest`. Executor + broad except, see backend.md.
+         */
+        post: operations["rewrite_pose_text_api_pose_texte_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/pose/render": {
         parameters: {
             query?: never;
@@ -3354,6 +3377,16 @@ export interface components {
             source?: string | null;
             /** Created At */
             created_at?: string | null;
+            /**
+             * Texte
+             * @default
+             */
+            texte: string;
+            /**
+             * Texte A Jour
+             * @default false
+             */
+            texte_a_jour: boolean;
         };
         /** PoseBankResponse */
         PoseBankResponse: {
@@ -3508,6 +3541,8 @@ export interface components {
             keypoints: {
                 [key: string]: unknown;
             };
+            /** Texte */
+            texte?: string | null;
         } & {
             [key: string]: unknown;
         };
@@ -3521,6 +3556,31 @@ export interface components {
             ok: boolean;
             /** Name */
             name: string;
+        };
+        /**
+         * PoseTextRequest
+         * @description The CURRENT frame, unsaved retouch included, its old `texte` inside:
+         *     the rewrite answers for what the editor shows, not for what is on disk,
+         *     and a from-scratch pose with no name yet gets one too. Nothing is
+         *     written: the save dates the text.
+         */
+        PoseTextRequest: {
+            /**
+             * Keypoints
+             * @default {}
+             */
+            keypoints: {
+                [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** PoseTextResponse */
+        PoseTextResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Texte */
+            texte: string;
         };
         /**
          * PromptEcho
@@ -6365,6 +6425,55 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    rewrite_pose_text_api_pose_texte_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PoseTextRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PoseTextResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description ComfyUI hors ligne */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

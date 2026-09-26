@@ -2330,6 +2330,58 @@
         }
       }
     },
+    "/api/pose/texte": {
+      "post": {
+        "summary": "Réécrire le texte d'une pose depuis son squelette",
+        "description": "After a retouch, no photo is left to read: the skeleton's geometry\ngives the facts, the local model rewrites the old text to match them\n(`pose_texte.reecrire`, measured 26/09). Writes nothing: see\n`PoseTextRequest`. Executor + broad except, see backend.md.",
+        "operationId": "rewrite_pose_text_api_pose_texte_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PoseTextRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PoseTextResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ComfyUI hors ligne"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/pose/render": {
       "post": {
         "summary": "Aperçu du rendu d'un squelette, sans l'enregistrer",
@@ -7475,6 +7527,16 @@
               }
             ],
             "title": "Created At"
+          },
+          "texte": {
+            "type": "string",
+            "title": "Texte",
+            "default": ""
+          },
+          "texte_a_jour": {
+            "type": "boolean",
+            "title": "Texte A Jour",
+            "default": false
           }
         },
         "type": "object",
@@ -7655,6 +7717,17 @@
             "type": "object",
             "title": "Keypoints",
             "default": {}
+          },
+          "texte": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Texte"
           }
         },
         "additionalProperties": true,
@@ -7680,6 +7753,38 @@
         ],
         "title": "PoseSaveResponse",
         "description": "`name` is the skeleton actually written — the request's `name` on a\nplain overwrite, `save_as` or a fresh `pose__NNNNN_.png` otherwise."
+      },
+      "PoseTextRequest": {
+        "properties": {
+          "keypoints": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Keypoints",
+            "default": {}
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "PoseTextRequest",
+        "description": "The CURRENT frame, unsaved retouch included, its old `texte` inside:\nthe rewrite answers for what the editor shows, not for what is on disk,\nand a from-scratch pose with no name yet gets one too. Nothing is\nwritten: the save dates the text."
+      },
+      "PoseTextResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "texte": {
+            "type": "string",
+            "title": "Texte"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "texte"
+        ],
+        "title": "PoseTextResponse"
       },
       "PromptEcho": {
         "properties": {

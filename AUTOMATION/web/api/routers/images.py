@@ -16,6 +16,7 @@ rest of the pose bank rather than a new router for four routes.
     /api/pose/preset  POST  saves the current frame AS a new template
     /api/pose/save          renders + writes an edited or brand-new skeleton
     /api/pose/render        renders WITHOUT writing — an on-demand preview
+    /api/pose/texte         rewrites a pose's text from a frame, writes nothing
 
 `/static/*` is not here: it is mounted in api/main.py, with the rest of the
 assembly, exactly as `web.static` was registered in web/app.py.
@@ -32,6 +33,8 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 
 import env_config
 import logs
+import llm_local
+import pose_texte
 import pose_tools
 import shared_state as ss
 
@@ -41,6 +44,7 @@ from ..schemas.images import (
     ImageNotFound, PoseBankResponse, PoseDeleteRequest, PoseExtractRequest,
     PoseExtractResponse, PosePresetSaveRequest, PosePresetSaveResponse,
     PosePresetsResponse, PoseRenderRequest, PoseSaveRequest, PoseSaveResponse,
+    PoseTextRequest, PoseTextResponse,
 )
 
 LOG = logging.getLogger("images")
@@ -292,7 +296,9 @@ async def get_pose_keypoints(
     if not ss.SAFE_NAME.match(name):
         ss.bad_request("nom invalide")
     try:
-        return pose_tools.charger_points(name)
+        frame = pose_tools.charger_points(name)
+        # Computed, never stored: the editor cannot hash the frame itself.
+        return {**frame, "texte_a_jour": pose_texte.a_jour(frame)}
     except pose_tools.ExtractionError as e:
         return JSONResponse({"ok": False, "erreur": str(e)}, status_code=404)
 
@@ -357,9 +363,36 @@ async def save_pose(payload: PoseSaveRequest):
         ss.bad_request("nom de fichier invalide")
     if not payload.keypoints.get("people"):
         ss.bad_request("points-clés manquants ou illisibles")
-    written = pose_tools.enregistrer_points(payload.keypoints, nom=(name or None))
+    written = pose_tools.enregistrer_points(payload.keypoints, nom=(name or None),
+                                            texte=payload.texte)
     ss.push_log(f"squelette enregistré : {written}")
     return {"ok": True, "name": written}
+
+
+@router.post("/api/pose/texte", response_model=PoseTextResponse,
+             responses={503: {"description": "ComfyUI hors ligne"}},
+             summary="Réécrire le texte d'une pose depuis son squelette")
+async def rewrite_pose_text(payload: PoseTextRequest):
+    """After a retouch, no photo is left to read: the skeleton's geometry
+    gives the facts, the local model rewrites the old text to match them
+    (`pose_texte.reecrire`, measured 26/09). Writes nothing: see
+    `PoseTextRequest`. Executor + broad except, see backend.md."""
+    if not payload.keypoints.get("people"):
+        ss.bad_request("points-clés manquants ou illisibles")
+    if not await ss.comfy_alive():
+        return JSONResponse({"ok": False, "erreur": "ComfyUI hors ligne"},
+                            status_code=503)
+    try:
+        texte = await asyncio.get_running_loop().run_in_executor(
+            None, pose_texte.reecrire, payload.keypoints, env_config.comfy_url())
+    except llm_local.LLMError as e:
+        return JSONResponse({"ok": False, "erreur": str(e)}, status_code=400)
+    except Exception as e:                                   # noqa: BLE001
+        msg = logs.report(LOG, e, "réécriture du texte de pose")
+        ss.push_log(msg, journal=False)
+        return JSONResponse({"ok": False, "erreur": msg},
+                            status_code=500)
+    return {"ok": True, "texte": texte}
 
 
 @router.post("/api/pose/render", responses=_IMAGE_RESPONSES,
