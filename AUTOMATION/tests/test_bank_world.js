@@ -177,6 +177,47 @@ async function ouvrir(nav, { arme }) {
        'revenue a la scene du monde, l intention est de nouveau verrouillee');
   await r.close();
 
+  /* IT-11 chantier 6 : le composeur, redefini. Le modele local n'est pas
+     appele : la route est interceptee et rend une proposition fixe, et la
+     requete envoyee est lue telle quelle. */
+  console.log('\n[3c] proposer des scenes : un brief, une intention et un lieu choisis');
+  const dc = (await ouvrir(nav, { arme: true }));
+  toutesErreurs.push(...dc.erreurs);
+  const pc = dc.page;
+  let envoye = null;
+  await pc.route('**/api/compose**', async route => {
+    envoye = route.request().postDataJSON();
+    await route.fulfill({ contentType: 'application/json', body: JSON.stringify({
+      ok: true, brut: '', scenes: [{ id: 'bouture_matin', intention: envoye.intention, place: envoye.place,
+        origin: 'compose', format: '4:5', count: 1, tags: [], tones: [], intensity: 0,
+        prompt: 'taking cuttings from a plant, close framing', wardrobe: { 0: 'a linen shirt' },
+        variants: [], alertes: [] }] }) });
+  });
+  await pc.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
+  await pc.click('#btnOpenPropose');
+  await pc.waitForSelector('#proposeBox');
+  dire(await pc.evaluate(() => document.activeElement?.id) === 'proposeBrief', 'le dialogue s ouvre sur le texte libre');
+  await pc.fill('#proposeBrief', 'elle bouture ses plantes le matin');
+  await pc.selectOption('#proposeIntention', 'lifestyle');
+  await pc.selectOption('#proposePlace', 'cuisine');
+  await pc.click('#btnPropose');
+  await pc.waitForSelector('[data-proposal="bouture_matin"]');
+  dire(envoye && envoye.brief === 'elle bouture ses plantes le matin' && envoye.intention === 'lifestyle'
+       && envoye.place === 'cuisine' && !('intention_cible' in envoye),
+       `la requete porte brief, intention et lieu (${JSON.stringify(envoye)})`);
+  await pc.click('[data-proposal="bouture_matin"] [data-add]');
+  await pc.waitForSelector('#proposeBox [data-proposal]', { state: 'detached' });
+  await pc.keyboard.press('Escape');
+  await pc.waitForSelector('#proposeBox', { state: 'detached' }).catch(() => {});
+  dire(!(await pc.$('#proposeBox')) && await pc.evaluate(() => document.activeElement?.id) === 'btnOpenPropose',
+       'Echap ferme le dialogue et rend le focus au bouton');
+  dire(await pc.$eval('[data-scene-card][data-on] [data-card-origin]', e => e.textContent.trim()) === 'composée',
+       'la scene ajoutee s ouvre, et sa ligne dit « composée »');
+  await pc.click('[data-tab="recap"]');
+  dire(await pc.$eval('#scenePlace', e => !e.disabled && e.value === 'cuisine'),
+       'son lieu est celui choisi, et se change');
+  await pc.close();
+
   console.log('\n[4] rien n a ete ecrit sur le disque');
   const apres = await (await fetch(BASE + '/api/scenes?character=lena')).json();
   const idsApres = (apres.data?.scenes || apres.scenes || []).map(s => s.id);

@@ -409,6 +409,13 @@
           "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
         },
         {
+          "s": "fait",
+          "it": "IT-11",
+          "t": "Proposer des scènes depuis ce qu'on veut montrer",
+          "d": "« Proposer des scènes… » dans la Banque : une phrase en français, une intention et un lieu choisis dans les listes du monde, et le modèle local écrit ce qui s'y passe. Une proposition ajoutée est marquée composée.",
+          "ref": "DOCS/cadrage/2026-09-26-it11-c6-composeur-de-scenes.md"
+        },
+        {
           "s": "faire",
           "it": "IT-10",
           "t": "Formats : 16:9 et une seule liste",

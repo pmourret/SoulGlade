@@ -179,7 +179,7 @@ function Provenance({
   if (origin !== 'world' && origin !== 'copy') {
     return (
       <span className="flex-none text-[12px] text-dim2" id="sceneOwn">
-        propre à ce personnage
+        {origin === 'compose' && 'proposée par le composeur · '}propre à ce personnage
       </span>
     )
   }

@@ -100,11 +100,12 @@ export function SceneListRow({
 }
 
 /* Where the scene comes from, in one word (ADR-0027 §5): taken from the world
-   and following it, copied from it for this character, or the character's
-   own. A scene born in this session has no origin yet: the server stamps it
-   `manual` on save, so it is already « propre ». */
+   and following it, copied from it for this character, proposed by the scene
+   composer, or the character's own. A scene born in this session has no
+   origin yet: the server stamps it `manual` on save, so it is already
+   « propre ». */
 function originWord(origin: unknown): string {
-  return origin === 'world' ? 'monde' : origin === 'copy' ? 'copie' : 'propre'
+  return { world: 'monde', copy: 'copie', compose: 'composée' }[String(origin)] ?? 'propre'
 }
 
 export type SceneGroup = {

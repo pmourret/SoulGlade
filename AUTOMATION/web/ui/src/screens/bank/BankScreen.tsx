@@ -50,6 +50,8 @@ import { ScenePreviewPanel } from './composer/ScenePreviewPanel'
 import { changedFields, hasChanges, savedScenes, type SceneField } from './sceneChanges'
 import { useSceneWorkbench } from './useSceneWorkbench'
 import { useWorldCatalogue } from './useWorldCatalogue'
+import { ProposeDialog } from './ProposeDialog'
+import { useSceneProposals } from './useSceneProposals'
 import { useWorldCatalog, type WorldPlace } from '../worlds/useWorldCatalog'
 import { WorldBanner, WorldDriftBand, worldDrift } from './WorldBanner'
 import { WorldCatalogueDialog } from './WorldCatalogueDialog'
@@ -118,6 +120,9 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   // preview shows (IT-11 chantier 5): a scene stores the key, never the text.
   const worldPlaces = useWorldCatalog<WorldPlace>(world?.id ?? null, 'places')
   const places = worldPlaces.entries ?? []
+  // « Proposer… » (IT-11 chantier 6): the scene composer, redefined
+  const [proposeOpen, setProposeOpen] = useState(false)
+  const proposer = useSceneProposals()
 
   /* Under 1100 px the list is a drawer (§S6) — same non-modal overlay
      contract as Revue's own inspector: Escape closes it, the focus goes in
@@ -216,6 +221,26 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
 
   return (
     <div className="screen flex h-full flex-col" id="scenes">
+      {proposeOpen && (
+        <ProposeDialog
+          request={proposer.request}
+          intentions={creative?.intentions ?? []}
+          places={places}
+          busy={proposer.busy}
+          error={proposer.error}
+          proposals={proposer.proposals}
+          onPatch={proposer.patch}
+          onPropose={() => void proposer.propose()}
+          onAdd={(index) => {
+            const { alertes: _alertes, ...scene } = proposer.proposals![index]
+            bench.addFrom(scene)
+            proposer.drop(index)
+            toast(`« ${scene.id} » ajoutée — enregistre la banque pour la garder`)
+          }}
+          onIgnore={proposer.drop}
+          onClose={() => setProposeOpen(false)}
+        />
+      )}
       {catalogueOpen && world && (
         <WorldCatalogueDialog
           worldLabel={world.label}
@@ -374,6 +399,9 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                   </button>
                 )}
               </div>
+              <button className="btn sm w-full" id="btnOpenPropose" onClick={() => setProposeOpen(true)}>
+                Proposer des scènes…
+              </button>
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto px-[8px] py-[10px]">
