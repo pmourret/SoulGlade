@@ -6,7 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { errorOf } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useScenes } from '../../state/ScenesStoreContext'
-import { editableToFrame, frameToEditable, type PoseFrame, type RawPoseFrame } from './poseFrame'
+import {
+  editableToFrame, frameToEditable, sameBody, type Point, type PoseFrame, type RawPoseFrame,
+} from './poseFrame'
 
 // A drag reports every pointermove as its own `update()` call — one entry
 // per PIXEL crossed would make undo useless (a hundred steps to get back to
@@ -47,6 +49,16 @@ export function usePoseEditor(source: PoseEditorSource) {
   const past = useRef<PoseFrame[]>([])
   const future = useRef<PoseFrame[]>([])
   const lastPushAt = useRef(0)
+  /* The pose's text lives OUTSIDE `pose`: an undo of a point must not undo
+     a sentence typed since. `textPoints` is the server's date for it,
+     carried through a save untouched; `textBaseline` is the body the text is
+     known to describe (null: not « à jour » on load). A save re-dates the
+     text (PoseSaveRequest.texte) exactly when it is not stale here, and
+     otherwise carries the old date back, so it stays « à revoir ». */
+  const [text, setTextState] = useState('')
+  const [textPoints, setTextPoints] = useState<string | null>(null)
+  const [textBaseline, setTextBaseline] = useState<Point[] | null>(null)
+  const [rewriting, setRewriting] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -65,6 +77,9 @@ export function usePoseEditor(source: PoseEditorSource) {
     const frame = frameToEditable(response)
     if (source.kind === 'preset' && source.initialLabel) frame.label = source.initialLabel
     setPose(frame)
+    setTextState(response.texte ?? '')
+    setTextPoints(response.texte_points ?? null)
+    setTextBaseline(response.texte_a_jour ? frame.body : null)
     setDirty(false)
     past.current = []
     future.current = []
@@ -142,6 +157,37 @@ export function usePoseEditor(source: PoseEditorSource) {
     setDirty(true)
   }, [])
 
+  /** The user writes the text: it describes the skeleton as it is now. */
+  const setText = useCallback(
+    (next: string) => {
+      setTextState(next)
+      setTextBaseline(pose ? pose.body : null)
+      setDirty(true)
+    },
+    [pose],
+  )
+
+  /** Rewrites the text from the CURRENT skeleton — unsaved retouch included
+      (POST /api/pose/texte writes nothing; the next save dates it). */
+  const rewriteText = useCallback(async (): Promise<string | null> => {
+    if (!pose) return null
+    setRewriting(true)
+    try {
+      const response = await api.post<{ ok?: boolean; erreur?: string; texte?: string }>(
+        '/api/pose/texte',
+        { keypoints: { ...editableToFrame(pose), texte: text } },
+      )
+      const failure = errorOf(response)
+      if (failure || !response.texte) return failure || 'échec'
+      setText(response.texte)
+      return null
+    } finally {
+      setRewriting(false)
+    }
+  }, [api, pose, text, setText])
+
+  const textStale = Boolean(text) && (!textBaseline || !pose || !sameBody(textBaseline, pose.body))
+
   /** `asNew`: keep whatever is currently saved under `name` untouched and
       branch a fresh pose instead — see PoseSaveRequest's own doc for why
       that is just "omit `name`", not a second parameter. */
@@ -152,7 +198,11 @@ export function usePoseEditor(source: PoseEditorSource) {
       try {
         const response = await api.post<{ ok?: boolean; erreur?: string; name?: string }>(
           '/api/pose/save',
-          { name: opts?.asNew ? null : name, keypoints: editableToFrame(pose) },
+          {
+            name: opts?.asNew ? null : name,
+            keypoints: { ...editableToFrame(pose), texte: text, texte_points: textPoints },
+            ...(textStale ? {} : { texte: text }),
+          },
         )
         const failure = errorOf(response)
         if (failure || !response.name) return { ok: false, erreur: failure || 'échec' }
@@ -168,7 +218,7 @@ export function usePoseEditor(source: PoseEditorSource) {
         setSaving(false)
       }
     },
-    [api, pose, name, reloadSceneBank],
+    [api, pose, name, reloadSceneBank, text, textPoints, textStale],
   )
 
   /** The "create a template too" option on a from-scratch pose — writes the
@@ -192,6 +242,7 @@ export function usePoseEditor(source: PoseEditorSource) {
   return {
     pose, name, loading, loadError, saving, dirty, update, applyAction, save, saveAsPreset, reload: load,
     undo, redo,
+    text, textStale, setText, rewriteText, rewriting,
     canUndo: past.current.length > 0,
     canRedo: future.current.length > 0,
   }

@@ -21,6 +21,7 @@ import { CanvasToolbarExtra } from './CanvasToolbarExtra'
 import { JointOutline } from './JointOutline'
 import { handlePoseKeyDown, isTextEntry, PoseCanvas } from './PoseCanvas'
 import { alignSelection, mirrorBody, mirrorHand, withPointsMoved, type Point } from './poseFrame'
+import { PoseTextPanel } from './PoseTextPanel'
 import { PoseToolsPanel } from './PoseToolsPanel'
 import { PoseTopBar } from './PoseTopBar'
 import { SelectionPanel } from './SelectionPanel'
@@ -55,7 +56,7 @@ function PoseEditorInner({
 }) {
   const {
     pose, name, loading, loadError, saving, dirty, update, applyAction, save, saveAsPreset,
-    undo, redo, canUndo, canRedo,
+    undo, redo, canUndo, canRedo, text, textStale, setText, rewriteText, rewriting,
   } = usePoseEditor(source)
   const [createTemplate, setCreateTemplate] = useState(createTemplateIntent)
   const { selected, onSelect, onToggleSelect, onSelectMany, clearSelection } = useSelection()
@@ -282,6 +283,13 @@ function PoseEditorInner({
             onClearSelection={clearSelection}
           />
           <PoseToolsPanel selectionSize={selected.size} onMirrorBody={onMirrorBody} onAlign={onAlign} />
+          <PoseTextPanel
+            text={text}
+            stale={textStale}
+            rewriting={rewriting}
+            onChange={setText}
+            onRewrite={rewriteText}
+          />
         </aside>
       </div>
     </div>

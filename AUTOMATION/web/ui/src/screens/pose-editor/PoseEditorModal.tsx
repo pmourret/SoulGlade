@@ -23,6 +23,7 @@ import { Dialog } from '../../chrome/Dialog'
 import { useToast } from '../../chrome/ToastContext'
 import type { NewPoseIntent } from './NewPoseModal'
 import { handlePoseKeyDown, PoseCanvas } from './PoseCanvas'
+import { PoseTextPanel } from './PoseTextPanel'
 import { UndoRedoButtons } from './UndoRedoButtons'
 import { usePoseEditor, type PoseEditorSource } from './usePoseEditor'
 import { useSelection } from './useSelection'
@@ -40,6 +41,7 @@ export function PoseEditorModal({
 }) {
   const {
     pose, name, loading, loadError, saving, dirty, update, save, undo, redo, canUndo, canRedo,
+    text, textStale, setText, rewriteText, rewriting,
   } = usePoseEditor(source)
   const { selected, onSelect, onToggleSelect, onSelectMany } = useSelection()
   const toast = useToast()
@@ -139,6 +141,17 @@ export function PoseEditorModal({
           </div>
         )}
       </div>
+
+      {pose && (
+        <PoseTextPanel
+          inline
+          text={text}
+          stale={textStale}
+          rewriting={rewriting}
+          onChange={setText}
+          onRewrite={rewriteText}
+        />
+      )}
 
       {pose && (
         <div className="flex h-[52px] flex-none items-center gap-[12px] border-t border-line px-[16px]">

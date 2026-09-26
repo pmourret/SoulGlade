@@ -25,6 +25,7 @@
 import { useEffect, useRef, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
 
+import type { Schema } from '../../../api/client'
 import { useApi } from '../../../api/useApi'
 import type { Creative } from '../../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../../state/ScenesStoreContext'
@@ -82,20 +83,20 @@ export function SceneComposer({
   const idRef = useRef<HTMLInputElement | null>(null)
   const api = useApi()
 
-  /* Labels for `poses` — refetched whenever the filename list itself changes,
+  /* Labels and texts for `poses` — refetched whenever the filename list itself changes,
      same trigger `usePoseBank`'s own `reloadBankDetail` uses. A pose with no
      sidecar (legacy, or the fetch hasn't landed yet) falls back to its
      filename, same as `PoseCard`'s own `label || name`. */
-  const [poseLabels, setPoseLabels] = useState<Record<string, string | null>>({})
+  const [poseEntries, setPoseEntries] = useState<Record<string, Schema<'PoseBankEntry'>>>({})
   useEffect(() => {
     let cancelled = false
     void api
-      .get<{ poses?: { nom: string; label: string | null }[] }>('/api/pose/bank')
+      .get<Partial<Schema<'PoseBankResponse'>>>('/api/pose/bank')
       .then((response) => {
         if (cancelled) return
-        const map: Record<string, string | null> = {}
-        for (const entry of response.poses ?? []) map[entry.nom] = entry.label
-        setPoseLabels(map)
+        const map: Record<string, Schema<'PoseBankEntry'>> = {}
+        for (const entry of response.poses ?? []) map[entry.nom] = entry
+        setPoseEntries(map)
       })
     return () => {
       cancelled = true
@@ -103,7 +104,8 @@ export function SceneComposer({
   }, [api, poses])
   const posesWithLabels: PoseSummary[] = poses.map((name) => ({
     name,
-    label: poseLabels[name] ?? null,
+    label: poseEntries[name]?.label ?? null,
+    text: poseEntries[name]?.texte ?? '',
   }))
 
   /* Opening a DIFFERENT scene always starts on Général and puts the cursor in

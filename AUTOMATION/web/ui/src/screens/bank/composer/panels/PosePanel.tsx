@@ -25,15 +25,15 @@ import { PromptField } from '../PromptField'
 import { HEAD } from './shared'
 
 /** Filename + human label — the same shape `usePoseBank`/`PoseCard` resolve
-    for the Poses screen. */
-export type PoseSummary = { name: string; label: string | null }
+    for the Poses screen — plus the pose's own text (IT-10, chantier 4). */
+export type PoseSummary = { name: string; label: string | null; text: string }
 
 /* Skeletons of INPUTS/POSE/, served by /api/scenes. A scene pointing at a
    missing skeleton (file moved, renamed) KEEPS it in the list rather than lose
    it in silence — same rule as an out-of-taxonomy intention. */
 function poseOptions(poses: PoseSummary[], current: string) {
   return current && !poses.some((p) => p.name === current)
-    ? [...poses, { name: current, label: null }]
+    ? [...poses, { name: current, label: null, text: '' }]
     : poses
 }
 
@@ -54,7 +54,17 @@ export function PosePanel({
 }) {
   const options = poseOptions(poses, draft.pose)
   // Same `label || name` fallback as `PoseCard`'s own accessible name.
-  const currentLabel = options.find((p) => p.name === draft.pose)?.label || draft.pose
+  const current = options.find((p) => p.name === draft.pose)
+  const currentLabel = current?.label || draft.pose
+  const currentText = current?.text ?? ''
+  /* The skeleton brings its text only into an EMPTY « En mots »: never over
+     words the user wrote. Otherwise « Reprendre le texte de la pose » does it
+     on request. A world-linked scene gets neither: its prose is locked. */
+  const pick = (name: string) => {
+    const text = options.find((p) => p.name === name)?.text ?? ''
+    const fill = text && !worldLinked && !draft.promptPose.trim()
+    onPatch(fill ? { pose: name, promptPose: text } : { pose: name })
+  }
   const [editing, setEditing] = useState(false)
   const [picking, setPicking] = useState(!draft.pose)
   /* "+ Nouvelle pose" (design pass écran 7, §V3): two steps, both without
@@ -89,6 +99,16 @@ export function PosePanel({
             <p className="tiny mt-[6px] mb-0">
               Décris la pose. Les deux peuvent coexister : la prose guide, le squelette impose.
             </p>
+            {!worldLinked && currentText && currentText !== draft.promptPose && (
+              <button
+                type="button"
+                className="link mt-[6px] text-[12px]"
+                data-hint-text={currentText}
+                onClick={() => onPatch({ promptPose: currentText })}
+              >
+                Reprendre le texte de la pose
+              </button>
+            )}
           </div>
         </div>
 
@@ -189,7 +209,7 @@ export function PosePanel({
                 on={draft.pose === name}
                 src={`/img/pose?name=${encodeURIComponent(name)}`}
                 onClick={() => {
-                  onPatch({ pose: name })
+                  pick(name)
                   setPicking(false)
                 }}
               />

@@ -404,6 +404,11 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.waitForTimeout(200);
   dire((await circles('full')) === 18 + 21 + 21, 'Edition rend les points editables');
 
+  console.log('\n[5undecies] le texte de la pose (IT-10, chantier 4) : ecrit a la main, il est a jour');
+  const TEXTE = 'standing, arms along the body, test text';
+  await page.getByRole('textbox', { name: 'Texte de la pose' }).fill(TEXTE);
+  dire(!(await page.$('#poseEditor [data-pose-text-stale]')), 'un texte ecrit a la main n est pas « a revoir »');
+
   console.log('\n[6] sauvegarde — redirige vers la pose reellement ecrite');
   await page.click('#btnPoseSave');
   await page.waitForFunction(() => location.pathname.includes('/bank/poses/edit/'), null, { timeout: 5000 });
@@ -428,6 +433,19 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   await page.waitForSelector('#poseEditor svg');
   dire((await page.textContent('#poseTitle')).trim() === NOM_POSE,
        'suivre ce lien (pas juste la redirection de sauvegarde) rouvre la meme pose, avec son nom');
+  await page.waitForTimeout(300);
+  dire((await page.getByRole('textbox', { name: 'Texte de la pose' }).inputValue()) === TEXTE, 'le texte est enregistre avec la pose');
+  dire(!(await page.$('#poseEditor [data-pose-text-stale]')), 'et il revient a jour');
+  // une retouche le passe « a revoir » : fleche droite sur un joint du corps
+  const jointRetouche = await (await page.$$('#poseEditor svg[data-canvas="full"] circle'))[5].boundingBox();
+  await page.mouse.click(jointRetouche.x + jointRetouche.width / 2, jointRetouche.y + jointRetouche.height / 2);
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('ArrowRight');
+  await page.waitForTimeout(150);
+  dire(Boolean(await page.$('#poseEditor [data-pose-text-stale]')), 'un point deplace le passe « a revoir »');
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(150);
+  dire(!(await page.$('#poseEditor [data-pose-text-stale]')), 'annuler la retouche le remet a jour');
 
   console.log('\n[8] une pose SANS points-cles (anterieure a cette fonctionnalite) echoue sans crash');
   // Pas de nouvelle pose sans JSON dans ce test : on cherche parmi celles
@@ -455,7 +473,9 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 
   console.log('\n[9] modale depuis le compositeur : editable sans quitter la scene');
   await page.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
-  await page.click('[data-scene-card]');
+  // une scene neuve, propre au personnage et jamais enregistree : celle d un
+  // monde verrouille « En mots », le texte de pose ne s y verifierait pas
+  await page.click('#btnAddScene');
   await page.waitForSelector('#sceneInspector');
   await page.click('[data-tab="pose"]');
   await page.waitForSelector('[data-tabpanel="pose"]');
@@ -472,8 +492,36 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   // reellement ecrit sur le disque, jamais ce que la vignette annonce ici.
   const vignette = await page.$(`[data-tabpanel="pose"] button[title="${NOM_POSE}"]`);
   dire(Boolean(vignette), 'la pose creee est choisissable dans le compositeur');
-  await vignette.click();
-  await page.waitForTimeout(200);
+  // « En mots » : jamais ecrase, rempli seulement vide (IT-10, chantier 4).
+  // Une scene liee au monde verrouille ce champ : le cas s ignore alors.
+  const enMots = '[data-tabpanel="pose"] textarea[data-f="prompt_pose"]';
+  const bande = '[data-tabpanel="pose"] [data-f="pose"]';
+  const ouvrirBande = async () => {
+    if (!(await page.$(bande))) await page.click('[data-tabpanel="pose"] button:has-text("Changer")');
+  };
+  // par le fichier, pas par le libelle : d anciennes poses de test portent le meme
+  const choisir = async (fichier) => {
+    await ouvrirBande();
+    await page.click(`${bande} button:has(img[src*="${encodeURIComponent(fichier)}"])`);
+    await page.waitForTimeout(200);
+  };
+  if (await page.isEnabled(enMots)) {
+    await ouvrirBande();
+    await page.click(`${bande} button:has-text("aucune")`);
+    await page.fill(enMots, 'hand written pose');
+    await choisir(nouveau);
+    dire((await page.inputValue(enMots)) === 'hand written pose', 'un champ deja ecrit n est pas ecrase');
+    await page.click('[data-tabpanel="pose"] button:has-text("Reprendre le texte de la pose")');
+    dire((await page.inputValue(enMots)) === TEXTE, '« Reprendre le texte de la pose » le remplace sur demande');
+    await page.fill(enMots, '');
+    await ouvrirBande();
+    await page.click(`${bande} button:has-text("aucune")`);
+    await choisir(nouveau);
+    dire((await page.inputValue(enMots)) === TEXTE, 'un champ vide recoit le texte de la pose choisie');
+  } else {
+    console.log('   (ignore — scene liee au monde, « En mots » verrouille)');
+    await choisir(nouveau);
+  }
   const crayon = await page.$('[data-tabpanel="pose"] button[aria-label*="point par point"]');
   dire(Boolean(crayon), 'un bouton crayon apparait une fois la pose choisie');
   await crayon.click();

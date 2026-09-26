@@ -32,6 +32,12 @@ export type RawPoseFrame = {
   source?: string
   label?: string | null
   created_at?: string | null
+  // The pose's text and the fingerprint of the points it was written for —
+  // opaque here, carried through a save unchanged (usePoseEditor). The
+  // freshness itself is computed by the server (`texte_a_jour`, on load only).
+  texte?: string
+  texte_points?: string | null
+  texte_a_jour?: boolean
 }
 
 function flatToPoints(flat: number[] | undefined, count: number): Point[] {
@@ -78,6 +84,16 @@ export function editableToFrame(pose: PoseFrame): RawPoseFrame {
     label: pose.label,
     created_at: pose.createdAt,
   }
+}
+
+/** Same body, to the pixel — the rounding `pose_texte.empreinte` applies,
+    so a text dated on load stays « à jour » until a point really moves. */
+export function sameBody(a: Point[], b: Point[]): boolean {
+  return a.every((p, i) => {
+    const q = b[i]
+    if (!q || p.c > 0 !== q.c > 0) return false
+    return p.c <= 0 || (Math.round(p.x) === Math.round(q.x) && Math.round(p.y) === Math.round(q.y))
+  })
 }
 
 export type PointGroup = 'body' | 'handLeft' | 'handRight'
