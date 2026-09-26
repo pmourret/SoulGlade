@@ -30,19 +30,22 @@ export type PromptFragment = {
   color: string
 }
 
-/** The non-empty fragments, in the order `composePrompt` joins them, then
-    the décor of the scene's place — LAST, the order `worlds.materialize`
-    composes « <scene>, <décor> » in at launch. `decor` is the place's text,
-    looked up by the caller; the scene only stores the place's key. */
+/** The non-empty fragments in the order the launch composes them: those
+    `composePrompt` joins, then the décor of the scene's place
+    (`worlds.materialize`, « <scene>, <décor> »), then its light
+    (`lights.resolve_bank`, IT-10 chantier 7). `decor` and `light` are the
+    TEXTS, looked up by the caller: the scene stores the place's key, and its
+    light may be a key too. `light` defaults to the field as typed. */
 export function sceneFragments(
   draft: Pick<SceneDraft, 'promptBase' | 'promptLight' | 'promptPose'>,
   decor = '',
+  light = draft.promptLight,
 ): PromptFragment[] {
   return [
     { key: 'base' as const, source: 'scène', text: draft.promptBase },
-    { key: 'light' as const, source: 'lumière', text: draft.promptLight },
     { key: 'pose' as const, source: 'pose', text: draft.promptPose },
     { key: 'place' as const, source: 'lieu', text: decor },
+    { key: 'light' as const, source: 'lumière', text: light },
   ]
     .map((fragment) => ({ ...fragment, text: fragment.text.trim(), color: FRAGMENT_COLORS[fragment.key] }))
     .filter((fragment) => fragment.text)

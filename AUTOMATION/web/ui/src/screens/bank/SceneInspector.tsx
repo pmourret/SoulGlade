@@ -25,6 +25,7 @@ import type { Creative } from '../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../state/ScenesStoreContext'
 import type { WorldPlace } from '../worlds/useWorldCatalog'
 import type { LibraryPick } from './assets/libraryPicks'
+import type { LightEntry } from './lights/useLights'
 import type { OutfitEntry } from './outfits/useOutfits'
 import { SceneComposer } from './composer/SceneComposer'
 import type { SceneField } from './sceneChanges'
@@ -56,6 +57,8 @@ export function SceneInspector({
   library,
   outfits,
   outfitMarker,
+  lights,
+  lightMarker,
   produced,
   changed,
   narrow,
@@ -79,6 +82,10 @@ export function SceneInspector({
   /** The outfits a scene may wear (IT-10 chantier 6). */
   outfits: OutfitEntry[]
   outfitMarker: string
+  /** The lights a scene may wear, resolved by the server (IT-10 chantier 7),
+      and the marker of a line that refers to one. */
+  lights: LightEntry[]
+  lightMarker: string
   produced: number | null
   /** Draft fields differing from the saved scene (`sceneChanges`). */
   changed: Set<SceneField>
@@ -246,6 +253,8 @@ export function SceneInspector({
         library={library}
         outfits={outfits}
         outfitMarker={outfitMarker}
+        lights={lights}
+        lightMarker={lightMarker}
         produced={produced}
         worldLinked={worldLinked}
         changed={changed}

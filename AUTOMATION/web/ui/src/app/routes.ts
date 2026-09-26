@@ -31,6 +31,9 @@ export const PATHS = {
   /** The outfit catalogue (IT-10 chantier 6): garment sets a scene wears by
       their key, corrected once for every scene that wears them. */
   bankOutfits: '/bank/outfits',
+  /** The light catalogue (IT-10 chantier 7): lightings a scene wears by their
+      key, in its Lumière field or as a variant. */
+  bankLights: '/bank/lights',
   expressionEditor: '/bank/tones/edit',
   /** The Lightroom-style layered editor (design-pass screen-photo-editor,
       §7b) — reached from the simplified modal's "Éditeur avancé →" link.

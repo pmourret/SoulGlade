@@ -45,6 +45,8 @@ import { ToneWorkshop } from '../expression-editor/ToneWorkshop'
 import { AssetsView } from './assets/AssetsView'
 import { libraryPicks } from './assets/libraryPicks'
 import { useAssetLibrary } from './assets/useAssetLibrary'
+import { LightsView } from './lights/LightsView'
+import { useLights } from './lights/useLights'
 import { OutfitsView } from './outfits/OutfitsView'
 import { useOutfits } from './outfits/useOutfits'
 import { PosesView } from './poses/PosesView'
@@ -69,7 +71,7 @@ const RETURN_TO_WORLD_CONFIRM = {
   button: 'Revenir au monde',
 }
 
-export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'assets' | 'outfits' }) {
+export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'assets' | 'outfits' | 'lights' }) {
   const api = useApi()
   const toast = useToast()
   const confirm = useConfirm()
@@ -138,6 +140,9 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
   /* Les tenues (IT-10 chantier 6) : le panneau Vêtements les pose par leur
      clé et les montre par leur texte, résolu par le serveur. */
   const { outfits, marker: outfitMarker } = useOutfits()
+  /* Les lumières (IT-10 chantier 7) : l'onglet Lumière les pose par leur clé,
+     l'aperçu les montre par leur texte. */
+  const { lights, marker: lightMarker } = useLights()
   // « Proposer… » (IT-11 chantier 6): the scene composer, redefined
   const [proposeOpen, setProposeOpen] = useState(false)
   const proposer = useSceneProposals()
@@ -217,6 +222,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
       <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
       <SubViewLink to={PATHS.bankAssets} label="Assets" active={view === 'assets'} vue="assets" />
       <SubViewLink to={PATHS.bankOutfits} label="Tenues" active={view === 'outfits'} vue="outfits" />
+      <SubViewLink to={PATHS.bankLights} label="Lumières" active={view === 'lights'} vue="lights" />
     </nav>
   )
 
@@ -236,6 +242,14 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
     return (
       <div className="screen flex h-full flex-col" id="scenes">
         <OutfitsView nav={subViewNav} />
+      </div>
+    )
+  }
+
+  if (view === 'lights') {
+    return (
+      <div className="screen flex h-full flex-col" id="scenes">
+        <LightsView nav={subViewNav} />
       </div>
     )
   }
@@ -509,6 +523,8 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
                 library={library}
                 outfits={outfits}
                 outfitMarker={outfitMarker}
+                lights={lights}
+                lightMarker={lightMarker}
                 produced={stats[bench.selected.base.id]?.n ?? null}
                 changed={changed}
                 narrow={narrow}
@@ -534,6 +550,8 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
             <ScenePreviewPanel
               draft={bench.selected}
               places={places}
+              lights={lights}
+              lightMarker={lightMarker}
               stats={stats[bench.selected.base.id]}
               changed={pending}
               className="max-[1100px]:w-auto max-[1100px]:overflow-visible max-[1100px]:border-l-0
@@ -593,4 +611,7 @@ export function BankAssetsScreen() {
 }
 export function BankOutfitsScreen() {
   return <BankScreen view="outfits" />
+}
+export function BankLightsScreen() {
+  return <BankScreen view="lights" />
 }

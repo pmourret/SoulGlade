@@ -444,9 +444,9 @@
           "ref": "DOCS/cadrage/2026-09-26-it10-c6-tenues.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "t": "Créateur de lumière",
-          "d": "Cadré le 26/09 : un fragment de prompt, pas un graphe. Une lumière du catalogue, du monde ou du personnage, se pose dans le champ Lumière d'une scène ou en variante. Le champ devient un champ à part : il ne perd plus ce qu'on y écrit.",
+          "d": "Atelier /bank/lights : une lumière est une phrase du prompt, possédée par le monde et surchargée par le personnage. La scène la pose dans son champ Lumière ou en variante, par sa clé, et le lancement l'ajoute après le décor. Le champ garde enfin ce qu'on y écrit.",
           "it": "IT-10",
           "ref": "DOCS/cadrage/2026-09-26-it10-c7-lumieres.md"
         },
@@ -1392,6 +1392,10 @@
       {
         "t": "Rééclairer une image par un graphe",
         "d": "(26 septembre 2026) Écarté du chantier 7 d'IT-10 : la lumière passe par le prompt. Aucune brique de rééclairage n'existe pour Flux ou SDXL (IC-Light vise SD1.5). Une phase de recherche, puis un modèle neuf au manifeste, si un besoin mesuré l'ouvre."
+      },
+      {
+        "t": "Sortir la lumière des scènes du monde",
+        "d": "(26 septembre 2026) Relevé à l'audit du chantier 7 d'IT-10 : les scènes des mondes portent leur lumière dans leur texte (« warm low sunlight from the side »). Une scène reprise du monde garde son onglet Lumière verrouillé, et une lumière du catalogue posée sur sa copie s'ajoute à celle du texte au lieu de la remplacer. Il faudrait un champ Lumière dans l'éditeur de mondes, puis réécrire les scènes livrées."
       },
       {
         "t": "Repasser le code en anglais, partout",
