@@ -2239,6 +2239,11 @@ export interface components {
             n?: number | null;
             /** Seed */
             seed?: number | null;
+            /**
+             * Anchor
+             * @default
+             */
+            anchor: string;
         };
         /** BaseGenerateResponse */
         BaseGenerateResponse: {
@@ -2448,6 +2453,11 @@ export interface components {
              * @default
              */
             base_gelee: string;
+            /**
+             * Anchor
+             * @default
+             */
+            anchor: string;
         };
         /** CreateCharacterResponse */
         CreateCharacterResponse: {

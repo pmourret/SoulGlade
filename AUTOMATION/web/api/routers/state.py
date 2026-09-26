@@ -285,7 +285,7 @@ async def create_character(payload: CreateCharacterRequest):
         cid = lb.create_character(
             payload.cid.strip(), payload.name.strip(),
             payload.type, payload.style, payload.world,
-            payload.base_gelee.strip())
+            payload.base_gelee.strip(), payload.anchor)
     except (ValueError, FileExistsError) as e:      # includes Unresolved/World*
         ss.bad_request(str(e))
     ss.push_log(f"personnage cree par le wizard : {cid!r}")
@@ -322,7 +322,8 @@ async def generate_identity_base(payload: BaseGenerateRequest):
     try:
         out = base_portrait.generate(
             payload.cid.strip(), payload.type, payload.style,
-            payload.world, n=payload.n or 4, seed=payload.seed)
+            payload.world, n=payload.n or 4, seed=payload.seed,
+            anchor=payload.anchor)
     except base_portrait.BaseImageError as e:
         ss.bad_request(str(e))
     ss.push_log(f"portraits de base : {len(out['candidates'])} en file "

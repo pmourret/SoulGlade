@@ -70,7 +70,13 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
     problems = []
     for key in ("prefix", "anchor", "texture"):
         if not str(data.get(key) or "").strip():
-            problems.append(f"champ racine manquant ou vide : « {key} »")
+            # The anchor is the one of the three a user types (the wizard asks
+            # for it, Réglages de l'atelier edits it): its refusal says where.
+            problems.append(
+                "ancre d'identité vide : la décrire dans « Réglages de "
+                "l'atelier » (ex. a woman in her thirties, auburn hair)"
+                if key == "anchor" else
+                f"champ racine manquant ou vide : « {key} »")
     scenes = data.get("scenes")
     if not isinstance(scenes, list) or not scenes:
         return problems + ["« scenes » doit être une liste non vide"]

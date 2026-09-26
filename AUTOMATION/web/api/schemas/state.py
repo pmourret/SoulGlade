@@ -223,6 +223,10 @@ class CreateCharacterRequest(BaseModel):
     style: Optional[str] = None
     world: Optional[str] = None
     base_gelee: str = ""
+    # The identity anchor, what follows the pack's prefix in every prompt
+    # (« raw candid smartphone photo of <anchor> »). Required: the pack leaves
+    # it empty, and a character born without it cannot save its bank.
+    anchor: str = ""
 
 
 class CreateCharacterResponse(BaseModel):
@@ -254,6 +258,9 @@ class BaseGenerateRequest(BaseModel):
     world: Optional[str] = None
     n: Optional[int] = None
     seed: Optional[int] = None
+    # The anchor typed at the Identité step: the portraits describe the same
+    # person the prompts will. Optional — an uploaded base never needs it.
+    anchor: str = ""
 
 
 class BaseCandidate(BaseModel):

@@ -5471,6 +5471,11 @@
               }
             ],
             "title": "Seed"
+          },
+          "anchor": {
+            "type": "string",
+            "title": "Anchor",
+            "default": ""
           }
         },
         "type": "object",
@@ -5908,6 +5913,11 @@
           "base_gelee": {
             "type": "string",
             "title": "Base Gelee",
+            "default": ""
+          },
+          "anchor": {
+            "type": "string",
+            "title": "Anchor",
             "default": ""
           }
         },

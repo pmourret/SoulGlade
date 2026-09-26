@@ -98,7 +98,8 @@ def _write_json(path, data):
                     encoding="utf-8")
 
 
-def create_character(cid, name, character_type, output_style, world, base_gelee):
+def create_character(cid, name, character_type, output_style, world, base_gelee,
+                     anchor):
     """Cree CHARACTERS/<cid>/ pour le wizard « nouveau personnage » (J7bis).
 
     Ecrit character.json + config.json (aux DEFAUTS du pack, jamais mesures ici
@@ -113,6 +114,12 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     Leve avant toute ecriture : ValueError (cid invalide, style absent du pack),
     FileExistsError (cid deja pris), UnresolvedPackError / UnknownWorldError /
     IncompatibleWorldError. Rend le cid.
+
+    `anchor` est l'ancre d'identite : ce qui suit le prefixe du pack (« raw
+    candid smartphone photo of ») dans chaque prompt. Le gabarit du pack la
+    laisse vide, et c'est au wizard de la demander : un personnage ne nait
+    jamais avec un prompt casse (« photo of , at home... »), ni avec une banque
+    que la Banque refuserait d'enregistrer (constate le 26/09).
     """
     if not _CID_RE.match(cid or ""):
         raise ValueError(f"character_id invalide : {cid!r} — attendu un slug "
@@ -132,6 +139,10 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     if not base_gelee:
         raise ValueError("base_gelee requis : image d'identite gelee (fournie "
                          "ou generee), c'est ce que le verrou charge")
+    anchor = (anchor or "").strip()
+    if not anchor:
+        raise ValueError("ancre d'identite vide : decrire le personnage en "
+                         "quelques mots (ex. a woman in her thirties, auburn hair)")
 
     dft = universe.load_character_defaults(pack)
 
@@ -182,7 +193,7 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     # par la Banque.
     scenes = {
         "prefix": seed.get("prefix", ""),
-        "anchor": seed.get("anchor", ""),
+        "anchor": anchor,
         "texture": seed.get("texture", ""),
         "direction": seed.get("direction", ""),
         "world": world,

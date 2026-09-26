@@ -155,8 +155,14 @@ def _synthetic_cfg(pack):
     }
 
 
-def _base_prompt(pack, output_style, world):
+def _base_prompt(pack, output_style, world, anchor=""):
+    """Le portrait de reference decrit la personne que decriront ensuite ses
+    prompts : l'ancre tapee a l'etape Identite du wizard entre ici. Sans elle,
+    les portraits tiraient un inconnu au hasard, et une ancre « auburn hair »
+    pouvait se retrouver sur une base blonde."""
     parts = [BASE_PROMPT]
+    if (anchor or "").strip():
+        parts.append(anchor.strip())
     for extra in (universe.style_effect(pack, output_style).get("prompt_add"),
                   worlds.assets(world).get("prompt_add")):
         extra = (extra or "").strip()
@@ -187,7 +193,7 @@ def _check_choices(cid, character_type, output_style, world):
     return pack
 
 
-def generate(cid, character_type, output_style, world, n=4, seed=None):
+def generate(cid, character_type, output_style, world, n=4, seed=None, anchor=""):
     """Met N portraits de base en file chez ComfyUI (verrou d'identite bypasse,
     aucune reference n'existe encore). Rend tout de suite : les jobs tournent
     en asynchrone, `candidates()` en suit l'avancee. GPU requis.
@@ -195,7 +201,7 @@ def generate(cid, character_type, output_style, world, n=4, seed=None):
     pack = _check_choices(cid, character_type, output_style, world)
     n = max(1, min(int(n or 4), MAX_CANDIDATES))
     cfg = _synthetic_cfg(pack)
-    prompt = _base_prompt(pack, output_style, world)
+    prompt = _base_prompt(pack, output_style, world, anchor)
     fmt = "4:5" if "4:5" in cfg["formats"] else next(iter(cfg["formats"]), "1:1")
     base_seed = int(seed) if seed is not None else random.randint(1, 2 ** 48)
 
