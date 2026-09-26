@@ -35,7 +35,8 @@ HARD RULES
 - Each prompt: 25 to 40 words.
 - id: short snake_case, in French, describing the scene (ex: jardin_arrosage).
 - intention: pick ONE from this list: %(intentions)s. Pick the closest.
-- format: "4:5" for feed, "9:16" for stories or selfies, "2:3" for full outfit.
+- format: pick ONE from this list, width:height: %(formats)s. The framing that
+  suits the scene: a tall ratio for one person, a wide one only for a wide view.
 - tags: 2 to 4 short French snake_case keywords. Reuse these when they fit:
   %(tags)s. They describe place, moment and framing, never clothing.
 - tones: 1 to 3 keys from this list, the moods this scene suits: %(tones)s.
@@ -73,7 +74,7 @@ Do not describe the place again: write only the action, framing and light.
 """
 
 
-def build_graph(brief, count, creative, seed, decor=""):
+def build_graph(brief, count, creative, seed, decor="", formats=()):
     """Le graphe du modele local, monte par `llm_local`.
 
     Ce graphe etait ecrit ici, et il l'a ete une seconde fois le 10/09 pour le
@@ -87,6 +88,7 @@ def build_graph(brief, count, creative, seed, decor=""):
                       or "lifestyle",
         "tones": ", ".join(t["key"] for t in creative.get("tones", [])) or "doux",
         "tags": ", ".join(TAGS_COURANTS),
+        "formats": ", ".join(formats),
         "n": count, "brief": brief,
         "place": PLACE % decor.strip() if decor.strip() else ""}
     import llm_local
@@ -126,7 +128,7 @@ def _json_objects(text):
     return out
 
 
-def parse(text, creative=None):
+def parse(text, creative=None, formats=()):
     if not text:
         return []
     scenes = []
@@ -136,7 +138,7 @@ def parse(text, creative=None):
         except Exception:
             continue
         if isinstance(obj, dict) and obj.get("prompt"):
-            scenes.append(clean(obj, creative))
+            scenes.append(clean(obj, creative, formats))
     return scenes
 
 
@@ -162,13 +164,15 @@ def alertes(scene):
     return trouve
 
 
-def clean(scene, creative=None):
+def clean(scene, creative=None, formats=()):
     """Normalise une proposition du modele vers le schema de scenes.json.
 
     Le modele local est un 4B : on lui demande des cles PLATES (wardrobe_0,
     wardrobe_1), pas un dictionnaire imbrique, et c'est ici qu'on reassemble. On
     ne fait jamais confiance a ses valeurs de vocabulaire non plus : intention et
     tons sont valides contre creative.json, tout ce qui n'y est pas est jete.
+    Le format aussi, contre `config.formats` du personnage : hors liste, c'est
+    le premier de la liste (IT-10, chantier 3).
     """
     creative = creative or {}
     intentions = [i["key"] for i in creative.get("intentions", [])]
@@ -178,7 +182,8 @@ def clean(scene, creative=None):
     intention = _slug(scene.get("intention") or scene.get("category"))
     if intentions and intention not in intentions:
         intention = "lifestyle" if "lifestyle" in intentions else intentions[0]
-    fmt = scene.get("format") if scene.get("format") in ("4:5", "2:3", "9:16", "1:1") else "4:5"
+    formats = list(formats)
+    fmt = scene.get("format") if scene.get("format") in formats else next(iter(formats), "")
 
     tags = [_slug(t) for t in (scene.get("tags") or [])]
     tags = [t for t in dict.fromkeys(tags) if t][:4]
@@ -217,10 +222,10 @@ def clean(scene, creative=None):
 
 
 def compose(brief, count=3, creative=None, comfy_url="http://127.0.0.1:8188",
-            seed=None, timeout=300, decor=""):
+            seed=None, timeout=300, decor="", formats=()):
     creative = creative or {}
     seed = seed if seed is not None else int(time.time()) % 100000
-    graph = build_graph(brief, count, creative, seed, decor)
+    graph = build_graph(brief, count, creative, seed, decor, formats)
     req = urllib.request.Request(
         comfy_url.rstrip("/") + "/prompt",
         data=json.dumps({"prompt": graph, "client_id": "compose"}).encode(),
@@ -237,7 +242,7 @@ def compose(brief, count=3, creative=None, comfy_url="http://127.0.0.1:8188",
             if errors:
                 raise RuntimeError(errors[0][1].get("exception_message", "erreur"))
             text = "".join(entry.get("outputs", {}).get("3", {}).get("text", []))
-            scenes = parse(text, creative)
+            scenes = parse(text, creative, formats)
             # garde-fou du projet : une scene qui decrit le visage n'est jamais
             # proposee, meme en relecture. Elle serait en concurrence avec PuLID.
             gardees = []
@@ -264,5 +269,6 @@ if __name__ == "__main__":
         raise SystemExit("usage : python compose.py <character_id> [brief...]")
     character_id, *mots = sys.argv[1:]
     scenes, raw = compose(" ".join(mots) or "gardening in the morning",
-                          creative=runner.load_creative(character_id))
+                          creative=runner.load_creative(character_id),
+                          formats=list(runner.load_config(character_id)["formats"]))
     print(json.dumps(scenes, ensure_ascii=False, indent=2))

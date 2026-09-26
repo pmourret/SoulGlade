@@ -49,7 +49,7 @@ def verifie(ok, texte):
 APPELS = []
 
 
-def bouchon(brief, count, creative, comfy_url, decor=""):
+def bouchon(brief, count, creative, comfy_url, decor="", formats=()):
     APPELS.append({"brief": brief, "count": count, "decor": decor})
     return ([{"id": "p1", "intention": "lifestyle", "format": "4:5", "count": 1,
               "tags": [], "tones": [], "intensity": 0, "prompt": "stirring a pot",

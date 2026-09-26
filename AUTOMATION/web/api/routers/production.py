@@ -117,6 +117,20 @@ def run_amendments(payload):
     }
 
 
+def unknown_format(payload, character):
+    """The refusal of an imposed format the character cannot render, or None.
+
+    `config.formats` is the one list of what a character renders (IT-10,
+    chantier 3): a format outside it crashed the batch on a KeyError, deep in
+    the runner, after the launch had already been accepted.
+    """
+    formats = list(ss.cfg(character)["formats"])
+    if payload.format and payload.format not in formats:
+        return (f"format « {payload.format} » absent des formats du personnage "
+                f"({', '.join(formats)})")
+    return None
+
+
 def filters_from(payload):
     """The filter object `lb.build_jobs` expects.
 
@@ -216,6 +230,8 @@ async def build_plan(payload: RunPayload, character_id: RequiredCharacterId):
         # nothing to build: the « plan » is the list of ticked images
         return {"total": len(valid_sources(payload, cid)), "jobs": [],
                 "edition": True, "alertes": alerts}
+    if err := unknown_format(payload, cid):
+        return {"total": 0, "jobs": [], "erreur": err, "alertes": alerts}
     jobs = lb.build_jobs(lb.scenes_path(cid),
                          filters_from(payload_at_generation_level(payload, cid)),
                          character_id=cid)
@@ -459,6 +475,8 @@ async def run_batch(payload: RunPayload, character_id: RequiredCharacterId):
         return {"ok": True, "batch_id": batch_id,
                 "total": len(sources), "edition": True}
 
+    if err := unknown_format(payload, cid):
+        return JSONResponse({"ok": False, "erreur": err}, status_code=400)
     jobs = lb.build_jobs(lb.scenes_path(cid),
                          filters_from(payload_at_generation_level(payload, cid)),
                          character_id=cid)

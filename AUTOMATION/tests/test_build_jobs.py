@@ -323,12 +323,12 @@ def test_composeur():
             "prompt": "standing in a garden, wearing a red dress, morning light",
             "wardrobe_0": "wearing a plain shirt.", "wardrobe_1": "a loose shirt",
             "variants": ["overcast light", "wearing a coat"]}
-    sc = compose.clean(brut, CREATIVE)
+    sc = compose.clean(brut, CREATIVE, ["4:5", "1:1"])
 
     verifie(sc["id"] == "jardin_matin", f"id normalise ({sc['id']})")
     verifie(sc["intention"] == "lifestyle",
             f"intention inconnue repliee sur un defaut ({sc['intention']})")
-    verifie(sc["format"] == "4:5", "format invalide repli sur 4:5")
+    verifie(sc["format"] == "4:5", "format hors liste : repli sur le premier format du personnage")
     verifie(sc["tones"] == ["doux", "intime"], f"tons hors taxonomie jetes ({sc['tones']})")
     verifie(len(sc["tags"]) <= 4 and len(set(sc["tags"])) == len(sc["tags"]),
             f"tags dedupliques et plafonnes ({sc['tags']})")

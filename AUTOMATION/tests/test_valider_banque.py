@@ -73,8 +73,12 @@ print("\n[2] forme : ce qui casserait la production plus tard")
 for cle in ("prefix", "anchor", "texture"):
     verifie(any(cle in p for p in bank.validate_scene_bank(sans(cle))),
             f"champ racine « {cle} » manquant : refuse")
-verifie(any("format inconnu" in p for p in bank.validate_scene_bank(avec("format", "16:9"))),
-        "format hors liste : refuse")
+# IT-10 chantier 3 : la liste est celle du personnage, jamais une liste en dur
+verifie(any("absent des formats" in p
+            for p in bank.validate_scene_bank(avec("format", "16:9"), formats=["4:5", "1:1"])),
+        "format hors des formats du personnage : refuse")
+verifie(not bank.validate_scene_bank(avec("format", "16:9"), formats=["4:5", "2:3", "9:16", "1:1", "16:9"]),
+        "le meme format chez un personnage qui le porte : accepte")
 # IT-11 chantier 5 : un lieu seul compose un prompt au lancement ; sans lieu,
 # un prompt vide reste refuse
 vide = avec("prompt", "   ")

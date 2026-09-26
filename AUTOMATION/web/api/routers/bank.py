@@ -109,7 +109,7 @@ async def save_scene_bank(payload: SceneBankSaveRequest, character_id: RequiredC
     data = worlds.refresh_scene_bank(data)
     problems = validate_scene_bank(data, previous=ss.scenes_data(cid),
                                    allow_losses=payload.autoriser_pertes,
-                                   world=world)
+                                   world=world, formats=list(ss.cfg(cid)["formats"]))
     if problems:
         ss.push_log(f"scenes.json REFUSE — {problems[0]}")
         return JSONResponse({"ok": False, "erreur": problems[0],
@@ -263,12 +263,14 @@ async def compose_scenes(payload: ComposeRequest, character_id: RequiredCharacte
             return JSONResponse({"ok": False, "erreur": f"lieu inconnu « {place} » — le monde "
                                  f"« {world} » ne le porte pas (ou plus)"}, status_code=400)
         decor = found[0].get("prompt", "")
+    configuration = ss.cfg(cid)
     try:
         loop = asyncio.get_running_loop()
         scenes, raw = await loop.run_in_executor(
             None, lambda: composer.compose(brief, int(payload.count or 3),
-                                           creative, ss.cfg(cid)["comfy_url"],
-                                           decor=decor))
+                                           creative, configuration["comfy_url"],
+                                           decor=decor,
+                                           formats=list(configuration["formats"])))
     except Exception as e:
         ss.push_log(f"composeur : {type(e).__name__} — {e}")
         return JSONResponse({"ok": False, "erreur": str(e)}, status_code=500)

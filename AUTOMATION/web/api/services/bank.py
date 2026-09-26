@@ -26,7 +26,6 @@ import shared_state as ss
 import worlds
 
 
-KNOWN_FORMATS = ("4:5", "2:3", "9:16", "1:1")
 # Keys carrying the creative journey. They are not mandatory — an unmigrated
 # bank has none — but a BATCH of scenes losing them at once is never an
 # intention: it is the signature of the 25/08/2026 regression, where a
@@ -42,7 +41,8 @@ WATCHED_KEYS = ("intention", "intensity", "tags", "tones", "wardrobe", "pose")
 KNOWN_ORIGINS = ("world", "copy", "manual", "compose")
 
 
-def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
+def validate_scene_bank(data, previous=None, allow_losses=False, world=None,
+                        formats=None):
     """Returns the list of a scene bank's problems. Empty list = good.
 
     What we refuse here is what would break production later and for no
@@ -54,6 +54,10 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
     so does every scene in it. Left at None the shape checks run alone — that is
     how a caller with no character context (a script, a unit test on the shape)
     uses this function; the HTTP route ALWAYS passes it.
+
+    `formats` is the character's `config.formats`, the one list of what it can
+    render (IT-10, chantier 3): a scene in any other format would crash at
+    render time on a KeyError. The route always passes it, like `world`.
     """
     if not isinstance(data, dict):
         return ["le corps n'est pas un objet JSON"]
@@ -83,8 +87,9 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
         # the place alone composes a prompt at launch (worlds.compose_scene_bank)
         if not str(s.get("prompt") or "").strip() and not s.get("place"):
             problems.append(f"{where} : « prompt » vide")
-        if s.get("format") and s["format"] not in KNOWN_FORMATS:
-            problems.append(f"{where} : format inconnu « {s['format']} »")
+        if formats is not None and s.get("format") and s["format"] not in formats:
+            problems.append(f"{where} : format « {s['format']} » absent des formats "
+                            f"du personnage ({', '.join(formats)})")
         # Since 26/08/2026 `intensity` carries the MINIMUM level, an integer.
         # The maximum is derived from the wardrobe (lb.scene_band). The old
         # [low, high] form stays accepted: its `high` is simply ignored.
