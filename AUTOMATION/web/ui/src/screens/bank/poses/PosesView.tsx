@@ -33,7 +33,6 @@ import { useFileDrop } from '../useFileDrop'
 
 type ExtractResponse = ActionLike & { name?: string }
 
-const OFFLINE_HINT = 'nécessite ComfyUI en ligne'
 /* THE PROMISE, said where the file is chosen. The drop overlay carries it in
    full (§S4); the button opens a NATIVE file picker, which leaves no surface
    to write on, so it says it on hover and on focus instead. It is the one
@@ -42,6 +41,10 @@ const OFFLINE_HINT = 'nécessite ComfyUI en ligne'
    is the one who needs to know that. */
 const PHOTO_HINT =
   "La photo source ne reste jamais sur le disque : elle est supprimée après l'extraction, seul le squelette est gardé"
+/* Offline, the button says why it is disabled AND keeps the promise: the
+   reason used to replace it (25/09), and the sentence this screen may not lose
+   was gone exactly while nobody could extract — measured by test_bank [14]. */
+const OFFLINE_HINT = `Nécessite ComfyUI en ligne. ${PHOTO_HINT}`
 
 export function PosesView({ nav }: { nav: ReactNode }) {
   const api = useApi()
