@@ -605,8 +605,14 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Composer des scènes depuis une intention en français
-         * @description Turns a French intention into scenes ready to be reviewed.
+         * Proposer des scènes depuis ce qu'on veut montrer, en français
+         * @description Turns a French brief into scenes ready to be reviewed (IT-11 chantier 6).
+         *
+         *     The intention and the place are KEYS picked from lists, never guessed from
+         *     the brief: the intention is imposed on every proposal, the place is given
+         *     to the model as a décor it must not describe again, and joins the scene at
+         *     launch (`worlds.compose_scene_bank`). Every proposal comes back
+         *     `origin: "compose"` — the character's own scene, proposed by the composer.
          *
          *     Goes through the local LLM served by ComfyUI, in an executor: `composer`
          *     talks to it with blocking urllib and a /history poll, exactly like the
@@ -2008,31 +2014,28 @@ export interface components {
         };
         /**
          * ComposeRequest
-         * @description `intention` is the free French text describing what is wanted;
-         *     `intention_cible` is the taxonomy KEY being imposed. Confusing the two put
-         *     the French sentence into the scenes' intention field. `category` is the old
-         *     name of `intention_cible`, still accepted.
+         * @description `brief` is the free French text describing what is wanted; `intention`
+         *     is the catalog KEY being imposed, `place` the key of a place of the
+         *     character's world (IT-11 chantier 6). Both optional.
          */
         ComposeRequest: {
+            /**
+             * Brief
+             * @default
+             */
+            brief: string;
             /**
              * Intention
              * @default
              */
             intention: string;
             /**
-             * Intention Cible
+             * Place
              * @default
              */
-            intention_cible: string;
-            /**
-             * Category
-             * @default
-             */
-            category: string;
+            place: string;
             /** Count */
             count?: number | null;
-        } & {
-            [key: string]: unknown;
         };
         /**
          * ComposeResponse

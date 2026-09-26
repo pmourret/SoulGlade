@@ -4,7 +4,7 @@ Port of `routes/banque.py` — same 4 URLs, same JSON bodies, same status codes.
 
     /api/scenes    GET the bank + everything the cards need, POST to save it
     /api/creative  intentions, tones, intensity tiers filtered by availability
-    /api/compose   a French intention -> scenes proposed by the local LLM
+    /api/compose   a French brief -> scenes proposed by the local LLM
 
 The bank's RULES — validation, rotating backup, the cards' statistics — live
 in `services/bank.py`. This module reads the request, calls them, and turns
@@ -231,9 +231,15 @@ async def revert_tone(payload: ToneKeyRequest, character_id: RequiredCharacterId
 # --------------------------------------------------------------- scene composer
 @router.post("/api/compose", response_model=ComposeResponse,
              responses={500: {"description": "Le composeur a échoué"}},
-             summary="Composer des scènes depuis une intention en français")
+             summary="Proposer des scènes depuis ce qu'on veut montrer, en français")
 async def compose_scenes(payload: ComposeRequest, character_id: RequiredCharacterId):
-    """Turns a French intention into scenes ready to be reviewed.
+    """Turns a French brief into scenes ready to be reviewed (IT-11 chantier 6).
+
+    The intention and the place are KEYS picked from lists, never guessed from
+    the brief: the intention is imposed on every proposal, the place is given
+    to the model as a décor it must not describe again, and joins the scene at
+    launch (`worlds.compose_scene_bank`). Every proposal comes back
+    `origin: "compose"` — the character's own scene, proposed by the composer.
 
     Goes through the local LLM served by ComfyUI, in an executor: `composer`
     talks to it with blocking urllib and a /history poll, exactly like the
@@ -241,33 +247,43 @@ async def compose_scenes(payload: ComposeRequest, character_id: RequiredCharacte
     back for review, and the user saves it through POST /api/scenes.
     """
     cid = character_id
-    intention = payload.intention.strip()
-    if not intention:
-        return JSONResponse({"ok": False, "erreur": "intention vide"},
+    brief = payload.brief.strip()
+    if not brief:
+        return JSONResponse({"ok": False, "erreur": "décris d'abord ce que tu veux montrer"},
                             status_code=400)
     data = ss.scenes_data(cid)
     creative = lb.load_creative(cid)
-    # `intention` is the free French text describing what is wanted;
-    # `intention_cible` is the taxonomy KEY being imposed. Confusing the two put
-    # the French sentence into the scenes' intention field.
-    forced = (payload.intention_cible or payload.category).strip()
+    forced = payload.intention.strip()
+    place = payload.place.strip()
+    decor = ""
+    if place:
+        world = data.get("world")
+        found = [p for p in (worlds.places(world) if world else []) if p.get("id") == place]
+        if not found:
+            return JSONResponse({"ok": False, "erreur": f"lieu inconnu « {place} » — le monde "
+                                 f"« {world} » ne le porte pas (ou plus)"}, status_code=400)
+        decor = found[0].get("prompt", "")
     try:
         loop = asyncio.get_running_loop()
         scenes, raw = await loop.run_in_executor(
-            None, lambda: composer.compose(intention, int(payload.count or 3),
-                                           creative, ss.cfg(cid)["comfy_url"]))
+            None, lambda: composer.compose(brief, int(payload.count or 3),
+                                           creative, ss.cfg(cid)["comfy_url"],
+                                           decor=decor))
     except Exception as e:
         ss.push_log(f"composeur : {type(e).__name__} — {e}")
         return JSONResponse({"ok": False, "erreur": str(e)}, status_code=500)
     existing = {s["id"] for s in data["scenes"]}
     for sc in scenes:
         if forced:
-            sc["intention"] = forced      # `category` no longer exists: this is it
+            sc["intention"] = forced
+        if place:
+            sc["place"] = place
+        sc["origin"] = "compose"
         base = sc["id"]
         n = 2
         while sc["id"] in existing:              # never two scenes of the same name
             sc["id"] = f"{base}_{n}"
             n += 1
         existing.add(sc["id"])
-    ss.push_log(f"composeur : {len(scenes)} scene(s) proposee(s) pour « {intention[:60]} »")
+    ss.push_log(f"composeur : {len(scenes)} scene(s) proposee(s) pour « {brief[:60]} »")
     return {"ok": True, "scenes": scenes, "brut": raw[:2000]}

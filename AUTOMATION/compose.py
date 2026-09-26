@@ -1,4 +1,7 @@
-"""Compose des scenes a partir d'une intention ecrite en francais.
+"""Compose des scenes a partir de ce que l'utilisateur veut montrer, ecrit en
+francais (le « brief »). L'INTENTION est une cle du catalogue, choisie dans une
+liste ; le LIEU aussi, et son decor n'est jamais reecrit par le modele : il
+rejoint la scene au lancement (ADR-0027, IT-11 chantier 6).
 
 Utilise le modele de langage local deja present dans ComfyUI (noeud coeur
 `TextGenerate` alimente par `qwen3vl_4b_fp8_scaled`). Rien ne sort de la machine,
@@ -15,7 +18,8 @@ import urllib.request
 CLIP_MODEL = "qwen3vl_4b_fp8_scaled.safetensors"
 
 SYSTEM = """You are a scene writer for a photo series about one recurring model.
-The user writes an intention in French. You output SCENE PROMPTS in English.
+The user describes in French what they want to show. You output SCENE PROMPTS
+in English.
 
 HARD RULES
 - Never describe the face, hair, eyes, skin, age or identity. Another system
@@ -53,7 +57,7 @@ Write EXACTLY %(n)d objects, in one JSON array, and nothing else — no markdown
 fence, no comment, no text before or after. Each object must be different from
 the others: different place or different moment, not the same scene reworded.
 
-USER INTENTION (French): %(intention)s
+%(place)sUSER BRIEF (French): %(brief)s
 
 JSON:"""
 
@@ -63,7 +67,13 @@ TAGS_COURANTS = ("interieur", "exterieur", "matin", "jour", "soir", "assise",
                  "half_body", "full_body", "medium_shot")
 
 
-def build_graph(intention, count, creative, seed):
+PLACE = """PLACE, already described elsewhere: %s
+Do not describe the place again: write only the action, framing and light.
+
+"""
+
+
+def build_graph(brief, count, creative, seed, decor=""):
     """Le graphe du modele local, monte par `llm_local`.
 
     Ce graphe etait ecrit ici, et il l'a ete une seconde fois le 10/09 pour le
@@ -77,7 +87,8 @@ def build_graph(intention, count, creative, seed):
                       or "lifestyle",
         "tones": ", ".join(t["key"] for t in creative.get("tones", [])) or "doux",
         "tags": ", ".join(TAGS_COURANTS),
-        "n": count, "intention": intention}
+        "n": count, "brief": brief,
+        "place": PLACE % decor.strip() if decor.strip() else ""}
     import llm_local
     return llm_local.graphe_texte(prompt, seed=seed, max_length=260 * count,
                                   temperature=0.75)
@@ -205,11 +216,11 @@ def clean(scene, creative=None):
             "prompt": prompt, "wardrobe": wardrobe, "variants": variants[:2]}
 
 
-def compose(intention, count=3, creative=None, comfy_url="http://127.0.0.1:8188",
-            seed=None, timeout=300):
+def compose(brief, count=3, creative=None, comfy_url="http://127.0.0.1:8188",
+            seed=None, timeout=300, decor=""):
     creative = creative or {}
     seed = seed if seed is not None else int(time.time()) % 100000
-    graph = build_graph(intention, count, creative, seed)
+    graph = build_graph(brief, count, creative, seed, decor)
     req = urllib.request.Request(
         comfy_url.rstrip("/") + "/prompt",
         data=json.dumps({"prompt": graph, "client_id": "compose"}).encode(),
@@ -250,7 +261,7 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     import runner
     if len(sys.argv) < 2:
-        raise SystemExit("usage : python compose.py <character_id> [intention...]")
+        raise SystemExit("usage : python compose.py <character_id> [brief...]")
     character_id, *mots = sys.argv[1:]
     scenes, raw = compose(" ".join(mots) or "gardening in the morning",
                           creative=runner.load_creative(character_id))

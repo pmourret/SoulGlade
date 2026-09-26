@@ -171,15 +171,12 @@ class CreativeResponse(BaseModel):
 
 # ----------------------------------------------------------------- /api/compose
 class ComposeRequest(BaseModel):
-    """`intention` is the free French text describing what is wanted;
-    `intention_cible` is the taxonomy KEY being imposed. Confusing the two put
-    the French sentence into the scenes' intention field. `category` is the old
-    name of `intention_cible`, still accepted."""
-    model_config = ConfigDict(extra="allow")
-
+    """`brief` is the free French text describing what is wanted; `intention`
+    is the catalog KEY being imposed, `place` the key of a place of the
+    character's world (IT-11 chantier 6). Both optional."""
+    brief: str = ""
     intention: str = ""
-    intention_cible: str = ""
-    category: str = ""
+    place: str = ""
     count: Optional[int] = None
 
 

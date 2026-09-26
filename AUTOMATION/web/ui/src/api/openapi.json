@@ -1286,8 +1286,8 @@
     },
     "/api/compose": {
       "post": {
-        "summary": "Composer des scènes depuis une intention en français",
-        "description": "Turns a French intention into scenes ready to be reviewed.\n\nGoes through the local LLM served by ComfyUI, in an executor: `composer`\ntalks to it with blocking urllib and a /history poll, exactly like the\nproduction runner. Nothing is written to the bank here — the proposal comes\nback for review, and the user saves it through POST /api/scenes.",
+        "summary": "Proposer des scènes depuis ce qu'on veut montrer, en français",
+        "description": "Turns a French brief into scenes ready to be reviewed (IT-11 chantier 6).\n\nThe intention and the place are KEYS picked from lists, never guessed from\nthe brief: the intention is imposed on every proposal, the place is given\nto the model as a décor it must not describe again, and joins the scene at\nlaunch (`worlds.compose_scene_bank`). Every proposal comes back\n`origin: \"compose\"` — the character's own scene, proposed by the composer.\n\nGoes through the local LLM served by ComfyUI, in an executor: `composer`\ntalks to it with blocking urllib and a /history poll, exactly like the\nproduction runner. Nothing is written to the bank here — the proposal comes\nback for review, and the user saves it through POST /api/scenes.",
         "operationId": "compose_scenes_api_compose_post",
         "parameters": [
           {
@@ -4876,19 +4876,19 @@
       },
       "ComposeRequest": {
         "properties": {
+          "brief": {
+            "type": "string",
+            "title": "Brief",
+            "default": ""
+          },
           "intention": {
             "type": "string",
             "title": "Intention",
             "default": ""
           },
-          "intention_cible": {
+          "place": {
             "type": "string",
-            "title": "Intention Cible",
-            "default": ""
-          },
-          "category": {
-            "type": "string",
-            "title": "Category",
+            "title": "Place",
             "default": ""
           },
           "count": {
@@ -4903,10 +4903,9 @@
             "title": "Count"
           }
         },
-        "additionalProperties": true,
         "type": "object",
         "title": "ComposeRequest",
-        "description": "`intention` is the free French text describing what is wanted;\n`intention_cible` is the taxonomy KEY being imposed. Confusing the two put\nthe French sentence into the scenes' intention field. `category` is the old\nname of `intention_cible`, still accepted."
+        "description": "`brief` is the free French text describing what is wanted; `intention`\nis the catalog KEY being imposed, `place` the key of a place of the\ncharacter's world (IT-11 chantier 6). Both optional."
       },
       "ComposeResponse": {
         "properties": {
