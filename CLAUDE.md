@@ -3,12 +3,12 @@
 ## Cadrage
 
 `PROJET.md` (racine) fixe le cadrage stratégique — pour qui, aha moment,
-critères de sortie, cinq règles de discipline de projet. **Lu en premier,
+critères de sortie, six règles de discipline de projet. **Lu en premier,
 avant ce fichier**, à chaque ouverture de session. Toute décision
 d'architecture qui remet en cause un point de `PROJET.md` modifie d'abord
 `PROJET.md`.
 
-Les cinq règles s'appliquent ici directement :
+Les six règles s'appliquent ici directement :
 1. Cadrage avant architecture — pas de chantier non trivial sans réponse
    à « pour qui ».
 2. Un chantier hors parcours nominal (test : un nouvel utilisateur en
@@ -22,6 +22,12 @@ Les cinq règles s'appliquent ici directement :
 4. Une rétro dans `DOCS/retros/` à chaque fin de phase.
 5. Une envie hors phase courante va au tableau de bord avec la date,
    jamais directement en itération.
+6. Un diagnostic se prouve, une solution se garantit — données avant
+   hypothèse, un facteur à la fois, instrument qualifié avant de juger,
+   cause lue dans le code, garantie par construction quand le mécanisme
+   se contrôle, vérifié en vrai avant d'être affirmé, diagnostic faux
+   corrigé partout. Vaut pour tout chantier, pas seulement la R&D ;
+   détail dans le protocole du skill `phase-recherche`.
 
 ## Tableau de bord (état du projet)
 

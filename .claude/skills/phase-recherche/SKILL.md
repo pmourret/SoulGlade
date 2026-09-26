@@ -26,7 +26,9 @@ implémentation d'une piste déjà adoptée (le skill du domaine).
 Écrire trois lignes, dans cet ordre, **avant d'ouvrir une seule source** :
 
 1. **La question**, formulée comme une question et pas comme une envie.
-2. **Ce qui a déjà été tenté**, avec le chiffre ou l'observation qui bloque.
+2. **Ce qui a déjà été tenté**, avec le chiffre ou l'observation qui bloque
+   — et ce que disent les données déjà enregistrées : la date de la rupture
+   dans la base, ce qui a changé à cette date (règle 6, `PROJET.md`).
 3. **Le test du parcours nominal** (règle 2, `PROJET.md`) : un utilisateur
    qui n'a jamais installé Soulglade en a-t-il besoin pour aller jusqu'à sa
    première publication ?
@@ -35,6 +37,10 @@ Si la réponse au 3 est non, la phase ne s'ouvre pas : la piste va à
 l'horizon du tableau de bord avec sa date, et le chantier en cours
 reprend. Le dire une fois, clairement, et ne pas y revenir si le
 développeur assume.
+
+Avant la première source externe, **lire le code de l'étage en cause**
+s'il est installé : un effet mesuré n'est pas une cause, et le code la dit
+souvent en quelques lignes (`references/protocole-de-mesure.md`).
 
 ## La boucle — trois itérations maximum
 
@@ -47,7 +53,9 @@ d'itération à chaque tour ; le compteur est visible, pas implicite.
    seulement **lu annoncé**.
 2. **Réflexion.** Trois candidats retenus au maximum, chacun avec un
    verdict explicite : candidat, à re-vérifier, ou clos. Un candidat sans
-   verdict n'existe pas.
+   verdict n'existe pas. Quand le mécanisme se contrôle, compter parmi les
+   candidats une **garantie par construction** — rendre le défaut
+   impossible plutôt que le détecter.
 3. **Plan d'implémentation**, si et seulement si un candidat passe les
    deux conditions d'adoption ci-dessous. Le plan dit les étapes, le coût
    mesuré et ce qu'on mesurera après.
@@ -91,6 +99,7 @@ maintenant ne l'est pas.
 | Une piste retenue, à explorer plus tard | `DOCS/ideas/` |
 | Une piste écartée | section « écartées » du tableau de bord : date, raison, **impact si mise en œuvre en l'état** |
 | Le séquencement (quoi, quand) | itérations et EPIC du tableau de bord |
+| Un diagnostic antérieur que la phase révèle faux | corrigé **partout où il est écrit** — cadrage, rétro, tableau de bord, `PROJET.md`, textes d'aide de l'interface — et la fiche dit l'erreur, sa cause et ce qui l'a révélée |
 
 **Le tableau de bord s'édite dans `soulglade-tableau-de-bord.data.json`,
 puis se reconstruit** (`python AUTOMATION/tools/build_tableau_de_bord.py`).

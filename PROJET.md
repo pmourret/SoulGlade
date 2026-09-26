@@ -174,7 +174,7 @@ restent des personnages de vitrine, jamais livrés dans le produit.
 
 ## Discipline de projet
 
-Cinq règles matérialisées dans le dépôt, à respecter avant tout code :
+Six règles matérialisées dans le dépôt, à respecter avant tout code :
 
 1. **Le cadrage vient avant l'architecture.** Toute décision non triviale
    demande d'abord "pour qui est-elle prise". Sans réponse, cadrage avant
@@ -209,3 +209,32 @@ Cinq règles matérialisées dans le dépôt, à respecter avant tout code :
    cours de phase va dans le tableau de bord (section horizon) avec la
    date, jamais directement en itération. Relecture en fin de phase — ce
    qui parle encore peut être promu par cadrage explicite.
+
+6. **Un diagnostic se prouve, une solution se garantit.** Ajoutée le
+   2026-09-26, après la passe sur la qualité des rendus d'IT-10 : trois
+   causes supposées de suite, dont une fausse, avant que les données et
+   l'outil tranchent. La règle vaut pour tout chantier, pas seulement
+   pour une phase de recherche — la fausse piste est née hors de l'une
+   d'elles.
+
+   - **Les données avant l'hypothèse.** Dater la rupture dans la base,
+     puis chercher ce qui a changé à cette date.
+   - **Un facteur à la fois, et décomposer ce qui en porte plusieurs.**
+     Un ton ajoute un fragment de prompt *et* pose une expression : le
+     comparer « sans / avec » a accusé le fragment, et c'était
+     l'expression.
+   - **Un instrument se qualifie avant de juger** : sur des positifs et
+     des négatifs connus, et en se demandant ce qui peut le faire monter
+     sans que ce qu'on cherche change. La netteté comptait le bruit comme
+     du piqué ; les points du visage suivaient l'apparence d'un sourire.
+   - **La cause se lit dans le code qui la produit**, pas seulement dans
+     ses effets : le défaut de l'expression était écrit dans le nœud.
+   - **Garantir par construction plutôt que surveiller par mesure**,
+     quand le mécanisme se contrôle.
+   - **Vérifié en vrai avant d'être affirmé** — une image rendue, un
+     écran ouvert, un test qui échoue d'abord.
+   - **Un diagnostic faux se corrige partout où il a été écrit**, dès
+     qu'on le sait : cadrage, rétro, tableau de bord, textes d'interface.
+
+   Le détail et les cas vécus vivent dans le protocole de mesure du
+   skill `phase-recherche`.
