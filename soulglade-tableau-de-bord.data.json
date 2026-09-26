@@ -1390,6 +1390,10 @@
     "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
     "items": [
       {
+        "t": "Repasser le code en anglais, partout",
+        "d": "(26 septembre 2026) Relevé au chantier 5 d'IT-10 : CLAUDE.md demande du code en anglais, et tous les modules cœur d'AUTOMATION/ sont en français (pose_tools, pose_texte, worlds, compose, legende), là où la couche web l'est déjà. Une itération à part, décidée par Pierre le 26/09 : on ne traduit rien au coup par coup d'ici là."
+      },
+      {
         "t": "La licence d'InsightFace avant tout pack vendu",
         "d": "(26 septembre 2026) Relevé en lisant la licence de LivePortrait : les modèles d'InsightFace sont réservés à la recherche non commerciale. La plateforme les utilise pour le contrôle d'identité et pour PuLID, et aucun ADR ne le traite. À instruire avant qu'un pack ne se vende."
       },
