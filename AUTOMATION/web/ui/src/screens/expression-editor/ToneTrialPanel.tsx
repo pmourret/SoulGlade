@@ -64,7 +64,7 @@ export function ToneTrialPanel({
         </label>
         <select
           id="toneTrialScene"
-          className="h-[30px] max-w-[220px]"
+          className="max-w-[220px]"
           value={chosen}
           onChange={(e) => setScene(e.target.value)}
         >
@@ -79,9 +79,9 @@ export function ToneTrialPanel({
         </label>
         <input
           id="toneTrialSeed"
-          className="h-[30px] w-[110px] font-code"
+          className="w-[120px] font-code"
           inputMode="numeric"
-          placeholder="graine au hasard"
+          placeholder="au hasard"
           value={seed}
           onChange={(e) => setSeed(e.target.value.replace(/\D/g, ''))}
         />

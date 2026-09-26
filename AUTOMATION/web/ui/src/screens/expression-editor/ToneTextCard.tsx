@@ -95,7 +95,7 @@ export function ToneTextCard({
             </label>
             <input
               id="toneTextLabel"
-              className="h-[30px] max-w-[320px] flex-1"
+              className="max-w-[320px] flex-1"
               value={editing.label}
               onChange={(e) => setEditing({ ...editing, label: e.target.value })}
             />

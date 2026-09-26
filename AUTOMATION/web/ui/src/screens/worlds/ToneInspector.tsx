@@ -102,8 +102,12 @@ export function ToneInspector({
             <label className={LABEL} htmlFor="toneLabel">
               Nom du ton
             </label>
+            {/* Focus on creation (audit du 26/09) : after « Créer le premier ton »
+                the focus stayed on <body>, so a keyboard user had to hunt for
+                the field, and Escape did not close the inspector. */}
             <input
               id="toneLabel"
+              autoFocus={creating}
               className={`h-[34px] ${changed('label')}`}
               value={draft.label}
               onChange={(e) => onLabel(e.target.value)}
