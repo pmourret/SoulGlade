@@ -75,8 +75,16 @@ for cle in ("prefix", "anchor", "texture"):
             f"champ racine « {cle} » manquant : refuse")
 verifie(any("format inconnu" in p for p in bank.validate_scene_bank(avec("format", "16:9"))),
         "format hors liste : refuse")
-verifie(any("prompt" in p for p in bank.validate_scene_bank(avec("prompt", "   "))),
-        "prompt vide : refuse")
+# IT-11 chantier 5 : un lieu seul compose un prompt au lancement ; sans lieu,
+# un prompt vide reste refuse
+vide = avec("prompt", "   ")
+vide["scenes"][0].pop("place", None)
+verifie(any("prompt" in p for p in bank.validate_scene_bank(vide)),
+        "prompt vide sans lieu : refuse")
+avec_lieu = avec("prompt", "   ")
+avec_lieu["scenes"][0]["place"] = "cuisine"
+verifie(not any("prompt" in p for p in bank.validate_scene_bank(avec_lieu)),
+        "prompt vide avec un lieu : accepte")
 verifie(any("intensity" in p for p in bank.validate_scene_bank(avec("intensity", [2, 1]))),
         "bande d'intensite decroissante : refusee")
 verifie(any("intensity" in p for p in bank.validate_scene_bank(avec("intensity", [0, 1, 2]))),
