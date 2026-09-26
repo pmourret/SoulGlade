@@ -165,8 +165,8 @@ Le chantier se construit sur le poste de Pierre, où vivent ComfyUI,
 `python_embeded` et les données de Léna — l'essai de rendu ne se vérifie
 qu'avec eux.
 
-**Point de départ.** Branche `claude/vigilant-carson-hdttd8`, poussée,
-non fusionnée. Elle porte, dans l'ordre : la correction des erreurs de test
+**Point de départ.** Branche `claude/vigilant-carson-hdttd8`, fusionnée
+dans `main` le 26/09 : partir de `main`. Elle porte, dans l'ordre : la correction des erreurs de test
 d'un personnage neuf (ancre d'identité au wizard), puis le chantier 7 —
 `layered_catalog.py` (mécanique de catalogue à couches, extraite des
 tenues), `lights.py`, routes `/api/lights`, résolution dans
