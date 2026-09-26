@@ -96,6 +96,8 @@ export function ProduceSidebar({
   editing: boolean
   onPickLevel: (level: number) => void
   full: [Intention, number][]
+  /** Intentions with no scene at this level, each with its count at ANY
+      level: 0 asks for the Banque, more says the level is what hides them. */
   empty: [Intention, number][]
   intent: string | null
   onPickIntent: (key: string) => void
@@ -105,6 +107,8 @@ export function ProduceSidebar({
   onPickTone: (key: string) => void
 }) {
   const tier = tiers.find((t) => t.level === level) ?? null
+  const offLevel = empty.filter(([, n]) => n > 0)
+  const toFill = empty.filter(([, n]) => n === 0)
   /* `unite` comes from the server: the tier that edits counts SOURCE IMAGES,
      not scenes — it picks none. Announcing « 16 scènes » there was false. */
   const unit = tier?.unite || 'scène'
@@ -249,7 +253,35 @@ export function ProduceSidebar({
                 )
               })}
             </div>
-            {empty.length > 0 && (
+            {/* The scene's band decides what shows at a level (ADR-0027):
+                these intentions HAVE scenes, at other levels. Nothing to
+                compose, so no link — the count says where they are. */}
+            {offLevel.length > 0 && (
+              <div id="railIntentAilleurs">
+                <div
+                  className="lab mt-[12px] mb-[6px] flex items-center gap-[8px]
+                             after:h-px after:flex-1 after:bg-line after:content-['']"
+                  data-sep
+                >
+                  aucune à ce niveau
+                </div>
+                <ul className="m-0 flex list-none flex-col gap-[1px] p-0">
+                  {offLevel.map(([entry, n]) => (
+                    <li
+                      key={entry.key}
+                      className="flex h-[26px] items-center gap-[8px] px-[10px] text-[12.5px] text-dim2"
+                      data-k={entry.key}
+                    >
+                      <span className="min-w-0 flex-1 truncate">{entry.label}</span>
+                      <span className="flex-none text-[11px] tabular-nums">
+                        {n} à d'autres niveaux
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {toFill.length > 0 && (
               <div id="railIntentVides">
                 <div
                   className="lab mt-[12px] mb-[6px] flex items-center gap-[8px]
@@ -259,7 +291,7 @@ export function ProduceSidebar({
                   à peupler
                 </div>
                 <div className="flex flex-col gap-[1px]">
-                  {empty.map(([entry]) => (
+                  {toFill.map(([entry]) => (
                     <button
                       type="button"
                       key={entry.key}

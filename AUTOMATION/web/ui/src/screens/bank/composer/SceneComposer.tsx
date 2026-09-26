@@ -28,6 +28,7 @@ import * as Tabs from '@radix-ui/react-tabs'
 import { useApi } from '../../../api/useApi'
 import type { Creative } from '../../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../../state/ScenesStoreContext'
+import type { WorldPlace } from '../../worlds/useWorldCatalog'
 import type { SceneField } from '../sceneChanges'
 import { SECTIONS, type SectionKey } from './sections'
 import { SectionRail } from './SectionRail'
@@ -44,6 +45,7 @@ export function SceneComposer({
   saved,
   creative,
   poses,
+  places,
   produced,
   worldLinked,
   changed,
@@ -58,6 +60,7 @@ export function SceneComposer({
   saved: Scene | undefined
   creative: Creative | null
   poses: string[]
+  places: WorldPlace[]
   produced: number | null
   /* A scene bound to a world place (ADR-0015): its frame — décor, lumière and
      the pose prose — is re-derived server-side on every save, so those three
@@ -204,6 +207,7 @@ export function SceneComposer({
                 {section.key === 'recap' && (
                   <RecapPanel
                     draft={draft}
+                    places={places}
                     worldLinked={worldLinked}
                     lockedNote={lockedNote}
                     changed={changed}

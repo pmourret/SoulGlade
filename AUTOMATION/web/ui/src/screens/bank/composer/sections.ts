@@ -55,14 +55,15 @@ export const SECTIONS: Section[] = [
     /* « Prompt global » promettait le prompt entier ; le panneau ne porte
        plus que le décor en édition, les deux autres fragments en lecture
        (design-pass screen-7c §5.1). La CLÉ ne bouge pas : elle est le contrat
-       du rail, des fumigations et de `data-tabpanel`. */
-    label: 'Décor et prompt',
+       du rail, des fumigations et de `data-tabpanel`. Depuis IT-11 (chantier
+       5), le décor est un LIEU du monde, choisi ici avec le texte de la scène. */
+    label: 'Scène et lieu',
     icon: 'pencil',
-    /* Le décor seul : la lumière, la pose et la tenue ne s'y éditent plus
-       (§5.2, §5.3), et un point ici pour une modification faite ailleurs
-       enverrait chercher dans le mauvais panneau. */
-    fields: ['promptBase'],
-    model: 'champ prompt · les trois fragments joints à l’enregistrement',
+    /* Le texte de la scène et son lieu seuls : la lumière, la pose et la
+       tenue ne s'y éditent plus (§5.2, §5.3), et un point ici pour une
+       modification faite ailleurs enverrait chercher dans le mauvais panneau. */
+    fields: ['promptBase', 'place'],
+    model: 'champs prompt et place · le décor du lieu rejoint le prompt au lancement',
   },
   { key: 'ai', label: 'Amélioration IA', icon: 'robot', fields: [], model: 'aucun champ écrit — pas encore branché' },
   { key: 'json', label: 'JSON final', icon: 'terminal', fields: [], model: 'la scène telle qu’elle sera écrite, comparée à ce qui est sur le disque' },

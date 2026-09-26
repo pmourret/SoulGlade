@@ -119,7 +119,7 @@ export function ProduceScreen() {
       picking it for the run are two different gestures). */
   const [pointedId, setPointedId] = useState<string | null>(null)
   const [compareOpen, setCompareOpen] = useState(false)
-  const { meta, stats, sceneList, scenesOf, visibleScenes } = useSceneChoice({
+  const { meta, stats, sceneList, scenesOf, allScenesOf, visibleScenes } = useSceneChoice({
     bank,
     drafts,
     tier,
@@ -286,10 +286,12 @@ export function ProduceScreen() {
   const intentions = (creative?.intentions ?? []) as Intention[]
   const withAll: Intention[] = [...intentions, { key: '*', label: 'Toutes', icon: '✳', defaults: {} }]
   const full: [Intention, number][] = []
+  // an empty one carries its count at ANY level: 0 means « à peupler »
   const empty: [Intention, number][] = []
   withAll.forEach((entry) => {
     const n = scenesOf(entry.key).length
-    ;(n ? full : empty).push([entry, n])
+    if (n) full.push([entry, n])
+    else empty.push([entry, allScenesOf(entry.key).length])
   })
 
   const goCompose = () => navigate(PATHS.bankScenes)

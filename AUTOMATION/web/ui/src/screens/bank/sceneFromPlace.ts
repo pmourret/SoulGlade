@@ -9,8 +9,9 @@
    one is the CHARACTER's overlay, which is where it belongs (ADR-0014):
 
    - ordinary: exactly what a bank seeded at creation holds
-     (`runner/prompt.py`, the `merge_scene` of the seed) — level 0, an EMPTY
-     wardrobe at that level, so the frame speaks for itself;
+     (`runner/prompt.py`, the `merge_scene` of the seed) — the world scene's
+     own minimum level (0 without one), an EMPTY wardrobe at that level, so
+     the frame speaks for itself;
    - adult: the level of the native tier, and the only wardrobe the place is
      meant to be worn in at that level. The level is GIVEN, never computed
      here: `/api/creative` says which tier declares `lora_adulte`, and an
@@ -29,7 +30,7 @@ export function sceneFromPlace(
   world: string,
   adult: { nativeLevel: number } | null,
 ): Scene {
-  const level = adult ? adult.nativeLevel : 0
+  const level = adult ? adult.nativeLevel : (place.intensity ?? 0)
   return {
     id: place.id,
     world,
@@ -37,6 +38,7 @@ export function sceneFromPlace(
     world_ref: place.id,
     label: place.label ?? '',
     intention: place.intention ?? '',
+    ...(place.place ? { place: place.place } : {}),
     prompt: place.prompt ?? '',
     intensity: level,
     wardrobe: { [String(level)]: adult ? NATIVE_WARDROBE : '' },

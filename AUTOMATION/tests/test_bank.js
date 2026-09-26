@@ -281,7 +281,7 @@ async function allerA(page, categorie, module) {
     e => e.getAttribute('aria-orientation'));
   dire(railVertical === 'vertical', 'et son rail est un tablist VERTICAL a libelles');
   dire((await page.$$eval('#sceneInspector [role="tab"]', e => e.map(t => t.textContent.trim())))
-         .includes('Décor et prompt'),
+         .includes('Scène et lieu'),
        'chaque section dit son nom, plus seulement son icone');
   // audit UX/UI (M2) : aria-controls doit resoudre a un id REELLEMENT present
   // dans le DOM pour les 7 onglets, pas seulement celui actif — un panneau
@@ -344,9 +344,10 @@ async function allerA(page, categorie, module) {
   await page.fill(champ('prompt_light'), marqueurSync);
   await page.waitForTimeout(150);
   await onglet('recap');
-  dire((await page.$$eval('#sceneInspector [data-f]', e => e.map(x => x.dataset.f)))
-         .every(f => f === 'prompt_base'),
-       'le panneau ne porte plus qu un champ editable : le decor');
+  // IT-11 chantier 5 : le texte de la scene, et le lieu choisi parmi ceux du monde
+  const editables = await page.$$eval('#sceneInspector [data-f]', e => e.map(x => x.dataset.f));
+  dire(editables.length === 2 && editables.includes('prompt_base') && editables.includes('place'),
+       `le panneau ne porte que deux champs editables : la scene et son lieu (${editables})`);
   dire((await page.textContent('[data-tabpanel="recap"]')).includes(marqueurSync),
        'la rangee Lumiere montre bien ce qui vient d etre tape dans l onglet Lumiere');
   const rangeeLumiere = await page.$('[data-tabpanel="recap"] >> text=Lumière');

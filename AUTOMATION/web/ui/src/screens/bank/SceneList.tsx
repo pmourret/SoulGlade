@@ -83,7 +83,7 @@ export function SceneListRow({
             where `--dim2` falls to 4.27:1 — the one exception `tokens.css`
             names, and a line of 11 px is exactly what it warns against. */}
         <span className="block truncate text-[11px] text-dim" data-card-produced>
-          {draft.format} ·{' '}
+          <span data-card-origin>{originWord(draft.base.origin)}</span> · {draft.format} ·{' '}
           {stats ? `${stats.n} produite${stats.n > 1 ? 's' : ''}` : 'jamais produite'}
         </span>
       </div>
@@ -97,6 +97,14 @@ export function SceneListRow({
       )}
     </button>
   )
+}
+
+/* Where the scene comes from, in one word (ADR-0027 §5): taken from the world
+   and following it, copied from it for this character, or the character's
+   own. A scene born in this session has no origin yet: the server stamps it
+   `manual` on save, so it is already « propre ». */
+function originWord(origin: unknown): string {
+  return origin === 'world' ? 'monde' : origin === 'copy' ? 'copie' : 'propre'
 }
 
 export type SceneGroup = {

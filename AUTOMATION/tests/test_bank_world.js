@@ -145,11 +145,30 @@ async function ouvrir(nav, { arme }) {
   const r = c.page;
   await r.goto(BASE + '/bank/scenes?character=lena&scene=salon_lecture', { waitUntil: 'networkidle' });
   await r.waitForSelector('#sceneCopy');
-  dire(!(await r.$('button[aria-pressed]:has-text("Monde")')), 'plus d onglet Monde dans l en-tete');
+  dire(!(await r.$('button[aria-pressed]:text-is("Monde")')), 'plus d onglet Monde dans l en-tete');
   dire(await r.$eval('#sceneIntention', e => e.disabled), 'l intention reprise du monde est verrouillee');
+  // IT-11 chantier 5 : provenance dans la liste, lieu choisi dans le composeur
+  const origine = () => r.$eval('[data-scene-card][data-on] [data-card-origin]', e => e.textContent.trim());
+  dire(await origine() === 'monde', 'la ligne de la scene reprise dit « monde »');
+  await r.click('[data-tab="recap"]');
+  dire(await r.$eval('#scenePlace', e => e.disabled && e.value === 'salon'),
+       'son lieu (salon) est affiche, verrouille');
+  dire(/cluttered living room/.test(await r.textContent('#scenePromptPreview')),
+       'l apercu compose le texte de la scene avec le decor de son lieu');
   await r.click('#sceneCopy');
-  dire(!(await r.$eval('#sceneIntention', e => e.disabled)),
-       '« Modifier pour ce personnage » la deverrouille');
+  dire(await origine() === 'copie', 'apres « Modifier pour ce personnage », la ligne dit « copie »');
+  dire(!(await r.$eval('#scenePlace', e => e.disabled)), 'le lieu se choisit sur la copie');
+  const autre = await r.$eval('#scenePlace', e => [...e.options].map(o => o.value).find(v => v && v !== 'salon'));
+  await r.selectOption('#scenePlace', autre);
+  dire(!/cluttered living room/.test(await r.textContent('#scenePromptPreview')),
+       `changer de lieu (${autre}) change le decor de l apercu`);
+  await r.click('[data-tab="json"]');
+  await r.waitForTimeout(150);
+  dire(new RegExp(`"place":\\s*"${autre}"`).test(await r.textContent('#sceneInspector')),
+       'le JSON de la scene porte la cle du lieu, jamais son texte');
+  await r.click('[data-tab="general"]');
+  await r.waitForTimeout(150);
+  dire(!(await r.$eval('#sceneIntention', e => e.disabled)), 'et l intention de la copie se choisit');
   dire(Boolean(await r.$('#sceneReturnToWorld')), 'et l en-tete dit « copie de … » avec le retour');
   await r.click('#sceneReturnToWorld');
   await r.click('dialog button:has-text("Revenir au monde")');

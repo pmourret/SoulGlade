@@ -6,30 +6,35 @@
    own fields were being typed. Here it is a column of its own (design pass
    screen-7b §S5), always visible, updated at the keystroke.
 
-   IT ASSEMBLES NOTHING (CLAUDE.md §3). `sceneFragments` cuts, `composePrompt`
-   joins — the same two functions the Prompt global panel uses for its own
-   tinted preview. This panel only draws them. */
+   IT ASSEMBLES NOTHING (CLAUDE.md §3). `sceneFragments` cuts — the same
+   function the Prompt global panel uses for its own tinted preview — and the
+   décor of the scene's place comes last, as `worlds.materialize` joins it at
+   launch. This panel only draws them. */
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../../app/routes'
-import { composePrompt, type SceneDraft } from '../../../state/ScenesStoreContext'
-import { sceneFragments } from './sceneFragments'
+import type { SceneDraft } from '../../../state/ScenesStoreContext'
+import type { WorldPlace } from '../../worlds/useWorldCatalog'
+import { decorOf, sceneFragments } from './sceneFragments'
 
 export function ScenePreviewPanel({
   draft,
+  places,
   stats,
   changed,
   className,
 }: {
   draft: SceneDraft
+  /** The world's places: the décor joins the scene's text at launch. */
+  places: WorldPlace[]
   /** The scene's produced shots, as `/api/scenes` counts them. */
   stats: { n: number; avg: number | null } | undefined
   /** Unsaved edits: Produire reads scenes.json, so it would not see them. */
   changed: boolean
   className?: string
 }) {
-  const fragments = sceneFragments(draft)
-  const composed = composePrompt(draft)
+  const fragments = sceneFragments(draft, decorOf(places, draft.place))
+  const composed = fragments.map((f) => f.text).join(', ')
 
   return (
     <aside

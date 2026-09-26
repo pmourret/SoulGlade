@@ -30,6 +30,7 @@ import { draftFields, type Scene, type SceneBank, type SceneDocument, type Scene
 const FIELDS = [
   'id',
   'intention',
+  'place',
   'format',
   'count',
   'guidance',

@@ -169,6 +169,20 @@ const ONGLET = k => `[data-tab="${k}"]`;
   } else {
     console.log('      (aucune intention vide dans cette banque)');
   }
+  // IT-11 chantier 5 : la bande de la scene decide ce qui se voit a un niveau.
+  // Une intention qui a des scenes, mais a d'autres niveaux, n'est pas « a peupler ».
+  if (await vu('#railIntentAilleurs')){
+    const ailleurs = await page.$$eval('#railIntentAilleurs [data-k]', e => e.map(x => x.dataset.k));
+    const aPeupler = await page.$$eval('#railIntentVides [data-k]', e => e.map(x => x.dataset.k)).catch(() => []);
+    dire((await texte('#railIntentAilleurs [data-sep]')).includes('aucune à ce niveau')
+         && !ailleurs.some(k => aPeupler.includes(k)),
+         `les intentions peuplees a d autres niveaux ont leur section (${ailleurs.join(', ')})`);
+    dire(!(await page.$('#railIntentAilleurs button'))
+         && /à d'autres niveaux/.test(await texte('#railIntentAilleurs')),
+         'sans lien vers la Banque, avec leur compte ailleurs');
+  } else {
+    console.log('      (toute intention peuplee l est a ce niveau)');
+  }
 
   console.log('\n[3] changer d intention dans le rail change la grille, rien d autre');
   if (pleines.length > 1){

@@ -176,7 +176,13 @@ function Provenance({
   onCopy: () => void
   onReturnToWorld: () => void
 }) {
-  if (origin !== 'world' && origin !== 'copy') return null
+  if (origin !== 'world' && origin !== 'copy') {
+    return (
+      <span className="flex-none text-[12px] text-dim2" id="sceneOwn">
+        propre à ce personnage
+      </span>
+    )
+  }
   return (
     <div className="flex flex-none flex-col items-end gap-[2px] text-[12px]">
       {origin === 'world' ? (

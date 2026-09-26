@@ -23,6 +23,7 @@ import { useCallback, useEffect, useRef } from 'react'
 
 import type { Creative } from '../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../state/ScenesStoreContext'
+import type { WorldPlace } from '../worlds/useWorldCatalog'
 import { SceneComposer } from './composer/SceneComposer'
 import type { SceneField } from './sceneChanges'
 
@@ -49,6 +50,7 @@ export function SceneInspector({
   saved,
   creative,
   poses,
+  places,
   produced,
   changed,
   narrow,
@@ -65,6 +67,8 @@ export function SceneInspector({
   saved: Scene | undefined
   creative: Creative | null
   poses: string[]
+  /** The places of the character's world, for the composer's Lieu step. */
+  places: WorldPlace[]
   produced: number | null
   /** Draft fields differing from the saved scene (`sceneChanges`). */
   changed: Set<SceneField>
@@ -228,6 +232,7 @@ export function SceneInspector({
         saved={saved}
         creative={creative}
         poses={poses}
+        places={places}
         produced={produced}
         worldLinked={worldLinked}
         changed={changed}

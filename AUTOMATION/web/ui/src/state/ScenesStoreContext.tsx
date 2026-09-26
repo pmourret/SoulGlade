@@ -62,6 +62,11 @@ export type Scene = {
      With `origin === 'copy'` it only keeps the provenance: the copy owns its
      frame and no longer follows the world. */
   world_ref?: string
+  /* Key of a place (décor) of the character's world (ADR-0027, IT-11 chantier
+     5). `prompt` is then the scene's OWN text; the décor joins it at launch
+     (`worlds.compose_scene_bank`), so a correction of the place reaches every
+     scene set in it, copies included. */
+  place?: string
   [key: string]: unknown
 }
 
@@ -83,6 +88,7 @@ export type SceneDraft = {
   base: Scene
   id: string
   intention: string
+  place: string
   format: string
   count: string
   guidance: string
@@ -232,6 +238,7 @@ export function draftFields(scene: Scene): Omit<SceneDraft, 'uid' | 'base'> {
     // `category` was a duplicate of the intention that doubled as the export
     // folder: the card preselects the intention, and saving drops the dead key
     intention: scene.intention ?? scene.category ?? '',
+    place: scene.place ?? '',
     format: scene.format ?? '4:5',
     count: String(scene.count ?? 1),
     guidance: scene.guidance == null ? '' : String(scene.guidance),
@@ -284,6 +291,7 @@ export function draftsToScenes(drafts: SceneDraft[]): Scene[] {
     scene.count = Number.parseInt(draft.count, 10) || 1
     scene.prompt = composePrompt(draft)
     put('intention', draft.intention)
+    put('place', draft.place)
     put('guidance', draft.guidance ? Number.parseFloat(draft.guidance) : null)
     put('tones', keys(draft.tones))
     put('tags', keys(draft.tags))

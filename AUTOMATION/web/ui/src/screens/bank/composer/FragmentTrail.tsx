@@ -10,9 +10,11 @@ import type { SceneDraft } from '../../../state/ScenesStoreContext'
 import { FRAGMENT_COLORS, sceneFragments } from './sceneFragments'
 import type { SectionKey } from './sections'
 
-/** Where each fragment is edited — the trail's own click target. */
-const HOME: Record<keyof typeof FRAGMENT_COLORS, { section: SectionKey; label: string }> = {
-  base: { section: 'recap', label: 'décor' },
+/** Where each fragment is edited — the trail's own click target. The décor of
+    the place is not a fragment of this form: the Prompt panel shows it. */
+type FormFragment = Exclude<keyof typeof FRAGMENT_COLORS, 'place'>
+const HOME: Record<FormFragment, { section: SectionKey; label: string }> = {
+  base: { section: 'recap', label: 'scène' },
   light: { section: 'light', label: 'lumière' },
   pose: { section: 'pose', label: 'pose' },
 }
@@ -25,14 +27,14 @@ export function FragmentTrail({
   draft: SceneDraft
   /** The fragment this panel edits: its box is marked « ici » and is not a
       link to somewhere one already is. */
-  here: keyof typeof FRAGMENT_COLORS
+  here: FormFragment
   onGoto: (section: SectionKey) => void
 }) {
   const found = sceneFragments(draft)
 
   return (
     <div className="flex items-stretch gap-[6px]" aria-label="Place de ce fragment dans le prompt">
-      {(Object.keys(HOME) as (keyof typeof FRAGMENT_COLORS)[]).map((key, index) => {
+      {(Object.keys(HOME) as FormFragment[]).map((key, index) => {
         const fragment = found.find((f) => f.key === key)
         const home = HOME[key]
         const onHere = key === here

@@ -105,5 +105,9 @@ export function useSceneChoice({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [intent, tone, scenesOf, meta, search, sortBy, stats])
 
-  return { meta, stats, sceneList, scenesOf, visibleScenes }
+  /* Every level at once: tells an intention with no scene AT THIS LEVEL from
+     one with no scene at all — only the second asks for the Banque. */
+  const allScenesOf = (key: string) => sceneList.filter((s) => key === '*' || intentOf(s) === key)
+
+  return { meta, stats, sceneList, scenesOf, allScenesOf, visibleScenes }
 }

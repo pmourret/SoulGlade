@@ -50,6 +50,7 @@ import { ScenePreviewPanel } from './composer/ScenePreviewPanel'
 import { changedFields, hasChanges, savedScenes, type SceneField } from './sceneChanges'
 import { useSceneWorkbench } from './useSceneWorkbench'
 import { useWorldCatalogue } from './useWorldCatalogue'
+import { useWorldCatalog, type WorldPlace } from '../worlds/useWorldCatalog'
 import { WorldBanner, WorldDriftBand, worldDrift } from './WorldBanner'
 import { WorldCatalogueDialog } from './WorldCatalogueDialog'
 
@@ -113,6 +114,10 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   // its bank does not hold yet, ordinary ones and — armed only — adult ones.
   const [catalogueOpen, setCatalogueOpen] = useState(false)
   const catalogue = useWorldCatalogue(catalogueOpen ? (world?.id ?? null) : null)
+  // The places of the world, for the composer's Lieu step and the décor the
+  // preview shows (IT-11 chantier 5): a scene stores the key, never the text.
+  const worldPlaces = useWorldCatalog<WorldPlace>(world?.id ?? null, 'places')
+  const places = worldPlaces.entries ?? []
 
   /* Under 1100 px the list is a drawer (§S6) — same non-modal overlay
      contract as Revue's own inspector: Escape closes it, the focus goes in
@@ -432,6 +437,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                 saved={saved.get(bench.selected.base.id ?? '')}
                 creative={creative}
                 poses={poses}
+                places={places}
                 produced={stats[bench.selected.base.id]?.n ?? null}
                 changed={changed}
                 narrow={narrow}
@@ -456,6 +462,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
           {bench.selected && (
             <ScenePreviewPanel
               draft={bench.selected}
+              places={places}
               stats={stats[bench.selected.base.id]}
               changed={pending}
               className="max-[1100px]:w-auto max-[1100px]:overflow-visible max-[1100px]:border-l-0
