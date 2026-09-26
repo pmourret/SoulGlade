@@ -363,13 +363,23 @@ const D = {
       "ref": "DOCS/retros/2026-09-25-phase-9-studio-poste-de-travail.md"
     },
     {
-      "id": "IT-10",
+      "id": "IT-11",
       "state": "now",
+      "titre": "Un monde se livre en lieux, intentions et scènes",
+      "quoi": "En cadrant le créateur d'intentions, la définition même d'une intention a cédé : les « lieux » d'un monde sont des scènes, et l'intention mêle genre, cadrage, humeur et niveau. Un monde se vend et doit suffire pour commencer ; les chantiers restants d'IT-10 agissent tous sur la scène, les bâtir sur l'ancien modèle serait les refaire.",
+      "dod": "Un monde neuf reçoit décor, intention, scène et ton depuis l'interface, et un personnage neuf produit la scène. Modifiée dans un atelier, elle devient sa copie : le monde corrigé atteint les autres personnages, pas la copie. slow-life et terres-sauvages réécrits, Léna et Abyssiaelle produisent.",
+      "epics": "E3, E1",
+      "ref": "ADR-0027 — DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
+    },
+    {
+      "id": "IT-10",
+      "state": "next",
       "titre": "Les ateliers font ce qu'ils annoncent",
       "quoi": "Ce qu'un ton fait à l'image était invisible dans l'atelier, et sa passe d'expression dégradait les selfies que Produire lui imposait. Le même défaut est ailleurs : des panneaux sans serveur, des catalogues du monde sans créateur, une pose sans son texte. Un outil livré passe avant toute capacité neuve.",
-      "dod": "Les huit chantiers livrés, chacun avec son audit vérifié en vrai. Aucun panneau n'annonce une capacité qu'aucun serveur ne rend, et un monde neuf reçoit ses tons et ses intentions sans qu'on ouvre un JSON.",
+      "dod": "Les huit chantiers livrés, chacun avec son audit vérifié en vrai. Aucun panneau n'annonce une capacité qu'aucun serveur ne rend, et un monde neuf reçoit ses tons sans qu'on ouvre un JSON.",
       "epics": "E3",
-      "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+      "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md",
+      "dep": "IT-11"
     },
     {
       "id": "IT-3f",
@@ -604,10 +614,38 @@ const D = {
         },
         {
           "s": "faire",
-          "it": "IT-10",
-          "t": "Intentions : créateur dans l'éditeur de mondes",
-          "d": "Même trou et même couche que les tons : l'intention est un catalogue du monde sans outil pour la créer. Reprend le patron de l'onglet Tons.",
-          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+          "it": "IT-11",
+          "t": "Le modèle du monde : décors, intentions, scènes",
+          "d": "Un « lieu » est aujourd'hui une scène entière, et l'intention porte niveau et format. Le monde se range en décors, intentions sans niveau, scènes et tons ; la branche adulte devient un catalogue de scènes.",
+          "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-11",
+          "t": "Le personnage reprend une scène du monde, et la copie quand il la modifie",
+          "d": "Remplace l'héritage vivant d'ADR-0015 : le cadre d'une scène liée ne se modifie pas pour un seul personnage.",
+          "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-11",
+          "t": "Le fragment d'intention vient de la scène",
+          "d": "Il dépend aujourd'hui du filtre cliqué dans Produire : depuis « Toutes », une scène perd le fragment de son intention. Une scène sans intention n'est pas exportée.",
+          "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-11",
+          "t": "Éditeur de mondes : décors, intentions, scènes",
+          "d": "Seuls les lieux et les tons ont un onglet ; un monde neuf n'a aucun moyen de recevoir une intention sans ouvrir un JSON.",
+          "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
+        },
+        {
+          "s": "faire",
+          "it": "IT-11",
+          "t": "Banque, composeur et Produire parlent le nouveau modèle",
+          "d": "La Banque dit d'où vient une scène, le composeur choisit intention et décor, Produire filtre par intention et laisse la bande de la scène décider du niveau.",
+          "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
         },
         {
           "s": "faire",
@@ -1573,6 +1611,11 @@ const D = {
       "e": "tranche",
       "t": "Les ancres d'identité se tiennent par construction",
       "d": "Décidé le 26/09 à l'œil de Pierre. Le champ du transfert de mouvement interdit à la mâchoire, aux pommettes, aux sourcils et aux iris de changer de forme ; plus rien n'est refusé au nom de l'identité, le score après expression devient une information. Les mesures sur 106 points suivent l'apparence, pas la géométrie."
+    },
+    {
+      "e": "tranche",
+      "t": "Un monde livre des lieux, des intentions et des scènes",
+      "d": "Décidé le 26/09 (ADR-0027). Un lieu est un décor ; une intention, ce qu'on veut montrer, à tous les niveaux et sans format ; une scène, une intention dans un décor. Le personnage produit les scènes du monde et copie celle qu'il modifie. Le NSFW est un niveau : sa branche reste séparée pour la livraison, sans intention adulte. Supersède ADR-0015."
     }
   ],
   "horizon": {
@@ -1665,6 +1708,14 @@ const D = {
       {
         "t": "La Revue nomme le défaut, pas seulement son axe",
         "d": "(23 septembre 2026) Relevé par Pierre en finissant la passe de revue du cran natif. Trois axes à trois valeurs ne disent pas assez : un « anatomie ko » recouvre un buste étroit, une épaule fondue dans les cheveux, une poitrine asymétrique et deux mains fusionnées. Conséquence mesurée le jour même : aucune mesure ne peut se valider contre une étiquette qui mélange quatre défauts. Demande un cadrage avant tout code."
+      },
+      {
+        "t": "Outil de cadrage : selfie, plan resserré, plan large",
+        "d": "26/09. Le selfie est une manière de montrer, pas une intention (ADR-0027) : il revient à un outil qui agit sur la scène. Le composeur n'a aucune section de cadrage. Attend la fin d'IT-11 ; d'ici là, le cadrage reste écrit dans le texte des scènes."
+      },
+      {
+        "t": "Choisir les scènes du monde à la création du personnage",
+        "d": "26/09. Un personnage reprend toutes les scènes de son monde (ADR-0027) ; à sa création, l'utilisateur choisira celles qu'il garde. Attend IT-11, qui pose la scène du monde."
       }
     ]
   },
