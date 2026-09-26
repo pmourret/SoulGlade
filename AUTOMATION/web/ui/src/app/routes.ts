@@ -25,6 +25,9 @@ export const PATHS = {
   bankPoses: '/bank/poses',
   poseEditor: '/bank/poses/edit',
   bankTones: '/bank/tones',
+  /** The asset library (IT-10 chantier 5): what one brings INTO the studio,
+      next to the poses one extracts and the tones one adjusts. */
+  bankAssets: '/bank/assets',
   expressionEditor: '/bank/tones/edit',
   /** The Lightroom-style layered editor (design-pass screen-photo-editor,
       §7b) — reached from the simplified modal's "Éditeur avancé →" link.

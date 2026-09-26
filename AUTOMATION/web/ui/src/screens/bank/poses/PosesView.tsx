@@ -29,7 +29,7 @@ import { useOverlayPanel } from '../../produce/useOverlayPanel'
 import { PoseInspector } from './PoseInspector'
 import { PoseTable } from './PoseTable'
 import { usePoseBank, type ProvenanceFilter, type UsageFilter } from './usePoseBank'
-import { usePoseDrop } from './usePoseDrop'
+import { useFileDrop } from '../useFileDrop'
 
 type ExtractResponse = ActionLike & { name?: string }
 
@@ -167,7 +167,7 @@ export function PosesView({ nav }: { nav: ReactNode }) {
     }
   }
 
-  const drop = usePoseDrop({ enabled: canExtract, extract, onRefused: toast })
+  const drop = useFileDrop({ enabled: canExtract, extract, onRefused: toast })
 
   const resetFilters = () => {
     setSearch('')

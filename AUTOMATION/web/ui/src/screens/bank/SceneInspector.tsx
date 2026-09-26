@@ -24,6 +24,7 @@ import { useCallback, useEffect, useRef } from 'react'
 import type { Creative } from '../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../state/ScenesStoreContext'
 import type { WorldPlace } from '../worlds/useWorldCatalog'
+import type { LibraryPick } from './assets/libraryPicks'
 import { SceneComposer } from './composer/SceneComposer'
 import type { SceneField } from './sceneChanges'
 
@@ -51,6 +52,7 @@ export function SceneInspector({
   creative,
   poses,
   places,
+  library,
   produced,
   changed,
   narrow,
@@ -69,6 +71,8 @@ export function SceneInspector({
   poses: string[]
   /** The places of the character's world, for the composer's Lieu step. */
   places: WorldPlace[]
+  /** The imported assets the panels may pull from (IT-10 chantier 5). */
+  library: LibraryPick[]
   produced: number | null
   /** Draft fields differing from the saved scene (`sceneChanges`). */
   changed: Set<SceneField>
@@ -233,6 +237,7 @@ export function SceneInspector({
         creative={creative}
         poses={poses}
         places={places}
+        library={library}
         produced={produced}
         worldLinked={worldLinked}
         changed={changed}

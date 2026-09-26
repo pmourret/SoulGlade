@@ -30,6 +30,7 @@ import { useApi } from '../../../api/useApi'
 import type { Creative } from '../../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../worlds/useWorldCatalog'
+import type { LibraryPick } from '../assets/libraryPicks'
 import type { SceneField } from '../sceneChanges'
 import { SECTIONS, type SectionKey } from './sections'
 import { SectionRail } from './SectionRail'
@@ -47,6 +48,7 @@ export function SceneComposer({
   creative,
   poses,
   places,
+  library,
   produced,
   worldLinked,
   changed,
@@ -62,6 +64,9 @@ export function SceneComposer({
   creative: Creative | null
   poses: string[]
   places: WorldPlace[]
+  /** Imported assets, already reduced to what a panel shows. Each panel
+      takes the ones whose fragment lands in the field it edits. */
+  library: LibraryPick[]
   produced: number | null
   /* A scene bound to a world place (ADR-0015): its frame — décor, lumière and
      the pose prose — is re-derived server-side on every save, so those three
@@ -195,7 +200,12 @@ export function SceneComposer({
                   />
                 )}
                 {section.key === 'clothing' && (
-                  <ClothingPanel draft={draft} changed={changed} onPatch={onPatch} />
+                  <ClothingPanel
+                    draft={draft}
+                    library={library.filter((pick) => pick.champ === 'wardrobe')}
+                    changed={changed}
+                    onPatch={onPatch}
+                  />
                 )}
                 {section.key === 'pose' && (
                   <PosePanel
@@ -211,6 +221,7 @@ export function SceneComposer({
                   <RecapPanel
                     draft={draft}
                     places={places}
+                    library={library.filter((pick) => pick.champ === 'prompt')}
                     worldLinked={worldLinked}
                     lockedNote={lockedNote}
                     changed={changed}

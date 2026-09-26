@@ -17,6 +17,7 @@
 import { useToast } from '../../../../chrome/ToastContext'
 import type { SceneDraft } from '../../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../../worlds/useWorldCatalog'
+import type { LibraryPick } from '../../assets/libraryPicks'
 import type { SceneField } from '../../sceneChanges'
 import { PromptField } from '../PromptField'
 import { FRAGMENT_COLORS, decorOf, sceneFragments } from '../sceneFragments'
@@ -26,6 +27,7 @@ import { HEAD } from './shared'
 export function RecapPanel({
   draft,
   places,
+  library,
   worldLinked,
   lockedNote,
   changed,
@@ -35,6 +37,8 @@ export function RecapPanel({
   draft: SceneDraft
   /** The places of the character's world (IT-11 chantier 5). */
   places: WorldPlace[]
+  /** Imported assets whose fragment lands in `prompt` (IT-10 chantier 5). */
+  library: LibraryPick[]
   worldLinked: boolean
   lockedNote: string
   changed: Set<SceneField>
@@ -87,6 +91,37 @@ export function RecapPanel({
                 onChange={(value) => onPatch({ promptBase: value })}
               />
             </div>
+            {/* Les décors importés (IT-10 chantier 5). Le fragment REMPLIT un
+                champ vide et s'AJOUTE en fin de texte sinon : il n'écrase
+                jamais ce qui est écrit — le précédent du texte de pose, qui ne
+                remplit « En mots » que s'il est vide. */}
+            {!worldLinked && library.length > 0 && (
+              <div className="mt-[8px] flex items-center gap-[8px]">
+                <label className="lab flex-none" htmlFor="decorFromLibrary">
+                  Depuis la bibliothèque
+                </label>
+                <select
+                  id="decorFromLibrary"
+                  className="!w-auto"
+                  value=""
+                  onChange={(event) => {
+                    const pick = library.find((p) => p.key === event.target.value)
+                    if (!pick?.fragment) return
+                    const current = draft.promptBase.trim()
+                    onPatch({ promptBase: current ? `${current}, ${pick.fragment}` : pick.fragment })
+                    toast(current ? `« ${pick.label} » ajouté à la fin` : `« ${pick.label} » repris`)
+                  }}
+                >
+                  <option value="">choisir un décor…</option>
+                  {library.map((pick) => (
+                    <option key={pick.key} value={pick.key} disabled={!pick.fragment}>
+                      {pick.label}
+                      {pick.fragment ? '' : ' — sans fragment'}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <p className="tiny mt-[6px] mb-0">
               ne décris jamais le visage : le verrou d'identité le porte
             </p>

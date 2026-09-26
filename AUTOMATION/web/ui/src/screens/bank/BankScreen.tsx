@@ -42,6 +42,9 @@ import { useTaxonomy } from '../../state/TaxonomyContext'
 import { PATHS } from '../../app/routes'
 import { useOverlayPanel } from '../produce/useOverlayPanel'
 import { ToneWorkshop } from '../expression-editor/ToneWorkshop'
+import { AssetsView } from './assets/AssetsView'
+import { libraryPicks } from './assets/libraryPicks'
+import { useAssetLibrary } from './assets/useAssetLibrary'
 import { PosesView } from './poses/PosesView'
 import { SceneListPanel, type ScenePreview } from './SceneList'
 import { DocumentPane, SceneInspector } from './SceneInspector'
@@ -64,7 +67,7 @@ const RETURN_TO_WORLD_CONFIRM = {
   button: 'Revenir au monde',
 }
 
-export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
+export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'assets' }) {
   const api = useApi()
   const toast = useToast()
   const confirm = useConfirm()
@@ -120,6 +123,16 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
   // preview shows (IT-11 chantier 5): a scene stores the key, never the text.
   const worldPlaces = useWorldCatalog<WorldPlace>(world?.id ?? null, 'places')
   const places = worldPlaces.entries ?? []
+  /* La bibliotheque d'assets (IT-10 chantier 5) : le composeur y puise, chaque
+     panneau prenant ce qui atterrit dans le champ qu'il edite. Construite ici
+     parce que `src` demande un appelant lie au personnage — un panneau n'en a
+     pas, et n'en veut pas (frontend.md). */
+  const { assets, classes: assetClasses } = useAssetLibrary()
+  const library = useMemo(
+    () => libraryPicks(assets, assetClasses,
+                       (key) => api.url(`/img/asset?key=${encodeURIComponent(key)}`)),
+    [assets, assetClasses, api],
+  )
   // « Proposer… » (IT-11 chantier 6): the scene composer, redefined
   const [proposeOpen, setProposeOpen] = useState(false)
   const proposer = useSceneProposals()
@@ -197,8 +210,19 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
       <SubViewLink to={PATHS.bankScenes} label="Scènes" active={view === 'scenes'} vue="scenes" />
       <SubViewLink to={PATHS.bankPoses} label="Poses" active={view === 'poses'} vue="poses" />
       <SubViewLink to={PATHS.bankTones} label="Tons" active={view === 'tones'} vue="tones" />
+      <SubViewLink to={PATHS.bankAssets} label="Assets" active={view === 'assets'} vue="assets" />
     </nav>
   )
+
+  /* Assets builds its own bar around the nav, same as Poses: its controls
+     (class of the import, owner, file) belong to that view's state. */
+  if (view === 'assets') {
+    return (
+      <div className="screen flex h-full flex-col" id="scenes">
+        <AssetsView nav={subViewNav} />
+      </div>
+    )
+  }
 
   if (view === 'poses') {
     return (
@@ -466,6 +490,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' }) {
                 creative={creative}
                 poses={poses}
                 places={places}
+                library={library}
                 produced={stats[bench.selected.base.id]?.n ?? null}
                 changed={changed}
                 narrow={narrow}
@@ -544,4 +569,7 @@ export function BankPosesScreen() {
 }
 export function BankTonesScreen() {
   return <BankScreen view="tones" />
+}
+export function BankAssetsScreen() {
+  return <BankScreen view="assets" />
 }

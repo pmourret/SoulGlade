@@ -1,4 +1,10 @@
-/* Drag-and-drop of a photo onto the pose table (design-pass screen-7d §S4).
+/* Drag-and-drop of ONE image file onto a bank view — the pose table
+   (design-pass screen-7d §S4), the asset library since IT-10 chantier 5.
+
+   SHARED BY TWO SUB-VIEWS AND OWNED BY NEITHER, so it lives here rather than
+   in one of them (frontend.md). Nothing in it was pose-specific: only the
+   drag state and the type filter, both the same for a photo to extract and
+   for an asset to import.
 
    IT SENDS NOTHING ITSELF. The whole point of the section is « on appelle LA
    MÊME fonction extract() que le bouton » — a second upload path would be a
@@ -14,12 +20,14 @@ import { useCallback, useRef, useState } from 'react'
 
 const ACCEPTED = ['image/png', 'image/jpeg', 'image/webp']
 
-export function usePoseDrop({
+export function useFileDrop({
   enabled, extract, onRefused,
 }: {
   /** False while an extraction runs or ComfyUI is offline — the overlay then
       still SHOWS (it explains why), but a drop does nothing. */
   enabled: boolean
+  /** What the button next to the drop zone calls too — never a second
+      upload path (that is the whole point of the section). */
   extract: (file: File) => void | Promise<void>
   onRefused: (message: string) => void
 }) {

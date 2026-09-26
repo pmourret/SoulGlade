@@ -25,6 +25,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import { useToast } from '../../../../chrome/ToastContext'
+import type { LibraryPick } from '../../assets/libraryPicks'
 import { bandOf, textToWardrobe, type SceneDraft } from '../../../../state/ScenesStoreContext'
 import type { SceneField } from '../../sceneChanges'
 import { InfoHint } from '../InfoHint'
@@ -38,12 +39,33 @@ import { HEAD, warnIf } from './shared'
 
 const linesOf = (text: string) => text.split('\n').filter((line) => line.trim() !== '')
 
+/* La catégorie des assets importés (IT-10 chantier 5). Ils remplissent la
+   vignette que ce catalogue réservait — « place réservée au jour où le
+   catalogue sera illustré » — sans remplacer les puces statiques : une
+   bibliothèque vide laisserait sinon le panneau nu. Le chantier 6
+   (gestionnaire de vêtements) tranchera ce qui reste des deux. */
+const LIBRARY = 'Bibliothèque'
+
+type CatalogItem = {
+  /** Clé de rendu, jamais affichée. */
+  id: string
+  /** Le texte ajouté au niveau. Vide = asset sans fragment : montré, et non
+      proposé (le modèle vision était muet à l'import). */
+  piece: string
+  label: string
+  category: string
+  src?: string
+}
+
 export function ClothingPanel({
   draft,
+  library,
   changed,
   onPatch,
 }: {
   draft: SceneDraft
+  /** Les assets importés dont le fragment atterrit dans `wardrobe`. */
+  library: LibraryPick[]
   /* `wardrobe` est UN champ du modèle, présenté en plusieurs contrôles : la
      bordure `--warn` marque la liste du niveau, pas une ligne. */
   changed: Set<SceneField>
@@ -86,11 +108,25 @@ export function ClothingPanel({
     })
   }
 
-  const items = WARDROBE_CATALOG.filter((c) => !category || c.category === category).flatMap((c) =>
-    c.items.map((item) => ({ item, category: c.category })),
-  )
-  const shown = search.trim()
-    ? items.filter(({ item }) => item.toLowerCase().includes(search.trim().toLowerCase()))
+  const items: CatalogItem[] = [
+    ...(category && category !== LIBRARY
+      ? []
+      : library.map((pick) => ({
+          id: `asset-${pick.key}`,
+          piece: pick.fragment,
+          label: pick.label,
+          category: LIBRARY,
+          src: pick.src,
+        }))),
+    ...WARDROBE_CATALOG.filter((c) => !category || c.category === category).flatMap((c) =>
+      c.items.map((item) => ({ id: item, piece: item, label: item, category: c.category })),
+    ),
+  ]
+  /* La recherche porte sur le LIBELLÉ et sur le fragment : un asset s'appelle
+     « Robe rouge » et son fragment est en anglais. */
+  const needle = search.trim().toLowerCase()
+  const shown = needle
+    ? items.filter((entry) => `${entry.label} ${entry.piece}`.toLowerCase().includes(needle))
     : items
 
   return (
@@ -184,6 +220,13 @@ export function ClothingPanel({
           />
           <div className="flex flex-wrap gap-[5px]" role="group" aria-label="Catégories de vêtement">
             <CategoryChip on={!category} label="tout" onClick={() => setCategory('')} />
+            {library.length > 0 && (
+              <CategoryChip
+                on={category === LIBRARY}
+                label="bibliothèque"
+                onClick={() => setCategory(category === LIBRARY ? '' : LIBRARY)}
+              />
+            )}
             {WARDROBE_CATALOG.map(({ category: name }) => (
               <CategoryChip
                 key={name}
@@ -199,30 +242,51 @@ export function ClothingPanel({
               en une colonne et donnait des carrés de 200 px). */}
           <div className="grid max-h-[420px] grid-cols-[repeat(auto-fill,minmax(78px,1fr))]
                           gap-[6px] overflow-y-auto">
-            {shown.map(({ item }) => (
+            {shown.map((entry) => (
               <button
-                key={item}
+                key={entry.id}
                 type="button"
-                title={item}
-                aria-label={`Ajouter « ${item} » au niveau ${active}`}
-                data-piece={item}
+                title={entry.piece || entry.label}
+                disabled={!entry.piece}
+                aria-label={
+                  entry.piece
+                    ? `Ajouter « ${entry.label} » au niveau ${active}`
+                    : `« ${entry.label} » n'a pas encore de fragment : l'analyser dans la bibliothèque`
+                }
+                data-piece={entry.piece}
                 className="flex cursor-pointer flex-col gap-[4px] rounded-card border border-line2
                            bg-transparent p-[5px] text-left hover:border-dim2 focus-visible:outline-2
-                           focus-visible:outline-focus focus-visible:outline-offset-2"
-                onClick={() => add(item)}
+                           focus-visible:outline-focus focus-visible:outline-offset-2
+                           disabled:cursor-not-allowed disabled:opacity-60"
+                onClick={() => add(entry.piece)}
               >
-                {/* Place réservée à la vignette du jour où le catalogue sera
-                    illustré : hachurée, donc visiblement en attente, plutôt
-                    qu'un carré vide qu'on prendrait pour une image manquante. */}
-                <span
-                  aria-hidden="true"
-                  className="block aspect-square w-full rounded-[5px] border border-line2"
-                  style={{
-                    background:
-                      'repeating-linear-gradient(45deg,var(--panel2),var(--panel2) 4px,var(--panel) 4px,var(--panel) 8px)',
-                  }}
-                />
-                <span className="line-clamp-2 text-[10.5px] leading-tight text-dim">{item}</span>
+                {entry.src ? (
+                  <img
+                    className="block aspect-square w-full rounded-[5px] border border-line2 object-cover"
+                    src={entry.src}
+                    alt=""
+                    loading="lazy"
+                  />
+                ) : (
+                  /* Place réservée à la vignette : hachurée, donc visiblement
+                     en attente, plutôt qu'un carré vide qu'on prendrait pour
+                     une image manquante. Un asset importé, lui, a la sienne. */
+                  <span
+                    aria-hidden="true"
+                    className="block aspect-square w-full rounded-[5px] border border-line2"
+                    style={{
+                      background:
+                        'repeating-linear-gradient(45deg,var(--panel2),var(--panel2) 4px,var(--panel) 4px,var(--panel) 8px)',
+                    }}
+                  />
+                )}
+                <span className="line-clamp-2 text-[10.5px] leading-tight text-dim">{entry.label}</span>
+                {/* POURQUOI elle ne se clique pas, visible sans survol : à
+                    0,6 d'opacité (mesuré) une vignette dit « indisponible »,
+                    jamais « son fragment n'a pas encore été lu ». */}
+                {!entry.piece && (
+                  <span className="text-[9.5px] leading-tight text-warn-txt">sans fragment</span>
+                )}
               </button>
             ))}
             {shown.length === 0 && (

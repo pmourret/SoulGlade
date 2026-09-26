@@ -142,7 +142,8 @@ async function allerA(page, categorie, module) {
   dire(await vu('#bankScenes'), 'la sous-vue Scenes est montee');
   dire(!(await vu('#bankPoses')), 'la sous-vue Poses ne l est pas — une route, pas un attribut');
   const onglets = await page.$$eval('#bankView [data-vue]', e => e.map(x => x.dataset.vue));
-  dire(onglets.join(',') === 'scenes,poses,tones', 'les trois sous-vues sont offertes');
+  // Quatre depuis IT-10 chantier 5 : la bibliotheque d'assets a rejoint les trois.
+  dire(onglets.join(',') === 'scenes,poses,tones,assets', 'les quatre sous-vues sont offertes');
   const allume = await page.$$eval('.tabs .cat.on', e => e.map(x => x.dataset.s));
   dire(allume.join(',') === 'atelier', "la categorie Atelier est allumee");
   const mod = await page.$$eval('.modbar .mod.on', e => e.map(x => x.dataset.m));

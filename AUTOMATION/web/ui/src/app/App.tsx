@@ -25,7 +25,9 @@ import { ServerLogProvider } from '../state/ServerLogContext'
 import { TaxonomyProvider } from '../state/TaxonomyContext'
 import { ConfigProvider } from '../state/ConfigContext'
 import { LightboxProvider } from '../chrome/LightboxContext'
-import { BankPosesScreen, BankScenesScreen, BankTonesScreen } from '../screens/bank/BankScreen'
+import {
+  BankAssetsScreen, BankPosesScreen, BankScenesScreen, BankTonesScreen,
+} from '../screens/bank/BankScreen'
 import { PhotoEditorAdvancedScreen } from '../screens/photo-editor-advanced/PhotoEditorAdvancedScreen'
 import { PoseEditorScreen } from '../screens/pose-editor/PoseEditorScreen'
 import { TrainingScreen } from '../screens/training/TrainingScreen'
@@ -86,6 +88,7 @@ export function App() {
                   <Route path={PATHS.bankScenes} element={<BankScenesScreen />} />
                   <Route path={PATHS.bankPoses} element={<BankPosesScreen />} />
                   <Route path={PATHS.bankTones} element={<BankTonesScreen />} />
+                  <Route path={PATHS.bankAssets} element={<BankAssetsScreen />} />
                   {/* :name? absent -> "new pose", starting from a chosen preset
                       (2026-09-02) — same list-then-editor shape as worlds/
                       places just below. */}
