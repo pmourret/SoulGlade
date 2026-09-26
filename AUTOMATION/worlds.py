@@ -109,8 +109,10 @@ def exists(wid):
 
 
 # Meme forme que `_CID_RE` de runner/prompt.py : un id de monde devient un nom
-# de fichier et une valeur d'URL, meme regle qu'un id de personnage.
-_WID_RE = re.compile(r"[a-z][a-z0-9_-]*$")
+# de fichier et une valeur d'URL, meme regle qu'un id de personnage. Les ids de
+# lieu et de scene suivent la meme regle (ecrits dans les banques de
+# personnage et les noms de fichier produits).
+ID_RE = re.compile(r"[a-z][a-z0-9_-]*$")
 
 
 def create_world(wid, label, pack, tone=""):
@@ -131,7 +133,7 @@ def create_world(wid, label, pack, tone=""):
     Leve avant toute ecriture : ValueError (id invalide, pack inconnu),
     FileExistsError (id deja pris). Rend le wid.
     """
-    if not _WID_RE.match(wid or ""):
+    if not ID_RE.match(wid or ""):
         raise ValueError(f"identifiant de monde invalide : {wid!r} — attendu un "
                          f"slug minuscule (^[a-z][a-z0-9_-]*$)")
     if exists(wid):
@@ -418,6 +420,14 @@ def _save_key(wid, cle, entries):
     data = _read_json(path)
     data[cle] = list(entries)
     _write(path, data)
+
+
+def save_places(wid, new_places):
+    _save_key(wid, CLE_PLACES, new_places)
+
+
+def save_intentions(wid, new_intentions):
+    _save_key(wid, "intentions", new_intentions)
 
 
 def save_scenes(wid, new_scenes):

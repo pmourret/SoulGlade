@@ -3720,6 +3720,220 @@
         }
       }
     },
+    "/api/worlds/{world_id}/places": {
+      "get": {
+        "summary": "Lieux (décors) d'un monde",
+        "operationId": "get_places_api_worlds__world_id__places_get",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldPlacesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Enregistrer les lieux d'un monde",
+        "description": "Replaces the world's WHOLE `places` list. A place a scene still uses\ncannot leave: the server says which scenes (ADR-0027).",
+        "operationId": "save_places_api_worlds__world_id__places_post",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveWorldPlacesRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Lieux refusés",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogRejected"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/worlds/{world_id}/intentions": {
+      "get": {
+        "summary": "Intentions d'un monde",
+        "operationId": "get_intentions_api_worlds__world_id__intentions_get",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorldIntentionsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Enregistrer les intentions d'un monde",
+        "description": "Replaces the world's WHOLE `intentions` list. An intention a scene\nstill carries cannot leave: the server says which scenes.",
+        "operationId": "save_intentions_api_worlds__world_id__intentions_post",
+        "parameters": [
+          {
+            "name": "world_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "World Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveWorldIntentionsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Intentions refusées",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogRejected"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/worlds/{world_id}/scenes": {
       "get": {
         "summary": "Scènes d'un monde",
@@ -7945,6 +8159,38 @@
         "title": "SaveTonesRequest",
         "description": "Shape checked in `services/worlds.validate_tones`, like scenes."
       },
+      "SaveWorldIntentionsRequest": {
+        "properties": {
+          "intentions": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Intentions"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SaveWorldIntentionsRequest",
+        "description": "Shape checked in `services/worlds.validate_intentions`."
+      },
+      "SaveWorldPlacesRequest": {
+        "properties": {
+          "places": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Places"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SaveWorldPlacesRequest",
+        "description": "Shape checked in `services/worlds.validate_places`."
+      },
       "SaveWorldScenesRequest": {
         "properties": {
           "scenes": {
@@ -9341,6 +9587,89 @@
         "title": "WorldBrief",
         "description": "`{id, label}` of a world, or null."
       },
+      "WorldIntention": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon",
+            "default": ""
+          },
+          "prompt_add": {
+            "type": "string",
+            "title": "Prompt Add",
+            "default": ""
+          },
+          "defaults": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WorldIntentionDefaults"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "WorldIntention",
+        "description": "One intention of a world: what one wants to show, at every level\n(ADR-0027 §3). At most one proposed tone."
+      },
+      "WorldIntentionDefaults": {
+        "properties": {
+          "tone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tone"
+          }
+        },
+        "type": "object",
+        "title": "WorldIntentionDefaults"
+      },
+      "WorldIntentionsResponse": {
+        "properties": {
+          "world": {
+            "type": "string",
+            "title": "World"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "intentions": {
+            "items": {
+              "$ref": "#/components/schemas/WorldIntention"
+            },
+            "type": "array",
+            "title": "Intentions"
+          }
+        },
+        "type": "object",
+        "required": [
+          "world",
+          "label",
+          "intentions"
+        ],
+        "title": "WorldIntentionsResponse"
+      },
       "WorldListResponse": {
         "properties": {
           "worlds": {
@@ -9372,6 +9701,57 @@
           "packs"
         ],
         "title": "WorldOptionsResponse"
+      },
+      "WorldPlace": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "prompt"
+        ],
+        "title": "WorldPlace",
+        "description": "One place of a world: a decor only (ADR-0027 §2)."
+      },
+      "WorldPlacesResponse": {
+        "properties": {
+          "world": {
+            "type": "string",
+            "title": "World"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "places": {
+            "items": {
+              "$ref": "#/components/schemas/WorldPlace"
+            },
+            "type": "array",
+            "title": "Places"
+          }
+        },
+        "type": "object",
+        "required": [
+          "world",
+          "label",
+          "places"
+        ],
+        "title": "WorldPlacesResponse"
       },
       "WorldScene": {
         "properties": {
@@ -9476,6 +9856,11 @@
           "places_count": {
             "type": "integer",
             "title": "Places Count",
+            "default": 0
+          },
+          "intentions_count": {
+            "type": "integer",
+            "title": "Intentions Count",
             "default": 0
           },
           "scenes_count": {

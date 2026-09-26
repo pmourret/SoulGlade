@@ -1,4 +1,5 @@
-"""Rules of the world catalog: what a save of `scenes` may contain.
+"""Rules of the world catalogs: what a save of `places`, `intentions` or
+`scenes` may contain.
 
 Reduced mirror of `services/bank.py`'s `validate_scene_bank` — a catalog has
 no previous-version comparison (no batch-erasure guard) because losing a
@@ -43,6 +44,9 @@ def validate_scenes(wid, data):
         where = pid or f"scène #{i + 1}"
         if not pid:
             problems.append(f"{where} : « id » manquant")
+        elif not worlds.ID_RE.match(pid):
+            problems.append(f"{where} : l'identifiant ne prend que des minuscules, "
+                            f"chiffres, « - » et « _ », et commence par une lettre")
         elif pid in seen:
             problems.append(f"{where} : identifiant en double")
         seen.add(pid)
@@ -63,6 +67,99 @@ def validate_scenes(wid, data):
                             f"n'habille pas ses scènes, ces réglages "
                             f"appartiennent au personnage (ADR-0014)")
     return problems
+
+
+def _used_by(wid, field):
+    """Scenes of the world (ordinary and adult) by the value of `field`."""
+    out = {}
+    for s in worlds.scenes(wid) + worlds.scenes_adulte(wid):
+        if s.get(field):
+            out.setdefault(s[field], []).append(s.get("id", "?"))
+    return out
+
+
+def _still_used(wid, field, kept, noun):
+    """A place or an intention a scene uses cannot leave the world: the scene
+    would lose its decor (`materialize` raises) or refuse its next save
+    (`validate_scenes`). The server says which scenes, the screen shows it."""
+    return [f"{noun} « {key} » sert encore aux scènes {', '.join(sorted(ids))} : "
+            f"change-les d'abord"
+            for key, ids in _used_by(wid, field).items() if key not in kept]
+
+
+def validate_places(wid, data):
+    """Returns the list of a places (decors) payload's problems. Empty = good.
+
+    A place is a decor only (ADR-0027 §2): id, label, the decor text. It never
+    carries an intention, an action or a character setting."""
+    if not isinstance(data, list):
+        return ["« places » doit être une liste"]
+    problems, seen = [], set()
+    for i, p in enumerate(data):
+        if not isinstance(p, dict):
+            problems.append(f"lieu #{i + 1} : ce n'est pas un objet")
+            continue
+        pid = str(p.get("id") or "").strip()
+        where = pid or f"lieu #{i + 1}"
+        if not pid:
+            problems.append(f"{where} : « id » manquant")
+        elif not worlds.ID_RE.match(pid):
+            problems.append(f"{where} : l'identifiant ne prend que des minuscules, "
+                            f"chiffres, « - » et « _ », et commence par une lettre")
+        elif pid in seen:
+            problems.append(f"{where} : identifiant en double")
+        seen.add(pid)
+        if not str(p.get("prompt") or "").strip():
+            problems.append(f"{where} : le décor est vide")
+        intrus = [k for k in worlds.PLACE_FORBIDDEN_KEYS if k in p]
+        if intrus:
+            problems.append(f"{where} : {', '.join(intrus)} — un lieu est un décor, "
+                            f"il ne porte ni intention ni réglage de personnage")
+    return problems + _still_used(wid, "place", seen, "lieu")
+
+
+_INTENTION_FIELDS = {"key", "label", "icon", "prompt_add", "defaults"}
+
+
+def validate_intentions(wid, data):
+    """Returns the list of an intentions payload's problems. Empty = good.
+
+    An intention is what one wants to show, at every level (ADR-0027 §3): no
+    level, no format. Its key is written into scenes, the base and an export
+    folder, so it is a stable slug, like a tone's."""
+    if not isinstance(data, list):
+        return ["« intentions » doit être une liste"]
+    tones = {t.get("key") for t in worlds.tones(wid)}
+    problems, seen = [], set()
+    for i, it in enumerate(data):
+        if not isinstance(it, dict):
+            problems.append(f"intention #{i + 1} : ce n'est pas un objet")
+            continue
+        key = it.get("key")
+        where = key if isinstance(key, str) and key else f"intention #{i + 1}"
+        if not isinstance(key, str) or not key:
+            problems.append(f"{where} : « key » manquante")
+        elif not _TONE_KEY_RE.match(key):
+            problems.append(f"{where} : la clé ne prend que des minuscules, "
+                            f"chiffres et « _ »")
+        elif key in seen:
+            problems.append(f"{where} : clé en double")
+        seen.add(key)
+        for field in ("label", "icon", "prompt_add"):
+            if field in it and not isinstance(it[field], str):
+                problems.append(f"{where} : « {field} » doit être un texte")
+        unknown = [k for k in it if k not in _INTENTION_FIELDS and not k.startswith("_")]
+        if unknown:
+            problems.append(f"{where} : champ(s) inconnu(s) {', '.join(unknown)} — une "
+                            f"intention ne porte ni niveau ni format")
+        defaults = it.get("defaults")
+        if defaults is not None:
+            if not isinstance(defaults, dict) or set(defaults) - {"tone"}:
+                problems.append(f"{where} : « defaults » ne porte que le ton proposé")
+            elif defaults.get("tone") and defaults["tone"] not in tones:
+                problems.append(f"{where} : ton inconnu dans ce monde : "
+                                f"{defaults['tone']!r}")
+    return problems + _still_used(wid, "intention", seen, "intention")
 
 
 _TONE_KEY_RE = re.compile(r"^[a-z0-9_]+$")

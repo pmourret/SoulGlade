@@ -1608,6 +1608,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/worlds/{world_id}/places": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lieux (décors) d'un monde */
+        get: operations["get_places_api_worlds__world_id__places_get"];
+        put?: never;
+        /**
+         * Enregistrer les lieux d'un monde
+         * @description Replaces the world's WHOLE `places` list. A place a scene still uses
+         *     cannot leave: the server says which scenes (ADR-0027).
+         */
+        post: operations["save_places_api_worlds__world_id__places_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/worlds/{world_id}/intentions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Intentions d'un monde */
+        get: operations["get_intentions_api_worlds__world_id__intentions_get"];
+        put?: never;
+        /**
+         * Enregistrer les intentions d'un monde
+         * @description Replaces the world's WHOLE `intentions` list. An intention a scene
+         *     still carries cannot leave: the server says which scenes.
+         */
+        post: operations["save_intentions_api_worlds__world_id__intentions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/worlds/{world_id}/scenes": {
         parameters: {
             query?: never;
@@ -3684,6 +3728,30 @@ export interface components {
             [key: string]: unknown;
         };
         /**
+         * SaveWorldIntentionsRequest
+         * @description Shape checked in `services/worlds.validate_intentions`.
+         */
+        SaveWorldIntentionsRequest: {
+            /** Intentions */
+            intentions?: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * SaveWorldPlacesRequest
+         * @description Shape checked in `services/worlds.validate_places`.
+         */
+        SaveWorldPlacesRequest: {
+            /** Places */
+            places?: {
+                [key: string]: unknown;
+            }[];
+        } & {
+            [key: string]: unknown;
+        };
+        /**
          * SaveWorldScenesRequest
          * @description The business shape (unique ids, non-empty prompt, no character-only
          *     key) is validated in `services/worlds.py`, not here — same reasoning as
@@ -4305,6 +4373,47 @@ export interface components {
             /** Label */
             label: string;
         };
+        /**
+         * WorldIntention
+         * @description One intention of a world: what one wants to show, at every level
+         *     (ADR-0027 §3). At most one proposed tone.
+         */
+        WorldIntention: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Icon
+             * @default
+             */
+            icon: string;
+            /**
+             * Prompt Add
+             * @default
+             */
+            prompt_add: string;
+            defaults?: components["schemas"]["WorldIntentionDefaults"] | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** WorldIntentionDefaults */
+        WorldIntentionDefaults: {
+            /** Tone */
+            tone?: string | null;
+        };
+        /** WorldIntentionsResponse */
+        WorldIntentionsResponse: {
+            /** World */
+            world: string;
+            /** Label */
+            label: string;
+            /** Intentions */
+            intentions: components["schemas"]["WorldIntention"][];
+        };
         /** WorldListResponse */
         WorldListResponse: {
             /** Worlds */
@@ -4314,6 +4423,32 @@ export interface components {
         WorldOptionsResponse: {
             /** Packs */
             packs: components["schemas"]["PackOption"][];
+        };
+        /**
+         * WorldPlace
+         * @description One place of a world: a decor only (ADR-0027 §2).
+         */
+        WorldPlace: {
+            /** Id */
+            id: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /** Prompt */
+            prompt: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** WorldPlacesResponse */
+        WorldPlacesResponse: {
+            /** World */
+            world: string;
+            /** Label */
+            label: string;
+            /** Places */
+            places: components["schemas"]["WorldPlace"][];
         };
         /**
          * WorldScene
@@ -4376,6 +4511,11 @@ export interface components {
              * @default 0
              */
             places_count: number;
+            /**
+             * Intentions Count
+             * @default 0
+             */
+            intentions_count: number;
             /**
              * Scenes Count
              * @default 0
@@ -7238,6 +7378,174 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+        };
+    };
+    get_places_api_worlds__world_id__places_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldPlacesResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_places_api_worlds__world_id__places_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveWorldPlacesRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Lieux refusés */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogRejected"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_intentions_api_worlds__world_id__intentions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorldIntentionsResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_intentions_api_worlds__world_id__intentions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                world_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SaveWorldIntentionsRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActionResponse"];
+                };
+            };
+            /** @description Intentions refusées */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CatalogRejected"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

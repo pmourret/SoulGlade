@@ -2,7 +2,9 @@
 
     /api/worlds                     GET the registry, POST to create one (ADR-0016)
     /api/worlds/options              packs available to derive a new world from
-    /api/worlds/{world_id}/scenes   GET the scenes, POST to save them (ADR-0027)
+    /api/worlds/{world_id}/places       GET the places (decors), POST to save them
+    /api/worlds/{world_id}/intentions   GET the intentions, POST to save them
+    /api/worlds/{world_id}/scenes       GET the scenes, POST to save them (ADR-0027)
     /api/worlds/{world_id}/tones    GET the tones, POST to save them (25/09)
 
 These routes touch ONLY `WORLDS/<world_id>.json` files. They are a world
@@ -22,10 +24,14 @@ import worlds
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
 from ..schemas.worlds import (
     CatalogRejected, CreateWorldRequest, CreateWorldResponse, PackOption,
-    SaveTonesRequest, SaveWorldScenesRequest, TonesResponse,
-    WorldListResponse, WorldOptionsResponse, WorldScenesResponse, WorldSummary,
+    SaveTonesRequest, SaveWorldIntentionsRequest, SaveWorldPlacesRequest,
+    SaveWorldScenesRequest, TonesResponse, WorldIntentionsResponse,
+    WorldListResponse, WorldOptionsResponse, WorldPlacesResponse,
+    WorldScenesResponse, WorldSummary,
 )
-from ..services.worlds import validate_scenes, validate_tones
+from ..services.worlds import (
+    validate_intentions, validate_places, validate_scenes, validate_tones,
+)
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -43,6 +49,7 @@ async def get_world_registry():
                     "compatible_families": w.get("compatible_families", []),
                     "tone": w.get("tone", ""),
                     "places_count": len(w.get("places", [])),
+                    "intentions_count": len(w.get("intentions", [])),
                     "scenes_count": len(w.get("scenes", [])),
                     "tones_count": len(w.get("tones", []))})
     return {"worlds": out}
@@ -75,6 +82,61 @@ async def create_world(payload: CreateWorldRequest):
         ss.bad_request(str(e))
     ss.push_log(f"monde cree : {wid!r} (pack {payload.pack!r})")
     return {"ok": True, "id": wid}
+
+
+def _refused(world_id, what, problems):
+    ss.push_log(f"WORLDS/{world_id}.json {what} REFUSE — {problems[0]}")
+    return JSONResponse({"ok": False, "erreur": problems[0],
+                         "problemes": problems}, status_code=400)
+
+
+@router.get("/api/worlds/{world_id}/places", response_model=WorldPlacesResponse,
+            response_model_exclude_none=True, summary="Lieux (décors) d'un monde")
+async def get_places(world_id: str):
+    w = worlds.load_world(world_id)             # UnknownWorldError -> 400
+    return {"world": world_id, "label": w.get("label", world_id),
+            "places": worlds.places(world_id)}
+
+
+@router.post("/api/worlds/{world_id}/places", response_model=ActionResponse,
+             response_model_exclude_unset=True,
+             responses={400: {"model": CatalogRejected, "description": "Lieux refusés"}},
+             summary="Enregistrer les lieux d'un monde")
+async def save_places(world_id: str, payload: SaveWorldPlacesRequest):
+    """Replaces the world's WHOLE `places` list. A place a scene still uses
+    cannot leave: the server says which scenes (ADR-0027)."""
+    worlds.load_world(world_id)
+    problems = validate_places(world_id, payload.places)
+    if problems:
+        return _refused(world_id, "places", problems)
+    worlds.save_places(world_id, payload.places)
+    ss.push_log(f"WORLDS/{world_id}.json : lieux enregistrés ({len(payload.places)})")
+    return {"ok": True}
+
+
+@router.get("/api/worlds/{world_id}/intentions", response_model=WorldIntentionsResponse,
+            response_model_exclude_none=True, summary="Intentions d'un monde")
+async def get_intentions(world_id: str):
+    w = worlds.load_world(world_id)
+    return {"world": world_id, "label": w.get("label", world_id),
+            "intentions": worlds.intentions(world_id)}
+
+
+@router.post("/api/worlds/{world_id}/intentions", response_model=ActionResponse,
+             response_model_exclude_unset=True,
+             responses={400: {"model": CatalogRejected, "description": "Intentions refusées"}},
+             summary="Enregistrer les intentions d'un monde")
+async def save_intentions(world_id: str, payload: SaveWorldIntentionsRequest):
+    """Replaces the world's WHOLE `intentions` list. An intention a scene
+    still carries cannot leave: the server says which scenes."""
+    worlds.load_world(world_id)
+    problems = validate_intentions(world_id, payload.intentions)
+    if problems:
+        return _refused(world_id, "intentions", problems)
+    worlds.save_intentions(world_id, payload.intentions)
+    ss.push_log(f"WORLDS/{world_id}.json : intentions enregistrées "
+                f"({len(payload.intentions)})")
+    return {"ok": True}
 
 
 @router.get("/api/worlds/{world_id}/scenes", response_model=WorldScenesResponse,

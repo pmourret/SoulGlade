@@ -9,6 +9,57 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class WorldPlace(BaseModel):
+    """One place of a world: a decor only (ADR-0027 §2)."""
+    model_config = ConfigDict(extra="allow")
+
+    id: str
+    label: str = ""
+    prompt: str
+
+
+class WorldPlacesResponse(BaseModel):
+    world: str
+    label: str
+    places: list[WorldPlace]
+
+
+class SaveWorldPlacesRequest(BaseModel):
+    """Shape checked in `services/worlds.validate_places`."""
+    model_config = ConfigDict(extra="allow")
+
+    places: list[dict[str, Any]] = Field(default_factory=list)
+
+
+class WorldIntentionDefaults(BaseModel):
+    tone: Optional[str] = None
+
+
+class WorldIntention(BaseModel):
+    """One intention of a world: what one wants to show, at every level
+    (ADR-0027 §3). At most one proposed tone."""
+    model_config = ConfigDict(extra="allow")
+
+    key: str
+    label: str = ""
+    icon: str = ""
+    prompt_add: str = ""
+    defaults: Optional[WorldIntentionDefaults] = None
+
+
+class WorldIntentionsResponse(BaseModel):
+    world: str
+    label: str
+    intentions: list[WorldIntention]
+
+
+class SaveWorldIntentionsRequest(BaseModel):
+    """Shape checked in `services/worlds.validate_intentions`."""
+    model_config = ConfigDict(extra="allow")
+
+    intentions: list[dict[str, Any]] = Field(default_factory=list)
+
+
 class WorldScene(BaseModel):
     """One scene of a world (ADR-0027 §4): an intention in a place (`place`,
     a décor id), with what happens there (`prompt`) and at most the bottom of
@@ -84,6 +135,7 @@ class WorldSummary(BaseModel):
     compatible_families: list[str] = Field(default_factory=list)
     tone: str = ""
     places_count: int = 0
+    intentions_count: int = 0
     scenes_count: int = 0
     tones_count: int = 0
 
