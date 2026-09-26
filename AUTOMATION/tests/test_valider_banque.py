@@ -70,8 +70,9 @@ if pbs:
         print("        " + p)
 
 print("\n[2] forme : ce qui casserait la production plus tard")
-for cle in ("prefix", "anchor", "texture"):
-    verifie(any(cle in p for p in bank.validate_scene_bank(sans(cle))),
+# l'ancre se refuse en francais, par l'ecran ou on la decrit (3b0353b)
+for cle, mot in (("prefix", "prefix"), ("anchor", "ancre d'identité"), ("texture", "texture")):
+    verifie(any(mot in p for p in bank.validate_scene_bank(sans(cle))),
             f"champ racine « {cle} » manquant : refuse")
 # IT-10 chantier 3 : la liste est celle du personnage, jamais une liste en dur
 verifie(any("absent des formats" in p

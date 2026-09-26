@@ -60,6 +60,7 @@ def img_b64(fmt, size=(64, 64), data_url=False):
 
 
 _vrai_in = base_portrait.COMFY_INPUT
+_vrai_verif = base_portrait.verifier_enrolement
 _vrai_out = base_portrait.COMFY_OUTPUT
 TMP = Path(tempfile.mkdtemp(prefix="base_portrait_test_"))
 TMP_OUT = Path(tempfile.mkdtemp(prefix="base_portrait_out_"))
@@ -68,6 +69,9 @@ base_portrait.COMFY_OUTPUT = TMP_OUT
 try:
     # ------------------------------------------------------- [1] vraies images
     print("[1] une vraie image atterrit sous un nom stable")
+    # [1] verifie le NOMMAGE : un aplat n'a pas de visage, et l'enrolement
+    # (60dafb1, 10/09) le refuse -- c'est [1bis] qui le verifie.
+    base_portrait.verifier_enrolement = lambda chemin: None
     n = base_portrait.save_uploaded("wiztest", img_b64("PNG"))
     verifie(n == "WIZTEST_BASE.png", f"PNG -> {n}")
     verifie((TMP / n).is_file() and (TMP / n).stat().st_size > 0,
@@ -82,6 +86,13 @@ try:
     verifie(base_portrait.save_uploaded("wiztest", img_b64("PNG", size=(8, 8)))
             == "WIZTEST_BASE.png",
             "re-upload du meme cid : ecrase sans broncher")
+    base_portrait.verifier_enrolement = _vrai_verif
+
+    print("\n[1bis] une image sans visage est refusee, et rien ne reste (60dafb1)")
+    attend(lambda: base_portrait.save_uploaded("sansvisage", img_b64("PNG")),
+           "aplat sans visage")
+    verifie(not (TMP / "SANSVISAGE_BASE.png").exists(),
+            "le fichier refuse est efface")
 
     # ------------------------------------------------------- [2] refus propres
     print("\n[2] tout le reste sort en BaseImageError, rien n'est ecrit")
@@ -137,6 +148,8 @@ try:
 
     # ------------------------------- [4] freeze / apercu : chemin borne a output/
     print("\n[4] freeze() et l'apercu ne sortent jamais de output/")
+    # [4] verifie le BORNAGE du chemin ; l'enrolement est celui de [1bis]
+    base_portrait.verifier_enrolement = lambda chemin: None
     cand_dir = TMP_OUT / "OFM" / "PROD" / "_BASE" / "wiznew"
     cand_dir.mkdir(parents=True)
     Image.new("RGB", (32, 32), (10, 20, 30)).save(cand_dir / "777_00001_.png")
@@ -152,6 +165,7 @@ try:
     attend(lambda: base_portrait.candidate_bytes("../../secret.png"),
            "apercu refuse un chemin hors output/")
 finally:
+    base_portrait.verifier_enrolement = _vrai_verif
     base_portrait.COMFY_INPUT = _vrai_in
     base_portrait.COMFY_OUTPUT = _vrai_out
     shutil.rmtree(TMP, ignore_errors=True)
