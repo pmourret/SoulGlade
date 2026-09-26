@@ -1168,6 +1168,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/lighting": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vocabulaire de la lumière (plateforme)
+         * @description Settings, effects, palette and starting schemes — the same for every
+         *     character, so no `character` parameter.
+         */
+        get: operations["get_lighting_api_lighting_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/lights": {
         parameters: {
             query?: never;
@@ -3525,6 +3546,7 @@ export interface components {
              * @default
              */
             text: string;
+            setup?: components["schemas"]["LightSetup"] | null;
             /**
              * Au Monde
              * @default false
@@ -3543,6 +3565,20 @@ export interface components {
             ok: boolean;
             /** Couche */
             couche: string;
+        };
+        /**
+         * LightEffectChoice
+         * @description An effect a sheet carries. `color` is a palette key or the user's own
+         *     words, used where the effect's fragment says `{color}`.
+         */
+        LightEffectChoice: {
+            /** Key */
+            key: string;
+            /**
+             * Color
+             * @default
+             */
+            color: string;
         };
         /**
          * LightEntry
@@ -3564,6 +3600,7 @@ export interface components {
              * @default
              */
             text: string;
+            setup?: components["schemas"]["LightSetup"] | null;
             /**
              * Couche
              * @default personnage
@@ -3600,8 +3637,9 @@ export interface components {
         };
         /**
          * LightSaveRequest
-         * @description Label and/or text. Omitted field = untouched, so adjusting one of the
-         *     two never freezes a copy of the other.
+         * @description Label, text and/or sheet. Omitted field = untouched, so adjusting one
+         *     never freezes a copy of the others. An empty `text` goes back to the
+         *     sheet.
          */
         LightSaveRequest: {
             /**
@@ -3613,6 +3651,7 @@ export interface components {
             label?: string | null;
             /** Text */
             text?: string | null;
+            setup?: components["schemas"]["LightSetup"] | null;
             /**
              * Au Monde
              * @default false
@@ -3620,6 +3659,112 @@ export interface components {
             au_monde: boolean;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * LightSetup
+         * @description The studio sheet of a light. An unset setting drops out of the
+         *     sentence.
+         */
+        LightSetup: {
+            /** Source */
+            source?: string | null;
+            /** Direction */
+            direction?: string | null;
+            /** Quality */
+            quality?: string | null;
+            /** Temperature */
+            temperature?: string | null;
+            /** Mood */
+            mood?: string | null;
+            /**
+             * Effects
+             * @default []
+             */
+            effects: components["schemas"]["LightEffectChoice"][];
+        };
+        /** LightingColor */
+        LightingColor: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Fragment */
+            fragment: string;
+            /** Swatch */
+            swatch: string;
+        };
+        /** LightingEffect */
+        LightingEffect: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Term
+             * @default
+             */
+            term: string;
+            /** Fragment */
+            fragment: string;
+        };
+        /**
+         * LightingOption
+         * @description One value of a setting: its plain name, the trade's term, its
+         *     fragment. `angle` places a direction on the top-view diagram.
+         */
+        LightingOption: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Term
+             * @default
+             */
+            term: string;
+            /** Fragment */
+            fragment: string;
+            /** Angle */
+            angle?: number | null;
+        };
+        /**
+         * LightingScheme
+         * @description A starting point: it fills the sheet, which the user then adjusts.
+         */
+        LightingScheme: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /**
+             * Term
+             * @default
+             */
+            term: string;
+            setup: components["schemas"]["LightSetup"];
+        };
+        /** LightingSetting */
+        LightingSetting: {
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Options */
+            options: components["schemas"]["LightingOption"][];
+        };
+        /**
+         * LightingVocabulary
+         * @description PLATFORM/lighting.json, the same for everyone.
+         */
+        LightingVocabulary: {
+            /** Settings */
+            settings: components["schemas"]["LightingSetting"][];
+            /** Palette */
+            palette: components["schemas"]["LightingColor"][];
+            /** Effects */
+            effects: components["schemas"]["LightingEffect"][];
+            /** Schemes */
+            schemes: components["schemas"]["LightingScheme"][];
         };
         /** LightsResponse */
         LightsResponse: {
@@ -7484,6 +7629,35 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_lighting_api_lighting_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LightingVocabulary"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
         };

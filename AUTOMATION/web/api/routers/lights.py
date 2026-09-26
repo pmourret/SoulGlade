@@ -1,9 +1,10 @@
 """Light catalogue — a scene lighting reused from one scene to the next
 (IT-10 chantier 7).
 
+    GET  /api/lighting        the platform vocabulary a studio sheet is made of
     GET  /api/lights          this character's lights, layered and resolved
     POST /api/lights/create   a new light, character or world side
-    POST /api/lights/save     its label and/or text
+    POST /api/lights/save     its label, text and/or sheet
     POST /api/lights/delete   drops the light, or only this character's tweak
 
 A scene wears a light through its `light` field or a variant line
@@ -21,7 +22,7 @@ import shared_state as ss
 from ..dependencies import RequiredCharacterId
 from ..schemas.common import ERROR_RESPONSES
 from ..schemas.lights import (
-    LightCreateRequest, LightDeleteResponse, LightKeyRequest,
+    LightCreateRequest, LightDeleteResponse, LightingVocabulary, LightKeyRequest,
     LightResponse, LightSaveRequest, LightsResponse,
 )
 
@@ -30,6 +31,18 @@ router = APIRouter(responses=ERROR_RESPONSES)
 
 def _refus(message, status=400):
     return JSONResponse({"ok": False, "erreur": message}, status_code=status)
+
+
+def _setup(model):
+    return model.model_dump(exclude_none=True) if model is not None else None
+
+
+@router.get("/api/lighting", response_model=LightingVocabulary,
+            summary="Vocabulaire de la lumière (plateforme)")
+async def get_lighting():
+    """Settings, effects, palette and starting schemes — the same for every
+    character, so no `character` parameter."""
+    return lights.vocabulary()
 
 
 @router.get("/api/lights", response_model=LightsResponse,
@@ -44,7 +57,7 @@ async def get_lights(character_id: RequiredCharacterId):
 async def create_light(payload: LightCreateRequest, character_id: RequiredCharacterId):
     try:
         entry = lights.create(character_id, payload.label, payload.text,
-                              to_world=payload.au_monde)
+                              to_world=payload.au_monde, setup=_setup(payload.setup))
     except lights.LightError as e:
         return _refus(str(e))
     ss.push_log(f"lumière créée : {entry['key']} ({entry['couche']})")
@@ -61,6 +74,8 @@ async def save_light(payload: LightSaveRequest, character_id: RequiredCharacterI
         fields["label"] = payload.label
     if payload.text is not None:
         fields["text"] = payload.text
+    if payload.setup is not None:
+        fields["setup"] = _setup(payload.setup)
     if not fields:
         return _refus("rien à enregistrer")
     try:

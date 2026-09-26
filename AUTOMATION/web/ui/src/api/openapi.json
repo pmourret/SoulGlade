@@ -2845,6 +2845,35 @@
         }
       }
     },
+    "/api/lighting": {
+      "get": {
+        "summary": "Vocabulaire de la lumière (plateforme)",
+        "description": "Settings, effects, palette and starting schemes — the same for every\ncharacter, so no `character` parameter.",
+        "operationId": "get_lighting_api_lighting_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LightingVocabulary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/lights": {
       "get": {
         "summary": "Lumières de ce personnage",
@@ -8115,6 +8144,16 @@
             "title": "Text",
             "default": ""
           },
+          "setup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LightSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "au_monde": {
             "type": "boolean",
             "title": "Au Monde",
@@ -8144,6 +8183,25 @@
         "title": "LightDeleteResponse",
         "description": "`couche` is what was actually removed: `surcharge` means only this\ncharacter's tweak went, and the world's light came back."
       },
+      "LightEffectChoice": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "color": {
+            "type": "string",
+            "title": "Color",
+            "default": ""
+          }
+        },
+        "type": "object",
+        "required": [
+          "key"
+        ],
+        "title": "LightEffectChoice",
+        "description": "An effect a sheet carries. `color` is a palette key or the user's own\nwords, used where the effect's fragment says `{color}`."
+      },
       "LightEntry": {
         "properties": {
           "key": {
@@ -8159,6 +8217,16 @@
             "type": "string",
             "title": "Text",
             "default": ""
+          },
+          "setup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LightSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "couche": {
             "type": "string",
@@ -8242,6 +8310,16 @@
             ],
             "title": "Text"
           },
+          "setup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LightSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "au_monde": {
             "type": "boolean",
             "title": "Au Monde",
@@ -8251,7 +8329,268 @@
         "additionalProperties": true,
         "type": "object",
         "title": "LightSaveRequest",
-        "description": "Label and/or text. Omitted field = untouched, so adjusting one of the\ntwo never freezes a copy of the other."
+        "description": "Label, text and/or sheet. Omitted field = untouched, so adjusting one\nnever freezes a copy of the others. An empty `text` goes back to the\nsheet."
+      },
+      "LightSetup": {
+        "properties": {
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "direction": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Direction"
+          },
+          "quality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quality"
+          },
+          "temperature": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Temperature"
+          },
+          "mood": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mood"
+          },
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/LightEffectChoice"
+            },
+            "type": "array",
+            "title": "Effects",
+            "default": []
+          }
+        },
+        "type": "object",
+        "title": "LightSetup",
+        "description": "The studio sheet of a light. An unset setting drops out of the\nsentence."
+      },
+      "LightingColor": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "fragment": {
+            "type": "string",
+            "title": "Fragment"
+          },
+          "swatch": {
+            "type": "string",
+            "title": "Swatch"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "fragment",
+          "swatch"
+        ],
+        "title": "LightingColor"
+      },
+      "LightingEffect": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term",
+            "default": ""
+          },
+          "fragment": {
+            "type": "string",
+            "title": "Fragment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "fragment"
+        ],
+        "title": "LightingEffect"
+      },
+      "LightingOption": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term",
+            "default": ""
+          },
+          "fragment": {
+            "type": "string",
+            "title": "Fragment"
+          },
+          "angle": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Angle"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "fragment"
+        ],
+        "title": "LightingOption",
+        "description": "One value of a setting: its plain name, the trade's term, its\nfragment. `angle` places a direction on the top-view diagram."
+      },
+      "LightingScheme": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "term": {
+            "type": "string",
+            "title": "Term",
+            "default": ""
+          },
+          "setup": {
+            "$ref": "#/components/schemas/LightSetup"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "setup"
+        ],
+        "title": "LightingScheme",
+        "description": "A starting point: it fills the sheet, which the user then adjusts."
+      },
+      "LightingSetting": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/LightingOption"
+            },
+            "type": "array",
+            "title": "Options"
+          }
+        },
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "options"
+        ],
+        "title": "LightingSetting"
+      },
+      "LightingVocabulary": {
+        "properties": {
+          "settings": {
+            "items": {
+              "$ref": "#/components/schemas/LightingSetting"
+            },
+            "type": "array",
+            "title": "Settings"
+          },
+          "palette": {
+            "items": {
+              "$ref": "#/components/schemas/LightingColor"
+            },
+            "type": "array",
+            "title": "Palette"
+          },
+          "effects": {
+            "items": {
+              "$ref": "#/components/schemas/LightingEffect"
+            },
+            "type": "array",
+            "title": "Effects"
+          },
+          "schemes": {
+            "items": {
+              "$ref": "#/components/schemas/LightingScheme"
+            },
+            "type": "array",
+            "title": "Schemes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "settings",
+          "palette",
+          "effects",
+          "schemes"
+        ],
+        "title": "LightingVocabulary",
+        "description": "PLATFORM/lighting.json, the same for everyone."
       },
       "LightsResponse": {
         "properties": {

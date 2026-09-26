@@ -1,0 +1,113 @@
+{
+  "settings": [
+    {
+      "key": "source",
+      "label": "Source",
+      "options": [
+        {"key": "window", "label": "Fenêtre", "term": "window light", "fragment": "window light"},
+        {"key": "sun", "label": "Soleil", "term": "direct sun", "fragment": "sunlight"},
+        {"key": "lamp", "label": "Lampe", "term": "practical", "fragment": "lamplight"},
+        {"key": "studio", "label": "Flash de studio", "term": "strobe, softbox", "fragment": "studio strobe light"},
+        {"key": "neon", "label": "Néon", "term": "neon", "fragment": "neon light"},
+        {"key": "overcast", "label": "Ciel couvert", "term": "overcast", "fragment": "overcast daylight"},
+        {"key": "twilight", "label": "Crépuscule", "term": "blue hour", "fragment": "twilight skylight"}
+      ]
+    },
+    {
+      "key": "direction",
+      "label": "Direction",
+      "options": [
+        {"key": "front", "label": "Face", "term": "flat, papillon", "fragment": "from the front", "angle": 0},
+        {"key": "three_quarter", "label": "Trois-quarts", "term": "Rembrandt", "fragment": "from a three-quarter angle", "angle": 45},
+        {"key": "side", "label": "Côté", "term": "split", "fragment": "from the side", "angle": 90},
+        {"key": "back", "label": "Contre-jour", "term": "backlight", "fragment": "from behind the subject", "angle": 180},
+        {"key": "top", "label": "Dessus", "term": "top light", "fragment": "from directly above", "angle": null}
+      ]
+    },
+    {
+      "key": "quality",
+      "label": "Qualité",
+      "options": [
+        {"key": "soft", "label": "Douce", "term": "soft light, diffused", "fragment": "soft"},
+        {"key": "hard", "label": "Dure", "term": "hard light, crisp shadows", "fragment": "hard"}
+      ]
+    },
+    {
+      "key": "temperature",
+      "label": "Température",
+      "options": [
+        {"key": "warm", "label": "Chaude", "term": "3200 K", "fragment": "warm"},
+        {"key": "neutral", "label": "Neutre", "term": "5600 K", "fragment": "neutral white"},
+        {"key": "cool", "label": "Froide", "term": "7000 K", "fragment": "cool"}
+      ]
+    },
+    {
+      "key": "mood",
+      "label": "Ambiance",
+      "options": [
+        {"key": "high_key", "label": "Lumineuse", "term": "high-key", "fragment": "bright high-key lighting with minimal shadows"},
+        {"key": "balanced", "label": "Équilibrée", "term": "balanced", "fragment": "balanced contrast"},
+        {"key": "low_key", "label": "Contrastée", "term": "low-key", "fragment": "moody low-key lighting with deep shadows"}
+      ]
+    }
+  ],
+  "palette": [
+    {"key": "magenta", "label": "Magenta", "fragment": "magenta", "swatch": "#e0309a"},
+    {"key": "cyan", "label": "Cyan", "fragment": "cyan", "swatch": "#1fc8dc"},
+    {"key": "blue", "label": "Bleu", "fragment": "electric blue", "swatch": "#2f5bff"},
+    {"key": "red", "label": "Rouge", "fragment": "red", "swatch": "#e02a2a"},
+    {"key": "amber", "label": "Ambre", "fragment": "amber", "swatch": "#f0a020"},
+    {"key": "green", "label": "Vert", "fragment": "green", "swatch": "#2fbf5a"}
+  ],
+  "effects": [
+    {"key": "neon_reflections", "label": "Reflets néon", "term": "neon reflections", "fragment": "{color} neon reflections on glossy surfaces"},
+    {"key": "wet_floor", "label": "Reflets sur sol mouillé", "term": "wet ground reflections", "fragment": "wet ground reflecting {color} lights"},
+    {"key": "gel", "label": "Gélatine colorée", "term": "colored gel", "fragment": "{color} gel lighting"},
+    {"key": "rim", "label": "Liseré de contre-jour", "term": "rim light", "fragment": "a thin {color} rim light outlining the silhouette"},
+    {"key": "god_rays", "label": "Rayons dans la brume", "term": "god rays, volumetric", "fragment": "volumetric light rays through haze"},
+    {"key": "lens_flare", "label": "Lens flare", "term": "lens flare", "fragment": "subtle lens flare"},
+    {"key": "bokeh", "label": "Bokeh de lumières", "term": "bokeh", "fragment": "{color} bokeh of out-of-focus lights in the background"},
+    {"key": "blind_shadows", "label": "Ombre de store", "term": "gobo, venetian blinds", "fragment": "striped shadows cast by venetian blinds"},
+    {"key": "window_shadows", "label": "Ombre de fenêtre", "term": "gobo, window frame", "fragment": "the shadow of a window frame cast across the scene"}
+  ],
+  "schemes": [
+    {"key": "rembrandt", "label": "Rembrandt", "term": "Rembrandt lighting",
+     "setup": {"source": "studio", "direction": "three_quarter", "quality": "soft", "temperature": "neutral", "mood": "low_key", "effects": []}},
+    {"key": "butterfly", "label": "Papillon", "term": "butterfly lighting",
+     "setup": {"source": "studio", "direction": "front", "quality": "soft", "temperature": "neutral", "mood": "balanced", "effects": []}},
+    {"key": "split", "label": "Split", "term": "split lighting",
+     "setup": {"source": "studio", "direction": "side", "quality": "hard", "temperature": "neutral", "mood": "low_key", "effects": []}},
+    {"key": "backlight", "label": "Contre-jour", "term": "backlight",
+     "setup": {"source": "sun", "direction": "back", "quality": "soft", "temperature": "warm", "mood": "balanced", "effects": [{"key": "rim", "color": ""}]}},
+    {"key": "high_key", "label": "Lumineux", "term": "high-key",
+     "setup": {"source": "studio", "direction": "front", "quality": "soft", "temperature": "neutral", "mood": "high_key", "effects": []}},
+    {"key": "low_key", "label": "Sombre", "term": "low-key",
+     "setup": {"source": "lamp", "direction": "side", "quality": "hard", "temperature": "warm", "mood": "low_key", "effects": []}},
+    {"key": "golden_hour", "label": "Heure dorée", "term": "golden hour",
+     "setup": {"source": "sun", "direction": "three_quarter", "quality": "soft", "temperature": "warm", "mood": "balanced", "effects": [{"key": "lens_flare", "color": ""}]}},
+    {"key": "blue_hour", "label": "Heure bleue", "term": "blue hour",
+     "setup": {"source": "twilight", "direction": "front", "quality": "soft", "temperature": "cool", "mood": "low_key", "effects": [{"key": "bokeh", "color": "amber"}]}},
+    {"key": "window_light", "label": "Lumière de fenêtre", "term": "window light",
+     "setup": {"source": "window", "direction": "side", "quality": "soft", "temperature": "neutral", "mood": "balanced", "effects": []}},
+    {"key": "practical_lamp", "label": "Lampe dans le champ", "term": "practical light",
+     "setup": {"source": "lamp", "direction": "three_quarter", "quality": "soft", "temperature": "warm", "mood": "low_key", "effects": []}},
+    {"key": "cyberpunk", "label": "Néon cyberpunk", "term": "cyberpunk neon",
+     "setup": {"source": "neon", "direction": "side", "quality": "hard", "temperature": "cool", "mood": "low_key", "effects": [{"key": "neon_reflections", "color": "magenta"}, {"key": "wet_floor", "color": "cyan"}]}}
+  ],
+  "_notes": [
+    "Vocabulaire de la lumière, couche PLATEFORME (IT-10 chantier 7 bis,",
+    "DOCS/cadrage/2026-09-26-it10-c7bis-studio-lumiere.md). Le même pour tous,",
+    "jamais modifié par l'utilisateur : ses préréglages sont les lumières du",
+    "catalogue (monde, personnage), ses effets à lui le catalogue light_effects.",
+    "",
+    "`label` est le nom parlant, `term` le terme du métier, `fragment` ce qui",
+    "entre dans le prompt. La phrase se compose dans AUTOMATION/lights.py::compose",
+    "et, à l'identique, côté écran : « <qualité> <température> <source>",
+    "<direction>, <ambiance>, <effet>, <effet> ». `{color}` marque la place de la",
+    "couleur d'un effet, prise dans `palette` ou écrite librement.",
+    "",
+    "Aucun fragment ne décrit le visage (FORBIDDEN_FACE, runner/prompt.py) :",
+    "tests/test_lights.py le vérifie. `angle` place une direction sur le schéma",
+    "vu du dessus (0 = face à l'appareil, 180 = derrière le sujet, null = au-dessus)."
+  ]
+}

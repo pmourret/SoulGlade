@@ -256,6 +256,95 @@ try:
             and propres(CA) == [],
             f"POST /api/lights/delete retire une lumiere non portee ({r.status_code})")
 
+    # =========================================== [7] la fiche de studio (7 bis)
+    print("\n[7] la fiche de studio compose la phrase")
+    V = lights.vocabulary()
+    for reglage in V["settings"]:
+        for o in reglage["options"]:
+            phrase = lights.compose({reglage["key"]: o["key"]})
+            if not o["fragment"] in phrase:
+                verifie(False, f"{reglage['key']}={o['key']} absent de « {phrase} »")
+    verifie(True, "chaque valeur de chaque reglage entre dans la phrase")
+    verifie(lights.compose({"quality": "soft", "temperature": "warm", "source": "window",
+                            "direction": "side", "mood": "balanced"})
+            == "soft warm window light from the side, balanced contrast",
+            "tete « qualite temperature source direction », puis l'ambiance")
+    verifie(lights.compose({"direction": "back"}) == "light from behind the subject",
+            "sans source, la tete dit « light »")
+    cyber = next(s for s in V["schemes"] if s["key"] == "cyberpunk")["setup"]
+    verifie(lights.compose(cyber)
+            == "hard cool neon light from the side, moody low-key lighting with deep "
+               "shadows, magenta neon reflections on glossy surfaces, wet ground "
+               "reflecting cyan lights",
+            f"le schema « neon cyberpunk » compose sa phrase ({lights.compose(cyber)})")
+    verifie(lights.compose({"effects": [{"key": "gel", "color": "blue"}]})
+            == "electric blue gel lighting", "une couleur de la palette : son fragment")
+    verifie(lights.compose({"effects": [{"key": "gel", "color": " deep violet "}]})
+            == "deep violet gel lighting", "une couleur libre : les mots de l'utilisateur")
+    verifie(lights.compose({"effects": [{"key": "gel"}]}) == "gel lighting",
+            "sans couleur, l'effet se lit sans trou")
+    for s_ in V["schemes"]:
+        lights.compose(s_["setup"])
+    verifie(True, f"les {len(V['schemes'])} schemas de depart se composent")
+    for cas, fiche in (("source inconnue", {"source": "torche"}),
+                       ("effet inconnu", {"effects": [{"key": "laser"}]}),
+                       ("fiche qui n'est pas un objet", ["x"])):
+        try:
+            lights.compose(fiche)
+            verifie(False, f"{cas} : passe en silence")
+        except lights.LightError:
+            verifie(True, f"{cas} : refuse")
+    fragments = ([o["fragment"] for r_ in V["settings"] for o in r_["options"]]
+                 + [e["fragment"] for e in V["effects"]]
+                 + [c["fragment"] for c in V["palette"]])
+    visage = [f for f in fragments if lb.FORBIDDEN_FACE.search(f)]
+    verifie(not visage, f"aucun fragment ne decrit le visage ({visage})")
+
+    print("\n[8] une lumiere stocke sa fiche ; le texte ecrit a la main prime")
+    r = CLIENT.post(f"/api/lights/create?character={CA}",
+                    json={"label": "Néon", "setup": cyber})
+    corps = r.json()
+    verifie(r.status_code == 200 and "text" not in propres(CA)[-1]
+            and propres(CA)[-1]["setup"]["source"] == "neon"
+            and corps["light"]["texte"] == lights.compose(cyber),
+            f"creee depuis une fiche : pas de `text`, la phrase est composee ({r.status_code})")
+    r = CLIENT.post(f"/api/lights/save?character={CA}",
+                    json={"key": "neon", "text": "pink neon glow"})
+    verifie(r.json()["light"]["texte"] == "pink neon glow"
+            and propres(CA)[-1]["setup"]["source"] == "neon",
+            "le texte a la main prime, la fiche reste")
+    r = CLIENT.post(f"/api/lights/save?character={CA}", json={"key": "neon", "text": ""})
+    verifie(r.status_code == 200 and r.json()["light"]["texte"] == lights.compose(cyber),
+            "vider le texte rend la main a la fiche")
+    r = CLIENT.post(f"/api/lights/create?character={CA}",
+                    json={"label": "Faux", "setup": {"source": "torche"}})
+    verifie(r.status_code == 400, f"une fiche qui ne se compose pas est refusee ({r.status_code})")
+    ecrire_scenes(CA, [scene("s1", light="@neon")])
+    verifie(prompts(CA)[0].endswith(f"{lights.compose(cyber)}, film grain"),
+            "une scene qui porte la lumiere recoit la phrase composee")
+    # corriger un fragment de la plateforme corrige la lumiere, sans la rouvrir
+    import tempfile
+    vrai = lights.VOCABULARY_PATH
+    V2 = copy.deepcopy(V)
+    next(e for e in V2["effects"] if e["key"] == "wet_floor")["fragment"] = "{color} puddles"
+    tmp = Path(tempfile.mkdtemp()) / "lighting.json"
+    tmp.write_text(json.dumps(V2), encoding="utf-8")
+    lights.VOCABULARY_PATH = tmp
+    try:
+        verifie(prompts(CA)[0].endswith("magenta neon reflections on glossy surfaces, "
+                                        "cyan puddles, film grain"),
+                "corriger le fragment d'un effet corrige la lumiere qui le porte")
+    finally:
+        lights.VOCABULARY_PATH = vrai
+        shutil.rmtree(tmp.parent, ignore_errors=True)
+    ecrire_scenes(CA, [])
+    r = CLIENT.get("/api/lighting")
+    verifie(r.status_code == 200
+            and [s_["key"] for s_ in r.json()["settings"]]
+            == ["source", "direction", "quality", "temperature", "mood"]
+            and r.json()["schemes"] and r.json()["palette"] and "_notes" not in r.json(),
+            f"GET /api/lighting sert le vocabulaire ({r.status_code})")
+
 finally:
     for c in (CA, CA2, CB):
         shutil.rmtree(OFM / "CHARACTERS" / c, ignore_errors=True)
