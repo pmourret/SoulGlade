@@ -4,7 +4,8 @@
 **les deux publics**, le nom parlant et le terme du métier ; une variante
 **remplace** la lumière de base ; la phrase anglaise générée **se montre** ;
 les schémas de départ viennent de **la plateforme** ; les **effets et
-reflets** — néon, sol mouillé — font partie du sous-studio)
+reflets** — néon, sol mouillé — font partie du sous-studio ; une **couleur
+libre** en plus de la palette, et des **effets personnalisés** dès le début)
 
 Suite du chantier 7 (`2026-09-26-it10-c7-lumieres.md`), qui a livré le
 catalogue et le champ `light`. Ce qui change ici : la façon dont on **crée**
@@ -50,10 +51,10 @@ Deux publics, un même écran : celui qui ne connaît pas l'éclairage lit
   - **température** : chaude, neutre, froide ;
   - **ambiance** : lumineuse (high-key), équilibrée, contrastée (low-key) ;
   - **effets**, plusieurs à la fois, certains avec une couleur prise dans
-    une palette courte (magenta, cyan, bleu, rouge, ambre, vert) : reflets
-    néon, reflets sur sol mouillé, gélatine colorée, liseré de contre-jour,
-    rayons dans la brume, lens flare, bokeh de lumières, ombre projetée
-    (store, fenêtre).
+    une palette courte (magenta, cyan, bleu, rouge, ambre, vert) **ou écrite
+    librement** (« deep violet ») : reflets néon, reflets sur sol mouillé,
+    gélatine colorée, liseré de contre-jour, rayons dans la brume, lens
+    flare, bokeh de lumières, ombre projetée (store, fenêtre).
 - **La phrase anglaise se fabrique à partir de la fiche, et se montre**,
   sous la fiche, en entier. On peut la réécrire à la main ; la fiche le dit
   alors (« texte écrit à la main ») et ne l'écrase plus.
@@ -65,6 +66,20 @@ Deux publics, un même écran : celui qui ne connaît pas l'éclairage lit
   préremplit la fiche, qu'on ajuste ensuite. Aucune règle par personnage ni
   par monde (invariant 7) : un monde qui veut ses ambiances les met dans son
   catalogue, comme aujourd'hui.
+- **Ce que livre la plateforme, ce qu'enregistre l'utilisateur.** La
+  plateforme livre un jeu par défaut — réglages, effets, palette, schémas —
+  le même pour tous, que l'utilisateur ne modifie pas. L'utilisateur
+  enregistre ses **préréglages** : ce sont les lumières du catalogue du
+  chantier 7, chacune avec sa fiche entière, pour ce personnage ou pour
+  tout son monde. Un schéma ajusté puis enregistré devient un préréglage à
+  lui.
+- **Des effets personnalisés, dès le début.** Un effet que la plateforme ne
+  livre pas se crée dans l'atelier : un libellé français, un fragment
+  anglais, et s'il prend une couleur, l'endroit où elle se place
+  (`{color}`). Ils vivent dans un second catalogue à couches,
+  `light_effects`, monde et personnage, sur la mécanique de
+  `layered_catalog` : la fiche les propose à côté de ceux de la plateforme.
+  Un effet qu'une lumière porte ne se supprime pas.
 - **Une lumière stocke sa fiche, pas seulement son texte.** Son texte est
   recomposé au lancement depuis la fiche : corriger le fragment d'un effet
   dans la plateforme corrige toutes les lumières qui le portent. Une
@@ -84,25 +99,30 @@ Deux publics, un même écran : celui qui ne connaît pas l'éclairage lit
 1. **Plateforme** : `PLATFORM/lighting.json` (réglages, effets, palette,
    schémas) ; `lights.compose(setup)`, pure, et la résolution qui l'emploie.
    Route `GET /api/lighting` (le vocabulaire, pour l'écran).
+   Effets personnalisés : catalogue `light_effects` sur `layered_catalog`,
+   routes `/api/light-effects` (GET, create, save, delete).
 2. **Variante** : `build_jobs` remplace la lumière par la variante quand la
    scène porte `light`. Test à l'octet près : une banque sans `light` est
    inchangée ; une scène avec `light` et une variante donne la lumière de
    la variante à la place de la sienne.
 3. **Atelier** : l'inspecteur d'une lumière devient la fiche — schémas de
    départ, les cinq réglages, le schéma de direction, les effets avec leur
-   couleur, la phrase générée en dessous, « écrire à la main ». Le même
+   couleur (palette ou libre), la phrase générée en dessous, « écrire à la
+   main ». La création d'un effet personnalisé se fait depuis la fiche. Le même
    aperçu se calcule côté écran avec le vocabulaire servi par la route ; un
    test vérifie qu'il rend la même phrase que le serveur.
 4. **Onglet Lumière** : l'avertissement de lumière déjà écrite ; les
    variantes se disent « une autre lumière » quand la scène en porte une.
-5. **Tests** : composition (chaque réglage, effets, couleur), l'octet près,
-   variante qui remplace, texte à la main qui prime, isolation ; test
+5. **Tests** : composition (chaque réglage, effets, couleur de la palette
+   et libre, effet personnalisé), l'octet près, variante qui remplace, texte
+   à la main qui prime, effet porté qui ne se supprime pas, isolation ; test
    navigateur de la fiche ; audit `audit-ux-ui` vérifié en vrai.
 
 ## Hors périmètre
 
 - **L'essai de rendu d'une lumière** (le patron des Tons) : il faut
-  ComfyUI et un rendu par essai. À l'horizon.
+  ComfyUI et un rendu par essai. Proposé à Pierre le 26/09 comme dernière
+  étape du chantier ; non tranché à l'écriture de ce cadrage.
 - **Une phrase par famille de modèle** (Flux lit des phrases, SDXL des
   mots-clés) : une seule phrase naturelle pour commencer ; le pack pourra
   la reformuler si la mesure le demande.
