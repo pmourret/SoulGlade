@@ -18,41 +18,52 @@
    trois secondes et le toast porte son propre « Annuler », qui remet le
    niveau exactement dans l'état d'avant le clic.
 
+   UNE LIGNE EST UNE TENUE, JAMAIS UNE PIÈCE (IT-10 chantier 6). Deux lignes
+   au même niveau font deux images (`wardrobe_for`) : le catalogue ajoutait
+   chaque pièce cliquée comme une ligne, donc une image en pull sans bas et une
+   autre en jean sans haut. Une pièce COMPLÈTE maintenant la tenue écrite du
+   niveau (`addPiece`) ; une tenue du catalogue s'ajoute comme une ligne
+   `@<clé>`, que le lancement résout et que ce panneau montre par son libellé
+   et son texte, jamais par sa clé.
+
    `draft.wardrobe` reste le même texte plat « N: description » :
    `splitWardrobeByLevel` / `joinWardrobeByLevel` (wardrobeCatalog.ts) sont
    l'aller-retour, refait à chaque rendu plutôt que tenu en état — ce panneau
    ne peut donc pas dériver de la valeur qu'il édite. */
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 import { useToast } from '../../../../chrome/ToastContext'
+import { PATHS } from '../../../../app/routes'
 import type { LibraryPick } from '../../assets/libraryPicks'
+import { addPiece, lineView } from '../../outfits/outfitText'
+import type { OutfitEntry } from '../../outfits/useOutfits'
 import { bandOf, textToWardrobe, type SceneDraft } from '../../../../state/ScenesStoreContext'
 import type { SceneField } from '../../sceneChanges'
 import { InfoHint } from '../InfoHint'
-import {
-  joinWardrobeByLevel,
-  splitWardrobeByLevel,
-  WARDROBE_CATALOG,
-  WARDROBE_LEVELS,
-} from '../wardrobeCatalog'
+import { joinWardrobeByLevel, splitWardrobeByLevel, WARDROBE_LEVELS } from '../wardrobeCatalog'
 import { HEAD, warnIf } from './shared'
 
 const linesOf = (text: string) => text.split('\n').filter((line) => line.trim() !== '')
 
-/* La catégorie des assets importés (IT-10 chantier 5). Ils remplissent la
-   vignette que ce catalogue réservait — « place réservée au jour où le
-   catalogue sera illustré » — sans remplacer les puces statiques : une
-   bibliothèque vide laisserait sinon le panneau nu. Le chantier 6
-   (gestionnaire de vêtements) tranchera ce qui reste des deux. */
-const LIBRARY = 'Bibliothèque'
+/* Les deux catégories du catalogue, toutes deux venues du serveur : les
+   TENUES du personnage (une ligne de plus), et les PIÈCES de sa bibliothèque
+   d'assets (elles complètent la tenue écrite). Plus rien d'écrit en dur. */
+const OUTFITS = 'Tenues'
+const PIECES = 'Pièces'
 
 type CatalogItem = {
   /** Clé de rendu, jamais affichée. */
   id: string
-  /** Le texte ajouté au niveau. Vide = asset sans fragment : montré, et non
-      proposé (le modèle vision était muet à l'import). */
-  piece: string
+  kind: 'outfit' | 'piece'
+  /** Ce que le clic écrit : `@<clé>` pour une tenue, le fragment pour une
+      pièce. Vide = rien à écrire (asset sans fragment, tenue qui ne se
+      résout pas) : montré, et non proposé. */
+  value: string
   label: string
+  /** Le texte que la scène recevra, ou la raison pour laquelle il manque. */
+  text: string
+  problem: string
   category: string
   src?: string
 }
@@ -60,12 +71,18 @@ type CatalogItem = {
 export function ClothingPanel({
   draft,
   library,
+  outfits,
+  marker,
   changed,
   onPatch,
 }: {
   draft: SceneDraft
   /** Les assets importés dont le fragment atterrit dans `wardrobe`. */
   library: LibraryPick[]
+  /** Les tenues de ce personnage, résolues par le serveur. */
+  outfits: OutfitEntry[]
+  /** Ce qui marque une ligne de tenue (`@`), dit par le serveur. */
+  marker: string
   /* `wardrobe` est UN champ du modèle, présenté en plusieurs contrôles : la
      bordure `--warn` marque la liste du niveau, pas une ligne. */
   changed: Set<SceneField>
@@ -90,44 +107,67 @@ export function ClothingPanel({
   const writeLevel = (level: number, lines: string[]) =>
     onPatch({ wardrobe: joinWardrobeByLevel({ ...byLevel, [level]: lines.join('\n') }, extra) })
 
-  const add = (piece: string) => {
+  const add = (entry: CatalogItem) => {
     const before = byLevel[active]
-    writeLevel(active, [...linesOf(before), piece])
-    setFresh({ level: active, text: piece })
+    const lines = linesOf(before)
+    const next = entry.kind === 'outfit' ? [...lines, entry.value] : addPiece(lines, entry.value, marker)
+    const touched = next.find((line, index) => line !== lines[index]) ?? entry.value
+    writeLevel(active, next)
+    setFresh({ level: active, text: touched })
     if (timer.current) window.clearTimeout(timer.current)
     timer.current = window.setTimeout(() => setFresh(null), 3000)
-    toast(`Ajoutée au niveau ${active}`, {
-      label: 'Annuler',
-      /* Remet le niveau dans l'état exact d'avant le clic : c'est plus sûr
-         que « retirer la dernière ligne », qui se tromperait si une autre
-         pièce était ajoutée entre-temps. */
-      run: () => {
-        onPatch({ wardrobe: joinWardrobeByLevel({ ...byLevel, [active]: before }, extra) })
-        setFresh(null)
+    toast(
+      entry.kind === 'outfit'
+        ? `Tenue ajoutée au niveau ${active}`
+        : `Pièce ajoutée à la tenue du niveau ${active}`,
+      {
+        label: 'Annuler',
+        /* Remet le niveau dans l'état exact d'avant le clic : c'est plus sûr
+           que « retirer la dernière ligne », qui se tromperait si une autre
+           pièce était ajoutée entre-temps. */
+        run: () => {
+          onPatch({ wardrobe: joinWardrobeByLevel({ ...byLevel, [active]: before }, extra) })
+          setFresh(null)
+        },
       },
-    })
+    )
   }
 
+  const srcOf = new Map(library.map((pick) => [pick.key, pick.src]))
   const items: CatalogItem[] = [
-    ...(category && category !== LIBRARY
+    ...(category && category !== OUTFITS
+      ? []
+      : outfits.map((outfit) => ({
+          id: `outfit-${outfit.key}`,
+          kind: 'outfit' as const,
+          value: outfit.erreur ? '' : `${marker}${outfit.key}`,
+          label: outfit.label || outfit.key,
+          text: outfit.texte ?? '',
+          problem: outfit.erreur ?? '',
+          category: OUTFITS,
+          // la vignette d'une tenue : celle de sa première pièce illustrée
+          src: (outfit.pieces ?? []).map((p) => (p.asset ? srcOf.get(p.asset) : undefined)).find(Boolean),
+        }))),
+    ...(category && category !== PIECES
       ? []
       : library.map((pick) => ({
           id: `asset-${pick.key}`,
-          piece: pick.fragment,
+          kind: 'piece' as const,
+          value: pick.fragment,
           label: pick.label,
-          category: LIBRARY,
+          text: pick.fragment,
+          problem: pick.fragment ? '' : 'sans fragment',
+          category: PIECES,
           src: pick.src,
         }))),
-    ...WARDROBE_CATALOG.filter((c) => !category || c.category === category).flatMap((c) =>
-      c.items.map((item) => ({ id: item, piece: item, label: item, category: c.category })),
-    ),
   ]
   /* La recherche porte sur le LIBELLÉ et sur le fragment : un asset s'appelle
      « Robe rouge » et son fragment est en anglais. */
   const needle = search.trim().toLowerCase()
   const shown = needle
-    ? items.filter((entry) => `${entry.label} ${entry.piece}`.toLowerCase().includes(needle))
+    ? items.filter((entry) => `${entry.label} ${entry.text}`.toLowerCase().includes(needle))
     : items
+  const empty = outfits.length === 0 && library.length === 0
 
   return (
     <div className="flex flex-col gap-[14px]">
@@ -208,8 +248,23 @@ export function ClothingPanel({
         {/* Catalogue */}
         <div className="flex min-w-0 flex-col gap-[8px] rounded-[10px] border border-line bg-panel p-[10px]">
           <span className={HEAD}>Catalogue</span>
+          {empty ? (
+            /* Rien sur le serveur : l'état vide MÈNE à l'atelier plutôt que
+               de laisser un panneau nu. Le champ libre à droite reste là pour
+               écrire une tenue sans rien créer. */
+            <div className="flex flex-col gap-[8px] py-[10px] text-[12px] text-dim" id="wardrobeCatalogEmpty">
+              <p className="m-0">
+                Aucune tenue ni pièce pour ce personnage. Une tenue créée dans l'atelier se pose
+                ici en un clic, et la corriger là-bas corrige toutes les scènes qui la portent.
+              </p>
+              <Link className="btn sm self-start no-underline" to={PATHS.bankOutfits}>
+                Créer une tenue
+              </Link>
+            </div>
+          ) : (
+            <>
           <label className="sr-only" htmlFor="wardrobeSearch">
-            rechercher une pièce
+            rechercher une tenue ou une pièce
           </label>
           <input
             id="wardrobeSearch"
@@ -218,23 +273,22 @@ export function ClothingPanel({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-          <div className="flex flex-wrap gap-[5px]" role="group" aria-label="Catégories de vêtement">
+          <div className="flex flex-wrap gap-[5px]" role="group" aria-label="Catégories du catalogue">
             <CategoryChip on={!category} label="tout" onClick={() => setCategory('')} />
-            {library.length > 0 && (
+            {outfits.length > 0 && (
               <CategoryChip
-                on={category === LIBRARY}
-                label="bibliothèque"
-                onClick={() => setCategory(category === LIBRARY ? '' : LIBRARY)}
+                on={category === OUTFITS}
+                label="tenues"
+                onClick={() => setCategory(category === OUTFITS ? '' : OUTFITS)}
               />
             )}
-            {WARDROBE_CATALOG.map(({ category: name }) => (
+            {library.length > 0 && (
               <CategoryChip
-                key={name}
-                on={category === name}
-                label={name}
-                onClick={() => setCategory(category === name ? '' : name)}
+                on={category === PIECES}
+                label="pièces"
+                onClick={() => setCategory(category === PIECES ? '' : PIECES)}
               />
-            ))}
+            )}
           </div>
           {/* `auto-fill` plutôt qu'un nombre de colonnes fixe : la vignette
               garde sa taille quand le catalogue s'élargit, au lieu de gonfler
@@ -246,19 +300,24 @@ export function ClothingPanel({
               <button
                 key={entry.id}
                 type="button"
-                title={entry.piece || entry.label}
-                disabled={!entry.piece}
+                title={entry.problem || entry.text || entry.label}
+                disabled={!entry.value}
                 aria-label={
-                  entry.piece
-                    ? `Ajouter « ${entry.label} » au niveau ${active}`
-                    : `« ${entry.label} » n'a pas encore de fragment : l'analyser dans la bibliothèque`
+                  !entry.value
+                    ? entry.kind === 'outfit'
+                      ? `« ${entry.label} » ne se résout pas : ${entry.problem}`
+                      : `« ${entry.label} » n'a pas encore de fragment : l'analyser dans Assets`
+                    : entry.kind === 'outfit'
+                      ? `Ajouter la tenue « ${entry.label} » au niveau ${active}`
+                      : `Ajouter « ${entry.label} » à la tenue du niveau ${active}`
                 }
-                data-piece={entry.piece}
+                data-catalog-kind={entry.kind}
+                data-piece={entry.value}
                 className="flex cursor-pointer flex-col gap-[4px] rounded-card border border-line2
                            bg-transparent p-[5px] text-left hover:border-dim2 focus-visible:outline-2
                            focus-visible:outline-focus focus-visible:outline-offset-2
                            disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => add(entry.piece)}
+                onClick={() => add(entry)}
               >
                 {entry.src ? (
                   <img
@@ -268,33 +327,41 @@ export function ClothingPanel({
                     loading="lazy"
                   />
                 ) : (
-                  /* Place réservée à la vignette : hachurée, donc visiblement
-                     en attente, plutôt qu'un carré vide qu'on prendrait pour
-                     une image manquante. Un asset importé, lui, a la sienne. */
+                  /* Une tenue sans pièce illustrée : sa vignette est son
+                     texte, en petit — c'est ce qui la distingue d'une autre. */
                   <span
                     aria-hidden="true"
-                    className="block aspect-square w-full rounded-[5px] border border-line2"
-                    style={{
-                      background:
-                        'repeating-linear-gradient(45deg,var(--panel2),var(--panel2) 4px,var(--panel) 4px,var(--panel) 8px)',
-                    }}
-                  />
+                    className="block aspect-square w-full overflow-hidden rounded-[5px] border border-line2
+                               bg-panel2 p-[4px] font-code text-[9px] leading-tight text-dim2"
+                  >
+                    {entry.text}
+                  </span>
                 )}
-                <span className="line-clamp-2 text-[10.5px] leading-tight text-dim">{entry.label}</span>
+                <span className="line-clamp-2 text-[10.5px] leading-tight text-dim">
+                  {entry.kind === 'outfit' && <b className="font-semibold text-txt">tenue · </b>}
+                  {entry.label}
+                </span>
                 {/* POURQUOI elle ne se clique pas, visible sans survol : à
                     0,6 d'opacité (mesuré) une vignette dit « indisponible »,
                     jamais « son fragment n'a pas encore été lu ». */}
-                {!entry.piece && (
-                  <span className="text-[9.5px] leading-tight text-warn-txt">sans fragment</span>
+                {entry.problem && (
+                  <span className="text-[9.5px] leading-tight text-warn-txt">
+                    {entry.kind === 'outfit' ? 'ne se résout pas' : entry.problem}
+                  </span>
                 )}
               </button>
             ))}
             {shown.length === 0 && (
               <p className="col-span-full m-0 py-[14px] text-center text-[12px] text-dim2">
-                aucune pièce ne porte « {search} »
+                rien ne porte « {search} »
               </p>
             )}
           </div>
+          <p className="m-0 text-[11px] text-dim2">
+            Une tenue ajoute une ligne ; une pièce complète la tenue écrite du niveau.
+          </p>
+            </>
+          )}
         </div>
 
         {/* Niveau actif */}
@@ -337,6 +404,7 @@ export function ClothingPanel({
           >
             {linesOf(byLevel[active]).map((line, index) => {
               const isFresh = fresh?.level === active && fresh.text === line
+              const view = lineView(line, outfits, marker)
               return (
                 <div
                   key={index}
@@ -344,26 +412,48 @@ export function ClothingPanel({
                     isFresh ? 'border border-warn bg-warn-bg' : ''
                   }`}
                 >
-                  <label className="sr-only" htmlFor={`piece-${active}-${index}`}>
-                    pièce {index + 1} du niveau {active}
-                  </label>
-                  <input
-                    id={`piece-${active}-${index}`}
-                    className="flex-1"
-                    value={line}
-                    onChange={(e) => {
-                      const next = linesOf(byLevel[active])
-                      next[index] = e.target.value
-                      writeLevel(active, next)
-                    }}
-                  />
+                  {view.reference ? (
+                    /* Une tenue du catalogue : son libellé et le texte que la
+                       scène recevra, jamais `@clé`. Elle ne s'édite pas ici —
+                       la corriger se fait dans l'atelier, pour toutes les
+                       scènes qui la portent. */
+                    <span className="min-w-0 flex-1 text-[12.5px]" data-outfit-line={line}>
+                      <span className="flex items-center gap-[6px]">
+                        <b className="font-medium">{view.label}</b>
+                        <Link className="text-[11px] text-dim2" to={PATHS.bankOutfits}>
+                          tenue · modifier dans l'atelier
+                        </Link>
+                      </span>
+                      <span
+                        className={`block font-code text-[11.5px] ${view.problem ? 'text-warn-txt' : 'text-dim'}`}
+                      >
+                        {view.problem || `wearing ${view.text}`}
+                      </span>
+                    </span>
+                  ) : (
+                    <>
+                      <label className="sr-only" htmlFor={`piece-${active}-${index}`}>
+                        tenue {index + 1} du niveau {active}
+                      </label>
+                      <input
+                        id={`piece-${active}-${index}`}
+                        className="flex-1"
+                        value={line}
+                        onChange={(e) => {
+                          const next = linesOf(byLevel[active])
+                          next[index] = e.target.value
+                          writeLevel(active, next)
+                        }}
+                      />
+                    </>
+                  )}
                   {isFresh && <span className="flex-none text-[11px] text-warn-txt">ajoutée</span>}
                   <button
                     type="button"
                     className="cursor-pointer rounded-[6px] border-0 bg-transparent px-[6px] text-[15px]
                                leading-none text-dim2 hover:text-bad focus-visible:outline-2
                                focus-visible:outline-focus focus-visible:outline-offset-2"
-                    aria-label={`Retirer « ${line} » du niveau ${active}`}
+                    aria-label={`Retirer « ${view.label} » du niveau ${active}`}
                     onClick={() => writeLevel(active, linesOf(byLevel[active]).filter((_, i) => i !== index))}
                   >
                     ×
@@ -389,7 +479,7 @@ export function ClothingPanel({
                   <span className={HEAD}>niveau {level}</span>
                   <span className="mt-[3px] block text-[12px] text-dim">
                     {lines.length ? (
-                      lines.join(' · ')
+                      lines.map((line) => lineView(line, outfits, marker).label).join(' · ')
                     ) : (
                       <span className="text-dim2">vide : reprend le niveau 0</span>
                     )}
@@ -437,12 +527,12 @@ function FreeEntry({ level, onAdd }: { level: number; onAdd: (piece: string) => 
   return (
     <div className="flex items-center gap-[8px] px-[6px]">
       <label className="sr-only" htmlFor={`free-${level}`}>
-        saisir une pièce libre pour le niveau {level}
+        écrire une tenue pour le niveau {level}
       </label>
       <input
         id={`free-${level}`}
         className="flex-1 !border-dashed"
-        placeholder="Saisir une pièce libre"
+        placeholder="Écrire une tenue"
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {

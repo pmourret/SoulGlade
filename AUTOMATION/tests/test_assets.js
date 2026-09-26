@@ -83,25 +83,27 @@ const FRAGMENT = 'a red linen dress, soft daylight';
     carte, { timeout: 10000 });
   dire(true, 'enregistré : la carte ne dit plus « sans fragment »');
 
-  console.log('\n[4] le composeur va le chercher — panneau Vêtements, catégorie bibliothèque');
+  console.log('\n[4] le composeur va le chercher — panneau Vêtements, catégorie pièces');
   await page.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
   await page.waitForSelector('[data-scene-card]');
   await page.click('[data-scene-card]');
   await page.waitForSelector('[data-tabpanel]', { timeout: 10000 });
   await page.click('[data-tab="clothing"]');
   await page.waitForSelector('[data-f^="wardrobe_"]');
-  dire(await page.isVisible('button:has-text("bibliothèque")'),
-       'la catégorie « bibliothèque » apparaît dès qu\'un asset existe');
-  await page.click('button:has-text("bibliothèque")');
+  // « pièces » depuis IT-10 chantier 6 : les tenues ont leur propre catégorie
+  dire(await page.isVisible('button:has-text("pièces")'),
+       'la catégorie « pièces » apparaît dès qu\'un asset existe');
+  await page.click('button:has-text("pièces")');
   const puce = `[data-piece="${FRAGMENT}"]`;
   await page.waitForSelector(puce);
   dire(await page.isVisible(`${puce} img`), 'et la pièce porte SON image, pas la vignette hachurée');
-  const niveauAvant = await page.getAttribute('[data-f^="wardrobe_"]', 'data-value');
+  // `[data-value]` : le niveau ouvert, jamais le bloc « hors des quatre niveaux »
+  const niveauAvant = await page.getAttribute('[data-f^="wardrobe_"][data-value]', 'data-value');
   await page.click(puce);
   await page.waitForTimeout(400);
-  const niveauApres = await page.getAttribute('[data-f^="wardrobe_"]', 'data-value');
+  const niveauApres = await page.getAttribute('[data-f^="wardrobe_"][data-value]', 'data-value');
   dire(niveauApres.includes(FRAGMENT) && niveauApres !== niveauAvant,
-       'un clic ajoute son fragment au niveau ouvert');
+       'un clic ajoute son fragment à la tenue du niveau ouvert');
 
   console.log('\n[5] NETTOYAGE : retrait UNIQUEMENT de ce que ce test a créé');
   await page.goto(BASE + '/bank/assets?character=lena', { waitUntil: 'networkidle' });

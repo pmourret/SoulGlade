@@ -25,6 +25,7 @@ import type { Creative } from '../../state/TaxonomyContext'
 import type { Scene, SceneDraft } from '../../state/ScenesStoreContext'
 import type { WorldPlace } from '../worlds/useWorldCatalog'
 import type { LibraryPick } from './assets/libraryPicks'
+import type { OutfitEntry } from './outfits/useOutfits'
 import { SceneComposer } from './composer/SceneComposer'
 import type { SceneField } from './sceneChanges'
 
@@ -53,6 +54,8 @@ export function SceneInspector({
   poses,
   places,
   library,
+  outfits,
+  outfitMarker,
   produced,
   changed,
   narrow,
@@ -73,6 +76,9 @@ export function SceneInspector({
   places: WorldPlace[]
   /** The imported assets the panels may pull from (IT-10 chantier 5). */
   library: LibraryPick[]
+  /** The outfits a scene may wear (IT-10 chantier 6). */
+  outfits: OutfitEntry[]
+  outfitMarker: string
   produced: number | null
   /** Draft fields differing from the saved scene (`sceneChanges`). */
   changed: Set<SceneField>
@@ -238,6 +244,8 @@ export function SceneInspector({
         poses={poses}
         places={places}
         library={library}
+        outfits={outfits}
+        outfitMarker={outfitMarker}
         produced={produced}
         worldLinked={worldLinked}
         changed={changed}

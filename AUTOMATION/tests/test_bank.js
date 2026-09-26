@@ -142,8 +142,8 @@ async function allerA(page, categorie, module) {
   dire(await vu('#bankScenes'), 'la sous-vue Scenes est montee');
   dire(!(await vu('#bankPoses')), 'la sous-vue Poses ne l est pas — une route, pas un attribut');
   const onglets = await page.$$eval('#bankView [data-vue]', e => e.map(x => x.dataset.vue));
-  // Quatre depuis IT-10 chantier 5 : la bibliotheque d'assets a rejoint les trois.
-  dire(onglets.join(',') === 'scenes,poses,tones,assets', 'les quatre sous-vues sont offertes');
+  // Cinq depuis IT-10 chantier 6 : les tenues ont rejoint la bibliotheque d'assets.
+  dire(onglets.join(',') === 'scenes,poses,tones,assets,outfits', 'les cinq sous-vues sont offertes');
   const allume = await page.$$eval('.tabs .cat.on', e => e.map(x => x.dataset.s));
   dire(allume.join(',') === 'atelier', "la categorie Atelier est allumee");
   const mod = await page.$$eval('.modbar .mod.on', e => e.map(x => x.dataset.m));
@@ -479,48 +479,60 @@ async function allerA(page, categorie, module) {
   await page.waitForTimeout(200);
   dire((await lignes(3)).length === 0, 'et le × rend le niveau 3 a son etat vide');
 
-  console.log('\n[7bis] UN clic ajoute la piece au niveau ouvert, et le toast la retire');
+  console.log('\n[7bis] UN clic ajoute au niveau ouvert, et le toast le retire');
   // §3.3 : le parcours en deux temps (selectionner puis « + ») a cede a un
   // clic unique. Le motif qui l'avait impose — « un mauvais clic passe
   // inapercu » — est traite par le surlignage de la ligne et par l'Annuler du
   // toast, pas en demandant deux gestes a chaque ajout.
+  //
+  // Depuis IT-10 chantier 6 le catalogue ne porte plus de puces ecrites en
+  // dur : il montre les tenues et les pieces du personnage, venues du serveur.
+  // Une tenue ajoute une ligne (`@cle`), une piece complete la ligne libre du
+  // niveau — dans les deux cas le TEXTE du niveau change et porte la valeur.
+  const valeur = n => page.getAttribute(`[data-f="wardrobe_${n}"]`, 'data-value');
+  const entree = '[data-catalog-kind][data-piece]:not([disabled])';
+  const porte = (texteNiveau, v) => texteNiveau.split('\n').some(l => l.trim() === v || l.trim().endsWith(`, ${v}`));
+  // relu en [9] : la saisie doit survivre a la navigation
   await page.click(NIVEAU(0));
   await page.waitForTimeout(150);
-  const niveau0Avant = await lignes(0);
-  const piece = await page.$('[data-piece]');
-  const libellePiece = await piece.getAttribute('data-piece');
-  await piece.click();
-  await page.waitForTimeout(250);
-  const apresAjout = await lignes(0);
-  dire(apresAjout.length === niveau0Avant.length + 1 && apresAjout.includes(libellePiece),
-       `un clic a ajoute "${libellePiece}" au niveau 0, sans second geste`);
-  dire((await texte('#toastTxt')).includes('niveau 0'),
-       `le toast dit ou la piece est allee : « ${await texte('#toastTxt')} »`);
-  dire((await page.textContent('[data-f="wardrobe_0"]')).includes('ajoutée'),
-       'et la ligne ajoutee se signale, le temps qu on la voie arriver');
-  await page.click('#toast button');
-  await page.waitForTimeout(250);
-  dire(JSON.stringify(await lignes(0)) === JSON.stringify(niveau0Avant),
-       'l Annuler du toast rend le niveau exactement a son etat d avant le clic');
+  const niveau0Avant = await valeur(0);
+  if (!(await page.$(entree))) {
+    console.log('   IGNORE [7bis] [7ter] — ni tenue ni piece dans le catalogue de ce personnage');
+    dire(await vu('#wardrobeCatalogEmpty'), 'le catalogue vide le dit, et mene a l atelier Tenues');
+  } else {
+    const cible = await page.$(entree);
+    const v0 = await cible.getAttribute('data-piece');
+    await cible.click();
+    await page.waitForTimeout(250);
+    const apresAjout = await valeur(0);
+    dire(apresAjout !== niveau0Avant && porte(apresAjout, v0),
+         `un clic a ajoute "${v0}" au niveau 0, sans second geste`);
+    dire((await texte('#toastTxt')).includes('niveau 0'),
+         `le toast dit ou l ajout est alle : « ${await texte('#toastTxt')} »`);
+    dire((await page.textContent('[data-f="wardrobe_0"]')).includes('ajoutée'),
+         'et la ligne touchee se signale, le temps qu on la voie arriver');
+    await page.click('#toast button');
+    await page.waitForTimeout(250);
+    dire((await valeur(0)) === niveau0Avant,
+         'l Annuler du toast rend le niveau exactement a son etat d avant le clic');
 
-  console.log('\n[7ter] le niveau ouvert est celui du segmente — un ajout ne touche que lui');
-  await page.click(NIVEAU(2));
-  await page.waitForTimeout(150);
-  const niveau2Avant = await lignes(2);
-  const autrePiece = await page.$('[data-piece]');
-  const libelleAutre = await autrePiece.getAttribute('data-piece');
-  await autrePiece.click();
-  await page.waitForTimeout(250);
-  dire((await lignes(2)).includes(libelleAutre), `le niveau choisi (2) recoit "${libelleAutre}"`);
-  await page.click(NIVEAU(0));
-  await page.waitForTimeout(150);
-  dire(JSON.stringify(await lignes(0)) === JSON.stringify(niveau0Avant),
-       'et le niveau 0 n a pas bouge — un ajout ne touche que le niveau ouvert');
-  await page.click(NIVEAU(2));
-  await page.waitForTimeout(150);
-  await page.click('[data-f="wardrobe_2"] button[aria-label^="Retirer"]');
-  await page.waitForTimeout(200);
-  dire(JSON.stringify(await lignes(2)) === JSON.stringify(niveau2Avant), 'remise en etat du niveau 2');
+    console.log('\n[7ter] le niveau ouvert est celui du segmente — un ajout ne touche que lui');
+    await page.click(NIVEAU(2));
+    await page.waitForTimeout(150);
+    const niveau2Avant = await valeur(2);
+    const autre = await page.$(entree);
+    const v2 = await autre.getAttribute('data-piece');
+    await autre.click();
+    await page.waitForTimeout(250);
+    dire(porte(await valeur(2), v2), `le niveau choisi (2) recoit "${v2}"`);
+    await page.click('#toast button');
+    await page.waitForTimeout(250);
+    dire((await valeur(2)) === niveau2Avant, 'remise en etat du niveau 2');
+    await page.click(NIVEAU(0));
+    await page.waitForTimeout(150);
+    dire((await valeur(0)) === niveau0Avant,
+         'et le niveau 0 n a pas bouge — un ajout ne touche que le niveau ouvert');
+  }
   await onglet('general');
 
   console.log('\n[8] une frappe arme le bandeau « modifications non enregistrees »');
@@ -543,8 +555,7 @@ async function allerA(page, categorie, module) {
   await page.waitForTimeout(200);
   // le niveau ouvert par defaut est celui de `band_lo` — 0 pour une scene
   // neuve, donc la tenue livree avec `NEW_SCENE`
-  dire(JSON.stringify(await lignes(0)) === JSON.stringify(niveau0Avant),
-       'la saisie est intacte au retour');
+  dire((await valeur(0)) === niveau0Avant, 'la saisie est intacte au retour');
 
   console.log('\n[10] FILTRER retrecit la grille, jamais le document');
   // `cible` est deja etabli en [4] — la premiere carte reelle du DOM, pas une

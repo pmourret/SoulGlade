@@ -26,7 +26,7 @@ import { TaxonomyProvider } from '../state/TaxonomyContext'
 import { ConfigProvider } from '../state/ConfigContext'
 import { LightboxProvider } from '../chrome/LightboxContext'
 import {
-  BankAssetsScreen, BankPosesScreen, BankScenesScreen, BankTonesScreen,
+  BankAssetsScreen, BankOutfitsScreen, BankPosesScreen, BankScenesScreen, BankTonesScreen,
 } from '../screens/bank/BankScreen'
 import { PhotoEditorAdvancedScreen } from '../screens/photo-editor-advanced/PhotoEditorAdvancedScreen'
 import { PoseEditorScreen } from '../screens/pose-editor/PoseEditorScreen'
@@ -89,6 +89,7 @@ export function App() {
                   <Route path={PATHS.bankPoses} element={<BankPosesScreen />} />
                   <Route path={PATHS.bankTones} element={<BankTonesScreen />} />
                   <Route path={PATHS.bankAssets} element={<BankAssetsScreen />} />
+                  <Route path={PATHS.bankOutfits} element={<BankOutfitsScreen />} />
                   {/* :name? absent -> "new pose", starting from a chosen preset
                       (2026-09-02) — same list-then-editor shape as worlds/
                       places just below. */}
