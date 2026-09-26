@@ -8,6 +8,10 @@
     POST /api/lights/delete   drops the light, or only this character's tweak
     GET  /api/light-effects   the user's own effects (7 bis), layered
     POST /api/light-effects/create|save|delete   the same three verbs
+    POST /api/lights/essai    render one scene at one seed, without then with
+                              the sheet as it is on screen (7 bis)
+    GET  /api/lights/essai    that trial's state and measures
+    GET  /api/lights/essai/image/{label}   one of its two images
 
 A scene wears a light through its `light` field or a variant line
 « @<key> », resolved before the prompt assembler (`lights.resolve_bank`).
@@ -15,20 +19,21 @@ A scene wears a light through its `light` field or a variant line
 arrangement as `routers/outfits.py`. Nothing here is blocking: no executor.
 """
 from fastapi import APIRouter
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 import layered_catalog
 import lights
 import shared_state as ss
 
 from ..dependencies import RequiredCharacterId
-from ..schemas.common import ERROR_RESPONSES
+from ..schemas.common import ERROR_RESPONSES, TrialResponse, TrialStarted
 from ..schemas.lights import (
     LightCreateRequest, LightDeleteResponse, LightEffectCreateRequest,
     LightEffectResponse, LightEffectSaveRequest, LightEffectsResponse,
     LightingVocabulary, LightKeyRequest, LightResponse, LightSaveRequest,
-    LightsResponse,
+    LightsResponse, LightTrialRequest,
 )
+from ..services.batch import start_light_trial, trial_image, trial_state
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -155,3 +160,35 @@ async def delete_light_effect(payload: LightKeyRequest, character_id: RequiredCh
         return _refus(str(e))
     ss.push_log(f"effet de lumière {payload.key!r} retiré ({couche})")
     return {"ok": True, "couche": couche}
+
+
+# ------------------------------------------------------------------ render trial
+@router.post("/api/lights/essai", response_model=TrialStarted,
+             responses={409: {"description": "Un batch tourne déjà"}},
+             summary="Essai de rendu d'une lumière : même scène, même graine, sans puis avec")
+async def start_light_trial_route(payload: LightTrialRequest, character_id: RequiredCharacterId):
+    """Same guard as /api/run and the tone trial: no `await` between the
+    `running` test and the launch, so two requests cannot both pass it."""
+    if ss.STATE["running"]:
+        return JSONResponse({"ok": False, "erreur": "un batch tourne deja"}, status_code=409)
+    try:
+        trial_id = start_light_trial(character_id, payload.scene, payload.key.strip(),
+                                     _setup(payload.setup), payload.text, payload.seed)
+    except ValueError as e:
+        return _refus(str(e))
+    return {"ok": True, "id": trial_id, "seed": ss.STATE["essai"]["seed"]}
+
+
+@router.get("/api/lights/essai", response_model=TrialResponse,
+            summary="État de l'essai de lumière du personnage")
+async def get_light_trial(character_id: RequiredCharacterId):
+    return {"essai": trial_state(character_id, "lumiere")}
+
+
+@router.get("/api/lights/essai/image/{label}", summary="Une image de l'essai de lumière",
+            responses={404: {"description": "Pas d'image pour ce libellé"}})
+async def get_light_trial_image(label: str, character_id: RequiredCharacterId):
+    path = trial_image(character_id, label, "lumiere")
+    if not path:
+        return _refus("aucune image d'essai pour ce libellé", 404)
+    return FileResponse(path, media_type="image/png")

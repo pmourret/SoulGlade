@@ -8,7 +8,7 @@ slider should see a rejection, not a silent correction.
 """
 from typing import Optional
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 import expression as _expression
 
@@ -96,30 +96,5 @@ class ToneTrialRequest(BaseModel):
     seed: Optional[int] = None
 
 
-class ToneTrialStarted(BaseModel):
-    ok: bool
-    id: str
-    seed: int
-
-
-class ToneTrialResult(BaseModel):
-    model_config = ConfigDict(extra="allow")
-
-    verdict: str
-    score: Optional[float] = None
-    measures: dict[str, float] = Field(default_factory=dict)
-
-
-class ToneTrialState(BaseModel):
-    """The character's current or last trial. `results` is keyed by label:
-    `sans_ton`, then the tone's key. Paths never leave the server."""
-    id: str
-    scene: str
-    tone: str
-    seed: int
-    running: bool
-    results: dict[str, ToneTrialResult] = Field(default_factory=dict)
-
-
-class ToneTrialResponse(BaseModel):
-    essai: Optional[ToneTrialState] = None
+# Its answers (TrialStarted, TrialResponse) are shared with the light trial:
+# schemas/common.py.

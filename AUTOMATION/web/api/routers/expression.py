@@ -23,10 +23,9 @@ import expression
 import shared_state as ss
 
 from ..dependencies import RequiredCharacterId
-from ..schemas.common import ActionResponse, ERROR_RESPONSES
+from ..schemas.common import ActionResponse, ERROR_RESPONSES, TrialResponse, TrialStarted
 from ..schemas.expression import (
     ExpressionPreviewRequest, ExpressionToneSaveRequest, ToneTrialRequest,
-    ToneTrialResponse, ToneTrialStarted,
 )
 from ..services.batch import start_tone_trial, trial_image, trial_state
 from ..services.expression import (
@@ -93,7 +92,7 @@ async def save_expression_tone(payload: ExpressionToneSaveRequest, character_id:
 
 
 # ------------------------------------------------------------------ tone trial
-@router.post("/api/tones/essai", response_model=ToneTrialStarted,
+@router.post("/api/tones/essai", response_model=TrialStarted,
              responses={409: {"description": "Un batch tourne déjà"}},
              summary="Essai de rendu d'un ton : même scène, même graine, sans puis avec")
 async def start_trial(payload: ToneTrialRequest, character_id: RequiredCharacterId):
@@ -108,7 +107,7 @@ async def start_trial(payload: ToneTrialRequest, character_id: RequiredCharacter
     return {"ok": True, "id": trial_id, "seed": ss.STATE["essai"]["seed"]}
 
 
-@router.get("/api/tones/essai", response_model=ToneTrialResponse,
+@router.get("/api/tones/essai", response_model=TrialResponse,
             summary="État de l'essai de ton du personnage")
 async def get_trial(character_id: RequiredCharacterId):
     return {"essai": trial_state(character_id)}

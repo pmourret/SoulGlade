@@ -16,10 +16,14 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useChrome } from '../../../chrome/ChromeContext'
 import { useConfirm } from '../../../chrome/ConfirmContext'
 import { Icon } from '../../../chrome/Icon'
+import { useLightbox } from '../../../chrome/LightboxContext'
 import { useToast } from '../../../chrome/ToastContext'
 import { useScenes } from '../../../state/ScenesStoreContext'
+import { useSystemState } from '../../../state/SystemStateContext'
 import { useOverlayPanel } from '../../produce/useOverlayPanel'
-import { LightInspector } from './LightInspector'
+import { RenderTrialPanel } from '../../render-trial/RenderTrialPanel'
+import { useRenderTrial } from '../../render-trial/useRenderTrial'
+import { LightInspector, type LightDraft } from './LightInspector'
 import type { Setup } from './lightCompose'
 import { useLights, type LightEffectEntry, type LightEntry, type LightFields } from './useLights'
 
@@ -29,7 +33,11 @@ export function LightsView({ nav }: { nav: ReactNode }) {
   const toast = useToast()
   const confirm = useConfirm()
   const { narrow } = useChrome()
-  const { world } = useScenes()
+  const { world, bank } = useScenes()
+  const { state } = useSystemState()
+  const { open: openLightbox } = useLightbox()
+  const trial = useRenderTrial('/api/lights/essai')
+  const [draft, setDraft] = useState<LightDraft | null>(null)
   const {
     lights, effects, vocabulary, marker, loaded, busy, create, save, remove, createEffect, removeEffect,
   } = useLights()
@@ -43,6 +51,17 @@ export function LightsView({ nav }: { nav: ReactNode }) {
     if (selected && selected !== NEW && loaded && !lights.some((l) => l.key === selected))
       setSelected(null)
   }, [lights, selected, loaded])
+
+  /* The render trial (7 bis): the scenes that carry a light first — there the
+     tried light takes the place of theirs, as a variant would. */
+  const bankScenes = ((bank?.data as { scenes?: unknown } | undefined)?.scenes ?? []) as
+    { id: string; light?: string }[]
+  const trialScenes = [
+    ...bankScenes.filter((scene) => scene.light?.trim()),
+    ...bankScenes.filter((scene) => !scene.light?.trim()),
+  ].map((scene) => scene.id)
+  const trialKey = selected === NEW ? '' : (selected ?? '')
+  const myTrial = trial.trial && trial.trial.light === trialKey ? trial.trial : null
 
   const drawerRef = useRef<HTMLDivElement | null>(null)
   useOverlayPanel(narrow && inspecting, () => setSelected(null), drawerRef)
@@ -139,7 +158,31 @@ export function LightsView({ nav }: { nav: ReactNode }) {
           inspecting && !narrow ? 'grid-cols-[minmax(0,1fr)_340px]' : 'grid-cols-1'
         }`}
       >
-        <div className="min-h-0 overflow-y-auto">
+        <div className="flex min-h-0 flex-col overflow-y-auto">
+          {inspecting && (
+            <RenderTrialPanel
+              kind="light"
+              title="Essai de rendu de la lumière"
+              button="Essayer la fiche"
+              scenes={trialScenes}
+              trial={myTrial}
+              columns={[
+                { label: 'sans_lumiere', caption: 'Sans lumière' },
+                { label: 'avec_lumiere', caption: `Avec « ${draft?.label || 'la fiche'} »` },
+              ]}
+              hint="deux images, même graine : la scène sans lumière, puis avec la fiche telle qu'elle est — hors production"
+              reason={!state?.comfy ? 'nécessite ComfyUI en ligne'
+                : state?.running ? 'un lot tourne déjà'
+                  : !draft?.sentence ? 'la fiche est vide' : null}
+              error={trial.error}
+              note={myTrial?.sentence ? <>phrase essayée : <span className="font-code">{myTrial.sentence}</span></> : undefined}
+              onStart={(scene, seed) => draft && void trial.start(scene, seed, {
+                key: trialKey, setup: draft.setup, text: draft.text,
+              })}
+              imageUrl={trial.imageUrl}
+              openLightbox={openLightbox}
+            />
+          )}
           {loaded && !lights.length ? (
             <div className="flex h-full items-center justify-center p-[24px]">
               <div
@@ -224,6 +267,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
               onCreate={(label, fields, toWorld) => void onCreate(label, fields, toWorld)}
               onCreateEffect={onCreateEffect}
               onDeleteEffect={(effect) => void onDeleteEffect(effect)}
+              onDraft={setDraft}
               onSave={(fields, toWorld) => selectedLight && void onSave(selectedLight.key, fields, toWorld)}
               onDelete={() => selectedLight && void onDelete(selectedLight)}
             />

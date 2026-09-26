@@ -1,5 +1,7 @@
-/* The render trial of a tone (IT-10, 25/09): one scene at one seed, without
-   and with the tone — the only callers of `/api/tones/essai*`.
+/* A render trial (IT-10, 25/09; generalised by the light studio, 7 bis): one
+   scene at one seed, with and without what is tried. A trial has a KIND — a
+   tone (`/api/tones/essai`) or a light (`/api/lights/essai`) — and its images;
+   this hook is the only caller of either, and the kind is its route.
 
    It runs as a batch on the server's single run state, so the chrome's batch
    panel shows it like a production. This hook only starts it, polls ITS state
@@ -10,26 +12,26 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { errorOf, type Schema } from '../../api/client'
 import { useApi } from '../../api/useApi'
 
-export type ToneTrial = Schema<'ToneTrialState'>
-type TrialResponse = Schema<'ToneTrialResponse'>
+export type RenderTrial = Schema<'TrialState'>
+type TrialResponse = Schema<'TrialResponse'>
 
 const POLL_MS = 2500
 
-export function useToneTrial() {
+export function useRenderTrial(route: '/api/tones/essai' | '/api/lights/essai') {
   const api = useApi()
-  const [trial, setTrial] = useState<ToneTrial | null>(null)
+  const [trial, setTrial] = useState<RenderTrial | null>(null)
   const [error, setError] = useState<string | null>(null)
   const timer = useRef<number | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      const response = await api.get<TrialResponse>('/api/tones/essai')
+      const response = await api.get<TrialResponse>(route)
       setTrial(response?.essai ?? null)
       return response?.essai ?? null
     } catch {
       return null
     }
-  }, [api])
+  }, [api, route])
 
   useEffect(() => {
     void refresh()
@@ -45,12 +47,13 @@ export function useToneTrial() {
     }
   }, [trial?.running, refresh])
 
+  /** `subject` is what is tried: `{tone}`, or `{key, setup, text}` of a light. */
   const start = useCallback(
-    async (scene: string, tone: string, seed: number | null) => {
+    async (scene: string, seed: number | null, subject: object) => {
       setError(null)
       let response: { ok?: boolean; erreur?: string } | null = null
       try {
-        response = await api.post('/api/tones/essai', { scene, tone, seed })
+        response = await api.post(route, { scene, seed, ...subject })
       } catch {
         response = null
       }
@@ -61,12 +64,12 @@ export function useToneTrial() {
       }
       await refresh()
     },
-    [api, refresh],
+    [api, refresh, route],
   )
 
   /* The trial's id busts the browser cache: two trials write the same label. */
   const imageUrl = (label: string) =>
-    api.url(`/api/tones/essai/image/${encodeURIComponent(label)}?v=${encodeURIComponent(trial?.id ?? '')}`)
+    api.url(`${route}/image/${encodeURIComponent(label)}?v=${encodeURIComponent(trial?.id ?? '')}`)
 
   return { trial, error, start, imageUrl }
 }

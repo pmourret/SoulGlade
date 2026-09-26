@@ -15,6 +15,9 @@ import { LightSetupFields } from './LightSetupFields'
 import { composeLight, SETTINGS, type EffectDef, type Setup, type Vocabulary } from './lightCompose'
 import type { LightEffectEntry, LightEntry, LightFields } from './useLights'
 
+/** The sheet as it is on screen, saved or not: what a render trial tries. */
+export type LightDraft = { label: string; setup: Setup; text: string; sentence: string }
+
 const LAYER: Record<string, { label: string; hint: string }> = {
   monde: {
     label: 'Du monde',
@@ -43,7 +46,7 @@ const blank = (setup: Setup) => same(setup, null)
 
 export function LightInspector({
   light, busy, marker, worldLabel, vocabulary, customEffects,
-  onSave, onCreate, onDelete, onCreateEffect, onDeleteEffect,
+  onSave, onCreate, onDelete, onCreateEffect, onDeleteEffect, onDraft,
 }: {
   /** `null` = a new light, not yet written anywhere. */
   light: LightEntry | null
@@ -62,6 +65,8 @@ export function LightInspector({
   onDelete: () => void
   onCreateEffect: (label: string, fragment: string, toWorld: boolean) => Promise<boolean>
   onDeleteEffect: (effect: LightEffectEntry) => void
+  /** Told of every change of the sheet, for the render trial. */
+  onDraft: (draft: LightDraft) => void
 }) {
   const [label, setLabel] = useState(light?.label ?? '')
   const [setup, setSetup] = useState<Setup>(normal(light?.setup))
@@ -89,6 +94,12 @@ export function LightInspector({
   )
   const composed = vocabulary ? composeLight(setup, vocabulary, custom) : { text: '', problem: '' }
   const sentence = hand ?? composed.text
+
+  const draftKey = JSON.stringify([label, setup, hand, sentence])
+  useEffect(() => {
+    onDraft({ label: label.trim(), setup, text: (hand ?? '').trim(), sentence: sentence.trim() })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftKey])
 
   const isNew = light === null
   const layer = LAYER[light?.couche ?? 'personnage'] ?? LAYER.personnage

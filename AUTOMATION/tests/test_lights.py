@@ -429,6 +429,63 @@ try:
                     json={"key": "lueur-de-bougie"})
     verifie(r.status_code == 200, "plus porte, il part")
 
+    # =========================================== [11] l'essai de rendu (7 bis)
+    print("\n[11] essai de rendu : deux images, la fiche telle qu'a l'ecran, rien d'ecrit")
+    import shared_state as ss
+    from api.services.batch import light_trial_jobs
+    ecrire_scenes(CA, [scene("s1", place="salon", light="@soir", variants=["x"])])
+    disque = lb.scenes_path(CA).read_bytes()
+    phrase = lights.compose(cyber)
+    jobs = light_trial_jobs(CA, "s1", phrase, 4242)
+    verifie([label for label, _, _ in jobs] == ["sans_lumiere", "avec_lumiere"]
+            and all(j["seed"] == 4242 and j["scene"] == "s1" for _, j, _ in jobs),
+            "sans puis avec, meme scene, meme graine")
+    sans_, avec_ = jobs[0][1]["prompt"], jobs[1][1]["prompt"]
+    verifie(sans_ == f"{tete}, {SALON}, {fin}", f"sans : ni la lumiere de la scene ni l'essayee ({sans_})")
+    verifie(avec_ == f"{tete}, {SALON}, {phrase}, {fin}",
+            "avec : la phrase prend la place de la lumiere de la scene, apres le decor")
+    ecrire_scenes(CA, [scene("s1", place="salon", light="@soir", variants=[phrase])])
+    verifie(avec_ == prompts(CA)[1], "a l'octet pres ce que donnerait la meme lumiere en variante")
+    ecrire_scenes(CA, [scene("s1", place="salon", light="@soir", variants=["x"])])
+    verifie(lb.scenes_path(CA).read_bytes() == disque, "scenes.json n'est pas touche")
+    etat = dict(ss.STATE)
+    for cas, corps_ in (("scene inconnue", {"scene": "nulle", "setup": cyber}),
+                        ("fiche vide", {"scene": "s1"}),
+                        ("fiche qui ne se compose pas", {"scene": "s1", "setup": {"source": "torche"}}),
+                        ("texte en reference", {"scene": "s1", "text": "@soir"})):
+        r = CLIENT.post(f"/api/lights/essai?character={CA}", json=corps_)
+        verifie(r.status_code == 400 and not ss.STATE["running"],
+                f"{cas} : 400, lot non arme ({r.status_code} — {r.json().get('erreur')})")
+    ss.STATE["running"] = True
+    r = CLIENT.post(f"/api/lights/essai?character={CA}", json={"scene": "s1", "setup": cyber})
+    verifie(r.status_code == 409, f"un lot tourne : 409 ({r.status_code})")
+    ss.STATE["running"] = False
+    image = OFM / "PROD" / CA.upper() / "_BENCH" / "essai-lumiere-probe" / "avec_lumiere" / "x.png"
+    image.parent.mkdir(parents=True, exist_ok=True)
+    image.write_bytes(b"\x89PNG probe")
+    ss.STATE["essai"] = {"id": "essai-lumiere-probe", "kind": "lumiere", "character": CA,
+                         "scene": "s1", "seed": 4242, "light": "neon", "sentence": phrase,
+                         "results": {"avec_lumiere": {"path": str(image), "verdict": "OK",
+                                                      "score": 0.7, "measures": {}}}}
+    try:
+        corps = CLIENT.get(f"/api/lights/essai?character={CA}")
+        verifie(corps.status_code == 200 and corps.json()["essai"]["sentence"] == phrase
+                and corps.json()["essai"]["kind"] == "lumiere" and str(image.parent) not in corps.text,
+                "le personnage lit son essai, sans chemin d'image")
+        verifie(CLIENT.get(f"/api/lights/essai/image/avec_lumiere?character={CA}").content
+                == b"\x89PNG probe", "son image est servie par son libelle")
+        verifie(CLIENT.get(f"/api/lights/essai?character={CB}").json()["essai"] is None
+                and CLIENT.get(f"/api/lights/essai/image/avec_lumiere?character={CB}").status_code == 404,
+                "un autre personnage ne voit ni l'essai ni son image")
+        verifie(CLIENT.get(f"/api/tones/essai?character={CA}").json()["essai"] is None
+                and CLIENT.get(f"/api/tones/essai/image/avec_lumiere?character={CA}").status_code == 404,
+                "l'atelier des tons ne prend pas un essai de lumiere pour le sien")
+    finally:
+        ss.STATE.pop("essai", None)
+        ss.STATE["running"] = etat.get("running", False)
+        shutil.rmtree(OFM / "PROD" / CA.upper(), ignore_errors=True)
+    ecrire_scenes(CA, [])
+
 finally:
     for c in (CA, CA2, CB):
         shutil.rmtree(OFM / "CHARACTERS" / c, ignore_errors=True)

@@ -29,6 +29,7 @@ import { useToast } from '../../chrome/ToastContext'
 import { useConfig } from '../../state/ConfigContext'
 import { useScenes } from '../../state/ScenesStoreContext'
 import { useSystemState } from '../../state/SystemStateContext'
+import { useRenderTrial } from '../render-trial/useRenderTrial'
 import { ParamPanel } from './ParamPanel'
 import { ToneList } from './ToneList'
 import { ToneTextCard } from './ToneTextCard'
@@ -37,7 +38,6 @@ import { TrialColumn } from './TrialColumn'
 import { MAX_SELECTED_PHOTOS, useExpressionEditor, type GalleryItem } from './useExpressionEditor'
 import { PARAM_NAMES, useToneList, type ToneRow } from './useToneList'
 import { useToneText } from './useToneText'
-import { useToneTrial } from './useToneTrial'
 
 const BANK_SENTENCE =
   'Les tons viennent du monde · cet écran les ajuste pour ce personnage'
@@ -86,7 +86,7 @@ function ToneWorkshopInner({
   const { open: openLightbox } = useLightbox()
   const { world, bank } = useScenes()
   const toneText = useToneText()
-  const toneTrial = useToneTrial()
+  const toneTrial = useRenderTrial('/api/tones/essai')
   const {
     tone, params, dirty, reset,
     setTrial, setMin, setMax, toggleIncluded, setAsMin, setAsMax,
@@ -331,7 +331,7 @@ function ToneWorkshopInner({
             error={toneTrial.error}
             comfy={comfy}
             busy={Boolean(state?.running)}
-            onStart={(scene, seed) => void toneTrial.start(scene, currentRow.key, seed)}
+            onStart={(scene, seed) => void toneTrial.start(scene, seed, { tone: currentRow.key })}
             imageUrl={toneTrial.imageUrl}
             openLightbox={openLightbox}
           />

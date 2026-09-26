@@ -169,3 +169,15 @@ class LightEffectSaveRequest(BaseModel):
 class LightEffectResponse(BaseModel):
     ok: bool
     effect: LightEffectEntry
+
+
+class LightTrialRequest(BaseModel):
+    """IT-10 7 bis: one scene at one seed, without its light, then with the
+    sheet as it is on screen — saved or not. `key` names the light being
+    edited ('' for a new one); `text`, when written by hand, wins over
+    `setup`. No seed = a random one, returned so the trial can be replayed."""
+    scene: str
+    key: str = ""
+    setup: Optional[LightSetup] = None
+    text: str = ""
+    seed: Optional[int] = None

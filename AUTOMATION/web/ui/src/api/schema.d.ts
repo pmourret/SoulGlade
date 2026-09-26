@@ -1343,6 +1343,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/lights/essai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** État de l'essai de lumière du personnage */
+        get: operations["get_light_trial_api_lights_essai_get"];
+        put?: never;
+        /**
+         * Essai de rendu d'une lumière : même scène, même graine, sans puis avec
+         * @description Same guard as /api/run and the tone trial: no `await` between the
+         *     `running` test and the launch, so two requests cannot both pass it.
+         */
+        post: operations["start_light_trial_route_api_lights_essai_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lights/essai/image/{label}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Une image de l'essai de lumière */
+        get: operations["get_light_trial_image_api_lights_essai_image__label__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/outfits": {
         parameters: {
             query?: never;
@@ -3843,6 +3882,30 @@ export interface components {
              */
             effects: components["schemas"]["LightEffectChoice"][];
         };
+        /**
+         * LightTrialRequest
+         * @description IT-10 7 bis: one scene at one seed, without its light, then with the
+         *     sheet as it is on screen — saved or not. `key` names the light being
+         *     edited ('' for a new one); `text`, when written by hand, wins over
+         *     `setup`. No seed = a random one, returned so the trial can be replayed.
+         */
+        LightTrialRequest: {
+            /** Scene */
+            scene: string;
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            setup?: components["schemas"]["LightSetup"] | null;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+            /** Seed */
+            seed?: number | null;
+        };
         /** LightingColor */
         LightingColor: {
             /** Key */
@@ -5097,53 +5160,6 @@ export interface components {
             /** Seed */
             seed?: number | null;
         };
-        /** ToneTrialResponse */
-        ToneTrialResponse: {
-            essai?: components["schemas"]["ToneTrialState"] | null;
-        };
-        /** ToneTrialResult */
-        ToneTrialResult: {
-            /** Verdict */
-            verdict: string;
-            /** Score */
-            score?: number | null;
-            /** Measures */
-            measures?: {
-                [key: string]: number;
-            };
-        } & {
-            [key: string]: unknown;
-        };
-        /** ToneTrialStarted */
-        ToneTrialStarted: {
-            /** Ok */
-            ok: boolean;
-            /** Id */
-            id: string;
-            /** Seed */
-            seed: number;
-        };
-        /**
-         * ToneTrialState
-         * @description The character's current or last trial. `results` is keyed by label:
-         *     `sans_ton`, then the tone's key. Paths never leave the server.
-         */
-        ToneTrialState: {
-            /** Id */
-            id: string;
-            /** Scene */
-            scene: string;
-            /** Tone */
-            tone: string;
-            /** Seed */
-            seed: number;
-            /** Running */
-            running: boolean;
-            /** Results */
-            results?: {
-                [key: string]: components["schemas"]["ToneTrialResult"];
-            };
-        };
         /** TonesResponse */
         TonesResponse: {
             /** World */
@@ -5303,6 +5319,75 @@ export interface components {
             /** Legendes */
             legendes: {
                 [key: string]: unknown;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** TrialResponse */
+        TrialResponse: {
+            essai?: components["schemas"]["TrialState"] | null;
+        };
+        /** TrialResult */
+        TrialResult: {
+            /** Verdict */
+            verdict: string;
+            /** Score */
+            score?: number | null;
+            /** Measures */
+            measures?: {
+                [key: string]: number;
+            };
+        } & {
+            [key: string]: unknown;
+        };
+        /** TrialStarted */
+        TrialStarted: {
+            /** Ok */
+            ok: boolean;
+            /** Id */
+            id: string;
+            /** Seed */
+            seed: number;
+        };
+        /**
+         * TrialState
+         * @description The character's current or last trial of one kind (`ton`, `lumiere`).
+         *     `results` is keyed by label — `sans_ton`, `fragment_seul`, the tone's key;
+         *     `sans_lumiere`, `avec_lumiere`. `tone` or `light` says what was tried, and
+         *     `sentence` the light's sentence. Paths never leave the server.
+         */
+        TrialState: {
+            /** Id */
+            id: string;
+            /**
+             * Kind
+             * @default ton
+             */
+            kind: string;
+            /** Scene */
+            scene: string;
+            /** Seed */
+            seed: number;
+            /** Running */
+            running: boolean;
+            /**
+             * Tone
+             * @default
+             */
+            tone: string;
+            /**
+             * Light
+             * @default
+             */
+            light: string;
+            /**
+             * Sentence
+             * @default
+             */
+            sentence: string;
+            /** Results */
+            results?: {
+                [key: string]: components["schemas"]["TrialResult"];
             };
         } & {
             [key: string]: unknown;
@@ -7083,7 +7168,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ToneTrialResponse"];
+                    "application/json": components["schemas"]["TrialResponse"];
                 };
             };
             /** @description Requête refusée */
@@ -7128,7 +7213,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ToneTrialStarted"];
+                    "application/json": components["schemas"]["TrialStarted"];
                 };
             };
             /** @description Requête refusée */
@@ -8168,6 +8253,149 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["ErrorResponse"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_light_trial_api_lights_essai_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_light_trial_route_api_lights_essai_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LightTrialRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TrialStarted"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Un batch tourne déjà */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_light_trial_image_api_lights_essai_image__label__get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path: {
+                label: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Pas d'image pour ce libellé */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {

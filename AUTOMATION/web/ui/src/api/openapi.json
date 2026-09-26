@@ -1942,7 +1942,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ToneTrialStarted"
+                  "$ref": "#/components/schemas/TrialStarted"
                 }
               }
             }
@@ -2001,7 +2001,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ToneTrialResponse"
+                  "$ref": "#/components/schemas/TrialResponse"
                 }
               }
             }
@@ -3389,6 +3389,202 @@
                 }
               }
             }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lights/essai": {
+      "post": {
+        "summary": "Essai de rendu d'une lumière : même scène, même graine, sans puis avec",
+        "description": "Same guard as /api/run and the tone trial: no `await` between the\n`running` test and the launch, so two requests cannot both pass it.",
+        "operationId": "start_light_trial_route_api_lights_essai_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LightTrialRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialStarted"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Un batch tourne déjà"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "summary": "État de l'essai de lumière du personnage",
+        "operationId": "get_light_trial_api_lights_essai_get",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TrialResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/lights/essai/image/{label}": {
+      "get": {
+        "summary": "Une image de l'essai de lumière",
+        "operationId": "get_light_trial_image_api_lights_essai_image__label__get",
+        "parameters": [
+          {
+            "name": "label",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Label"
+            }
+          },
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Pas d'image pour ce libellé"
           },
           "422": {
             "description": "Validation Error",
@@ -8799,6 +8995,51 @@
         "title": "LightSetup",
         "description": "The studio sheet of a light. An unset setting drops out of the\nsentence."
       },
+      "LightTrialRequest": {
+        "properties": {
+          "scene": {
+            "type": "string",
+            "title": "Scene"
+          },
+          "key": {
+            "type": "string",
+            "title": "Key",
+            "default": ""
+          },
+          "setup": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LightSetup"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "scene"
+        ],
+        "title": "LightTrialRequest",
+        "description": "IT-10 7 bis: one scene at one seed, without its light, then with the\nsheet as it is on screen — saved or not. `key` names the light being\nedited ('' for a new one); `text`, when written by hand, wins over\n`setup`. No seed = a random one, returned so the trial can be replayed."
+      },
       "LightingColor": {
         "properties": {
           "key": {
@@ -11162,118 +11403,6 @@
         "title": "ToneTrialRequest",
         "description": "IT-10: the same scene at the same seed, without and with a tone. No\nseed = a random one, returned so the trial can be replayed."
       },
-      "ToneTrialResponse": {
-        "properties": {
-          "essai": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/ToneTrialState"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          }
-        },
-        "type": "object",
-        "title": "ToneTrialResponse"
-      },
-      "ToneTrialResult": {
-        "properties": {
-          "verdict": {
-            "type": "string",
-            "title": "Verdict"
-          },
-          "score": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Score"
-          },
-          "measures": {
-            "additionalProperties": {
-              "type": "number"
-            },
-            "type": "object",
-            "title": "Measures"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "verdict"
-        ],
-        "title": "ToneTrialResult"
-      },
-      "ToneTrialStarted": {
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "title": "Ok"
-          },
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "seed": {
-            "type": "integer",
-            "title": "Seed"
-          }
-        },
-        "type": "object",
-        "required": [
-          "ok",
-          "id",
-          "seed"
-        ],
-        "title": "ToneTrialStarted"
-      },
-      "ToneTrialState": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "scene": {
-            "type": "string",
-            "title": "Scene"
-          },
-          "tone": {
-            "type": "string",
-            "title": "Tone"
-          },
-          "seed": {
-            "type": "integer",
-            "title": "Seed"
-          },
-          "running": {
-            "type": "boolean",
-            "title": "Running"
-          },
-          "results": {
-            "additionalProperties": {
-              "$ref": "#/components/schemas/ToneTrialResult"
-            },
-            "type": "object",
-            "title": "Results"
-          }
-        },
-        "type": "object",
-        "required": [
-          "id",
-          "scene",
-          "tone",
-          "seed",
-          "running"
-        ],
-        "title": "ToneTrialState",
-        "description": "The character's current or last trial. `results` is keyed by label:\n`sans_ton`, then the tone's key. Paths never leave the server."
-      },
       "TonesResponse": {
         "properties": {
           "world": {
@@ -11695,6 +11824,134 @@
           "legendes"
         ],
         "title": "TrainingProposalResponse"
+      },
+      "TrialResponse": {
+        "properties": {
+          "essai": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TrialState"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "type": "object",
+        "title": "TrialResponse"
+      },
+      "TrialResult": {
+        "properties": {
+          "verdict": {
+            "type": "string",
+            "title": "Verdict"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "measures": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Measures"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "verdict"
+        ],
+        "title": "TrialResult"
+      },
+      "TrialStarted": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "id",
+          "seed"
+        ],
+        "title": "TrialStarted"
+      },
+      "TrialState": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "title": "Kind",
+            "default": "ton"
+          },
+          "scene": {
+            "type": "string",
+            "title": "Scene"
+          },
+          "seed": {
+            "type": "integer",
+            "title": "Seed"
+          },
+          "running": {
+            "type": "boolean",
+            "title": "Running"
+          },
+          "tone": {
+            "type": "string",
+            "title": "Tone",
+            "default": ""
+          },
+          "light": {
+            "type": "string",
+            "title": "Light",
+            "default": ""
+          },
+          "sentence": {
+            "type": "string",
+            "title": "Sentence",
+            "default": ""
+          },
+          "results": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/TrialResult"
+            },
+            "type": "object",
+            "title": "Results"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "scene",
+          "seed",
+          "running"
+        ],
+        "title": "TrialState",
+        "description": "The character's current or last trial of one kind (`ton`, `lumiere`).\n`results` is keyed by label — `sans_ton`, `fragment_seul`, the tone's key;\n`sans_lumiere`, `avec_lumiere`. `tone` or `light` says what was tried, and\n`sentence` the light's sentence. Paths never leave the server."
       },
       "UndoResponse": {
         "properties": {

@@ -25,11 +25,16 @@ a stage of the run, handed to `execute_jobs` as `after=`.
 """
 import asyncio
 import copy
+import json
 import logging
 import random
+import tempfile
 from datetime import datetime
+from pathlib import Path
 from types import SimpleNamespace
 
+import layered_catalog
+import lights
 import logs
 import nsfw_batch
 import runner as lb
@@ -234,14 +239,18 @@ def start_batch(jobs, configuration, use_qc, character, header=None):
     return batch_id
 
 
-# ------------------------------------------------------------------ tone trial
-# IT-10, 25/09. The same scene at the same seed, without the tone, with its
-# prompt fragment only, then with the whole tone. It runs as a batch like any
-# other — same STATE, same panel, same single-GPU lock through `_launch` — and
-# through `execute_jobs` (§8.2), but with a `Sink`: the images land under
-# PROD/<CID>/_BENCH/, out of the Revue, the export and the production tables,
-# like the bench's.
+# ------------------------------------------------------------------ render trials
+# IT-10, 25/09. The same scene at the same seed, rendered with and without what
+# is being tried. It runs as a batch like any other — same STATE, same panel,
+# same single-GPU lock through `_launch` — and through `execute_jobs` (§8.2),
+# but with a `Sink`: the images land under PROD/<CID>/_BENCH/, out of the
+# Revue, the export and the production tables, like the bench's.
 #
+# A TRIAL HAS A KIND (7 bis): `ton` (the tone workshop) or `lumiere` (the light
+# workshop). Each kind builds its jobs through `build_jobs`; `_run_trial` is the
+# one launcher, and `ss.STATE["essai"]` the one slot — one GPU, one last trial.
+#
+# THE TONE TRIAL.
 # WHY THREE IMAGES AND NOT TWO. A tone does two things: it adds a fragment to
 # the prompt, and it poses an expression after the identity check. A two-image
 # trial (without / with) changes both at once, and on 25/09 it pinned the
@@ -284,8 +293,79 @@ def start_tone_trial(character, scene, tone, seed=None):
     jobs = trial_jobs(character, scene, tone, seed)
     if not jobs:
         raise ValueError(f"scène introuvable au niveau de base : {scene!r}")
+    return _run_trial(character, "ton", scene, seed, jobs, {"tone": tone},
+                      f"(sans ton → « {tone} »)")
 
-    trial_id = f"essai-ton-{datetime.now():%Y%m%d_%H%M%S}"
+
+# THE LIGHT TRIAL (7 bis). The scene without its light, then with the light of
+# the sheet AS IT IS ON SCREEN, saved or not — that is what lets one grope.
+# The sentence goes through the normal resolution: it takes the place of the
+# scene's own light, like a variant, in a copy of the bank that build_jobs
+# reads from a temporary file. Nothing is written to scenes.json nor to the
+# catalogue; `build_jobs` stays the one assembler (invariant 3).
+TRIAL_WITHOUT_LIGHT = "sans_lumiere"
+TRIAL_WITH_LIGHT = "avec_lumiere"
+
+
+def light_sentence(character, setup=None, text=""):
+    """The sentence a light trial tries: the text written by hand, else the
+    sheet composed with this character's own effects. Raises ValueError with
+    the screen's message."""
+    try:
+        sentence = str(text or "").strip() or (
+            lights.compose(setup, lights.EFFECTS.merged(character)) if setup else "")
+    except lights.LightError as e:
+        raise ValueError(str(e)) from e
+    if not sentence:
+        raise ValueError("rien à essayer : la fiche est vide")
+    if layered_catalog.is_reference(sentence):
+        raise ValueError(f"le texte d'une lumière ne commence pas par « {layered_catalog.MARKER} »")
+    return sentence
+
+
+def light_trial_jobs(character, scene, sentence, seed):
+    """The jobs of a light trial as `(label, job, expression)` triples, or []
+    when the scene does not resolve at the base level."""
+    bank = lb.load_json(lb.scenes_path(character))
+    if not any(isinstance(s, dict) and s.get("id") == scene for s in bank.get("scenes", [])):
+        return []
+    filters = SimpleNamespace(scene=[scene], category=None, format=None, count=1, limit=1,
+                              seed=seed, no_variants=True, tone=None, intention=None,
+                              intensity=0)
+    jobs = []
+    with tempfile.TemporaryDirectory(prefix="essai-lumiere-") as tmp:
+        for label, light in ((TRIAL_WITHOUT_LIGHT, None), (TRIAL_WITH_LIGHT, sentence)):
+            copy_ = copy.deepcopy(bank)
+            for s in copy_["scenes"]:
+                if isinstance(s, dict) and s.get("id") == scene:
+                    s.pop("light", None)
+                    if light:
+                        s["light"] = light
+            path = Path(tmp) / "scenes.json"
+            path.write_text(json.dumps(copy_, ensure_ascii=False), encoding="utf-8")
+            built = lb.build_jobs(path, filters, character_id=character)
+            if not built:
+                return []
+            jobs.append((label, {**built[0], "seed": seed}, True))
+    return jobs
+
+
+def start_light_trial(character, scene, key="", setup=None, text="", seed=None):
+    """Launches a light trial and returns its id. Raises ValueError when the
+    sheet or the scene does not resolve — checked before STATE is armed."""
+    sentence = light_sentence(character, setup, text)
+    seed = int(seed) if seed is not None else random.randint(1, 2**31 - 1)
+    jobs = light_trial_jobs(character, scene, sentence, seed)
+    if not jobs:
+        raise ValueError(f"scène introuvable au niveau de base : {scene!r}")
+    return _run_trial(character, "lumiere", scene, seed, jobs,
+                      {"light": key, "sentence": sentence}, "(sans lumière → avec la fiche)")
+
+
+def _run_trial(character, kind, scene, seed, jobs, subject, announce):
+    """Arms STATE and launches the jobs of a trial; returns its id. `subject`
+    says what is tried (`tone`, or `light` and its `sentence`)."""
+    trial_id = f"essai-{kind}-{datetime.now():%Y%m%d_%H%M%S}"
     configuration = ss.cfg(character)
     configuration["_intensity"] = 0
     apply_tier_rules(configuration, 0, character)
@@ -296,10 +376,10 @@ def start_tone_trial(character, scene, tone, seed=None):
                     current=None, stats={}, recent=[], intensity=0, character=character,
                     last_error=None, edition=False,
                     started_at=datetime.now().isoformat(timespec="seconds"))
-    ss.STATE["essai"] = {"id": trial_id, "character": character, "scene": scene,
-                         "tone": tone, "seed": seed, "results": {}}
-    ss.push_log(f"essai de ton {trial_id} — « {scene} », {len(jobs)} images "
-                f"(sans ton → « {tone} »), graine {seed} · hors production")
+    ss.STATE["essai"] = {"id": trial_id, "kind": kind, "character": character,
+                         "scene": scene, "seed": seed, "results": {}, **subject}
+    ss.push_log(f"essai {trial_id} — « {scene} », {len(jobs)} images "
+                f"{announce}, graine {seed} · hors production")
 
     def work():
         checker = ss.checker_partage(configuration)
@@ -328,23 +408,30 @@ def start_tone_trial(character, scene, tone, seed=None):
     return trial_id
 
 
-def trial_state(character):
-    """The current (or last) trial of THIS character, without file paths —
-    those stay on the server. None when there is none."""
+def _trial(character, kind):
     essai = ss.STATE.get("essai")
-    if not essai or essai.get("character") != character:
+    if not essai or essai.get("character") != character or essai.get("kind", "ton") != kind:
         return None
-    return {**{k: v for k, v in essai.items() if k != "results"},
+    return essai
+
+
+def trial_state(character, kind="ton"):
+    """The current (or last) trial of THIS character and kind, without file
+    paths — those stay on the server. None when there is none."""
+    essai = _trial(character, kind)
+    if not essai:
+        return None
+    return {**{k: v for k, v in essai.items() if k != "results"}, "kind": kind,
             "running": bool(ss.STATE["running"]) and ss.STATE.get("batch_id") == essai["id"],
             "results": {label: {k: v for k, v in r.items() if k != "path"}
                         for label, r in essai["results"].items()}}
 
 
-def trial_image(character, label):
+def trial_image(character, label, kind="ton"):
     """The path of one image of THIS character's current trial, or None. The
     path comes from the server's own record, never from the request."""
-    essai = ss.STATE.get("essai")
-    if not essai or essai.get("character") != character:
+    essai = _trial(character, kind)
+    if not essai:
         return None
     result = essai["results"].get(label)
     return result and result["path"]
