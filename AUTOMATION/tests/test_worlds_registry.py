@@ -281,11 +281,11 @@ try:
            "materialize : decor disparu")
 
     merged = worlds.merge_scene("vivant", "p1", {"wardrobe": {"0": "jeans"}})
-    verifie(merged["prompt"] == "reading, morning light, a quiet room"
+    verifie(merged["prompt"] == "reading, morning light" and merged["place"] == "d1"
             and merged["intention"] == "lifestyle" and merged["world_ref"] == "p1"
             and merged["origin"] == "world" and merged["world"] == "vivant"
             and merged["wardrobe"] == {"0": "jeans"} and merged["intensity"] == 1,
-            f"merge_scene : scene composee + intensity du monde + overlay ({merged})")
+            f"merge_scene : texte propre + cle du decor + intensity du monde + overlay ({merged})")
     verifie(worlds.merge_scene("vivant", "p1", {"intensity": 0})["intensity"] == 0,
             "merge_scene : l'intensity du personnage recouvre celle du monde")
     attend(worlds.UnknownSceneError, lambda: worlds.merge_scene("vivant", "gone", {}),
@@ -295,9 +295,42 @@ try:
     data = worlds.load_world("vivant")
     data["places"][0]["prompt"] = "a sunlit room"
     (_tmp / "vivant.json").write_text(json.dumps(data), encoding="utf-8")
-    verifie(worlds.merge_scene("vivant", "p1", {})["prompt"]
+    def lancement(scene_bank):
+        """Ce que lit build_jobs : la banque relue puis composee."""
+        return worlds.compose_scene_bank(worlds.refresh_scene_bank(scene_bank))
+
+    def banque(*scenes):
+        return {"world": "vivant", "scenes": [dict(s) for s in scenes]}
+
+    reprise = {"id": "p1", "world": "vivant", "origin": "world", "world_ref": "p1"}
+    verifie(lancement(banque(reprise))["scenes"][0]["prompt"]
             == "reading, morning light, a sunlit room",
-            "corriger un decor atteint toute scene qui y puise")
+            "corriger un decor atteint toute scene qui y puise, au lancement")
+    copie = {"id": "p1", "world": "vivant", "origin": "copy", "world_ref": "p1",
+             "place": "d1", "prompt": "my own reading"}
+    propre = {"id": "m1", "world": "vivant", "origin": "manual", "place": "d1",
+              "prompt": "writing a letter"}
+    lu = {s["id"]: s["prompt"] for s in lancement(banque(copie, propre))["scenes"]}
+    verifie(lu == {"p1": "my own reading, a sunlit room",
+                   "m1": "writing a letter, a sunlit room"},
+            f"une copie et une scene propre suivent leur decor, pas le texte du monde ({lu})")
+    verifie(lancement(banque({"id": "x", "prompt": "plain"}))["scenes"][0]["prompt"] == "plain",
+            "une scene sans decor n'est pas touchee")
+    attend(worlds.UnknownPlaceError,
+           lambda: lancement(banque({"id": "z", "place": "gone", "prompt": "x"})),
+           "un decor disparu au lancement")
+    try:
+        lancement(banque({"id": "z", "place": "gone", "prompt": "x"}))
+    except worlds.UnknownPlaceError as e:
+        verifie("'z'" in str(e), f"l'erreur nomme la scene ({e})")
+    ancienne = dict(reprise, place="d1")
+    data = worlds.load_world("vivant")
+    data["scenes"][0].pop("place")
+    (_tmp / "vivant.json").write_text(json.dumps(data), encoding="utf-8")
+    verifie("place" not in worlds.refresh_scene_bank(banque(ancienne))["scenes"][0],
+            "une scene reprise perd le decor que le monde a retire")
+    data["scenes"][0]["place"] = "d1"
+    (_tmp / "vivant.json").write_text(json.dumps(data), encoding="utf-8")
 
     worlds.save_scenes("vivant", [{"id": "p1", "label": "Scene 1",
                                    "place": "d1", "prompt": "reading, evening light"}])
@@ -306,7 +339,7 @@ try:
             "save_scenes : les scenes relues portent le nouveau texte")
     verifie(apres["label"] == "Vivant" and apres["places"][0]["id"] == "d1",
             "save_scenes : le reste du fichier (label, decors) intact")
-    verifie(worlds.merge_scene("vivant", "p1", {})["prompt"]
+    verifie(lancement(banque(reprise))["scenes"][0]["prompt"]
             == "reading, evening light, a sunlit room",
             "merge_scene relit le catalogue APRES l'edition — heritage vivant")
 finally:

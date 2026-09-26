@@ -131,8 +131,10 @@ try:
             "la banque du personnage octet pour octet identique")
     verifie([i["key"] for i in CLIENT.get(f"/api/worlds/{A}/intentions").json()["intentions"]]
             == ["lifestyle", "sport", "voyage"], "GET relit ce qui a ete ecrit")
-    verifie(worlds.merge_scene(A, "matin", {})["prompt"] == "waking up, a quiet bedroom, linen",
-            "corriger un lieu atteint la scene composee")
+    lu = worlds.compose_scene_bank(worlds.refresh_scene_bank(
+        json.loads((d / "scenes.json").read_text(encoding="utf-8"))))
+    verifie(lu["scenes"][0]["prompt"] == "waking up, a quiet bedroom, linen",
+            "corriger un lieu atteint la scene composee au lancement")
     reg = {w["id"]: w for w in CLIENT.get("/api/worlds").json()["worlds"]}
     verifie(reg[A]["intentions_count"] == 3 and reg[A]["places_count"] == 2,
             "le registre compte lieux et intentions")

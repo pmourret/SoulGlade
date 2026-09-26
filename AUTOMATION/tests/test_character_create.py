@@ -94,14 +94,15 @@ try:
     verifie(all({"id", "prompt", "format", "intensity"} <= set(s) for s in sc["scenes"]),
             "chaque scene amorcee a la forme attendue par build_jobs")
     # ADR-0015 : la scene amorcee ne fige pas le prompt, elle herite en direct
-    # de la scene du monde via `world_ref` — et le prompt materialise a la naissance est
-    # deja la scene composee avec son decor (ADR-0027 §4).
+    # de la scene du monde via `world_ref` — elle porte le texte de la scene et la
+    # cle de son decor, composes au lancement (ADR-0027 §4, IT-11 chantier 5).
     par_id = {p["id"]: p for p in catalogue}
     verifie(all(s.get("world_ref") == s["id"] for s in sc["scenes"]),
             "chaque scene amorcee porte world_ref == son id de scene du monde")
-    verifie(all(s["prompt"] == worlds.materialize("terres-sauvages", par_id[s["id"]])
+    verifie(all(s["prompt"] == par_id[s["id"]].get("prompt", "")
+                and s.get("place") == par_id[s["id"]].get("place")
                 for s in sc["scenes"]),
-            "le prompt amorce est celui du catalogue au moment de la creation")
+            "la scene amorcee porte le texte et le decor du catalogue a la creation")
 
     cr = json.loads((d / "creative.json").read_text(encoding="utf-8"))
     verifie(cr["intensity"][0]["destination"] == "PROD/WIZTEST_RPG",

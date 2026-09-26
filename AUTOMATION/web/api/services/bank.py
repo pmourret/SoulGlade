@@ -23,6 +23,7 @@ import shutil
 
 import pose_tools
 import shared_state as ss
+import worlds
 
 
 KNOWN_FORMATS = ("4:5", "2:3", "9:16", "1:1")
@@ -78,7 +79,9 @@ def validate_scene_bank(data, previous=None, allow_losses=False, world=None):
         elif sid in seen:
             problems.append(f"{where} : identifiant en double")
         seen.add(sid)
-        if not str(s.get("prompt") or "").strip():
+        # a scene set in a place of its world may carry no text of its own:
+        # the place alone composes a prompt at launch (worlds.compose_scene_bank)
+        if not str(s.get("prompt") or "").strip() and not s.get("place"):
             problems.append(f"{where} : « prompt » vide")
         if s.get("format") and s["format"] not in KNOWN_FORMATS:
             problems.append(f"{where} : format inconnu « {s['format']} »")
@@ -172,6 +175,10 @@ def _world_problems(data, scenes, previous, world):
 
     known = ({s.get("id") for s in previous.get("scenes", []) if isinstance(s, dict)}
              if previous else set())
+    try:
+        place_ids = {p.get("id") for p in worlds.places(world)}
+    except worlds.UnknownWorldError:
+        place_ids = set()
     for i, s in enumerate(scenes):
         if not isinstance(s, dict):
             continue                      # already reported by the shape checks
@@ -185,6 +192,10 @@ def _world_problems(data, scenes, previous, world):
         elif not w and (not previous or sid in known):
             problems.append(f"{where} : « world » manquant — chaque scène "
                             f"déclare son monde, ici « {world} »")
+        place = s.get("place")
+        if place and place not in place_ids:
+            problems.append(f"{where} : lieu inconnu « {place} » — le monde "
+                            f"« {world} » ne le porte pas (ou plus)")
         origin = s.get("origin")
         if origin is not None and origin not in KNOWN_ORIGINS:
             problems.append(f"{where} : origine inconnue « {origin} » — "

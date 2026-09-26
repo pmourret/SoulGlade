@@ -406,9 +406,11 @@ def tone_affinity(scene, tone):
 def load_scene_bank(scenes_file):
     """La banque d'un personnage telle que `build_jobs` l'assemble : le
     fichier, dont chaque scene reprise du monde est relue depuis le monde
-    (ADR-0027 §4-§5, `worlds.refresh_scene_bank`). C'est la lecture, en amont
-    de l'assemblage : l'assembleur ne compose jamais une scene lui-meme."""
-    return worlds.refresh_scene_bank(load_json(scenes_file))
+    (ADR-0027 §4-§5, `worlds.refresh_scene_bank`), puis chaque scene qui
+    porte un decor composee avec lui (`worlds.compose_scene_bank`). C'est la
+    lecture, en amont de l'assemblage : l'assembleur ne compose jamais une
+    scene lui-meme."""
+    return worlds.compose_scene_bank(worlds.refresh_scene_bank(load_json(scenes_file)))
 
 
 def build_jobs(scenes_file, args, character_id, creative=None):

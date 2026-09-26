@@ -201,6 +201,39 @@ try:
     verifie(r.status_code == 400 and "world_ref" in r.text,
             f"une copie sans world_ref est refusee ({r.status_code})")
 
+    # ================================= [4b] le lieu reste lie (chantier 5, 26/09)
+    print("\n[4b] une copie suit la correction de son LIEU, pas celle du texte du monde")
+    monde = json.loads(WORLD_PATH.read_text("utf-8"))
+    monde["places"] = [{"id": "salon", "label": "Salon", "prompt": "a small living room"}]
+    monde["scenes"] = [{"id": "p1", "label": "Lieu 1", "intention": "lifestyle",
+                        "place": "salon", "prompt": "reading"}]
+    WORLD_PATH.write_text(json.dumps(monde), encoding="utf-8")
+    bank_a = CLIENT.get(f"/api/scenes?character={CHAR_A}").json()
+    reprise = bank_a["data"]["scenes"][0]
+    verifie(reprise.get("place") == "salon" and reprise["prompt"] == "reading",
+            f"la Banque sert le texte propre et la cle du lieu ({reprise.get('place')}, {reprise['prompt']!r})")
+    copie = {**reprise, "origin": "copy", "prompt": "reading by CANDLE light"}
+    r = CLIENT.post(f"/api/scenes?character={CHAR_A}",
+                    json={"data": {**bank_a["data"], "scenes": [copie]}})
+    verifie(r.status_code == 200, f"A enregistre sa copie liee au lieu ({r.status_code})")
+    monde["places"][0]["prompt"] = "a BRIGHT living room"
+    monde["scenes"][0]["prompt"] = "reading, WORLD fix"
+    WORLD_PATH.write_text(json.dumps(monde), encoding="utf-8")
+    pa, pb = prompt_lance(CHAR_A), prompt_lance(CHAR_B)
+    verifie("CANDLE" in pa and "BRIGHT living room" in pa and "WORLD fix" not in pa,
+            f"{CHAR_A} (copie) : son texte, le lieu corrige")
+    verifie("WORLD fix" in pb and "BRIGHT living room" in pb,
+            f"{CHAR_B} (reprise) : les deux corrections")
+    inconnu = {**copie, "place": "nulle_part"}
+    r = CLIENT.post(f"/api/scenes?character={CHAR_A}",
+                    json={"data": {**bank_a["data"], "scenes": [inconnu]}})
+    verifie(r.status_code == 400 and "nulle_part" in r.text,
+            f"un lieu inconnu du monde est refuse ({r.status_code})")
+    sans_texte = {**copie, "prompt": ""}
+    r = CLIENT.post(f"/api/scenes?character={CHAR_A}",
+                    json={"data": {**bank_a["data"], "scenes": [sans_texte]}})
+    verifie(r.status_code == 200, f"un lieu seul suffit a une scene ({r.status_code})")
+
 finally:
     shutil.rmtree(OFM / "CHARACTERS" / CHAR_A, ignore_errors=True)
     shutil.rmtree(OFM / "CHARACTERS" / CHAR_B, ignore_errors=True)

@@ -456,11 +456,16 @@ def save_scenes_adulte(wid, new_scenes):
 
 
 def merge_scene(wid, scene_id, overlay):
-    """La scene du monde, composee avec son decor et toujours relue depuis le
-    catalogue actuel, plus l'OVERLAY du personnage (`SCENE_OVERLAY_KEYS`),
-    recopie tel quel depuis `overlay`. L'`intensity` de la scene du monde est
-    le defaut de l'overlay. Leve UnknownWorldError / UnknownSceneError /
-    UnknownPlaceError : a l'appelant de decider quoi en faire.
+    """La scene du monde, toujours relue depuis le catalogue actuel, plus
+    l'OVERLAY du personnage (`SCENE_OVERLAY_KEYS`), recopie tel quel depuis
+    `overlay`. L'`intensity` de la scene du monde est le defaut de l'overlay.
+    Leve UnknownWorldError / UnknownSceneError : a l'appelant de decider quoi
+    en faire.
+
+    Elle rend la CLE du decor (`place`) et le texte propre de la scene, jamais
+    le prompt compose : la composition se fait au lancement
+    (`runner.prompt.load_scene_bank`), pour toute scene qui porte un decor.
+    Une copie garde ainsi le lien a son decor (chantier 5, tranche le 26/09).
 
     Seule une scene `origin == "world"` passe ici : une copie du personnage
     (`origin == "copy"`) garde son cadre, voir `refresh_scene_bank`."""
@@ -472,8 +477,10 @@ def merge_scene(wid, scene_id, overlay):
         "world_ref": scene_id,
         "label": s.get("label", ""),
         "intention": s.get("intention", ""),
-        "prompt": materialize(wid, s),
+        "prompt": s.get("prompt", ""),
     }
+    if s.get("place"):
+        merged["place"] = s["place"]
     if "intensity" in s:
         merged["intensity"] = s["intensity"]
     for k in SCENE_OVERLAY_KEYS:
@@ -506,9 +513,33 @@ def refresh_scene_bank(data):
         if not wid or not ref:
             continue
         try:
-            s.update(merge_scene(wid, ref, s))
-        except (UnknownWorldError, UnknownSceneError, UnknownPlaceError):
+            merged = merge_scene(wid, ref, s)
+        except (UnknownWorldError, UnknownSceneError):
             continue
+        s.pop("place", None)              # le monde a pu retirer le decor de sa scene
+        s.update(merged)
+    return data
+
+
+def compose_scene_bank(data):
+    """Compose en place, avec son decor, chaque scene de la banque qui en
+    porte un (`place`), quelle que soit son origine : « <texte>, <decor> »,
+    la regle de `materialize`. C'est la derniere lecture avant l'assembleur
+    (ADR-0027 §4) ; le disque garde le texte propre et la cle du decor.
+
+    Un decor disparu leve UnknownPlaceError en nommant la scene : un
+    lancement sans son decor serait un echec silencieux."""
+    for s in data.get("scenes", []):
+        if not isinstance(s, dict) or not s.get("place"):
+            continue
+        wid = s.get("world") or data.get("world")
+        if not wid:
+            raise UnknownPlaceError(
+                f"scene {s.get('id')!r} : decor {s['place']!r} sans monde")
+        try:
+            s["prompt"] = materialize(wid, s)
+        except (UnknownPlaceError, UnknownWorldError) as e:
+            raise UnknownPlaceError(f"scene {s.get('id')!r} : {e}") from e
     return data
 
 
