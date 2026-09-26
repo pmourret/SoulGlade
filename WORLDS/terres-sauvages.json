@@ -20,69 +20,6 @@
   },
   "tone": "wilderness travel: forests and dusk, campfires, worn traveller's gear, low muted light",
   "ui_skin_token": "world-terres-sauvages",
-  "places": [
-    {
-      "id": "lisiere_foret",
-      "label": "Lisiere de foret",
-      "intention": "exploration",
-      "prompt": "at the edge of a forest at dusk, half body, three-quarter angle, cool blue light"
-    },
-    {
-      "id": "portrait_etude",
-      "label": "Portrait Etude",
-      "intention": "portrait",
-      "prompt": "half body portrait against a plain neutral studio backdrop, facing the camera, even soft lighting from the front"
-    },
-    {
-      "id": "camp_soir",
-      "label": "Camp Soir",
-      "intention": "exploration",
-      "prompt": "sitting by a small campfire at the edge of a forest at dusk, half body, three-quarter angle, gentle warm light from the fire balanced by cool blue dusk light behind her"
-    }
-  ],
-  "_notes": [
-    "Monde d'Abyssiaelle (pack rpg-personnage / famille sdxl). ADR-0012, J7bis.",
-    "compatible_families : sdxl seulement -- le monde ne resout pas la famille, il",
-    "doit etre compatible avec celle que (type, style) a deja resolue.",
-    "FIGE a la creation du personnage (CLAUDE.md §3-§4) : ses assets entrent dans",
-    "le rendu et la mesure du verrou les valide pour ce visage.",
-    "places : catalogue VIVANT (ADR-0015), pas une simple amorce. Consomme a la",
-    "creation du personnage (wizard, J7bis etape 5) ET tant qu'il vit : une scene",
-    "de personnage qui reference un lieu (`world_ref`) en herite en direct --",
-    "prompt/intention toujours relus d'ici, jamais figes dans scenes.json. Edite",
-    "par ses propres routes (/api/worlds/<id>/places), jamais par POST /api/scenes.",
-    "J8.3 (ADR-0019) : places/intentions/tones portent desormais le contenu REEL",
-    "d'Abyssiaelle (2 scenes -> 2 lieux + 1 placeholder anterieur non recouvert ;",
-    "2 intentions ; 2 tons), migre par AUTOMATION/tests/migrate_world_catalogs.py.",
-    "L'ancien placeholder `feu_de_camp` a ete retire au profit du lieu reel",
-    "`camp_soir` (meme theme, id different). intentions/tones sont la BASE qu'un",
-    "personnage de ce monde herite via runner.prompt.load_creative() ; une `key`",
-    "de personnage la remplace entierement ou s'y ajoute, jamais une fusion",
-    "champ a champ. CHARACTERS/abyssiaelle/scenes.json ne porte plus que",
-    "l'overlay (tenue, pose...) des 2 scenes migrees, plus jamais leur cadre."
-  ],
-  "intentions": [
-    {
-      "key": "portrait",
-      "label": "Portrait",
-      "icon": "◉",
-      "defaults": {
-        "format": "1:1",
-        "tone": "neutre"
-      },
-      "prompt_add": ""
-    },
-    {
-      "key": "exploration",
-      "label": "Exploration",
-      "icon": "⛰",
-      "defaults": {
-        "format": "1:1",
-        "tone": "sombre"
-      },
-      "prompt_add": "full figure or half body, environment clearly visible around her"
-    }
-  ],
   "tones": [
     {
       "key": "neutre",
@@ -93,6 +30,69 @@
       "key": "sombre",
       "label": "Sombre",
       "prompt_add": "moody atmosphere, low ambient light, muted colors"
+    }
+  ],
+  "_notes": [
+    "ADR-0012 : fige a la creation du personnage, au meme titre que le style.",
+    "compatible_families filtre les mondes proposables, il n'en resout aucun.",
+    "ADR-0027 : places = decors ; intentions = ce qu'on veut montrer, sans",
+    "niveau ni format ; scenes = une intention dans un decor, avec ce qui s'y",
+    "passe (le prompt compose est « <scene>, <decor> », worlds.materialize) ;",
+    "tons = humeurs. La branche adulte vit dans <id>.adulte.json, en scenes."
+  ],
+  "places": [
+    {
+      "id": "foret",
+      "label": "Lisière de forêt",
+      "prompt": "edge of a forest at dusk"
+    },
+    {
+      "id": "studio_neutre",
+      "label": "Studio neutre",
+      "prompt": "plain neutral studio backdrop"
+    }
+  ],
+  "intentions": [
+    {
+      "key": "portrait",
+      "label": "Portrait",
+      "icon": "◉",
+      "prompt_add": "",
+      "defaults": {
+        "tone": "neutre"
+      }
+    },
+    {
+      "key": "exploration",
+      "label": "Exploration",
+      "icon": "⛰",
+      "prompt_add": "full figure or half body, environment clearly visible around her",
+      "defaults": {
+        "tone": "sombre"
+      }
+    }
+  ],
+  "scenes": [
+    {
+      "id": "lisiere_foret",
+      "label": "Lisière de forêt",
+      "intention": "exploration",
+      "place": "foret",
+      "prompt": "half body, three-quarter angle, cool blue light"
+    },
+    {
+      "id": "portrait_etude",
+      "label": "Portrait d'étude",
+      "intention": "portrait",
+      "place": "studio_neutre",
+      "prompt": "half body portrait facing the camera, even soft lighting from the front"
+    },
+    {
+      "id": "camp_soir",
+      "label": "Feu de camp",
+      "intention": "exploration",
+      "place": "foret",
+      "prompt": "sitting by a small campfire, half body, three-quarter angle, gentle warm light from the fire balanced by cool blue dusk light behind her"
     }
   ]
 }

@@ -1,25 +1,24 @@
 {
   "_lisez_moi": [
-    "Catalogue ADULTE du monde slow-life. Meme forme que `places` dans",
-    "WORLDS/slow-life.json, meme validation : un CADRE (label, intention,",
-    "prompt), jamais une tenue -- la nudite est la garde-robe du PERSONNAGE",
-    "a son palier natif, pas une livraison du monde (ADR-0014).",
-    "Ces lieux n'apparaissent dans aucune banque ordinaire : `places()` ne",
-    "les lit pas, et une scene qui en derive ne se voit qu'a sa bande de",
-    "niveaux (runner.prompt.scene_band)."
+    "Branche ADULTE du monde slow-life (ADR-0027 §6) : des scenes, qui",
+    "puisent dans les decors et les intentions de slow-life.json. Jamais",
+    "une tenue : la nudite est la garde-robe du personnage a son palier",
+    "natif (ADR-0014). Ce qui montre une scene reste sa bande de niveaux."
   ],
-  "places_adulte": [
+  "scenes": [
     {
       "id": "chambre_lumiere_matin",
-      "label": "Chambre, lumiere du matin",
-      "intention": "boudoir",
-      "prompt": "standing by the bedroom window in the morning, soft diffuse daylight across the skin, unmade bed and linen curtains behind, calm domestic intimacy, full body, three-quarter angle"
+      "label": "Chambre, lumière du matin",
+      "intention": "lifestyle",
+      "place": "chambre",
+      "prompt": "standing by the bedroom window in the morning, soft diffuse daylight across the skin, calm domestic intimacy, full body, three-quarter angle"
     },
     {
       "id": "salle_bain_vapeur",
-      "label": "Salle de bain, apres la douche",
-      "intention": "boudoir",
-      "prompt": "in a small tiled bathroom just after a shower, warm damp air, steam on the mirror, wet hair, low side light from a frosted window, intimate and unposed, standing full body, three-quarter angle"
+      "label": "Salle de bain, après la douche",
+      "intention": "selfcare",
+      "place": "salle_de_bain",
+      "prompt": "just after a shower, warm damp air, steam on the mirror, wet hair, low side light from a frosted window, intimate and unposed, standing full body, three-quarter angle"
     }
   ]
 }
