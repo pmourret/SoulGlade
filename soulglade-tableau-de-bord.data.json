@@ -125,16 +125,16 @@
     },
     {
       "id": "IT-11",
-      "state": "now",
+      "state": "done",
       "titre": "Un monde se livre en lieux, intentions et scènes",
-      "quoi": "En cadrant le créateur d'intentions, la définition même d'une intention a cédé : les « lieux » d'un monde sont des scènes, et l'intention mêle genre, cadrage, humeur et niveau. Un monde se vend et doit suffire pour commencer ; les chantiers restants d'IT-10 agissent tous sur la scène, les bâtir sur l'ancien modèle serait les refaire.",
-      "dod": "Un monde neuf reçoit décor, intention, scène et ton depuis l'interface, et un personnage neuf produit la scène. Modifiée dans un atelier, elle devient sa copie : le monde corrigé atteint les autres personnages, pas la copie. slow-life et terres-sauvages réécrits, Léna et Abyssiaelle produisent.",
+      "quoi": "Les « lieux » d'un monde étaient des scènes, et l'intention mêlait genre, cadrage, humeur et niveau. Un monde se livre maintenant en lieux, intentions, scènes et tons, qu'un personnage reprend ou copie ; les chantiers d'IT-10 se bâtissent sur ce modèle.",
+      "dod": "Un monde neuf reçoit lieu, intention, scène et ton depuis l'écran, et un personnage neuf produit la scène. Une copie ne suit plus le texte du monde, mais suit son lieu. Les deux mondes réécrits, Léna et Abyssiaelle vérifiés au plan.",
       "epics": "E3, E1",
-      "ref": "ADR-0027 — DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
+      "ref": "ADR-0027 — DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md · DOCS/retros/2026-09-26-phase-11-monde-lieux-intentions-scenes.md"
     },
     {
       "id": "IT-10",
-      "state": "next",
+      "state": "now",
       "titre": "Les ateliers font ce qu'ils annoncent",
       "quoi": "Ce qu'un ton fait à l'image était invisible dans l'atelier, et sa passe d'expression dégradait les selfies que Produire lui imposait. Le même défaut est ailleurs : des panneaux sans serveur, des catalogues du monde sans créateur, une pose sans son texte. Un outil livré passe avant toute capacité neuve.",
       "dod": "Les huit chantiers livrés, chacun avec son audit vérifié en vrai. Aucun panneau n'annonce une capacité qu'aucun serveur ne rend, et un monde neuf reçoit ses tons sans qu'on ouvre un JSON.",
@@ -1484,6 +1484,10 @@
       {
         "t": "Choisir les scènes du monde à la création du personnage",
         "d": "26/09. Un personnage reprend toutes les scènes de son monde (ADR-0027) ; à sa création, l'utilisateur choisira celles qu'il garde. Attend IT-11, qui pose la scène du monde."
+      },
+      {
+        "t": "Le minimum d'une scène reprise suit le monde",
+        "d": "26/09. Enregistrer la Banque réécrit le niveau minimum d'une scène reprise du monde : une correction de ce minimum dans le monde ne l'atteint plus. Le composeur ne l'écrirait que s'il diffère du monde. Vu au chantier 5 d'IT-11, sans usage qui le réclame encore."
       }
     ]
   },
