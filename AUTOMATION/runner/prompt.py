@@ -316,6 +316,10 @@ def by_level(creative, level):
                  if it.get("level") == level), None)
 
 
+# Dossier d'export (et prefixe de fichier) d'une scene sans intention.
+SANS_INTENTION = "sans-intention"
+
+
 def scene_intention(scene):
     """Defaut de compatibilite : sans champ `intention`, la categorie fait foi."""
     return scene.get("intention") or scene.get("category")
@@ -431,8 +435,6 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     tone_key = getattr(args, "tone", None) or None
     intention_key = getattr(args, "intention", None) or None
     tone = by_key(creative.get("tones", []), tone_key) if tone_key else None
-    intention = (by_key(creative.get("intentions", []), intention_key)
-                 if intention_key else None)
     palier = by_level(creative, level)
     if palier is None:
         raise ValueError(f"niveau d'intensite inconnu : {level}")
@@ -447,6 +449,13 @@ def build_jobs(scenes_file, args, character_id, creative=None):
             continue
         if not scene_visible(scene, level, intention_key, tone_key):
             continue
+
+        # Le fragment d'intention vient de l'intention DE LA SCENE, jamais du
+        # filtre cliquee dans Produire (ADR-0027 §3) : lancee depuis « Toutes »,
+        # `selfie_miroir_entree` perdait le fragment que le filtre Selfie lui
+        # donnait, alors que les deux images etaient journalisees pareil. Le
+        # filtre (`intention_key`) ne fait plus que filtrer.
+        intention = by_key(creative.get("intentions", []), scene_intention(scene))
 
         variants = [""] if args.no_variants else [""] + list(scene.get("variants", []))
         tenues = wardrobe_for(scene, level, creative)
@@ -519,7 +528,11 @@ def build_jobs(scenes_file, args, character_id, creative=None):
                         # pour ranger `chambre_soir`, une scene Intime, dans
                         # PROD/EXPORT/mode/. Les deux disaient la meme chose ;
                         # celle qui est affichee fait desormais foi.
-                        "category": scene_intention(scene),
+                        # dossier d'export et prefixe de fichier : une scene
+                        # sans intention s'exporte quand meme (ADR-0027 §3).
+                        # `None` ici cassait le nom de fichier, puis le chemin
+                        # d'export, et _best_effort avalait l'erreur.
+                        "category": scene_intention(scene) or SANS_INTENTION,
                         "intention": scene_intention(scene),
                         "tone": tone_key or "",
                         "intensity": level,

@@ -55,20 +55,26 @@ def oracle(data, scene, tenue, tone_add="", intention_add="", variant=""):
     return ", ".join(m for m in morceaux if m)
 
 
+def intention_de(scene):
+    """Fragment de l'intention DE LA SCENE (ADR-0027 §3) : il entre sans
+    qu'aucune intention soit demandee au lancement."""
+    return (lb.by_key(CREATIVE["intentions"], lb.scene_intention(scene)) or {}).get("prompt_add", "")
+
+
 def scene_by_id(data, sid):
     return next(s for s in data["scenes"] if s["id"] == sid)
 
 
 def test_byte_exact_sans_ton():
-    print("\n[1] assemblage a l'octet pres -- sans ton ni intention (niveau 0)")
-    data = lb.load_json(SCENES)
+    print("\n[1] assemblage a l'octet pres -- sans ton ni intention demandes (niveau 0)")
+    data = lb.load_scene_bank(SCENES)
     jobs = lb.build_jobs(SCENES, filtres(), CHARACTER, CREATIVE)
     verifie(len(jobs) == len(data["scenes"]),
             f"un job par scene de niveau 0 ({len(jobs)}/{len(data['scenes'])})")
     for job in jobs:
         scene = scene_by_id(data, job["scene"])
         tenue = scene["wardrobe"]["0"]
-        attendu = oracle(data, scene, tenue)
+        attendu = oracle(data, scene, tenue, intention_add=intention_de(scene))
         verifie(job["prompt"] == attendu,
                 f"{scene['id']} : prompt identique a l'oracle")
         if job["prompt"] != attendu:
@@ -78,7 +84,7 @@ def test_byte_exact_sans_ton():
 
 def test_byte_exact_avec_ton_et_variante():
     print("\n[2] assemblage a l'octet pres -- avec ton + variante")
-    data = lb.load_json(SCENES)
+    data = lb.load_scene_bank(SCENES)
     jobs = lb.build_jobs(SCENES, filtres(no_variants=False, tone="sombre",
                                          scene=["camp_soir"]),
                          CHARACTER, CREATIVE)
@@ -87,7 +93,8 @@ def test_byte_exact_avec_ton_et_variante():
     tenue = scene["wardrobe"]["0"]
     ton = lb.by_key(CREATIVE["tones"], "sombre")["prompt_add"]
     for job in jobs:
-        attendu = oracle(data, scene, tenue, tone_add=ton, variant=job["variant"])
+        attendu = oracle(data, scene, tenue, tone_add=ton,
+                         intention_add=intention_de(scene), variant=job["variant"])
         verifie(job["prompt"] == attendu,
                 f"variante {job['variant']!r} : prompt identique a l'oracle")
         if job["prompt"] != attendu:

@@ -10,6 +10,7 @@ et sert d'oracle : si les deux divergent d'un seul caractere, le test tombe.
 C'est ce qui garantit que la CLI existante et tout batch lance sans les nouveaux
 parametres produisent le meme resultat qu'avant.
 """
+import json
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -47,11 +48,18 @@ def filtres(**kw):
 
 
 # --------------------------------------------------------------------- oracle
-def prompt_avant_refonte(data, scene, variant):
-    """Assemblage tel qu'il etait avant la refonte. Ne jamais le modifier."""
+def prompt_avant_refonte(data, scene, variant, intention_add=""):
+    """Assemblage tel qu'il etait avant la refonte, plus UNE chose : le
+    fragment de l'intention de la scene, entre la scene et la variante.
+
+    Ne jamais le modifier au-dela. Le 26/09 (ADR-0027 §3, IT-11 chantier 3),
+    le fragment d'intention a cesse de dependre du filtre de Produire pour
+    venir de la scene : sans intention demandee, une scene porte desormais
+    le fragment de la sienne. C'est le seul ecart voulu avec l'ancien
+    assemblage, et l'oracle le rejoue a l'octet pres."""
     prefix, anchor, texture = data["prefix"], data["anchor"], data["texture"]
     direction = (data.get("direction") or "").strip()
-    corps = scene["prompt"] + (", " + variant if variant else "")
+    corps = ", ".join(x for x in [scene["prompt"], intention_add, variant] if x)
     return ", ".join(x for x in [f"{prefix} {anchor}", corps, texture, direction] if x)
 
 
@@ -65,13 +73,15 @@ def test_compatibilite():
 
     attendus = []
     for scene in data["scenes"]:
+        intention = lb.by_key(CREATIVE["intentions"], lb.scene_intention(scene)) or {}
         prompts = [(scene["prompt"], "")]
         for v in scene.get("variants", []):
             prompts.append((scene["prompt"] + ", " + v, v))
         for _, variant in prompts:
             for i in range(scene.get("count", 1)):
                 attendus.append((scene["id"], variant, i + 1,
-                                 prompt_avant_refonte(data, scene, variant)))
+                                 prompt_avant_refonte(data, scene, variant,
+                                                      intention.get("prompt_add", ""))))
 
     verifie(len(jobs) == len(attendus),
             f"nombre de jobs identique ({len(jobs)} vs {len(attendus)})")
@@ -349,13 +359,50 @@ def test_composeur():
             "aucune alerte sur une scene propre")
 
 
+def test_intention_de_la_scene():
+    """ADR-0027 §3 : le fragment d'intention vient de la scene, pas du filtre.
+
+    Constate le 26/09 : `selfie_miroir_entree` lancee depuis « Toutes » ne
+    portait pas le fragment que le filtre de son intention lui donnait, alors
+    que les deux images etaient journalisees sous la meme intention."""
+    print("\n[9] le fragment d'intention vient de la scene, pas du filtre")
+    sid = "selfie_miroir_entree"
+    scene = next(s for s in lb.load_scene_bank(SCENES)["scenes"] if s["id"] == sid)
+    cle = lb.scene_intention(scene)
+    fragment = (lb.by_key(CREATIVE["intentions"], cle) or {}).get("prompt_add", "")
+    verifie(bool(fragment), f"{sid} a une intention ({cle}) qui porte un fragment")
+    toutes = lb.build_jobs(SCENES, filtres(scene=[sid], no_variants=True),
+                           character_id="lena", creative=CREATIVE)
+    filtre = lb.build_jobs(SCENES, filtres(scene=[sid], no_variants=True, intention=cle),
+                           character_id="lena", creative=CREATIVE)
+    verifie(toutes and fragment in toutes[0]["prompt"],
+            "lancee depuis « Toutes », elle porte le fragment de son intention")
+    verifie(toutes and filtre and toutes[0]["prompt"] == filtre[0]["prompt"],
+            "et depuis le filtre de son intention, le meme prompt a l'octet pres")
+
+    # une scene sans intention : pas de fragment, et un dossier d'export nomme
+    nue = {"prefix": "p", "anchor": "a", "texture": "t",
+           "scenes": [{"id": "sans", "prompt": "a plain room", "format": "4:5", "count": 1}]}
+    chemin = HERE / "_scene_sans_intention.json"
+    chemin.write_text(json.dumps(nue), encoding="utf-8")
+    try:
+        job = lb.build_jobs(chemin, filtres(no_variants=True), character_id="lena",
+                            creative=CREATIVE)[0]
+    finally:
+        chemin.unlink(missing_ok=True)
+    verifie(job["category"] == lb.SANS_INTENTION and not job["intention"],
+            f"sans intention : exportee dans « {job['category']} », journalisee sans intention")
+    verifie(job["prompt"] == "p a, a plain room, t",
+            f"et aucun fragment d'intention n'entre ({job['prompt']!r})")
+
+
 def main():
     print("=" * 72)
     print("build_jobs — tests")
     print("=" * 72)
     for t in (test_compatibilite, test_no_variants, test_filtrage_intensite,
               test_assemblage_nouveau, test_wardrobe, test_garde_fou_visage,
-              test_amendements_fragment, test_composeur):
+              test_amendements_fragment, test_composeur, test_intention_de_la_scene):
         t()
     print("\n" + "=" * 72)
     if ECHECS:

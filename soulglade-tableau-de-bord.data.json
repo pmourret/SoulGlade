@@ -388,10 +388,10 @@
           "ref": "DOCS/cadrage/2026-09-26-it11-c2-reprendre-et-copier.md"
         },
         {
-          "s": "faire",
+          "s": "fait",
           "it": "IT-11",
           "t": "Le fragment d'intention vient de la scène",
-          "d": "Il dépend aujourd'hui du filtre cliqué dans Produire : depuis « Toutes », une scène perd le fragment de son intention. Une scène sans intention n'est pas exportée.",
+          "d": "Une scène porte le fragment de sa propre intention, quel que soit le filtre de Produire ; le verrou à l'octet près rejoue l'ancien assemblage plus ce fragment. Une scène sans intention s'exporte dans sans-intention.",
           "ref": "DOCS/cadrage/2026-09-26-it11-monde-lieux-intentions-scenes.md"
         },
         {
