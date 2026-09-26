@@ -1492,10 +1492,6 @@
       {
         "t": "Le minimum d'une scène reprise suit le monde",
         "d": "26/09. Enregistrer la Banque réécrit le niveau minimum d'une scène reprise du monde : une correction de ce minimum dans le monde ne l'atteint plus. Le composeur ne l'écrirait que s'il diffère du monde. Vu au chantier 5 d'IT-11, sans usage qui le réclame encore."
-      },
-      {
-        "t": "Un personnage neuf enregistre sa banque",
-        "d": "26/09. Un personnage fraîchement créé ne peut pas enregistrer sa banque depuis l'interface : anchor vide, tenues d'amorce vides (« 0: », hors des quatre niveaux) et tons vides perdus d'un coup, refusés à la sauvegarde. Vu au chantier 6 d'IT-10 sur un personnage d'essai. Touche le parcours nominal."
       }
     ]
   },
