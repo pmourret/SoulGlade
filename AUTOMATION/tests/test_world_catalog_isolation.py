@@ -2,7 +2,7 @@
 """Isolation d'ecriture du catalogue de monde (ADR-0015).
 
 POURQUOI CE TEST EXISTE. ADR-0015 rend `WORLDS/<id>.json` vivant : une scene
-de personnage peut desormais y referencer un lieu (`world_ref`) et en herite
+de personnage peut y referencer une scene du monde (`world_ref`) et en herite
 en direct a chaque lecture/ecriture de sa banque. Le risque exact que
 `.claude/rules/backend.md` demande de verrouiller pour toute route
 generalisee : que sauver la banque D'UN personnage finisse par ecrire dans le
@@ -12,7 +12,7 @@ par erreur dans la banque d'un personnage.
 Ce que ce test verrouille :
   1. `POST /api/scenes` (banque d'un personnage) ne modifie jamais
      `WORLDS/<son-monde>.json` — meme contenu, meme mtime, avant/apres.
-  2. `POST /api/worlds/{id}/places` (catalogue) ne modifie jamais
+  2. `POST /api/worlds/{id}/scenes` (catalogue) ne modifie jamais
      `CHARACTERS/<id>/scenes.json` d'AUCUN personnage.
   3. Deux personnages jetables du meme monde : editer le catalogue puis
      recharger `/api/scenes` pour les deux montre le nouveau texte pour les
@@ -57,18 +57,19 @@ def verifie(ok, texte):
         KO += 1
 
 
-def poser_monde(places):
+def poser_monde(scenes):
     WORLD_PATH.write_text(json.dumps({
         "id": WORLD, "label": "Monde de test isolation",
         "compatible_families": ["flux"], "suggested_styles": ["realiste"],
         "assets": {"lora": None, "lora_strength": None, "prompt_add": ""},
         "tone": "test", "ui_skin_token": "world-probe-iso",
-        "places": places,
+        "intentions": [{"key": "lifestyle", "label": "Lifestyle"}],
+        "scenes": scenes,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def poser_personnage(cid, wardrobe_overlay):
-    """Personnage jetable, une scene liee au lieu `p1` du monde jetable —
+    """Personnage jetable, une scene liee a la scene `p1` du monde jetable —
     banque deja MATERIALISEE, comme `create_character` l'ecrirait (ADR-0015 §4)."""
     d = OFM / "CHARACTERS" / cid
     if d.exists():
@@ -115,10 +116,10 @@ try:
             "WORLDS/<monde>.json OCTET POUR OCTET identique apres la sauvegarde")
 
     # ============================================ [2] le catalogue n'ecrit jamais une banque
-    print("\n[2] POST /api/worlds/{id}/places n'ecrit jamais scenes.json d'un personnage")
+    print("\n[2] POST /api/worlds/{id}/scenes n'ecrit jamais scenes.json d'un personnage")
     avant_a = (OFM / "CHARACTERS" / CHAR_A / "scenes.json").read_bytes()
     avant_b = (OFM / "CHARACTERS" / CHAR_B / "scenes.json").read_bytes()
-    r = CLIENT.post(f"/api/worlds/{WORLD}/places", json={"places": [
+    r = CLIENT.post(f"/api/worlds/{WORLD}/scenes", json={"scenes": [
         {"id": "p1", "label": "Lieu 1", "intention": "lifestyle",
          "prompt": "a quiet room, EVENING light — edite depuis le catalogue"},
     ]})

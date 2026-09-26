@@ -2,8 +2,8 @@
 
 Un monde est le CADRE d'un personnage : forets et feux de camp d'une voyageuse,
 cafes et lumiere douce d'une influenceuse slow-life. Il porte un ton, un jeton de
-peau UI, un catalogue de LIEUX (`places`), et surtout des ASSETS (LoRA de monde,
-prompt_add) qui entrent dans le rendu.
+peau UI, des decors, des intentions, des scenes et des tons (ADR-0027), et des
+ASSETS (LoRA de monde, prompt_add) qui entrent dans le rendu.
 
 Trois choses qu'un monde n'est PAS :
 
@@ -16,10 +16,10 @@ Trois choses qu'un monde n'est PAS :
     mesure est une dette declaree, pas un monde pret.
   - CE QUI EST FIGE A LA CREATION D'UN PERSONNAGE, c'est son APPARTENANCE a ce
     monde (CLAUDE.md §3-§4) : en changer reviendrait a creer un autre
-    personnage, pour la meme raison que le style. Le catalogue `places`
-    LUI-MEME reste vivant apres coup (ADR-0015) : un lieu s'edite depuis la
-    Banque (routes `/api/worlds/<id>/places`, jamais `POST /api/scenes`), et
-    toute scene qui le reference en herite en direct — voir `merge_scene()`.
+    personnage, pour la meme raison que le style. Les catalogues EUX-MEMES
+    restent vivants apres coup : ils s'editent par les routes
+    `/api/worlds/<id>/...`, jamais `POST /api/scenes`, et une scene de
+    personnage qui reprend une scene du monde en herite — voir `merge_scene()`.
 
 Comme PACKS/, ce registre est VERSIONNE : aucune donnee personnelle, un fichier
 plat par monde (WORLDS/<id>.json), decouverte par scan.
@@ -50,7 +50,11 @@ class UnknownWorldError(ValueError):
 
 
 class UnknownPlaceError(ValueError):
-    """Un id de lieu demande n'existe pas dans le catalogue de ce monde."""
+    """Un decor reference par une scene n'existe pas dans ce monde."""
+
+
+class UnknownSceneError(ValueError):
+    """Un id de scene demande n'existe pas dans le catalogue de ce monde."""
 
 
 class IncompatibleWorldError(ValueError):
@@ -110,8 +114,7 @@ _WID_RE = re.compile(r"[a-z][a-z0-9_-]*$")
 
 
 def create_world(wid, label, pack, tone=""):
-    """Cree WORLDS/<wid>.json pour l'ecran « Mondes » — catalogue `places`
-    VIDE, un pack deja curate pour en deriver `compatible_families` /
+    """Cree WORLDS/<wid>.json pour l'ecran « Mondes » — catalogues VIDES, un pack deja curate pour en deriver `compatible_families` /
     `suggested_styles` sans les faire taper a la main.
 
     LE PACK EST UNE PROPOSITION, PAS UN AIGUILLAGE (ADR-0016) : il sert une
@@ -148,14 +151,16 @@ def create_world(wid, label, pack, tone=""):
         "tone": (tone or "").strip(),
         "ui_skin_token": f"world-{wid}",
         "places": [],
+        "intentions": [],
+        "scenes": [],
         "tones": [],
         "_notes": [
             f"Cree par l'ecran « Mondes ». Pack {pack!r} choisi pour en deriver",
             f"compatible_families ({family!r}) et suggested_styles — UNE",
             "PROPOSITION, pas un aiguillage : universe.resolve() continue de",
             "deriver le pack d'un personnage de (type, style) exclusivement",
-            "(ADR-0016). Catalogue de lieux vide, a construire depuis l'ecran",
-            "d'edition (ADR-0015). readiness nait a {places, tones, style}:",
+            "(ADR-0016). Decors, intentions, scenes et tons vides, a construire",
+            "depuis l'ecran d'edition (ADR-0027). readiness nait a {places, tones, style}:",
             "false, pose par le createur du monde, jamais calcule (ADR-0023).",
         ],
     }
@@ -217,9 +222,9 @@ def ui_skin_token(wid):
 # ------------------------------------------- vocabulaire creatif (J8.3, ADR-0019)
 def intentions(wid):
     """Intentions de base declarees par le monde (`WORLDS/<id>.json` /
-    `intentions`) — un personnage de ce monde en herite (voir
-    `merge_creative_vocab`). Meme forme qu'une entree de creative.json :
-    key, label, icon, defaults, prompt_add, min_intensity."""
+    `intentions`) — ce qu'on veut montrer, a tous les niveaux (ADR-0027 §3).
+    Un personnage de ce monde en herite (voir `merge_creative_vocab`) : key,
+    label, icon, prompt_add, et au plus un ton propose (`defaults.tone`)."""
     return list(load_world(wid).get("intentions", []))
 
 
@@ -304,42 +309,43 @@ def tone_layers(wid, character_tones):
 CHARACTER_ONLY_SCENE_KEYS = ("wardrobe", "pose", "format", "count", "variants")
 
 # Cles d'overlay qu'une scene de personnage peut porter EN PLUS des cinq
-# ci-dessus, quand elle est liee a un lieu du catalogue (ADR-0015). Toutes
-# restent des reglages de personnage (tons/tags/intensite/guidance) : jamais
-# le cadre (label/intention/prompt), qui vient toujours du lieu.
+# ci-dessus, quand elle reprend une scene du monde. Toutes restent des
+# reglages de personnage (tons/tags/intensite/guidance) : jamais le cadre
+# (label/intention/prompt), qui vient toujours de la scene du monde.
 SCENE_OVERLAY_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("tones", "tags", "intensity", "guidance")
 
 
+# ADR-0027 : un monde livre des DECORS (`places`), des intentions, des SCENES
+# (une intention dans un decor, avec ce qui s'y passe) et des tons.
 CLE_PLACES = "places"
-# Catalogue ADULTE du monde, tranche le 21/09 (cadrage 2026-09-21-flux-nsfw,
-# arbitrage 3, couche decidee le meme jour). Meme validation, meme forme, meme
-# heritage que le catalogue ordinaire : separation de DONNEES, pas de
-# sous-systeme (invariant 9), et c'est `scene_band` qui masque ensuite la
-# scene hors de sa bande.
-#
-# DANS UN FICHIER A COTE, ET PAS DANS LE MONDE : `WORLDS/<id>.adulte.json`.
-# La raison n'est PAS la publication -- ce depot est le depot de dev, il est
-# prive, et le public se fera ailleurs (Pierre, 21/09). C'est une propriete
-# de produit : un monde vendu peut porter une branche adulte ou ne pas en
-# porter, et le vendeur livre alors le monde SEUL. Deux fichiers rendent ce
-# choix lisible et separable ; une cle de plus dans le monde ne le rendrait
-# pas. Un monde livre d'origine n'a pas ce fichier, et `places_adulte()`
-# rend [] sans que personne ait a le savoir.
+CLE_SCENES = "scenes"
+# Branche ADULTE du monde (21/09, ADR-0027 §6) : des scenes, qui puisent dans
+# les memes decors et les memes intentions que les autres. Separation de
+# LIVRAISON, pas de sous-systeme (invariant 9) : un monde vendu peut porter
+# cette branche ou non, et le vendeur livre alors le monde seul. C'est
+# `scene_band` qui masque ensuite une scene hors de sa bande, jamais la liste
+# dont elle sort. Un monde sans ce fichier rend [] sans que personne ait a le
+# savoir.
 SUFFIXE_ADULTE = ".adulte.json"
+
+# Ce qu'un decor ne porte jamais (ADR-0027 §2) : il dit OU, pas quoi montrer.
+PLACE_FORBIDDEN_KEYS = CHARACTER_ONLY_SCENE_KEYS + ("intention",)
 
 
 def places(wid):
-    """Catalogue de lieux du monde — le CADRE que chaque personnage de ce
-    monde peut composer (ADR-0015). Vivant : lu a la creation du personnage
-    (amorce de banque, J7bis) ET tant qu'il vit, chaque fois que sa Banque
-    charge ou enregistre une scene qui reference un lieu (`world_ref`).
+    """Decors du monde : id, label, et la description du decor (`prompt`).
+    Plusieurs scenes, de plusieurs intentions, puisent dans le meme decor."""
+    return _valider(wid, load_world(wid).get(CLE_PLACES, []), CLE_PLACES,
+                    PLACE_FORBIDDEN_KEYS)
 
-    Un catalogue de monde decrit des CADRES, pas des garde-robes : un lieu
-    qui porte une tenue (ou une pose, un format, un compte) est une erreur
-    explicite ici, pas un silence qui se propage a chaque personnage qui le
-    reference.
-    """
-    return _catalogue(wid, CLE_PLACES)
+
+def scenes(wid):
+    """Scenes du monde : une intention dans un decor, avec le texte de ce qui
+    s'y passe et, au plus, le bas de sa bande de niveaux (`intensity`). Un
+    personnage les produit telles quelles (ADR-0027 §5). Une scene de monde
+    n'habille jamais le personnage : une tenue livree par le monde est une
+    erreur explicite ici, pas un silence qui se propage."""
+    return _valider(wid, load_world(wid).get(CLE_SCENES, []), CLE_SCENES)
 
 
 def adulte_path(wid):
@@ -347,149 +353,119 @@ def adulte_path(wid):
     return world_path(wid).with_name(f"{wid}{SUFFIXE_ADULTE}")
 
 
-def places_adulte(wid):
-    """Catalogue ADULTE du monde : meme chose, autre fichier, vide par defaut.
-
-    Un monde qui n'en livre pas rend [] — c'est le cas nominal, et aucun
-    appelant n'a a savoir si le fichier existe. La validation est la MEME que
-    celle du catalogue ordinaire, et c'est voulu : un lieu adulte qui
-    habillerait le personnage serait la meme faute qu'ailleurs. La nudite
-    n'est pas une garde-robe livree par le monde, c'est la garde-robe du
-    personnage a son palier natif.
-
-    Ce catalogue ne se melange jamais au premier : `places()` ne le lit pas,
-    la banque ordinaire ne peut donc pas en afficher un lieu par accident.
-    Ce qui rend une scene adulte visible reste sa bande de niveaux
-    (`runner.prompt.scene_band`), jamais la liste dont elle sort.
-
-    Le monde doit exister : demander le catalogue adulte d'un monde inconnu
-    leve, comme pour l'autre. Seul le FICHIER a cote est optionnel.
-    """
+def scenes_adulte(wid):
+    """Scenes de la branche adulte, [] si le monde n'en livre pas. Meme
+    validation que les autres : la nudite n'est pas une garde-robe livree par
+    le monde, c'est la garde-robe du personnage a son palier natif. Le monde
+    doit exister ; seul le fichier a cote est optionnel."""
     load_world(wid)                       # leve si le monde n'existe pas
     chemin = adulte_path(wid)
     if not chemin.exists():
         return []
-    return _valider(wid, _read_json(chemin).get(CLE_PLACES_ADULTE, []),
-                    CLE_PLACES_ADULTE)
+    return _valider(wid, _read_json(chemin).get(CLE_SCENES, []),
+                    f"{CLE_SCENES} (adulte)")
 
 
-CLE_PLACES_ADULTE = "places_adulte"
-
-
-def _catalogue(wid, cle):
-    return _valider(wid, load_world(wid).get(cle, []), cle)
-
-
-def _valider(wid, entries, cle):
+def _valider(wid, entries, cle, interdites=CHARACTER_ONLY_SCENE_KEYS):
     entries = list(entries)
     for i, s in enumerate(entries):
         if not isinstance(s, dict):
             raise ValueError(f"monde {wid!r} : {cle}[{i}] n'est pas un objet")
-        intrus = [k for k in CHARACTER_ONLY_SCENE_KEYS if k in s]
+        intrus = [k for k in interdites if k in s]
         if intrus:
             raise ValueError(
-                f"monde {wid!r} : le lieu {s.get('id', i)!r} declare "
-                f"{', '.join(intrus)} — un catalogue de monde n'habille pas ses "
-                f"lieux, ces reglages appartiennent au personnage (ADR-0014)")
+                f"monde {wid!r} : {cle} {s.get('id', i)!r} declare "
+                f"{', '.join(intrus)} — ces reglages n'appartiennent pas a ce "
+                f"catalogue de monde (ADR-0014, ADR-0027)")
     return entries
 
 
-def place(wid, place_id):
-    """Un lieu du catalogue de `wid`. Leve UnknownPlaceError si absent —
-    monde inconnu leve deja UnknownWorldError via `places()`.
-
-    LES DEUX CATALOGUES, l'ordinaire puis l'adulte (21/09). C'est ce qui rend
-    le merge vivant d'ADR-0015 vrai pour une scene adulte : sans ca
-    `refresh_world_scenes` lirait UnknownPlaceError et laisserait la scene se
-    perimer en silence, avec un cadre fige au jour ou elle a ete ajoutee.
-    Chercher ici ne montre rien a personne : ce qui affiche une scene reste
-    sa bande de niveaux, et ce qui affiche un CATALOGUE appelle `places()` ou
-    `places_adulte()` en connaissance de cause.
-    """
-    for p in places(wid):
-        if p.get("id") == place_id:
-            return p
-    for p in places_adulte(wid):
-        if p.get("id") == place_id:
-            return p
-    raise UnknownPlaceError(f"lieu inconnu : {place_id!r} dans le monde {wid!r}")
+def scene(wid, scene_id):
+    """Une scene du monde, branche ordinaire puis adulte. Leve
+    UnknownSceneError si absente. Chercher dans les deux ne montre rien a
+    personne : ce qui affiche une scene reste sa bande de niveaux."""
+    for s in scenes(wid) + scenes_adulte(wid):
+        if s.get("id") == scene_id:
+            return s
+    raise UnknownSceneError(f"scene inconnue : {scene_id!r} dans le monde {wid!r}")
 
 
-def save_places(wid, new_places):
-    """Reecrit UNIQUEMENT la cle `places` de WORLDS/<wid>.json, le reste du
-    fichier intact (lecture-modification-ecriture) — jamais depuis
-    `POST /api/scenes`, toujours depuis une route monde dediee (ADR-0015).
+def materialize(wid, s):
+    """Prompt d'une scene du monde, compose avec son decor : « <scene>,
+    <decor> ». C'est ici, en amont de `build_jobs`, que la scene se compose
+    (ADR-0027 §4) : l'assembleur lit une scene deja composee. Leve
+    UnknownPlaceError si le decor reference n'existe plus."""
+    decor = ""
+    if s.get("place"):
+        trouve = [p for p in places(wid) if p.get("id") == s["place"]]
+        if not trouve:
+            raise UnknownPlaceError(
+                f"decor inconnu : {s['place']!r} dans le monde {wid!r}")
+        decor = trouve[0].get("prompt", "")
+    return ", ".join(t for t in (s.get("prompt", "").strip(), decor.strip()) if t)
 
-    La validation de forme (ids uniques, prompt non vide, aucune cle de
-    personnage) vit cote service HTTP (`api/services/worlds.py`) ; cette
-    fonction fait confiance a son appelant et se contente d'ecrire.
-    """
-    path = world_path(wid)
-    data = _read_json(path)
-    data["places"] = list(new_places)
+
+def _write(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
                     encoding="utf-8")
+
+
+def _save_key(wid, cle, entries):
+    """Reecrit UNE cle de WORLDS/<wid>.json, le reste du fichier intact —
+    jamais depuis `POST /api/scenes`, toujours depuis une route monde dediee.
+    La forme est verifiee par `api/services/worlds.py` ; ceci ecrit."""
+    path = world_path(wid)
+    data = _read_json(path)
+    data[cle] = list(entries)
+    _write(path, data)
+
+
+def save_scenes(wid, new_scenes):
+    _save_key(wid, CLE_SCENES, new_scenes)
 
 
 def save_tones(wid, new_tones):
-    """Reecrit UNIQUEMENT la cle `tones` de WORLDS/<wid>.json, jumelle de
-    `save_places` : le monde cree ses tons comme il cree ses lieux (25/09,
-    `DOCS/cadrage/2026-09-25-creer-un-ton.md`). La forme est verifiee par
-    `api/services/worlds.validate_tones` ; cette fonction ecrit."""
-    path = world_path(wid)
-    data = _read_json(path)
-    data["tones"] = list(new_tones)
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8")
+    """Le monde cree ses tons comme ses scenes (25/09,
+    `DOCS/cadrage/2026-09-25-creer-un-ton.md`)."""
+    _save_key(wid, "tones", new_tones)
 
 
-def save_places_adulte(wid, new_places):
-    """Jumelle de `save_places` pour `WORLDS/<wid>.adulte.json`.
-
-    Meme contrat : elle ecrit, elle ne valide pas — la forme est verifiee par
-    `api/services/worlds.validate_places`, la MEME fonction que pour le
-    catalogue ordinaire, parce que les regles sont les memes.
-
-    UNE LISTE VIDE RETIRE LE FICHIER. Un monde sans branche adulte ne garde
-    pas un fichier vide a cote de lui : `places_adulte()` rend deja [] quand
-    il n'existe pas, et laisser une coquille ferait croire a une branche la
-    ou il n'y en a plus. Le monde doit exister — ce n'est pas ici qu'on cree
-    un monde par surprise.
-    """
+def save_scenes_adulte(wid, new_scenes):
+    """Jumelle de `save_scenes` pour `WORLDS/<wid>.adulte.json`. UNE LISTE
+    VIDE RETIRE LE FICHIER : un monde sans branche adulte ne garde pas une
+    coquille qui ferait croire a une branche."""
     load_world(wid)                       # leve si le monde n'existe pas
     path = adulte_path(wid)
-    entries = list(new_places)
+    entries = list(new_scenes)
     if not entries:
         path.unlink(missing_ok=True)
         return
     data = _read_json(path) if path.exists() else {}
-    data[CLE_PLACES_ADULTE] = entries
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-                    encoding="utf-8")
+    data[CLE_SCENES] = entries
+    _write(path, data)
 
 
-def merge_scene(wid, place_id, overlay):
-    """La fusion vivante d'ADR-0015 : le CADRE du lieu (`label`/`intention`/
-    `prompt`), toujours relu depuis le catalogue actuel, jamais fiable depuis
-    `overlay` — plus l'OVERLAY du personnage (`SCENE_OVERLAY_KEYS`), recopie
-    tel quel depuis `overlay` quand il le porte.
+def merge_scene(wid, scene_id, overlay):
+    """La scene du monde, composee avec son decor et toujours relue depuis le
+    catalogue actuel, plus l'OVERLAY du personnage (`SCENE_OVERLAY_KEYS`),
+    recopie tel quel depuis `overlay`. L'`intensity` de la scene du monde est
+    le defaut de l'overlay. Leve UnknownWorldError / UnknownSceneError /
+    UnknownPlaceError : a l'appelant de decider quoi en faire.
 
-    `overlay` est la scene telle que le personnage la possede (ou un objet
-    partiel a la creation) : ce que `merge_scene` en lit ne sert jamais a
-    ecraser le catalogue, seulement a construire la scene fusionnee rendue a
-    l'appelant. Leve UnknownWorldError / UnknownPlaceError si le monde ou le
-    lieu a disparu — a l'appelant de decider quoi en faire.
-    """
-    p = place(wid, place_id)
+    Heritage vivant d'ADR-0015 tant que le chantier 2 d'IT-11 n'a pas pose la
+    copie a la modification (ADR-0027 §5)."""
+    s = scene(wid, scene_id)
     merged = {
-        "id": overlay.get("id") or p["id"],
+        "id": overlay.get("id") or s["id"],
         "world": wid,
         "origin": "world",
-        "world_ref": place_id,
-        "label": p.get("label", ""),
-        "intention": p.get("intention", ""),
-        "prompt": p.get("prompt", ""),
+        "world_ref": scene_id,
+        "label": s.get("label", ""),
+        "intention": s.get("intention", ""),
+        "prompt": materialize(wid, s),
     }
+    if "intensity" in s:
+        merged["intensity"] = s["intensity"]
     for k in SCENE_OVERLAY_KEYS:
         if k in overlay:
             merged[k] = overlay[k]
@@ -546,7 +522,8 @@ def _diagnostic():
         print(f"    styles    : {', '.join(suggested_styles(wid)) or '(aucun)'}")
         print(f"    readiness : places={r['places']} tones={r['tones']} style={r['style']}"
               + ("  -> pret a vendre" if pret else ""))
-        print(f"    lieux     : {len(places(wid))}")
+        print(f"    decors    : {len(places(wid))}   intentions : {len(intentions(wid))}"
+              f"   scenes : {len(scenes(wid))} (+{len(scenes_adulte(wid))} adulte)")
     for fam in sorted(familles_reelles):
         print(f"\n  famille {fam:8} -> mondes : {', '.join(worlds_for_family(fam)) or '(aucun)'}")
     return 1 if drift else 0

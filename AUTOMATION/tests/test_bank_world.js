@@ -27,7 +27,7 @@ catch { console.log('  IGNORE — playwright absent (voir l en-tete du fichier)'
 
 const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 const FAUX = 'zz_essai_banque';
-const LIEU_FAUX = { id: FAUX, label: 'Essai banque', intention: 'boudoir',
+const LIEU_FAUX = { id: FAUX, label: 'Essai banque', intention: 'lifestyle',
                     prompt: 'a plain room, wide shot' };
 
 async function ouvrir(nav, { arme }) {
@@ -42,11 +42,11 @@ async function ouvrir(nav, { arme }) {
     if (r.status() >= 400) erreurs.push(`HTTP ${r.status()} : ${r.url()}`);
   });
   // le lieu adulte « manquant », injecte : jamais ecrit nulle part
-  await page.route('**/api/worlds/*/places-adulte*', async (route) => {
+  await page.route('**/api/worlds/*/scenes-adulte*', async (route) => {
     if (route.request().method() !== 'GET') return route.continue();
     const vraie = await route.fetch();
     const corps = await vraie.json();
-    corps.places = [...(corps.places || []), LIEU_FAUX];
+    corps.scenes = [...(corps.scenes || []), LIEU_FAUX];
     await route.fulfill({ response: vraie, json: corps });
   });
   if (!arme) {

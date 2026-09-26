@@ -1,5 +1,7 @@
-/* Loads and saves the catalog of ONE world (ADR-0015) — the only place that
-   calls `/api/worlds/{id}/places`. A sub-component never calls the API
+/* Loads and saves the SCENES of ONE world (ADR-0027) — the only place that
+   calls `/api/worlds/{id}/scenes`. Still named after places: until IT-11's
+   world editor (chantier 4), the « Lieux » tab and the bank show the world's
+   scenes, which is what they always showed. A sub-component never calls the API
    (`.claude/rules/frontend.md`); `PlaceInspector` receives what this hook
    loads and the callback that saves it.
 
@@ -26,8 +28,8 @@ import { useCallback, useEffect, useState } from 'react'
 import { errorOf, type Schema } from '../../api/client'
 import { useApi } from '../../api/useApi'
 
-export type Place = Schema<'Place'>
-type PlacesResponse = Schema<'PlacesResponse'>
+export type Place = Schema<'WorldScene'>
+type PlacesResponse = Schema<'WorldScenesResponse'>
 
 type SaveResult = { ok: boolean; erreur?: string }
 
@@ -37,7 +39,7 @@ export function useWorldPlaces(worldId: string | null, options?: { adulte?: bool
   const [places, setPlaces] = useState<Place[] | null>(null)
   const [label, setLabel] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const route = adulte ? 'places-adulte' : 'places'
+  const route = adulte ? 'scenes-adulte' : 'scenes'
 
   const load = useCallback(async () => {
     if (!worldId) {
@@ -54,10 +56,10 @@ export function useWorldPlaces(worldId: string | null, options?: { adulte?: bool
       response = null
     }
     const failure =
-      !response ? 'serveur injoignable' : errorOf(response) || (Array.isArray(response.places) ? null : 'catalogue illisible')
+      !response ? 'serveur injoignable' : errorOf(response) || (Array.isArray(response.scenes) ? null : 'catalogue illisible')
     setError(failure)
     if (!failure) {
-      setPlaces(response!.places)
+      setPlaces(response!.scenes)
       setLabel(response!.label)
     }
   }, [api, route, worldId])
@@ -73,7 +75,7 @@ export function useWorldPlaces(worldId: string | null, options?: { adulte?: bool
       if (!worldId) return { ok: false, erreur: 'aucun monde' }
       const response = await api.post<{ ok?: boolean; erreur?: string }>(
         `/api/worlds/${encodeURIComponent(worldId)}/${route}`,
-        { places: next },
+        { scenes: next },
       )
       const failure = errorOf(response)
       if (failure) return { ok: false, erreur: failure }

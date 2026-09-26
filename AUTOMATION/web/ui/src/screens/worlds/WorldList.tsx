@@ -59,8 +59,8 @@ export function WorldList({
                   {world.label}
                 </span>
                 <span className="flex-none text-[11.5px] tabular-nums text-dim2">
-                  {world.places_count > 0
-                    ? `${world.places_count} lieu${world.places_count > 1 ? 'x' : ''}`
+                  {world.scenes_count > 0
+                    ? `${world.scenes_count} scène${world.scenes_count > 1 ? 's' : ''}`
                     : 'vide'}
                 </span>
               </span>

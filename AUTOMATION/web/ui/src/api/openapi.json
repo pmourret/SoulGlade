@@ -3645,7 +3645,7 @@
       },
       "post": {
         "summary": "Créer un monde (catalogue vide, pack curaté)",
-        "description": "Writes a new `WORLDS/<id>.json` with an EMPTY `places` catalog\n(ADR-0016). The pack is a proposal used once to derive\n`compatible_families`/`suggested_styles` — never a routing change:\n`universe.resolve()` is not touched, and neither is `CHARACTERS/` (this\nworld is assigned to no character, ever, by this route).",
+        "description": "Writes a new `WORLDS/<id>.json` with EMPTY catalogs (ADR-0016). The pack is a proposal used once to derive\n`compatible_families`/`suggested_styles` — never a routing change:\n`universe.resolve()` is not touched, and neither is `CHARACTERS/` (this\nworld is assigned to no character, ever, by this route).",
         "operationId": "create_world_api_worlds_post",
         "requestBody": {
           "content": {
@@ -3720,11 +3720,11 @@
         }
       }
     },
-    "/api/worlds/{world_id}/places": {
+    "/api/worlds/{world_id}/scenes": {
       "get": {
-        "summary": "Catalogue de lieux d'un monde",
+        "summary": "Scènes d'un monde",
         "description": "`worlds.load_world` raises `UnknownWorldError` (a ValueError) on an\nunknown id — the generic ValueError handler turns that into a clean 400,\nnothing to catch here.",
-        "operationId": "get_places_api_worlds__world_id__places_get",
+        "operationId": "get_scenes_api_worlds__world_id__scenes_get",
         "parameters": [
           {
             "name": "world_id",
@@ -3742,7 +3742,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesResponse"
+                  "$ref": "#/components/schemas/WorldScenesResponse"
                 }
               }
             }
@@ -3770,9 +3770,9 @@
         }
       },
       "post": {
-        "summary": "Enregistrer le catalogue de lieux d'un monde",
-        "description": "Replaces the world's WHOLE `places` list, like `POST /api/scenes`\nreplaces a character's whole scene bank — same shape of contract, one\nlevel up. Affects every character composing in this world: the frontend\nwarns before calling this, the server does not soften it.",
-        "operationId": "save_places_api_worlds__world_id__places_post",
+        "summary": "Enregistrer les scènes d'un monde",
+        "description": "Replaces the world's WHOLE `scenes` list, like `POST /api/scenes`\nreplaces a character's whole scene bank — same shape of contract, one\nlevel up. Affects every character composing in this world: the frontend\nwarns before calling this, the server does not soften it.",
+        "operationId": "save_scenes_api_worlds__world_id__scenes_post",
         "parameters": [
           {
             "name": "world_id",
@@ -3789,7 +3789,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SavePlacesRequest"
+                "$ref": "#/components/schemas/SaveWorldScenesRequest"
               }
             }
           }
@@ -3806,11 +3806,11 @@
             }
           },
           "400": {
-            "description": "Catalogue refusé",
+            "description": "Scènes refusées",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesRejected"
+                  "$ref": "#/components/schemas/CatalogRejected"
                 }
               }
             }
@@ -3878,7 +3878,7 @@
       },
       "post": {
         "summary": "Enregistrer les tons d'un monde",
-        "description": "Replaces the world's WHOLE `tones` list, same contract as `places`.\nA tone is created with its world (25/09); every character of the world\ninherits it, field by field under its own adjustments. A removed key\nbreaks nothing: a scene that still lists it simply stops matching it.",
+        "description": "Replaces the world's WHOLE `tones` list, same contract as `scenes`.\nA tone is created with its world (25/09); every character of the world\ninherits it, field by field under its own adjustments. A removed key\nbreaks nothing: a scene that still lists it simply stops matching it.",
         "operationId": "save_tones_api_worlds__world_id__tones_post",
         "parameters": [
           {
@@ -3917,7 +3917,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesRejected"
+                  "$ref": "#/components/schemas/CatalogRejected"
                 }
               }
             }
@@ -3935,11 +3935,11 @@
         }
       }
     },
-    "/api/worlds/{world_id}/places-adulte": {
+    "/api/worlds/{world_id}/scenes-adulte": {
       "get": {
-        "summary": "Catalogue adulte d'un monde",
-        "description": "Le catalogue adulte, vide si le monde n'en porte pas — ce qui est le\ncas nominal. Même forme de réponse que le catalogue ordinaire : c'est le\nmême objet, rangé ailleurs.",
-        "operationId": "get_places_adulte_api_worlds__world_id__places_adulte_get",
+        "summary": "Scènes adultes d'un monde",
+        "description": "La branche adulte, vide si le monde n'en porte pas — ce qui est le\ncas nominal. Même forme de réponse que les scènes ordinaires : c'est le\nmême objet, rangé ailleurs (ADR-0027 §6).",
+        "operationId": "get_scenes_adulte_api_worlds__world_id__scenes_adulte_get",
         "parameters": [
           {
             "name": "world_id",
@@ -3957,7 +3957,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesResponse"
+                  "$ref": "#/components/schemas/WorldScenesResponse"
                 }
               }
             }
@@ -3985,9 +3985,9 @@
         }
       },
       "post": {
-        "summary": "Enregistrer le catalogue adulte d'un monde",
-        "description": "Remplace tout le catalogue adulte. MÊME VALIDATION que l'ordinaire —\n`validate_places`, sans variante : ids uniques et non vides, prompt non\nvide, et surtout aucune clé de personnage. Un lieu adulte qui habillerait\nle personnage serait la même faute qu'ailleurs, parce que la nudité est\nla garde-robe du personnage à son palier natif, pas une livraison du\nmonde (ADR-0014).\n\nUne liste vide retire le fichier : un monde cesse alors de porter une\nbranche adulte, ce qui est un état légitime et pas une coquille.",
-        "operationId": "save_places_adulte_api_worlds__world_id__places_adulte_post",
+        "summary": "Enregistrer les scènes adultes d'un monde",
+        "description": "Remplace toute la branche adulte. MÊME VALIDATION que l'ordinaire —\n`validate_scenes`, sans variante : mêmes décors, mêmes intentions, et\naucune clé de personnage. La nudité est la garde-robe du personnage à son\npalier natif, pas une livraison du monde (ADR-0014).\n\nUne liste vide retire le fichier : un monde cesse alors de porter une\nbranche adulte, ce qui est un état légitime et pas une coquille.",
+        "operationId": "save_scenes_adulte_api_worlds__world_id__scenes_adulte_post",
         "parameters": [
           {
             "name": "world_id",
@@ -4004,7 +4004,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SavePlacesRequest"
+                "$ref": "#/components/schemas/SaveWorldScenesRequest"
               }
             }
           }
@@ -4021,11 +4021,11 @@
             }
           },
           "400": {
-            "description": "Catalogue refusé",
+            "description": "Scènes refusées",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PlacesRejected"
+                  "$ref": "#/components/schemas/CatalogRejected"
                 }
               }
             }
@@ -4444,6 +4444,32 @@
         ],
         "title": "BatchError",
         "description": "Last batch error, `{at, msg}`. Set at BATCH level, not per job, and\ncleared when the next one starts: the chrome shows it even after the user\nhas left the Créer screen (J7bis, honest chrome)."
+      },
+      "CatalogRejected": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok",
+            "default": false
+          },
+          "erreur": {
+            "type": "string",
+            "title": "Erreur"
+          },
+          "problemes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Problemes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "erreur"
+        ],
+        "title": "CatalogRejected",
+        "description": "400 of a refused save. `erreur` is the first problem — what the screen\nshows; `problemes` is the whole list, for the details panel."
       },
       "CharacterListResponse": {
         "properties": {
@@ -7036,88 +7062,6 @@
         "title": "PhotoEditorSaveResponse",
         "description": "Mirrors `EditSaveResponse` field for field — same two paths, same\n`export` semantics (filled on overwrite only)."
       },
-      "Place": {
-        "properties": {
-          "id": {
-            "type": "string",
-            "title": "Id"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label",
-            "default": ""
-          },
-          "intention": {
-            "type": "string",
-            "title": "Intention",
-            "default": ""
-          },
-          "prompt": {
-            "type": "string",
-            "title": "Prompt"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "required": [
-          "id",
-          "prompt"
-        ],
-        "title": "Place",
-        "description": "One entry of a world's catalog — a FRAME (label/intention/prompt),\nnever a wardrobe. `extra=\"allow\"` for the same reason as `SceneMeta`: this\nlayer relays a file it does not own."
-      },
-      "PlacesRejected": {
-        "properties": {
-          "ok": {
-            "type": "boolean",
-            "title": "Ok",
-            "default": false
-          },
-          "erreur": {
-            "type": "string",
-            "title": "Erreur"
-          },
-          "problemes": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "title": "Problemes"
-          }
-        },
-        "type": "object",
-        "required": [
-          "erreur"
-        ],
-        "title": "PlacesRejected",
-        "description": "400 of a refused save. `erreur` is the first problem — what the screen\nshows; `problemes` is the whole list, for the details panel."
-      },
-      "PlacesResponse": {
-        "properties": {
-          "world": {
-            "type": "string",
-            "title": "World"
-          },
-          "label": {
-            "type": "string",
-            "title": "Label"
-          },
-          "places": {
-            "items": {
-              "$ref": "#/components/schemas/Place"
-            },
-            "type": "array",
-            "title": "Places"
-          }
-        },
-        "type": "object",
-        "required": [
-          "world",
-          "label",
-          "places"
-        ],
-        "title": "PlacesResponse"
-      },
       "PlanResponse": {
         "properties": {
           "total": {
@@ -7985,22 +7929,6 @@
         "title": "RunStartedResponse",
         "description": "A batch is on its way. `batch_id` is the timestamp the journal and the\nlive strip carry; the frontend follows it through /api/state."
       },
-      "SavePlacesRequest": {
-        "properties": {
-          "places": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "type": "array",
-            "title": "Places"
-          }
-        },
-        "additionalProperties": true,
-        "type": "object",
-        "title": "SavePlacesRequest",
-        "description": "The business shape (unique ids, non-empty prompt, no character-only\nkey) is validated in `services/worlds.py`, not here — same reasoning as\n`SceneBankSaveRequest`: this is a FILE that belongs to the world, not a\nrequest payload the schema layer should own the rules of."
-      },
       "SaveTonesRequest": {
         "properties": {
           "tones": {
@@ -8015,7 +7943,23 @@
         "additionalProperties": true,
         "type": "object",
         "title": "SaveTonesRequest",
-        "description": "Shape checked in `services/worlds.validate_tones`, like places."
+        "description": "Shape checked in `services/worlds.validate_tones`, like scenes."
+      },
+      "SaveWorldScenesRequest": {
+        "properties": {
+          "scenes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Scenes"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "SaveWorldScenesRequest",
+        "description": "The business shape (unique ids, non-empty prompt, no character-only\nkey) is validated in `services/worlds.py`, not here — same reasoning as\n`SceneBankSaveRequest`: this is a FILE that belongs to the world, not a\nrequest payload the schema layer should own the rules of."
       },
       "SceneBankRejected": {
         "properties": {
@@ -9429,6 +9373,84 @@
         ],
         "title": "WorldOptionsResponse"
       },
+      "WorldScene": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label",
+            "default": ""
+          },
+          "intention": {
+            "type": "string",
+            "title": "Intention",
+            "default": ""
+          },
+          "place": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place"
+          },
+          "prompt": {
+            "type": "string",
+            "title": "Prompt"
+          },
+          "intensity": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Intensity"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "prompt"
+        ],
+        "title": "WorldScene",
+        "description": "One scene of a world (ADR-0027 §4): an intention in a place (`place`,\na décor id), with what happens there (`prompt`) and at most the bottom of\nits level band. Never a wardrobe. `extra=\"allow\"` for the same reason as\n`SceneMeta`: this layer relays a file it does not own."
+      },
+      "WorldScenesResponse": {
+        "properties": {
+          "world": {
+            "type": "string",
+            "title": "World"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "scenes": {
+            "items": {
+              "$ref": "#/components/schemas/WorldScene"
+            },
+            "type": "array",
+            "title": "Scenes"
+          }
+        },
+        "type": "object",
+        "required": [
+          "world",
+          "label",
+          "scenes"
+        ],
+        "title": "WorldScenesResponse"
+      },
       "WorldSummary": {
         "properties": {
           "id": {
@@ -9456,6 +9478,11 @@
             "title": "Places Count",
             "default": 0
           },
+          "scenes_count": {
+            "type": "integer",
+            "title": "Scenes Count",
+            "default": 0
+          },
           "tones_count": {
             "type": "integer",
             "title": "Tones Count",
@@ -9469,7 +9496,7 @@
           "label"
         ],
         "title": "WorldSummary",
-        "description": "One row of the « Mondes » screen's registry — enough to card it and\nlink to its places editor, nothing a character sheet needs."
+        "description": "One row of the « Mondes » screen's registry — enough to card it and\nlink to its editor, nothing a character sheet needs. `places_count`\ncounts décors, `scenes_count` the ordinary scenes (ADR-0027)."
       },
       "WorldTone": {
         "properties": {

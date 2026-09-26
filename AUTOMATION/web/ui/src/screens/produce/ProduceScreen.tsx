@@ -283,9 +283,7 @@ export function ProduceScreen() {
   })
 
   // --------------------------------------------------------------- render
-  const intentions = ((creative?.intentions ?? []) as Intention[]).filter(
-    (i) => (i.min_intensity ?? 0) <= level,
-  )
+  const intentions = (creative?.intentions ?? []) as Intention[]
   const withAll: Intention[] = [...intentions, { key: '*', label: 'Toutes', icon: '✳', defaults: {} }]
   const full: [Intention, number][] = []
   const empty: [Intention, number][] = []

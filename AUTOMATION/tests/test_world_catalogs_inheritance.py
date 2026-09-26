@@ -9,7 +9,7 @@ le monde fournit la base, une `key` de personnage la remplace entierement,
 une `key` neuve s'ajoute, une entree du monde absente chez le personnage
 reste heritee. Verifie aussi qu'un monde reste lisible sans aucun
 personnage (contrainte explicite du chantier) : `worlds.intentions/tones/
-places` ne prennent jamais de `character_id`.
+places`/`scenes` ne prennent jamais de `character_id`.
 
 Lancer :  python_embeded\\python.exe AUTOMATION\\tests\\test_world_catalogs_inheritance.py
 """
@@ -45,8 +45,10 @@ WORLD_DATA = {
     "suggested_styles": ["realiste"],
     "assets": {"lora": None, "lora_strength": None, "prompt_add": ""},
     "tone": "", "ui_skin_token": f"world-{WID}",
-    "places": [{"id": "lieu_a", "label": "Lieu A", "intention": "lifestyle",
-               "prompt": "a plain place"}],
+    "places": [{"id": "lieu_a", "label": "Lieu A", "prompt": "a plain place"}],
+    "scenes": [{"id": "scene_a", "label": "Scene A", "intention": "lifestyle",
+                "place": "lieu_a",
+                "prompt": "reading"}],
     "intentions": [
         {"key": "selfie", "label": "Selfie (monde)", "prompt_add": "phone camera"},
         {"key": "lifestyle", "label": "Lifestyle (monde)", "prompt_add": "daylight"},
@@ -72,7 +74,8 @@ try:
             "intentions(wid) ne prend aucun character_id, lit le monde seul")
     verifie(worlds.tones(WID) == WORLD_DATA["tones"],
             "tones(wid) idem")
-    verifie(len(worlds.places(WID)) == 1, "places(wid) idem")
+    verifie(len(worlds.places(WID)) == 1 and len(worlds.scenes(WID)) == 1,
+            "places(wid) et scenes(wid) idem")
 
     # ------------------------------------------ [2] _merge_by_key, regle nue
     print("\n[2] _merge_by_key : remplace une cle connue, ajoute une neuve, "

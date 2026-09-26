@@ -212,7 +212,7 @@ def stamp_world(data, world):
 
 def refresh_world_scenes(data):
     """Live merge of ADR-0015, applied in place: every scene bound to a world
-    place (`origin == "world"` and a `world_ref`) has its FRAME
+    scene (`origin == "world"` and a `world_ref`) has its FRAME
     (`label`/`intention`/`prompt`) re-derived from the CURRENT catalog —
     never trusted from what the client sent. The character's overlay
     (`worlds.SCENE_OVERLAY_KEYS`) is untouched either way, since
@@ -225,8 +225,8 @@ def refresh_world_scenes(data):
     to `build_jobs`, which reads `scenes.json` verbatim and knows nothing of
     this function (ADR-0014 §5, ADR-0015).
 
-    A world or place that no longer exists (`UnknownWorldError` /
-    `UnknownPlaceError`) is NOT an error here: the scene is left exactly as
+    A world, scene or décor that no longer exists (`UnknownWorldError` /
+    `UnknownSceneError` / `UnknownPlaceError`) is NOT an error here: the scene is left exactly as
     it was, and `validate_scene_bank`'s "prompt vide" refusal is what
     surfaces the break at the next save — this function never repairs, never
     crashes the whole bank for one dangling reference.
@@ -239,7 +239,8 @@ def refresh_world_scenes(data):
             continue
         try:
             merged = worlds.merge_scene(wid, ref, scene)
-        except (worlds.UnknownWorldError, worlds.UnknownPlaceError):
+        except (worlds.UnknownWorldError, worlds.UnknownSceneError,
+                worlds.UnknownPlaceError):
             continue
         scene.update(merged)
     return data

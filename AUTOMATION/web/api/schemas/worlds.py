@@ -1,6 +1,6 @@
-"""Payload shapes of the world catalog module (ADR-0015).
+"""Payload shapes of the world catalog module (ADR-0027).
 
-`places` is a WORLD resource, not a character one: these routes read and
+A world's catalogs are a WORLD resource, not a character one: these routes read and
 write `WORLDS/<id>.json`, never `CHARACTERS/<id>/scenes.json`. That split is
 the isolation guarantee — see `api/services/worlds.py`.
 """
@@ -9,35 +9,38 @@ from typing import Any, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class Place(BaseModel):
-    """One entry of a world's catalog — a FRAME (label/intention/prompt),
-    never a wardrobe. `extra="allow"` for the same reason as `SceneMeta`: this
-    layer relays a file it does not own."""
+class WorldScene(BaseModel):
+    """One scene of a world (ADR-0027 §4): an intention in a place (`place`,
+    a décor id), with what happens there (`prompt`) and at most the bottom of
+    its level band. Never a wardrobe. `extra="allow"` for the same reason as
+    `SceneMeta`: this layer relays a file it does not own."""
     model_config = ConfigDict(extra="allow")
 
     id: str
     label: str = ""
     intention: str = ""
+    place: Optional[str] = None
     prompt: str
+    intensity: Optional[int] = None
 
 
-class PlacesResponse(BaseModel):
+class WorldScenesResponse(BaseModel):
     world: str
     label: str
-    places: list[Place]
+    scenes: list[WorldScene]
 
 
-class SavePlacesRequest(BaseModel):
+class SaveWorldScenesRequest(BaseModel):
     """The business shape (unique ids, non-empty prompt, no character-only
     key) is validated in `services/worlds.py`, not here — same reasoning as
     `SceneBankSaveRequest`: this is a FILE that belongs to the world, not a
     request payload the schema layer should own the rules of."""
     model_config = ConfigDict(extra="allow")
 
-    places: list[dict[str, Any]] = Field(default_factory=list)
+    scenes: list[dict[str, Any]] = Field(default_factory=list)
 
 
-class PlacesRejected(BaseModel):
+class CatalogRejected(BaseModel):
     """400 of a refused save. `erreur` is the first problem — what the screen
     shows; `problemes` is the whole list, for the details panel."""
     ok: bool = False
@@ -63,7 +66,7 @@ class TonesResponse(BaseModel):
 
 
 class SaveTonesRequest(BaseModel):
-    """Shape checked in `services/worlds.validate_tones`, like places."""
+    """Shape checked in `services/worlds.validate_tones`, like scenes."""
     model_config = ConfigDict(extra="allow")
 
     tones: list[dict[str, Any]] = Field(default_factory=list)
@@ -72,7 +75,8 @@ class SaveTonesRequest(BaseModel):
 # --------------------------------------------------------------- world registry
 class WorldSummary(BaseModel):
     """One row of the « Mondes » screen's registry — enough to card it and
-    link to its places editor, nothing a character sheet needs."""
+    link to its editor, nothing a character sheet needs. `places_count`
+    counts décors, `scenes_count` the ordinary scenes (ADR-0027)."""
     model_config = ConfigDict(extra="allow")
 
     id: str
@@ -80,6 +84,7 @@ class WorldSummary(BaseModel):
     compatible_families: list[str] = Field(default_factory=list)
     tone: str = ""
     places_count: int = 0
+    scenes_count: int = 0
     tones_count: int = 0
 
 

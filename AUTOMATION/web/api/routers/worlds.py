@@ -2,7 +2,7 @@
 
     /api/worlds                     GET the registry, POST to create one (ADR-0016)
     /api/worlds/options              packs available to derive a new world from
-    /api/worlds/{world_id}/places   GET the catalog, POST to save it (ADR-0015)
+    /api/worlds/{world_id}/scenes   GET the scenes, POST to save them (ADR-0027)
     /api/worlds/{world_id}/tones    GET the tones, POST to save them (25/09)
 
 These routes touch ONLY `WORLDS/<world_id>.json` files. They are a world
@@ -21,11 +21,11 @@ import worlds
 
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
 from ..schemas.worlds import (
-    CreateWorldRequest, CreateWorldResponse, PackOption, PlacesRejected,
-    PlacesResponse, SavePlacesRequest, SaveTonesRequest, TonesResponse,
-    WorldListResponse, WorldOptionsResponse, WorldSummary,
+    CatalogRejected, CreateWorldRequest, CreateWorldResponse, PackOption,
+    SaveTonesRequest, SaveWorldScenesRequest, TonesResponse,
+    WorldListResponse, WorldOptionsResponse, WorldScenesResponse, WorldSummary,
 )
-from ..services.worlds import validate_places, validate_tones
+from ..services.worlds import validate_scenes, validate_tones
 
 router = APIRouter(responses=ERROR_RESPONSES)
 
@@ -43,6 +43,7 @@ async def get_world_registry():
                     "compatible_families": w.get("compatible_families", []),
                     "tone": w.get("tone", ""),
                     "places_count": len(w.get("places", [])),
+                    "scenes_count": len(w.get("scenes", [])),
                     "tones_count": len(w.get("tones", []))})
     return {"worlds": out}
 
@@ -62,8 +63,7 @@ async def get_world_options():
 @router.post("/api/worlds", response_model=CreateWorldResponse,
              summary="Créer un monde (catalogue vide, pack curaté)")
 async def create_world(payload: CreateWorldRequest):
-    """Writes a new `WORLDS/<id>.json` with an EMPTY `places` catalog
-    (ADR-0016). The pack is a proposal used once to derive
+    """Writes a new `WORLDS/<id>.json` with EMPTY catalogs (ADR-0016). The pack is a proposal used once to derive
     `compatible_families`/`suggested_styles` — never a routing change:
     `universe.resolve()` is not touched, and neither is `CHARACTERS/` (this
     world is assigned to no character, ever, by this route)."""
@@ -77,36 +77,37 @@ async def create_world(payload: CreateWorldRequest):
     return {"ok": True, "id": wid}
 
 
-@router.get("/api/worlds/{world_id}/places", response_model=PlacesResponse,
-            summary="Catalogue de lieux d'un monde")
-async def get_places(world_id: str):
+@router.get("/api/worlds/{world_id}/scenes", response_model=WorldScenesResponse,
+            response_model_exclude_none=True,
+            summary="Scènes d'un monde")
+async def get_scenes(world_id: str):
     """`worlds.load_world` raises `UnknownWorldError` (a ValueError) on an
     unknown id — the generic ValueError handler turns that into a clean 400,
     nothing to catch here."""
     w = worlds.load_world(world_id)
     return {"world": world_id, "label": w.get("label", world_id),
-            "places": worlds.places(world_id)}
+            "scenes": worlds.scenes(world_id)}
 
 
-@router.post("/api/worlds/{world_id}/places", response_model=ActionResponse,
+@router.post("/api/worlds/{world_id}/scenes", response_model=ActionResponse,
              response_model_exclude_unset=True,
-             responses={400: {"model": PlacesRejected,
-                              "description": "Catalogue refusé"}},
-             summary="Enregistrer le catalogue de lieux d'un monde")
-async def save_places(world_id: str, payload: SavePlacesRequest):
-    """Replaces the world's WHOLE `places` list, like `POST /api/scenes`
+             responses={400: {"model": CatalogRejected,
+                              "description": "Scènes refusées"}},
+             summary="Enregistrer les scènes d'un monde")
+async def save_scenes(world_id: str, payload: SaveWorldScenesRequest):
+    """Replaces the world's WHOLE `scenes` list, like `POST /api/scenes`
     replaces a character's whole scene bank — same shape of contract, one
     level up. Affects every character composing in this world: the frontend
     warns before calling this, the server does not soften it."""
     worlds.load_world(world_id)             # UnknownWorldError -> 400
-    problems = validate_places(payload.places)
+    problems = validate_scenes(world_id, payload.scenes)
     if problems:
-        ss.push_log(f"WORLDS/{world_id}.json places REFUSE — {problems[0]}")
+        ss.push_log(f"WORLDS/{world_id}.json scenes REFUSE — {problems[0]}")
         return JSONResponse({"ok": False, "erreur": problems[0],
                              "problemes": problems}, status_code=400)
-    worlds.save_places(world_id, payload.places)
-    ss.push_log(f"WORLDS/{world_id}.json : catalogue enregistré "
-               f"({len(payload.places)} lieu(x))")
+    worlds.save_scenes(world_id, payload.scenes)
+    ss.push_log(f"WORLDS/{world_id}.json : scènes enregistrées "
+               f"({len(payload.scenes)} scène(s))")
     return {"ok": True}
 
 
@@ -120,11 +121,11 @@ async def get_tones(world_id: str):
 
 @router.post("/api/worlds/{world_id}/tones", response_model=ActionResponse,
              response_model_exclude_unset=True,
-             responses={400: {"model": PlacesRejected,
+             responses={400: {"model": CatalogRejected,
                               "description": "Tons refusés"}},
              summary="Enregistrer les tons d'un monde")
 async def save_tones(world_id: str, payload: SaveTonesRequest):
-    """Replaces the world's WHOLE `tones` list, same contract as `places`.
+    """Replaces the world's WHOLE `tones` list, same contract as `scenes`.
     A tone is created with its world (25/09); every character of the world
     inherits it, field by field under its own adjustments. A removed key
     breaks nothing: a scene that still lists it simply stops matching it."""
@@ -140,46 +141,45 @@ async def save_tones(world_id: str, payload: SaveTonesRequest):
     return {"ok": True}
 
 
-# ------------------------------------------------------- catalogue adulte
+# ------------------------------------------------------- branche adulte
 # DEUX ROUTES JUMELLES, PAS UN DRAPEAU SUR LES PREMIERES. Un `?adulte=1` sur
 # les routes ci-dessus aurait fait dependre d'un booleen de requete le fichier
 # ecrit — et un booleen absent ecrit le mauvais. Deux chemins nommes rendent
 # l'intention lisible dans le journal du serveur comme dans l'onglet reseau,
 # et le catalogue adulte d'un monde reste un objet distinct (decision du
 # 21/09, cadrage 2026-09-21-flux-nsfw arbitrage 3).
-@router.get("/api/worlds/{world_id}/places-adulte", response_model=PlacesResponse,
-            summary="Catalogue adulte d'un monde")
-async def get_places_adulte(world_id: str):
-    """Le catalogue adulte, vide si le monde n'en porte pas — ce qui est le
-    cas nominal. Même forme de réponse que le catalogue ordinaire : c'est le
-    même objet, rangé ailleurs."""
+@router.get("/api/worlds/{world_id}/scenes-adulte", response_model=WorldScenesResponse,
+            response_model_exclude_none=True,
+            summary="Scènes adultes d'un monde")
+async def get_scenes_adulte(world_id: str):
+    """La branche adulte, vide si le monde n'en porte pas — ce qui est le
+    cas nominal. Même forme de réponse que les scènes ordinaires : c'est le
+    même objet, rangé ailleurs (ADR-0027 §6)."""
     w = worlds.load_world(world_id)
     return {"world": world_id, "label": w.get("label", world_id),
-            "places": worlds.places_adulte(world_id)}
+            "scenes": worlds.scenes_adulte(world_id)}
 
 
-@router.post("/api/worlds/{world_id}/places-adulte", response_model=ActionResponse,
+@router.post("/api/worlds/{world_id}/scenes-adulte", response_model=ActionResponse,
              response_model_exclude_unset=True,
-             responses={400: {"model": PlacesRejected,
-                              "description": "Catalogue refusé"}},
-             summary="Enregistrer le catalogue adulte d'un monde")
-async def save_places_adulte(world_id: str, payload: SavePlacesRequest):
-    """Remplace tout le catalogue adulte. MÊME VALIDATION que l'ordinaire —
-    `validate_places`, sans variante : ids uniques et non vides, prompt non
-    vide, et surtout aucune clé de personnage. Un lieu adulte qui habillerait
-    le personnage serait la même faute qu'ailleurs, parce que la nudité est
-    la garde-robe du personnage à son palier natif, pas une livraison du
-    monde (ADR-0014).
+             responses={400: {"model": CatalogRejected,
+                              "description": "Scènes refusées"}},
+             summary="Enregistrer les scènes adultes d'un monde")
+async def save_scenes_adulte(world_id: str, payload: SaveWorldScenesRequest):
+    """Remplace toute la branche adulte. MÊME VALIDATION que l'ordinaire —
+    `validate_scenes`, sans variante : mêmes décors, mêmes intentions, et
+    aucune clé de personnage. La nudité est la garde-robe du personnage à son
+    palier natif, pas une livraison du monde (ADR-0014).
 
     Une liste vide retire le fichier : un monde cesse alors de porter une
     branche adulte, ce qui est un état légitime et pas une coquille."""
     worlds.load_world(world_id)             # UnknownWorldError -> 400
-    problems = validate_places(payload.places)
+    problems = validate_scenes(world_id, payload.scenes)
     if problems:
         ss.push_log(f"WORLDS/{world_id}.adulte.json REFUSE — {problems[0]}")
         return JSONResponse({"ok": False, "erreur": problems[0],
                              "problemes": problems}, status_code=400)
-    worlds.save_places_adulte(world_id, payload.places)
-    ss.push_log(f"WORLDS/{world_id}.adulte.json : catalogue adulte enregistré "
-                f"({len(payload.places)} lieu(x))")
+    worlds.save_scenes_adulte(world_id, payload.scenes)
+    ss.push_log(f"WORLDS/{world_id}.adulte.json : branche adulte enregistrée "
+                f"({len(payload.scenes)} scène(s))")
     return {"ok": True}

@@ -171,10 +171,11 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
     # tamponnee : c'est ce qui permet a /api/scenes d'etre STRICT ensuite au
     # lieu de reparer en silence. `origin` dit d'ou vient la scene — ici du
     # catalogue du monde, plus tard « manual » ou « compose ».
-    # `merge_scene` (ADR-0015) fait le travail : le cadre (label/intention/
-    # prompt) vient du lieu, l'overlay ci-dessous est le reglage de
+    # `merge_scene` fait le travail : le cadre (label/intention/prompt, compose
+    # avec le decor, ADR-0027) vient de la scene du monde, et son `intensity`
+    # si elle en porte une ; l'overlay ci-dessous est le reglage de
     # personnage par defaut a la naissance — tenue VIDE, le catalogue du
-    # monde n'habille pas ses lieux (ADR-0014 §2). Meme fonction que celle
+    # monde n'habille pas ses scenes (ADR-0014 §2). Meme fonction que celle
     # que la Banque appelle a chaque chargement/enregistrement : une scene
     # nee ici a deja un prompt utilisable par build_jobs sans jamais passer
     # par la Banque.
@@ -186,9 +187,10 @@ def create_character(cid, name, character_type, output_style, world, base_gelee)
         "world": world,
         "scenes": [
             worlds.merge_scene(world, s["id"], {
-                "tones": [], "intensity": 0, "format": fmt, "count": 1,
-                "wardrobe": {"0": ""}, "variants": []})
-            for s in worlds.places(world) if s.get("id")
+                "tones": [], "intensity": s.get("intensity", 0),
+                "format": fmt, "count": 1,
+                "wardrobe": {str(s.get("intensity", 0)): ""}, "variants": []})
+            for s in worlds.scenes(world) if s.get("id")
         ],
     }
 

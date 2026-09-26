@@ -65,8 +65,8 @@ for wid in REELS:
             and isinstance(w.get("compatible_families"), list) and w["compatible_families"],
             f"{wid} : id + label + compatible_families non vide")
     verifie(worlds.label(wid) and isinstance(worlds.suggested_styles(wid), list)
-            and isinstance(worlds.places(wid), list),
-            f"{wid} : accesseurs label / suggested_styles / places sains")
+            and isinstance(worlds.places(wid), list) and worlds.scenes(wid),
+            f"{wid} : accesseurs label / suggested_styles / places / scenes sains")
 
 # ----------------------------------------------- [2] pas une copie l'un de l'autre
 print("\n[2] les deux mondes ne sont pas une copie l'un de l'autre")
@@ -143,31 +143,28 @@ finally:
     worlds.WORLDS_DIR = _vrai
     shutil.rmtree(_tmp, ignore_errors=True)
 
-# ----------------------------------- [9] le catalogue n'habille pas ses lieux
-print("\n[9] un catalogue de monde n'habille pas ses lieux (ADR-0014)")
+# ----------------------------------- [9] le catalogue n'habille pas ses scenes
+print("\n[9] un monde n'habille pas ses scenes, un decor ne porte pas d'intention")
 # La tenue, la pose, le format et le compte sont des reglages de PERSONNAGE. Un
 # monde qui les livrerait habillerait de la meme facon tous les personnages qui
-# y naissent, et rendrait fausse la premiere mesure de verrou qui suit. Le
-# catalogue decrit un CADRE, pas une garde-robe.
+# y naissent, et rendrait fausse la premiere mesure de verrou qui suit.
+# Un decor dit OU, jamais quoi montrer (ADR-0027 §2).
 for wid in REELS:
-    intrus = sorted({k for s in worlds.load_world(wid).get("places", [])
-                     if isinstance(s, dict)
-                     for k in worlds.CHARACTER_ONLY_SCENE_KEYS if k in s})
-    verifie(not intrus, f"{wid} : lieux sans reglage de personnage"
+    toutes = worlds.scenes(wid) + worlds.scenes_adulte(wid)
+    intrus = sorted({k for s in toutes for k in worlds.CHARACTER_ONLY_SCENE_KEYS if k in s})
+    verifie(not intrus, f"{wid} : scenes (et branche adulte) sans reglage de personnage"
                         + (f" — trouve : {', '.join(intrus)}" if intrus else ""))
-    verifie(worlds.places(wid) is not None,
-            f"{wid} : places() charge sans lever")
-    # Le catalogue adulte d'un monde reel, s'il en a un, passe la MEME
-    # validation : c'est la seule chose qui garantit qu'un lieu livre n'habille
-    # personne, adulte ou non.
-    adultes = worlds.places_adulte(wid)
-    intrus_a = sorted({k for s in adultes if isinstance(s, dict)
-                       for k in worlds.CHARACTER_ONLY_SCENE_KEYS if k in s})
-    verifie(not intrus_a,
-            f"{wid} : catalogue adulte ({len(adultes)} lieu(x)) sans reglage "
-            f"de personnage" + (f" — trouve : {', '.join(intrus_a)}" if intrus_a else ""))
-    verifie(all(p.get("id") and p.get("prompt") for p in adultes),
-            f"{wid} : chaque lieu adulte a un id et un prompt")
+    decors = {p["id"] for p in worlds.places(wid)}
+    cles = {i["key"] for i in worlds.intentions(wid)}
+    verifie(all(s.get("place") in decors for s in toutes),
+            f"{wid} : chaque scene puise dans un decor du monde")
+    verifie(all(s.get("intention") in cles for s in toutes),
+            f"{wid} : chaque scene porte une intention du monde")
+    verifie(all(worlds.materialize(wid, s) for s in toutes),
+            f"{wid} : chaque scene se compose en un prompt non vide")
+    verifie(not [i for i in worlds.intentions(wid)
+                 if "min_intensity" in i or "format" in (i.get("defaults") or {})],
+            f"{wid} : aucune intention ne porte de niveau ni de format (ADR-0027 §3)")
 
 _vrai = worlds.WORLDS_DIR
 _tmp = Path(tempfile.mkdtemp(prefix="worlds_dressing_"))
@@ -176,25 +173,28 @@ try:
     (_tmp / "habille.json").write_text(
         json.dumps({"id": "habille", "label": "Habille",
                     "compatible_families": ["flux"],
-                    "places": [{"id": "s1", "prompt": "x",
-                                        "wardrobe": {"0": "a red dress"}}]}),
+                    "scenes": [{"id": "s1", "prompt": "x",
+                                "wardrobe": {"0": "a red dress"}}],
+                    "places": [{"id": "d1", "prompt": "x", "intention": "selfie"}]}),
         encoding="utf-8")
+    attend(ValueError, lambda: worlds.scenes("habille"),
+           "un monde qui habille une de ses scenes : refuse au chargement")
     attend(ValueError, lambda: worlds.places("habille"),
-           "un monde qui habille un de ses lieux : refuse au chargement")
+           "un decor qui porte une intention : refuse au chargement")
 finally:
     worlds.WORLDS_DIR = _vrai
     shutil.rmtree(_tmp, ignore_errors=True)
 
-# --------------------------------- [9b] catalogue ADULTE, cle a part (21/09)
+# --------------------------------- [9b] branche ADULTE, fichier a part (21/09)
 print()
-print("[9b] le catalogue adulte est une cle a part, validee comme l'autre")
+print("[9b] la branche adulte est un fichier a part, validee comme l'autre")
 _tmp = Path(tempfile.mkdtemp(prefix="worlds_adulte_"))
 try:
     worlds.WORLDS_DIR = _tmp
     (_tmp / "sobre.json").write_text(json.dumps(
         {"id": "sobre", "label": "Sobre", "compatible_families": ["flux"],
-         "places": [{"id": "s1", "prompt": "x"}]}), encoding="utf-8")
-    verifie(worlds.places_adulte("sobre") == [],
+         "scenes": [{"id": "s1", "prompt": "x"}]}), encoding="utf-8")
+    verifie(worlds.scenes_adulte("sobre") == [],
             "un monde sans fichier adulte a cote rend [] : c'est le cas nominal")
     verifie(not worlds.adulte_path("sobre").exists(),
             "et son fichier n'existe pas : un monde sans branche adulte se "
@@ -202,60 +202,57 @@ try:
 
     (_tmp / "adulte.json").write_text(json.dumps(
         {"id": "adulte", "label": "Adulte", "compatible_families": ["flux"],
-         "places": [{"id": "s1", "prompt": "un cafe"}]}), encoding="utf-8")
+         "scenes": [{"id": "s1", "prompt": "un cafe"}]}), encoding="utf-8")
     (_tmp / "adulte.adulte.json").write_text(json.dumps(
-        {"places_adulte": [{"id": "a1", "prompt": "une chambre"}]}), encoding="utf-8")
-    verifie([p["id"] for p in worlds.places_adulte("adulte")] == ["a1"],
-            "le catalogue adulte se lit")
-    verifie([p["id"] for p in worlds.places("adulte")] == ["s1"],
-            "et il ne fuit JAMAIS dans le catalogue ordinaire : la banque "
-            "habituelle ne peut pas en afficher un par accident")
+        {"scenes": [{"id": "a1", "prompt": "une chambre"}]}), encoding="utf-8")
+    verifie([p["id"] for p in worlds.scenes_adulte("adulte")] == ["a1"],
+            "la branche adulte se lit")
+    verifie([p["id"] for p in worlds.scenes("adulte")] == ["s1"],
+            "et elle ne fuit JAMAIS dans les scenes ordinaires")
+    verifie(worlds.scene("adulte", "a1")["prompt"] == "une chambre",
+            "scene() la trouve quand meme : une scene adulte reprise reste vivante")
 
     (_tmp / "habille2.json").write_text(json.dumps(
         {"id": "habille2", "label": "H", "compatible_families": ["flux"],
-         "places": []}), encoding="utf-8")
+         "scenes": []}), encoding="utf-8")
     (_tmp / "habille2.adulte.json").write_text(json.dumps(
-        {"places_adulte": [{"id": "a1", "prompt": "x",
-                            "wardrobe": {"3": "nothing"}}]}), encoding="utf-8")
-    attend(ValueError, lambda: worlds.places_adulte("habille2"),
-           "un lieu adulte qui habille : refuse comme les autres, la nudite "
+        {"scenes": [{"id": "a1", "prompt": "x",
+                     "wardrobe": {"3": "nothing"}}]}), encoding="utf-8")
+    attend(ValueError, lambda: worlds.scenes_adulte("habille2"),
+           "une scene adulte qui habille : refusee comme les autres, la nudite "
            "est la garde-robe du PERSONNAGE a son palier, pas celle du monde")
 
-    # --- ecriture : l'aller-retour, et le fichier qui disparait quand la
-    # branche se vide. Un monde sans lieu adulte ne garde pas de coquille.
-    worlds.save_places_adulte("sobre", [{"id": "a1", "label": "Chambre",
-                                         "intention": "boudoir",
+    worlds.save_scenes_adulte("sobre", [{"id": "a1", "label": "Chambre",
                                          "prompt": "une chambre au matin"}])
     verifie(worlds.adulte_path("sobre").exists(),
-            "save_places_adulte cree le fichier a cote")
-    verifie([p["id"] for p in worlds.places_adulte("sobre")] == ["a1"],
+            "save_scenes_adulte cree le fichier a cote")
+    verifie([p["id"] for p in worlds.scenes_adulte("sobre")] == ["a1"],
             "et ce qu'on relit est ce qu'on a ecrit")
-    verifie([p["id"] for p in worlds.places("sobre")] == ["s1"],
-            "le catalogue ordinaire n'a pas bouge d'un lieu")
-    worlds.save_places_adulte("sobre", [])
+    verifie([p["id"] for p in worlds.scenes("sobre")] == ["s1"],
+            "les scenes ordinaires n'ont pas bouge")
+    worlds.save_scenes_adulte("sobre", [])
     verifie(not worlds.adulte_path("sobre").exists(),
-            "une liste vide RETIRE le fichier : la branche adulte cesse "
-            "d'exister au lieu de laisser une coquille")
-    verifie(worlds.places_adulte("sobre") == [],
+            "une liste vide RETIRE le fichier : pas de coquille")
+    verifie(worlds.scenes_adulte("sobre") == [],
             "et la lecture rend [] comme avant, sans rien casser")
     attend(worlds.UnknownWorldError,
-           lambda: worlds.save_places_adulte("jamais-vu", []),
-           "ecrire le catalogue d'un monde inconnu : refuse plutot que de "
+           lambda: worlds.save_scenes_adulte("jamais-vu", []),
+           "ecrire la branche d'un monde inconnu : refuse plutot que de "
            "creer un monde par surprise")
 finally:
     worlds.WORLDS_DIR = _vrai
     shutil.rmtree(_tmp, ignore_errors=True)
 
-# --------------------------------- [10] place() / save_places() / merge_scene()
-print("\n[10] catalogue vivant : place(), save_places(), merge_scene() (ADR-0015)")
+# ------------------- [10] scene(), materialize(), save_scenes(), merge_scene()
+print("\n[10] scene composee avec son decor, heritage vivant (ADR-0027 §4)")
 for wid in REELS:
-    first = worlds.places(wid)[0]
-    p = worlds.place(wid, first["id"])
-    verifie(p == first, f"{wid} : place({first['id']!r}) rend l'entree du catalogue")
-attend(worlds.UnknownPlaceError, lambda: worlds.place("slow-life", "does-not-exist"),
-       "place() sur un id absent")
-attend(worlds.UnknownWorldError, lambda: worlds.place("does-not-exist", "x"),
-       "place() sur un monde absent")
+    first = worlds.scenes(wid)[0]
+    verifie(worlds.scene(wid, first["id"]) == first,
+            f"{wid} : scene({first['id']!r}) rend l'entree du catalogue")
+attend(worlds.UnknownSceneError, lambda: worlds.scene("slow-life", "does-not-exist"),
+       "scene() sur un id absent")
+attend(worlds.UnknownWorldError, lambda: worlds.scene("does-not-exist", "x"),
+       "scene() sur un monde absent")
 
 _vrai = worlds.WORLDS_DIR
 _tmp = Path(tempfile.mkdtemp(prefix="worlds_live_"))
@@ -264,33 +261,54 @@ try:
     (_tmp / "vivant.json").write_text(json.dumps({
         "id": "vivant", "label": "Vivant", "compatible_families": ["flux"],
         "assets": {"lora": None, "lora_strength": None, "prompt_add": ""},
-        "places": [{"id": "p1", "label": "Lieu 1", "intention": "lifestyle",
-                    "prompt": "a quiet room, morning light"}],
+        "places": [{"id": "d1", "label": "Chambre", "prompt": "a quiet room"}],
+        "intentions": [{"key": "lifestyle", "label": "Lifestyle"}],
+        "scenes": [{"id": "p1", "label": "Scene 1", "intention": "lifestyle",
+                    "place": "d1", "prompt": "reading, morning light", "intensity": 1},
+                   {"id": "nu", "prompt": "just a scene"},
+                   {"id": "vide", "place": "d1"},
+                   {"id": "perdu", "place": "gone", "prompt": "x"}],
     }), encoding="utf-8")
 
-    merged = worlds.merge_scene("vivant", "p1", {"wardrobe": {"0": "jeans"},
-                                                  "intensity": 0})
-    verifie(merged["prompt"] == "a quiet room, morning light"
+    sc = {s["id"]: s for s in worlds.scenes("vivant")}
+    verifie(worlds.materialize("vivant", sc["p1"]) == "reading, morning light, a quiet room",
+            "materialize : « <scene>, <decor> »")
+    verifie(worlds.materialize("vivant", sc["nu"]) == "just a scene",
+            "materialize : une scene sans decor reste son propre texte")
+    verifie(worlds.materialize("vivant", sc["vide"]) == "a quiet room",
+            "materialize : un decor sans texte de scene reste le decor")
+    attend(worlds.UnknownPlaceError, lambda: worlds.materialize("vivant", sc["perdu"]),
+           "materialize : decor disparu")
+
+    merged = worlds.merge_scene("vivant", "p1", {"wardrobe": {"0": "jeans"}})
+    verifie(merged["prompt"] == "reading, morning light, a quiet room"
             and merged["intention"] == "lifestyle" and merged["world_ref"] == "p1"
             and merged["origin"] == "world" and merged["world"] == "vivant"
-            and merged["wardrobe"] == {"0": "jeans"} and merged["intensity"] == 0,
-            f"merge_scene : cadre du lieu + overlay du personnage ({merged})")
-    attend(worlds.UnknownPlaceError, lambda: worlds.merge_scene("vivant", "gone", {}),
-           "merge_scene sur un lieu absent")
+            and merged["wardrobe"] == {"0": "jeans"} and merged["intensity"] == 1,
+            f"merge_scene : scene composee + intensity du monde + overlay ({merged})")
+    verifie(worlds.merge_scene("vivant", "p1", {"intensity": 0})["intensity"] == 0,
+            "merge_scene : l'intensity du personnage recouvre celle du monde")
+    attend(worlds.UnknownSceneError, lambda: worlds.merge_scene("vivant", "gone", {}),
+           "merge_scene sur une scene absente")
 
-    # save_places : reecrit UNIQUEMENT `places`, le reste du fichier survit
-    worlds.save_places("vivant", [{"id": "p1", "label": "Lieu 1 renomme",
-                                   "intention": "lifestyle",
-                                   "prompt": "a quiet room, evening light"}])
+    # corriger le DECOR atteint la scene composee : c'est ce que vend le monde
+    data = worlds.load_world("vivant")
+    data["places"][0]["prompt"] = "a sunlit room"
+    (_tmp / "vivant.json").write_text(json.dumps(data), encoding="utf-8")
+    verifie(worlds.merge_scene("vivant", "p1", {})["prompt"]
+            == "reading, morning light, a sunlit room",
+            "corriger un decor atteint toute scene qui y puise")
+
+    worlds.save_scenes("vivant", [{"id": "p1", "label": "Scene 1",
+                                   "place": "d1", "prompt": "reading, evening light"}])
     apres = worlds.load_world("vivant")
-    verifie(apres["places"][0]["prompt"] == "a quiet room, evening light",
-            "save_places : le catalogue relu porte le nouveau texte")
-    verifie(apres["label"] == "Vivant" and apres["compatible_families"] == ["flux"],
-            "save_places : le reste du fichier (label, compatible_families) intact")
-
-    remerged = worlds.merge_scene("vivant", "p1", {"wardrobe": {"0": "jeans"}})
-    verifie(remerged["prompt"] == "a quiet room, evening light",
-            "merge_scene relit le catalogue APRES l'edition — heritage live")
+    verifie(apres["scenes"][0]["prompt"] == "reading, evening light",
+            "save_scenes : les scenes relues portent le nouveau texte")
+    verifie(apres["label"] == "Vivant" and apres["places"][0]["id"] == "d1",
+            "save_scenes : le reste du fichier (label, decors) intact")
+    verifie(worlds.merge_scene("vivant", "p1", {})["prompt"]
+            == "reading, evening light, a sunlit room",
+            "merge_scene relit le catalogue APRES l'edition — heritage vivant")
 finally:
     worlds.WORLDS_DIR = _vrai
     shutil.rmtree(_tmp, ignore_errors=True)
@@ -314,7 +332,8 @@ try:
     data = worlds.load_world("probe-monde")
     verifie(data["label"] == "Probe Monde", "label nettoye des espaces")
     verifie(data["tone"] == "quiet test tone", "tone nettoye des espaces")
-    verifie(data["places"] == [], "catalogue de lieux VIDE a la naissance")
+    verifie(data["places"] == [] and data["intentions"] == [] and data["scenes"] == [],
+            "decors, intentions et scenes VIDES a la naissance")
     verifie(data["compatible_families"] == [universe.model_family("rpg-personnage")],
             f"compatible_families DERIVE du pack, pas tape ({data['compatible_families']})")
     verifie(data["suggested_styles"] == universe.style_names("rpg-personnage"),

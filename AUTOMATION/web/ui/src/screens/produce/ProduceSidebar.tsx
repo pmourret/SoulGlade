@@ -28,7 +28,6 @@ export type Intention = {
   key: string
   label?: string | null
   icon?: string
-  min_intensity?: number
   defaults?: { tone?: string }
 }
 

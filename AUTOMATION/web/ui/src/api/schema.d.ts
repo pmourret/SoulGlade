@@ -1574,8 +1574,7 @@ export interface paths {
         put?: never;
         /**
          * Créer un monde (catalogue vide, pack curaté)
-         * @description Writes a new `WORLDS/<id>.json` with an EMPTY `places` catalog
-         *     (ADR-0016). The pack is a proposal used once to derive
+         * @description Writes a new `WORLDS/<id>.json` with EMPTY catalogs (ADR-0016). The pack is a proposal used once to derive
          *     `compatible_families`/`suggested_styles` — never a routing change:
          *     `universe.resolve()` is not touched, and neither is `CHARACTERS/` (this
          *     world is assigned to no character, ever, by this route).
@@ -1609,7 +1608,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/worlds/{world_id}/places": {
+    "/api/worlds/{world_id}/scenes": {
         parameters: {
             query?: never;
             header?: never;
@@ -1617,21 +1616,21 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Catalogue de lieux d'un monde
+         * Scènes d'un monde
          * @description `worlds.load_world` raises `UnknownWorldError` (a ValueError) on an
          *     unknown id — the generic ValueError handler turns that into a clean 400,
          *     nothing to catch here.
          */
-        get: operations["get_places_api_worlds__world_id__places_get"];
+        get: operations["get_scenes_api_worlds__world_id__scenes_get"];
         put?: never;
         /**
-         * Enregistrer le catalogue de lieux d'un monde
-         * @description Replaces the world's WHOLE `places` list, like `POST /api/scenes`
+         * Enregistrer les scènes d'un monde
+         * @description Replaces the world's WHOLE `scenes` list, like `POST /api/scenes`
          *     replaces a character's whole scene bank — same shape of contract, one
          *     level up. Affects every character composing in this world: the frontend
          *     warns before calling this, the server does not soften it.
          */
-        post: operations["save_places_api_worlds__world_id__places_post"];
+        post: operations["save_scenes_api_worlds__world_id__scenes_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1650,7 +1649,7 @@ export interface paths {
         put?: never;
         /**
          * Enregistrer les tons d'un monde
-         * @description Replaces the world's WHOLE `tones` list, same contract as `places`.
+         * @description Replaces the world's WHOLE `tones` list, same contract as `scenes`.
          *     A tone is created with its world (25/09); every character of the world
          *     inherits it, field by field under its own adjustments. A removed key
          *     breaks nothing: a scene that still lists it simply stops matching it.
@@ -1662,7 +1661,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/worlds/{world_id}/places-adulte": {
+    "/api/worlds/{world_id}/scenes-adulte": {
         parameters: {
             query?: never;
             header?: never;
@@ -1670,26 +1669,24 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Catalogue adulte d'un monde
-         * @description Le catalogue adulte, vide si le monde n'en porte pas — ce qui est le
-         *     cas nominal. Même forme de réponse que le catalogue ordinaire : c'est le
-         *     même objet, rangé ailleurs.
+         * Scènes adultes d'un monde
+         * @description La branche adulte, vide si le monde n'en porte pas — ce qui est le
+         *     cas nominal. Même forme de réponse que les scènes ordinaires : c'est le
+         *     même objet, rangé ailleurs (ADR-0027 §6).
          */
-        get: operations["get_places_adulte_api_worlds__world_id__places_adulte_get"];
+        get: operations["get_scenes_adulte_api_worlds__world_id__scenes_adulte_get"];
         put?: never;
         /**
-         * Enregistrer le catalogue adulte d'un monde
-         * @description Remplace tout le catalogue adulte. MÊME VALIDATION que l'ordinaire —
-         *     `validate_places`, sans variante : ids uniques et non vides, prompt non
-         *     vide, et surtout aucune clé de personnage. Un lieu adulte qui habillerait
-         *     le personnage serait la même faute qu'ailleurs, parce que la nudité est
-         *     la garde-robe du personnage à son palier natif, pas une livraison du
-         *     monde (ADR-0014).
+         * Enregistrer les scènes adultes d'un monde
+         * @description Remplace toute la branche adulte. MÊME VALIDATION que l'ordinaire —
+         *     `validate_scenes`, sans variante : mêmes décors, mêmes intentions, et
+         *     aucune clé de personnage. La nudité est la garde-robe du personnage à son
+         *     palier natif, pas une livraison du monde (ADR-0014).
          *
          *     Une liste vide retire le fichier : un monde cesse alors de porter une
          *     branche adulte, ce qui est un état légitime et pas une coquille.
          */
-        post: operations["save_places_adulte_api_worlds__world_id__places_adulte_post"];
+        post: operations["save_scenes_adulte_api_worlds__world_id__scenes_adulte_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1878,6 +1875,22 @@ export interface components {
             at: string;
             /** Msg */
             msg: string;
+        };
+        /**
+         * CatalogRejected
+         * @description 400 of a refused save. `erreur` is the first problem — what the screen
+         *     shows; `problemes` is the whole list, for the details panel.
+         */
+        CatalogRejected: {
+            /**
+             * Ok
+             * @default false
+             */
+            ok: boolean;
+            /** Erreur */
+            erreur: string;
+            /** Problemes */
+            problemes?: string[];
         };
         /** CharacterListResponse */
         CharacterListResponse: {
@@ -3216,55 +3229,6 @@ export interface components {
             export?: string | null;
         };
         /**
-         * Place
-         * @description One entry of a world's catalog — a FRAME (label/intention/prompt),
-         *     never a wardrobe. `extra="allow"` for the same reason as `SceneMeta`: this
-         *     layer relays a file it does not own.
-         */
-        Place: {
-            /** Id */
-            id: string;
-            /**
-             * Label
-             * @default
-             */
-            label: string;
-            /**
-             * Intention
-             * @default
-             */
-            intention: string;
-            /** Prompt */
-            prompt: string;
-        } & {
-            [key: string]: unknown;
-        };
-        /**
-         * PlacesRejected
-         * @description 400 of a refused save. `erreur` is the first problem — what the screen
-         *     shows; `problemes` is the whole list, for the details panel.
-         */
-        PlacesRejected: {
-            /**
-             * Ok
-             * @default false
-             */
-            ok: boolean;
-            /** Erreur */
-            erreur: string;
-            /** Problemes */
-            problemes?: string[];
-        };
-        /** PlacesResponse */
-        PlacesResponse: {
-            /** World */
-            world: string;
-            /** Label */
-            label: string;
-            /** Places */
-            places: components["schemas"]["Place"][];
-        };
-        /**
          * PlanResponse
          * @description Dry run. ALWAYS 200, even when the guard refuses — see the box on
          *     `build_plan` in routers/production.py: `total` and `erreur` are the server
@@ -3708,27 +3672,27 @@ export interface components {
             [key: string]: unknown;
         };
         /**
-         * SavePlacesRequest
-         * @description The business shape (unique ids, non-empty prompt, no character-only
-         *     key) is validated in `services/worlds.py`, not here — same reasoning as
-         *     `SceneBankSaveRequest`: this is a FILE that belongs to the world, not a
-         *     request payload the schema layer should own the rules of.
+         * SaveTonesRequest
+         * @description Shape checked in `services/worlds.validate_tones`, like scenes.
          */
-        SavePlacesRequest: {
-            /** Places */
-            places?: {
+        SaveTonesRequest: {
+            /** Tones */
+            tones?: {
                 [key: string]: unknown;
             }[];
         } & {
             [key: string]: unknown;
         };
         /**
-         * SaveTonesRequest
-         * @description Shape checked in `services/worlds.validate_tones`, like places.
+         * SaveWorldScenesRequest
+         * @description The business shape (unique ids, non-empty prompt, no character-only
+         *     key) is validated in `services/worlds.py`, not here — same reasoning as
+         *     `SceneBankSaveRequest`: this is a FILE that belongs to the world, not a
+         *     request payload the schema layer should own the rules of.
          */
-        SaveTonesRequest: {
-            /** Tones */
-            tones?: {
+        SaveWorldScenesRequest: {
+            /** Scenes */
+            scenes?: {
                 [key: string]: unknown;
             }[];
         } & {
@@ -4352,9 +4316,48 @@ export interface components {
             packs: components["schemas"]["PackOption"][];
         };
         /**
+         * WorldScene
+         * @description One scene of a world (ADR-0027 §4): an intention in a place (`place`,
+         *     a décor id), with what happens there (`prompt`) and at most the bottom of
+         *     its level band. Never a wardrobe. `extra="allow"` for the same reason as
+         *     `SceneMeta`: this layer relays a file it does not own.
+         */
+        WorldScene: {
+            /** Id */
+            id: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Intention
+             * @default
+             */
+            intention: string;
+            /** Place */
+            place?: string | null;
+            /** Prompt */
+            prompt: string;
+            /** Intensity */
+            intensity?: number | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** WorldScenesResponse */
+        WorldScenesResponse: {
+            /** World */
+            world: string;
+            /** Label */
+            label: string;
+            /** Scenes */
+            scenes: components["schemas"]["WorldScene"][];
+        };
+        /**
          * WorldSummary
          * @description One row of the « Mondes » screen's registry — enough to card it and
-         *     link to its places editor, nothing a character sheet needs.
+         *     link to its editor, nothing a character sheet needs. `places_count`
+         *     counts décors, `scenes_count` the ordinary scenes (ADR-0027).
          */
         WorldSummary: {
             /** Id */
@@ -4373,6 +4376,11 @@ export interface components {
              * @default 0
              */
             places_count: number;
+            /**
+             * Scenes Count
+             * @default 0
+             */
+            scenes_count: number;
             /**
              * Tones Count
              * @default 0
@@ -7234,7 +7242,7 @@ export interface operations {
             };
         };
     };
-    get_places_api_worlds__world_id__places_get: {
+    get_scenes_api_worlds__world_id__scenes_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -7251,7 +7259,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlacesResponse"];
+                    "application/json": components["schemas"]["WorldScenesResponse"];
                 };
             };
             /** @description Requête refusée */
@@ -7274,7 +7282,7 @@ export interface operations {
             };
         };
     };
-    save_places_api_worlds__world_id__places_post: {
+    save_scenes_api_worlds__world_id__scenes_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -7285,7 +7293,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SavePlacesRequest"];
+                "application/json": components["schemas"]["SaveWorldScenesRequest"];
             };
         };
         responses: {
@@ -7298,13 +7306,13 @@ export interface operations {
                     "application/json": components["schemas"]["ActionResponse"];
                 };
             };
-            /** @description Catalogue refusé */
+            /** @description Scènes refusées */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlacesRejected"];
+                    "application/json": components["schemas"]["CatalogRejected"];
                 };
             };
             /** @description Validation Error */
@@ -7388,7 +7396,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlacesRejected"];
+                    "application/json": components["schemas"]["CatalogRejected"];
                 };
             };
             /** @description Validation Error */
@@ -7402,7 +7410,7 @@ export interface operations {
             };
         };
     };
-    get_places_adulte_api_worlds__world_id__places_adulte_get: {
+    get_scenes_adulte_api_worlds__world_id__scenes_adulte_get: {
         parameters: {
             query?: never;
             header?: never;
@@ -7419,7 +7427,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlacesResponse"];
+                    "application/json": components["schemas"]["WorldScenesResponse"];
                 };
             };
             /** @description Requête refusée */
@@ -7442,7 +7450,7 @@ export interface operations {
             };
         };
     };
-    save_places_adulte_api_worlds__world_id__places_adulte_post: {
+    save_scenes_adulte_api_worlds__world_id__scenes_adulte_post: {
         parameters: {
             query?: never;
             header?: never;
@@ -7453,7 +7461,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SavePlacesRequest"];
+                "application/json": components["schemas"]["SaveWorldScenesRequest"];
             };
         };
         responses: {
@@ -7466,13 +7474,13 @@ export interface operations {
                     "application/json": components["schemas"]["ActionResponse"];
                 };
             };
-            /** @description Catalogue refusé */
+            /** @description Scènes refusées */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PlacesRejected"];
+                    "application/json": components["schemas"]["CatalogRejected"];
                 };
             };
             /** @description Validation Error */

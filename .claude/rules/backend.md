@@ -58,7 +58,7 @@ migration FastAPI) — une nouvelle route rejoint le router qui correspond
 - api/routers/images — images, miniatures, poses
 - api/routers/production — lancement de génération, file de jobs
 - api/routers/review — QC, revue, jugements, export
-- api/routers/worlds — registre des mondes, catalogue de lieux (ADR-0015/16)
+- api/routers/worlds — registre des mondes, scènes et tons d'un monde (ADR-0016, ADR-0027)
 - api/routers/expression — aperçu non-destructif d'expression, plage d'un ton
 - api/routers/photo_editor — persistance des calques de l'éditeur photo
   avancé (le compositing lui-même reste côté client, Canvas2D)
@@ -81,7 +81,7 @@ transport) ; une `JSONResponse` non — une fonction qui doit choisir un
 - api/services/bank — validation de banque, backup, stats des cartes
 - api/services/journal — ligne en base, export, journal NSFW du tri
 - api/services/preview — aperçu de prompt et échos entre fragments
-- api/services/worlds — validation du catalogue de lieux d'un monde
+- api/services/worlds — validation des scènes et des tons d'un monde
 - api/services/expression — résolution de photo, rendu d'aperçu, écriture
   de la plage d'un ton dans creative.json
 - api/services/photo_editor — résolution de photo, lecture/écriture du

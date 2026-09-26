@@ -341,7 +341,7 @@ export function WorldsScreen() {
               world={world}
               tab={tab}
               onTab={(next) => void onTab(next)}
-              ordinaryCount={ordinary.places?.length ?? world.places_count}
+              ordinaryCount={ordinary.places?.length ?? world.scenes_count}
               adultCount={adult.places?.length ?? 0}
               ordinary={ordinary.places}
               adult={adult.places}

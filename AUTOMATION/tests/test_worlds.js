@@ -119,7 +119,7 @@ const NEUF = 'zz_essai_fumigation';
   dire(!(await page.$('#pendingBar')), 'un formulaire vide ne declare rien au DirtyBar');
   await page.fill('#placeId', NEUF);
   await page.fill('#placeLabel', 'Essai fumigation');
-  await page.fill('#placeIntention', 'boudoir');
+  await page.fill('#placeIntention', 'lifestyle');
   await page.fill('#placePrompt', 'a plain room, wide shot');
   await page.waitForSelector('#pendingBar');
   const banniere = await page.textContent('#pendingBar');
