@@ -186,7 +186,7 @@ function Provenance({
             {world && (
               <>
                 {' · '}
-                <Link className="text-dim2 underline hover:text-txt" to={worldPlacesPath(world)}>
+                <Link className="text-dim2 underline hover:text-txt" to={`${worldPlacesPath(world)}?onglet=scenes`}>
                   ouvrir dans Mondes
                 </Link>
               </>

@@ -1,55 +1,67 @@
-/* The gestures of ONE catalog: select, create, save, remove. Extracted from
-   `WorldPlacesScreen` on 21/09, the day a world gained a second catalog —
-   the adult one — and the screen would otherwise have grown a copy of its
-   own body.
+/* The gestures of ONE catalog of a world: select, create, save, remove — for
+   places, intentions and scenes alike (IT-11 chantier 4). What differs between
+   them is the spec (`catalogSpecs.ts`); the gestures are the same.
 
-   It holds state and calls back into `useWorldPlaces`; it never talks to the
+   It holds state and calls back into `useWorldCatalog`; it never talks to the
    API itself (`.claude/rules/frontend.md`: the loader owns the calls, this
    owns the gestures).
 
-   ONE INSTANCE PER CATALOG, and that is the point: two catalogs each keep
-   their own selection and their own « creating » state. Sharing one would make
-   opening a place on one tab close the other's, which is exactly the kind of
-   coupling a second instance costs nothing to avoid. The two inspectors used
-   to be on screen at once (a `<details>` under the ordinary list); they are
-   two tabs since the design-pass screen-11, and the independence is now what
-   you find when you come BACK to a tab.
+   ONE INSTANCE PER CATALOG. Each keeps its own selection and its own
+   « creating » state, so coming back to a tab finds what was open there.
 
-   THE DRAFT LIVES HERE SINCE THE SAME PASS, through `usePlaceDraft` — the
-   chrome's `DirtyBar` carries the save (§S5.4), and a banner above the screen
-   cannot ask a field below it whether it changed. `save` and `remove` did not
-   move: `save` still takes the patch, the screen just hands it the draft. */
-import { useCallback, useState } from 'react'
+   THE DRAFT LIVES HERE: the chrome's `DirtyBar` carries the save (§S5.4), and
+   a banner above the screen cannot ask a field below it whether it changed.
+   It is keyed on the entry's identity plus an epoch, never on its content: a
+   save reloads the catalog and hands back NEW objects, and resetting on
+   content would wipe a field typed while the save was in flight. The epoch
+   bumps for the one other case, a deliberate `reset()`. */
+import { useCallback, useMemo, useState } from 'react'
 
-import { usePlaceDraft, type PlacePatch } from './usePlaceDraft'
-import type { Place } from './useWorldPlaces'
+import type { CatalogSpec, Draft } from './catalogSpecs'
 
-export type { PlacePatch }
-
-type Catalogue = {
-  places: Place[] | null
-  save: (next: Place[]) => Promise<{ ok: boolean; erreur?: string }>
+type Catalog<T> = {
+  entries: T[] | null
+  save: (next: T[]) => Promise<{ ok: boolean; erreur?: string }>
 }
 
-export const BLANK_PLACE: Place = { id: '', label: '', intention: '', prompt: '' }
-
-export function useCatalogueEditor(
-  catalogue: Catalogue,
+export function useCatalogueEditor<T extends object>(
+  catalog: Catalog<T>,
+  spec: CatalogSpec<T>,
   handlers: {
     onSaved: (message: string) => void
-    confirmRemoval: (place: Place) => Promise<boolean>
+    confirmRemoval: (entry: T) => Promise<boolean>
   },
 ) {
+  const idOf = useCallback((entry: T) => String((entry as Record<string, unknown>)[spec.idKey] ?? ''), [spec.idKey])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [creatingNew, setCreatingNew] = useState(false)
   const [saving, setSaving] = useState(false)
   const [status, setStatus] = useState<string | null>(null)
 
-  const selected = creatingNew
-    ? BLANK_PLACE
-    : (catalogue.places?.find((p) => p.id === selectedId) ?? null)
-  const { draft, patch, dirty, reset } = usePlaceDraft(selected)
+  const selected: T | null = creatingNew
+    ? null
+    : (catalog.entries?.find((e) => idOf(e) === selectedId) ?? null)
+  const isOpen = creatingNew || selected !== null
 
+  // ---------------------------------------------------------------- draft
+  const [edits, setEdits] = useState<Draft>({})
+  const [epoch, setEpoch] = useState(0)
+  const [draftKey, setDraftKey] = useState<string | null>(null)
+  const saved = useMemo(() => spec.toDraft(selected), [spec, selected])
+  const currentKey = `${creatingNew ? '+' : (selectedId ?? '')}#${epoch}`
+  /* Derived during render rather than in an effect: an effect would paint one
+     frame of the PREVIOUS entry's text under the new entry's title. */
+  const live = draftKey === currentKey ? edits : {}
+  if (draftKey !== currentKey) {
+    setDraftKey(currentKey)
+    setEdits({})
+  }
+  const draft: Draft = { ...saved, ...live }
+  const patch = useCallback((next: Draft) => setEdits((prev) => ({ ...prev, ...next })), [])
+  const reset = useCallback(() => setEpoch((n) => n + 1), [])
+  const dirty = isOpen && Object.keys(draft).some((k) => draft[k] !== saved[k])
+
+  // ---------------------------------------------------------------- gestures
   const open = useCallback((id: string) => {
     setSelectedId(id)
     setCreatingNew(false)
@@ -67,54 +79,57 @@ export function useCatalogueEditor(
     setCreatingNew(false)
   }, [])
 
-  /* Returns whether the write happened. The body is the one it has always had;
-     the verdict is new, and it is what lets « Enregistrer puis continuer »
-     (design-pass screen-11 §S1) stay where it is when the save is refused —
-     without it the screen would navigate away from a place the server just
-     rejected, and the refusal would scroll off with the inspector. */
-  const save = async (patch: PlacePatch): Promise<boolean> => {
-    const current = catalogue.places ?? []
-    if (creatingNew && current.some((p) => p.id === patch.id)) {
-      setStatus(`identifiant « ${patch.id} » déjà utilisé dans ce catalogue`)
-      return false
+  function fail(message: string) {
+    setStatus(message)
+    return false
+  }
+
+  /* Returns whether the write happened: « Enregistrer puis continuer »
+     (design-pass screen-11 §S1) stays put when the save is refused, rather
+     than navigating away from what the server just rejected. */
+  const save = async (): Promise<boolean> => {
+    const current = catalog.entries ?? []
+    const id = (draft[spec.idKey] ?? '').trim()
+    if (creatingNew) {
+      if (!id) return fail(`${spec.article} a besoin d’un ${spec.idLabel.toLowerCase()}`)
+      if (!spec.idRule.test(id)) return fail(`${spec.idLabel} : ${spec.idRuleText}`)
+      if (current.some((e) => idOf(e) === id)) return fail(`« ${id} » existe déjà dans ce monde`)
     }
-    setSaving(true)
+    const missing = spec.missing(draft)
+    if (missing) return fail(missing)
     const next = creatingNew
-      ? [...current, patch]
-      : current.map((p) => (p.id === selectedId ? { ...p, ...patch } : p))
-    const result = await catalogue.save(next)
+      ? [...current, spec.toEntry(draft, null)]
+      : current.map((e) => (idOf(e) === selectedId ? spec.toEntry({ ...draft, [spec.idKey]: selectedId! }, e) : e))
+    setSaving(true)
+    const result = await catalog.save(next)
     setSaving(false)
-    setStatus(result.ok ? 'lieu enregistré' : (result.erreur ?? 'échec'))
-    if (result.ok) {
-      handlers.onSaved('catalogue du monde enregistré')
-      setCreatingNew(false)
-      setSelectedId(patch.id)
-      /* The catalog has been reloaded by `save` above, so the draft re-derives
-         from what is now on disk. Without this it would stay « modifié » for
-         any field the save normalised — a trimmed prompt is enough. */
-      reset()
-    }
-    return result.ok
+    setStatus(result.ok ? `${spec.noun} enregistré${spec.article.startsWith('une') ? 'e' : ''}` : (result.erreur ?? 'échec'))
+    if (!result.ok) return false
+    handlers.onSaved(`${spec.noun} enregistré${spec.article.startsWith('une') ? 'e' : ''}`)
+    setCreatingNew(false)
+    setSelectedId(creatingNew ? id : selectedId)
+    reset()
+    return true
   }
 
   const remove = async (id: string) => {
-    const place = catalogue.places?.find((p) => p.id === id)
-    if (!place) return
-    if (!(await handlers.confirmRemoval(place))) return
-    const result = await catalogue.save((catalogue.places ?? []).filter((p) => p.id !== id))
+    const entry = catalog.entries?.find((e) => idOf(e) === id)
+    if (!entry || !(await handlers.confirmRemoval(entry))) return
+    const result = await catalog.save((catalog.entries ?? []).filter((e) => idOf(e) !== id))
     if (!result.ok) {
+      setStatus(result.erreur ?? 'échec du retrait')
       handlers.onSaved(result.erreur ?? 'échec du retrait')
       return
     }
     if (selectedId === id) setSelectedId(null)
-    handlers.onSaved('lieu retiré')
+    handlers.onSaved(`${spec.noun} retiré${spec.article.startsWith('une') ? 'e' : ''}`)
   }
 
   return {
-    selected, selectedId, creatingNew, saving, status,
-    draft, patch, dirty, reset,
+    spec, selected, selectedId, creatingNew, isOpen, saving, status,
+    draft, saved, patch, dirty, reset,
     open, add, close, save, remove,
   }
 }
 
-export type CatalogueEditor = ReturnType<typeof useCatalogueEditor>
+export type CatalogueEditor<T extends object = object> = ReturnType<typeof useCatalogueEditor<T>>

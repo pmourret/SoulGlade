@@ -1,5 +1,5 @@
 /* Loads and saves the tones of ONE world — the only place that calls
-   `/api/worlds/{id}/tones`. Twin of `useWorldPlaces`, and for the same reason:
+   `/api/worlds/{id}/tones`. Twin of `useWorldCatalog`, and for the same reason:
    a tone is created with its world, like a place (IT-10, 25/09,
    `DOCS/cadrage/2026-09-25-creer-un-ton.md`).
 

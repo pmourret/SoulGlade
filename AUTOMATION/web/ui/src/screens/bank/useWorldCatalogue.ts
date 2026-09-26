@@ -13,22 +13,22 @@
    empty — not greyed: a greyed row is still an invitation, the same rule the
    intensity slider already follows for the notch that requires arming.
 
-   It loads through `useWorldPlaces` (the only caller of the world routes) and
+   It loads through `useWorldCatalog` (the only caller of the world routes) and
    hands out plain data and one callback; it never talks to the API itself. */
 import { useMemo } from 'react'
 
 import { useCharacter } from '../../character/CharacterContext'
 import { useScenes } from '../../state/ScenesStoreContext'
 import { useTaxonomy } from '../../state/TaxonomyContext'
-import { useWorldPlaces, type Place } from '../worlds/useWorldPlaces'
+import { useWorldCatalog, type WorldScene } from '../worlds/useWorldCatalog'
 import { missingPlaces, sceneFromPlace } from './sceneFromPlace'
 
 export function useWorldCatalogue(worldId: string | null) {
   const { sheet } = useCharacter()
   const { creative } = useTaxonomy()
   const { drafts } = useScenes()
-  const ordinary = useWorldPlaces(worldId)
-  const adult = useWorldPlaces(worldId, { adulte: true })
+  const ordinary = useWorldCatalog<WorldScene>(worldId, 'scenes')
+  const adult = useWorldCatalog<WorldScene>(worldId, 'scenes-adulte')
 
   const nativeLevel = creative?.niveau_natif ?? null
   const armed = Boolean(sheet?.nsfw)
@@ -40,19 +40,19 @@ export function useWorldCatalogue(worldId: string | null) {
     () => drafts.map((d) => ({ id: d.id, world_ref: d.base.world_ref })),
     [drafts],
   )
-  const ordinaryMissing = useMemo(() => missingPlaces(ordinary.places, held), [ordinary.places, held])
+  const ordinaryMissing = useMemo(() => missingPlaces(ordinary.entries, held), [ordinary.entries, held])
   const adultMissing = useMemo(
-    () => (adultAllowed ? missingPlaces(adult.places, held) : []),
-    [adultAllowed, adult.places, held],
+    () => (adultAllowed ? missingPlaces(adult.entries, held) : []),
+    [adultAllowed, adult.entries, held],
   )
 
   /* The scene a place would become, for THIS character. Never called for an
      adult place when the adult list is not allowed — it would not be listed. */
-  const toScene = (place: Place, isAdult: boolean) =>
+  const toScene = (place: WorldScene, isAdult: boolean) =>
     sceneFromPlace(place, worldId ?? '', isAdult && nativeLevel != null ? { nativeLevel } : null)
 
   return {
-    loading: ordinary.places === null,
+    loading: ordinary.entries === null,
     error: ordinary.error ?? (adultAllowed ? adult.error : null),
     ordinaryMissing,
     adultMissing,

@@ -1,39 +1,32 @@
 /* The middle column (design-pass screen-11 §S4): what a world IS at the top,
-   its two catalogs as tabs, its places as rows, and the button that adds one.
+   its four catalogs as tabs — Lieux, Intentions, Scènes, Tons (ADR-0027,
+   IT-11 chantier 4) — their entries as rows, and the button that adds one.
    Presentation only — props and callbacks, no API call.
 
-   IT REPLACES `CatalogueSection`, which was rendered TWICE, once per catalog,
-   the adult one inside a folded `<details>`. Two lists and two inspectors could
-   be open at once, and the adult block carried a full second copy of the
-   column. One column and two tabs say the same thing with one list on screen.
-
-   THE ADULT TAB IS ANNOUNCED, NEVER IMPOSED — the 21/09 arbitration, kept
-   whole: its count shows on the tab itself, and its content appears only once
-   the tab is picked. What changed is the idiom, not the restraint.
+   FOUR TABS, NOT FIVE: five do not fit the column at 340 px. The adult branch
+   lives INSIDE the Scènes tab, behind « Ordinaires | Adultes », because it IS
+   a scenes catalog delivered apart (ADR-0027 §6). The 21/09 arbitration holds:
+   its count is announced, its content appears only once it is picked.
 
    RADIX OWNS THE KEYBOARD, as it does for the inspector of Produire
    (`screens/produce/ProduceInspector.tsx`): tablist roles, arrows, Home/End. */
 import * as Tabs from '@radix-ui/react-tabs'
 
 import { moveFocusInList, tabIndexInList } from './listKeys'
-import type { CatalogueEditor } from './useCatalogueEditor'
 import type { ToneCatalogue } from './useToneCatalogue'
-import type { Place } from './useWorldPlaces'
 import type { WorldTone } from './useWorldTones'
 import type { WorldSummary } from './useWorldRegistry'
 
-export type CatalogueTab = 'ordinaire' | 'adulte' | 'tons'
+export type CatalogueTab = 'lieux' | 'intentions' | 'scenes' | 'tons'
+/** Which branch of the Scènes tab is open: the world's scenes, or its adult
+    branch (`WORLDS/<id>.adulte.json`, ADR-0027 §6). */
+export type SceneBranch = 'ordinaires' | 'adultes'
 
 const TRIGGER =
-  'flex-none cursor-pointer border-0 bg-transparent px-[12px] py-[9px] text-[13px] ' +
+  'flex-none cursor-pointer border-0 bg-transparent px-[10px] py-[9px] text-[13px] ' +
   'focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-[-2px]'
 const TRIGGER_OFF = 'text-dim hover:text-txt'
-/* The adult tab underlines in `--warn` rather than `--txt` (§S4.2): the change
-   of register must be visible from the tab bar alone. Never colour ONLY — the
-   tab is also the selected one, in `--txt` and 600, and the banner under it
-   says in words which catalog is open. */
 const TRIGGER_ON = 'font-semibold text-txt [box-shadow:inset_0_-2px_0_var(--txt)]'
-const TRIGGER_ON_WARN = 'font-semibold text-txt [box-shadow:inset_0_-2px_0_var(--warn)]'
 
 const ROW =
   'block w-full cursor-pointer border-y-0 border-r-0 border-l-2 bg-transparent ' +
@@ -42,45 +35,60 @@ const ROW =
 const ROW_ON = 'border-l-acc bg-panel3'
 const ROW_OFF = 'border-l-transparent hover:bg-panel'
 
-function PlaceRows({
-  places,
+/** What a row of a catalog shows: its name, a tag on the right, one line. */
+export type RowView = { id: string; title: string; tag?: string; line: string }
+
+/** The editor state a list needs to draw its selection and its pending dot. */
+type ListState = { creatingNew: boolean; selectedId: string | null; dirty: boolean }
+
+/** One catalog as the column receives it: rows, list state, load error, count. */
+export type ColumnCatalog = {
+  rows: RowView[] | null
+  editor: ListState
+  error: string | null
+  count: number
+}
+
+function EntryRows({
+  rows,
   editor,
+  label,
   emptyState,
   onOpen,
 }: {
-  places: Place[] | null
-  editor: CatalogueEditor
+  rows: RowView[] | null
+  editor: ListState
+  label: string
   emptyState: React.ReactNode
-  /* NOT `editor.open` directly: opening another place throws away what is
-     typed in the inspector, so the screen asks first (§S1). A column that
-     called the editor itself would make that question impossible to place. */
+  /* NOT `editor.open` directly: opening another entry throws away what is
+     typed in the inspector, so the screen asks first (§S1). */
   onOpen: (id: string) => void
 }) {
-  if (places === null) return <p className="tiny px-[12px] py-[10px]">chargement du catalogue…</p>
-  if (places.length === 0 && !editor.creatingNew) {
+  if (rows === null) return <p className="tiny px-[12px] py-[10px]">chargement…</p>
+  if (rows.length === 0 && !editor.creatingNew) {
     return <div className="empty px-[16px] py-[24px] text-[13px]">{emptyState}</div>
   }
   const selection = !editor.creatingNew && editor.selectedId
   return (
-    <div role="listbox" aria-label="Lieux du catalogue">
-      {places.map((place, index) => {
-        const on = selection === place.id
+    <div role="listbox" aria-label={label}>
+      {rows.map((row, index) => {
+        const on = selection === row.id
         return (
           <button
-            key={place.id}
+            key={row.id}
             type="button"
             role="option"
             aria-selected={on}
-            data-place-row
+            data-entry-row={row.id}
             tabIndex={tabIndexInList(on, index === 0, Boolean(selection))}
             className={`${ROW} ${on ? ROW_ON : ROW_OFF}`}
-            onClick={() => onOpen(place.id)}
+            onClick={() => onOpen(row.id)}
             onKeyDown={moveFocusInList}
           >
             <span className="flex items-baseline gap-[8px]">
               <b className={`min-w-0 flex-1 truncate text-[13.5px] ${on ? '' : 'font-normal'}`}>
-                {place.label || place.id}
-                {/* A place edited but not saved carries a dot, so the list and
+                {row.title}
+                {/* An entry edited but not saved carries a dot, so the list and
                     the banner agree on what is pending (§S4.3). */}
                 {on && editor.dirty && (
                   <span className="ml-[6px] text-[9px] text-warn" aria-hidden="true">
@@ -88,13 +96,9 @@ function PlaceRows({
                   </span>
                 )}
               </b>
-              {place.intention && (
-                <span className="flex-none text-[11.5px] text-dim">{place.intention}</span>
-              )}
+              {row.tag && <span className="flex-none text-[11.5px] text-dim">{row.tag}</span>}
             </span>
-            <span className="mt-[2px] block truncate text-[12px] text-dim2">
-              {place.prompt || '—'}
-            </span>
+            <span className="mt-[2px] block truncate text-[12px] text-dim2">{row.line || '—'}</span>
           </button>
         )
       })}
@@ -102,9 +106,8 @@ function PlaceRows({
   )
 }
 
-/* The tones of the world (IT-10, 25/09). Same row shape as a place: the name,
-   then the fragment one reads to know what the tone does to an image — the
-   very thing no screen showed before. */
+/* The tones of the world (IT-10, 25/09). Same row shape: the name, then the
+   fragment one reads to know what the tone does to an image. */
 function ToneRows({
   tones,
   catalogue,
@@ -169,18 +172,53 @@ function ToneRows({
   )
 }
 
+function Panel({ error, children }: { error: string | null; children: React.ReactNode }) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      {error && (
+        <p className="m-0 px-[14px] py-[9px] text-[12px] text-danger-txt" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="min-h-0 flex-1 overflow-y-auto py-[4px]">{children}</div>
+    </div>
+  )
+}
+
+function EmptyWithAction({
+  title,
+  children,
+  action,
+  onAction,
+}: {
+  title: string
+  children: React.ReactNode
+  action: string
+  onAction: () => void
+}) {
+  return (
+    <>
+      <b>{title}</b>
+      {children}
+      <div className="mt-[14px]">
+        <button type="button" className="btn primary sm" onClick={onAction}>
+          {action}
+        </button>
+      </div>
+    </>
+  )
+}
+
 export function CatalogueColumn({
   world,
   tab,
   onTab,
-  ordinaryCount,
-  adultCount,
-  ordinary,
+  branch,
+  onBranch,
+  places,
+  intentions,
+  scenes,
   adult,
-  ordinaryEditor,
-  adultEditor,
-  ordinaryError,
-  adultError,
   tones,
   toneCatalogue,
   tonesError,
@@ -188,34 +226,69 @@ export function CatalogueColumn({
   narrow,
   worlds,
   onSelectWorld,
-  onOpenPlace,
-  onAddPlace,
+  onOpen,
+  onAdd,
 }: {
   world: WorldSummary
   tab: CatalogueTab
   onTab: (tab: CatalogueTab) => void
-  ordinaryCount: number
-  adultCount: number
-  ordinary: Place[] | null
-  adult: Place[] | null
-  ordinaryEditor: CatalogueEditor
-  adultEditor: CatalogueEditor
-  ordinaryError: string | null
-  adultError: string | null
+  branch: SceneBranch
+  onBranch: (branch: SceneBranch) => void
+  places: ColumnCatalog
+  intentions: ColumnCatalog
+  scenes: ColumnCatalog
+  adult: ColumnCatalog
   tones: WorldTone[] | null
   toneCatalogue: ToneCatalogue
   tonesError: string | null
   tonesCount: number
   /* Under 1100 px the registry column is gone (§S8) and its choice comes back
-     here as a select — never as a hidden list, which would make the other
-     worlds unreachable on a laptop. */
+     here as a select — never as a hidden list. */
   narrow: boolean
   worlds: WorldSummary[]
   onSelectWorld: (id: string) => void
-  onOpenPlace: (id: string) => void
-  onAddPlace: () => void
+  onOpen: (id: string) => void
+  onAdd: () => void
 }) {
-  const error = tab === 'adulte' ? adultError : tab === 'tons' ? tonesError : ordinaryError
+  const sceneCatalog = branch === 'adultes' ? adult : scenes
+  const error =
+    tab === 'tons'
+      ? tonesError
+      : tab === 'lieux'
+        ? places.error
+        : tab === 'intentions'
+          ? intentions.error
+          : sceneCatalog.error
+  const addLabel = {
+    lieux: '+ Ajouter un lieu',
+    intentions: '+ Ajouter une intention',
+    scenes: branch === 'adultes' ? '+ Ajouter une scène adulte' : '+ Ajouter une scène',
+    tons: '+ Ajouter un ton',
+  }[tab]
+
+  /* A scene draws on a place and an intention: a world without them says so
+     rather than offering a scene with two empty lists. */
+  const lacks = places.count === 0 ? 'lieux' : intentions.count === 0 ? 'intentions' : null
+  const scenesEmpty = lacks ? (
+    <>
+      <b>Pas encore de scène</b>
+      Une scène est une intention dans un lieu, avec ce qui s'y passe. Ce monde n'a pas encore{' '}
+      {lacks === 'lieux' ? 'de lieu' : 'd’intention'} : commence par là.
+      <div className="mt-[14px] flex flex-wrap gap-[8px]">
+        <button type="button" className="btn primary sm" onClick={() => onTab(lacks)}>
+          Aller à {lacks === 'lieux' ? 'Lieux' : 'Intentions'}
+        </button>
+        <button type="button" className="btn sm" onClick={onAdd}>
+          Créer une scène quand même
+        </button>
+      </div>
+    </>
+  ) : (
+    <EmptyWithAction title="Pas encore de scène" action="Créer la première scène" onAction={onAdd}>
+      Une scène est une intention dans un lieu, avec ce qui s'y passe. Les personnages de ce monde la
+      produisent telle quelle.
+    </EmptyWithAction>
+  )
 
   return (
     <Tabs.Root
@@ -258,11 +331,8 @@ export function CatalogueColumn({
               {family}
             </span>
           ))}
-          {/* No tone, no chip: an empty « ton : » would be a field, not a fact. */}
-          {/* TRONQUEE. Un ton est une phrase (« calm and unhurried: natural
-              light, lived-in interiors… ») : entiere, l'etiquette devenait un
-              bloc de deux lignes large comme la colonne, et l'en-tete ne se
-              lisait plus d'un coup. Le texte entier reste au survol. */}
+          {/* TRONQUEE : une ambiance est une phrase ; entiere, l'etiquette
+              devenait un bloc de deux lignes. Le texte entier reste au survol. */}
           {world.tone && (
             <span
               className="max-w-full truncate rounded-[5px] border border-line2 px-[7px] py-[1px]
@@ -275,120 +345,151 @@ export function CatalogueColumn({
         </div>
       </div>
 
-      <Tabs.List className="flex flex-none border-b border-b-line px-[8px]" aria-label="Catalogues du monde">
-        <Tabs.Trigger
-          value="ordinaire"
-          className={`${TRIGGER} ${tab === 'ordinaire' ? TRIGGER_ON : TRIGGER_OFF}`}
-        >
-          Ordinaire <span className="text-[11.5px] tabular-nums opacity-70">{ordinaryCount}</span>
-        </Tabs.Trigger>
-        <Tabs.Trigger
-          value="adulte"
-          className={`${TRIGGER} ${tab === 'adulte' ? TRIGGER_ON_WARN : TRIGGER_OFF}`}
-        >
-          Adulte <span className="text-[11.5px] tabular-nums opacity-70">{adultCount}</span>
-        </Tabs.Trigger>
-        <Tabs.Trigger
-          value="tons"
-          className={`${TRIGGER} ${tab === 'tons' ? TRIGGER_ON : TRIGGER_OFF}`}
-        >
-          Tons <span className="text-[11.5px] tabular-nums opacity-70">{tonesCount}</span>
-        </Tabs.Trigger>
+      <Tabs.List className="flex flex-none border-b border-b-line px-[6px]" aria-label="Catalogues du monde">
+        {(
+          [
+            ['lieux', 'Lieux', places.count],
+            ['intentions', 'Intentions', intentions.count],
+            ['scenes', 'Scènes', scenes.count],
+            ['tons', 'Tons', tonesCount],
+          ] as const
+        ).map(([value, label, count]) => (
+          <Tabs.Trigger key={value} value={value} className={`${TRIGGER} ${tab === value ? TRIGGER_ON : TRIGGER_OFF}`}>
+            {label} <span className="text-[11.5px] tabular-nums opacity-70">{count}</span>
+          </Tabs.Trigger>
+        ))}
       </Tabs.List>
 
-      {/* `flex` N'EST PAS SUR LE PANNEAU LUI-MEME, et ce n'est pas un detail
-          de style : Radix pose `hidden` sur le panneau inactif, et la regle du
-          navigateur `[hidden]{display:none}` perd contre une utilitaire
-          `.flex` de meme specificite ecrite par la feuille. Mesure a l'audit :
-          le panneau Ordinaire, vide mais affiche, prenait sa part de `flex-1`
-          et poussait le bandeau adulte et sa liste tout en bas de la colonne.
-          La colonne interieure porte la mise en page, le panneau ne porte que
-          sa hauteur. */}
-      <Tabs.Content value="ordinaire" id="ordinaireBlock" className="min-h-0 flex-1">
-        <div className="flex h-full min-h-0 flex-col">
-          {ordinaryError && (
-            <p className="m-0 px-[14px] py-[9px] text-[12px] text-danger-txt" role="alert">
-              {ordinaryError}
-            </p>
-          )}
-          <div className="min-h-0 flex-1 overflow-y-auto py-[4px]">
-            <PlaceRows
-              places={ordinary}
-              editor={ordinaryEditor}
-              onOpen={onOpenPlace}
-              emptyState={
-                <>
-                  <b>Catalogue vide</b>
-                  Ajoute un premier lieu pour que les personnages de ce monde puissent y composer
-                  des scènes.
-                </>
-              }
-            />
-          </div>
-        </div>
+      {/* `flex` N'EST PAS SUR LE PANNEAU LUI-MEME : Radix pose `hidden` sur le
+          panneau inactif, et `[hidden]{display:none}` perd contre une
+          utilitaire `.flex` de meme specificite. La colonne interieure porte
+          la mise en page, le panneau ne porte que sa hauteur. */}
+      <Tabs.Content value="lieux" id="lieuxBlock" className="min-h-0 flex-1">
+        <Panel error={places.error}>
+          <EntryRows
+            rows={places.rows}
+            editor={places.editor}
+            label="Lieux du monde"
+            onOpen={onOpen}
+            emptyState={
+              <EmptyWithAction title="Pas encore de lieu" action="Créer le premier lieu" onAction={onAdd}>
+                Un lieu est un décor : où l'on est, sans action ni lumière. Plusieurs scènes, de
+                plusieurs intentions, puisent dans le même lieu.
+              </EmptyWithAction>
+            }
+          />
+        </Panel>
       </Tabs.Content>
 
-      <Tabs.Content value="adulte" id="adulteBlock" className="min-h-0 flex-1">
+      <Tabs.Content value="intentions" id="intentionsBlock" className="min-h-0 flex-1">
+        <Panel error={intentions.error}>
+          <EntryRows
+            rows={intentions.rows}
+            editor={intentions.editor}
+            label="Intentions du monde"
+            onOpen={onOpen}
+            emptyState={
+              <EmptyWithAction
+                title="Pas encore d'intention"
+                action="Créer la première intention"
+                onAction={onAdd}
+              >
+                Ce que les personnages de ce monde veulent montrer : lifestyle, sport, voyage… Une
+                intention vaut à tous les niveaux.
+              </EmptyWithAction>
+            }
+          />
+        </Panel>
+      </Tabs.Content>
+
+      <Tabs.Content value="scenes" id="scenesBlock" className="min-h-0 flex-1">
         <div className="flex h-full min-h-0 flex-col">
-          {/* §S4.5 — a square, not a ⚠: this states a register, it does not warn
-              of an incident. Same sentence as before, and the file it writes. */}
-          <p className="m-0 flex flex-none items-start gap-[8px] border-b border-b-warn-line
-                        bg-warn-bg px-[14px] py-[10px] text-[12px] leading-[1.45] text-warn-txt">
-            <span aria-hidden="true" className="mt-[3px] text-[8px]">
-              ■
-            </span>
-            <span>
-              Des cadres, jamais une tenue. Ces lieux n'apparaissent dans aucune banque ordinaire.
-              Une scène qui en dérive ne se voit qu'au cran natif d'un personnage armé.
-              <code className="font-code ml-[4px] text-[11.5px] leading-[normal]">
-                WORLDS/{world.id}.adulte.json
-              </code>
-            </span>
-          </p>
-          {adultError && (
-            <p className="m-0 px-[14px] py-[9px] text-[12px] text-danger-txt" role="alert">
-              {adultError}
+          <div className="flex flex-none items-center border-b border-b-line px-[12px] py-[8px]">
+            <div role="group" aria-label="Branche des scènes" className="seg">
+              <button
+                type="button"
+                id="branchOrdinaires"
+                className={branch === 'ordinaires' ? 'on' : undefined}
+                aria-pressed={branch === 'ordinaires'}
+                onClick={() => onBranch('ordinaires')}
+              >
+                Ordinaires <span className="tabular-nums opacity-70">{scenes.count}</span>
+              </button>
+              <button
+                type="button"
+                id="branchAdultes"
+                className={branch === 'adultes' ? 'on' : undefined}
+                aria-pressed={branch === 'adultes'}
+                onClick={() => onBranch('adultes')}
+              >
+                Adultes <span className="tabular-nums opacity-70">{adult.count}</span>
+              </button>
+            </div>
+          </div>
+          {branch === 'adultes' && (
+            /* §S4.5 — a square, not a ⚠: this states a register, it does not
+               warn of an incident. */
+            <p
+              id="adulteBanner"
+              className="m-0 flex flex-none items-start gap-[8px] border-b border-b-warn-line
+                         bg-warn-bg px-[14px] py-[10px] text-[12px] leading-[1.45] text-warn-txt"
+            >
+              <span aria-hidden="true" className="mt-[3px] text-[8px]">
+                ■
+              </span>
+              <span>
+                Les mêmes lieux et intentions, jamais une tenue. Ces scènes ne se voient qu'au cran
+                natif d'un personnage armé, et se livrent à part.
+                <code className="font-code ml-[4px] text-[11.5px] leading-[normal]">
+                  WORLDS/{world.id}.adulte.json
+                </code>
+              </span>
             </p>
           )}
-          <div className="min-h-0 flex-1 overflow-y-auto py-[4px]">
-            <PlaceRows
-              places={adult}
-              editor={adultEditor}
-              onOpen={onOpenPlace}
-              emptyState={
-                <>
-                  <b>Aucun lieu adulte</b>
-                  Ce monde se livre sans branche adulte. En ajouter un crée son catalogue ; le
-                  retirer entièrement le supprime.
-                </>
-              }
-            />
-          </div>
+          <Panel error={sceneCatalog.error}>
+            {branch === 'adultes' ? (
+              <EntryRows
+                rows={adult.rows}
+                editor={adult.editor}
+                label="Scènes adultes du monde"
+                onOpen={onOpen}
+                emptyState={
+                  <>
+                    <b>Pas de branche adulte</b>
+                    Ce monde se livre sans elle. Ajouter une scène la crée ; les retirer toutes la
+                    supprime.
+                  </>
+                }
+              />
+            ) : (
+              <EntryRows
+                rows={scenes.rows}
+                editor={scenes.editor}
+                label="Scènes du monde"
+                onOpen={onOpen}
+                emptyState={scenesEmpty}
+              />
+            )}
+          </Panel>
         </div>
       </Tabs.Content>
 
       <Tabs.Content value="tons" id="tonsBlock" className="min-h-0 flex-1">
-        <div className="flex h-full min-h-0 flex-col">
-          {tonesError && (
-            <p className="m-0 px-[14px] py-[9px] text-[12px] text-danger-txt" role="alert">
-              {tonesError}
-            </p>
-          )}
-          <div className="min-h-0 flex-1 overflow-y-auto py-[4px]">
-            <ToneRows tones={tones} catalogue={toneCatalogue} onOpen={onOpenPlace} onAdd={onAddPlace} />
-          </div>
-        </div>
+        <Panel error={tonesError}>
+          <ToneRows tones={tones} catalogue={toneCatalogue} onOpen={onOpen} onAdd={onAdd} />
+        </Panel>
       </Tabs.Content>
 
       <div className="flex-none border-t border-t-line p-[10px]">
         <button
           type="button"
+          id="btnAddEntry"
           className="w-full cursor-pointer rounded-card border border-dashed border-line2
                      bg-transparent px-[13px] py-[8px] text-[13px] text-dim hover:border-dim2 hover:text-txt"
-          onClick={onAddPlace}
+          onClick={onAdd}
           disabled={Boolean(error)}
         >
-          {tab === 'adulte' ? '+ Ajouter un lieu adulte' : tab === 'tons' ? '+ Ajouter un ton' : '+ Ajouter un lieu'}
+          {addLabel}
         </button>
       </div>
     </Tabs.Root>

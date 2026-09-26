@@ -7,7 +7,7 @@
    greyed one. Picking a place adds it and closes the box; the bench opens
    what it created, the same rule as « + nouvelle scène ». */
 import { Dialog } from '../../chrome/Dialog'
-import type { Place } from '../worlds/useWorldPlaces'
+import type { WorldScene as Place } from '../worlds/useWorldCatalog'
 
 function PlacePick({
   place,

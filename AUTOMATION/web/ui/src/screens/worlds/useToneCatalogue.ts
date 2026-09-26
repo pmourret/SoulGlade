@@ -1,5 +1,5 @@
 /* The gestures of a world's TONES: select, create, save, remove — twin of
-   `useCatalogueEditor` for places.
+   `useCatalogueEditor` for places, intentions and scenes.
 
    A TWIN, NOT A GENERALISATION. A place is keyed by `id` and needs a prompt;
    a tone is keyed by `key`, may carry an empty fragment (a tone can be only an
@@ -7,7 +7,7 @@
    edited here. Bending one hook over both would put those differences behind
    flags in every function.
 
-   THE DRAFT LIVES HERE (same reason as `usePlaceDraft`): the chrome's
+   THE DRAFT LIVES HERE (same reason as in `useCatalogueEditor`): the chrome's
    `DirtyBar` carries the save, and a banner cannot ask a field below it whether
    it changed. Keyed on the tone's key plus an epoch, never on its content, so a
    save that reloads the list does not wipe a field typed meanwhile. */

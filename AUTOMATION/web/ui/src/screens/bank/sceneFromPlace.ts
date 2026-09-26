@@ -16,7 +16,7 @@
      here: `/api/creative` says which tier declares `lora_adulte`, and an
      interface that deduced it would drift the day a pack declares its tiers
      differently. */
-import type { Place } from '../worlds/useWorldPlaces'
+import type { WorldScene as Place } from '../worlds/useWorldCatalog'
 import type { Scene } from '../../state/ScenesStoreContext'
 
 /* The native tier is a produce tier: nothing is worn. Written as a wardrobe

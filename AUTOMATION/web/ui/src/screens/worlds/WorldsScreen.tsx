@@ -1,22 +1,16 @@
 /* Référentiel > Mondes — ONE screen for both `/worlds` and
-   `/worlds/:worldId/places` (design-pass screen-11).
-
-   IT USED TO BE TWO. `/worlds` was a grid of cards linking to a second screen
-   that held the catalog, and that second screen carried the adult catalog as a
-   folded `<details>` with a full copy of the list and the inspector inside. The
-   split cost a navigation to see what a world holds, and made « which world am
-   I editing » a question one answered by reading the URL.
+   `/worlds/:worldId/places` (design-pass screen-11), with a world's four
+   catalogs: Lieux, Intentions, Scènes (and their adult branch), Tons
+   (ADR-0027, IT-11 chantier 4).
 
    THE SELECTED WORLD IS DERIVED, NEVER STORED: `worldId` comes from the route,
-   and falls back to the first row of the registry. There is no second source of
-   truth to drift from the URL — the same reasoning as `activeCategory` in
-   `app/routes.ts`. `WorldPlacesScreen` is gone; its route mounts this file.
+   and falls back to the first row of the registry — the same reasoning as
+   `activeCategory` in `app/routes.ts`.
 
-   THE SAVE BELONGS TO THE CHROME. A place is edited in the third column and
-   written by the `DirtyBar` (§S5.4), like the tones workshop writes
-   `creative.json`. That is also what makes leaving a modified place a QUESTION
-   rather than a silent loss: changing world, changing tab or opening another
-   place all pass through `leaveGuard`. */
+   THE SAVE BELONGS TO THE CHROME. An entry is edited in the third column and
+   written by the `DirtyBar` (§S5.4). That is also what makes leaving a
+   modified entry a QUESTION rather than a silent loss: changing world, tab or
+   branch, or opening another entry, all pass through `leaveGuard`. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
@@ -25,13 +19,14 @@ import { useConfirm } from '../../chrome/ConfirmContext'
 import { useRegisterPendingSave, type PendingSave } from '../../chrome/PendingSaveContext'
 import { useToast } from '../../chrome/ToastContext'
 import { PATHS, worldPlacesPath } from '../../app/routes'
-import { CatalogueColumn, type CatalogueTab } from './CatalogueColumn'
+import { CatalogueColumn, type CatalogueTab, type ColumnCatalog, type RowView, type SceneBranch } from './CatalogueColumn'
+import { INTENTION_SPEC, PLACE_SPEC, SCENE_SPEC, composedPrompt, type CatalogContext } from './catalogSpecs'
+import { EntryInspector } from './EntryInspector'
 import { NewWorldDialog } from './NewWorldDialog'
-import { PlaceInspector } from './PlaceInspector'
 import { ToneInspector } from './ToneInspector'
-import { useCatalogueEditor, type CatalogueEditor } from './useCatalogueEditor'
+import { useCatalogueEditor } from './useCatalogueEditor'
 import { useToneCatalogue } from './useToneCatalogue'
-import { useWorldPlaces, type Place } from './useWorldPlaces'
+import { useWorldCatalog, type WorldIntention, type WorldPlace, type WorldScene } from './useWorldCatalog'
 import { useWorldTones, type WorldTone } from './useWorldTones'
 import { useWorldRegistry } from './useWorldRegistry'
 import { WorldList } from './WorldList'
@@ -40,6 +35,16 @@ const SHELL = 'screen flex h-full min-h-0 overflow-hidden'
 const LEFT = 'flex w-[260px] shrink-0 flex-col overflow-hidden border-r border-line max-[1100px]:hidden'
 const MIDDLE = 'flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-line max-[1100px]:w-[340px]'
 const RIGHT = 'flex min-w-0 flex-1 flex-col overflow-hidden bg-panel2'
+
+const TABS: CatalogueTab[] = ['lieux', 'intentions', 'scenes', 'tons']
+
+/** « <noun> » with its article and agreement, for the banner and questions. */
+const NOUNS = {
+  lieux: { name: 'Lieu', this: 'Ce lieu', done: 'modifié', save: 'Enregistrer le lieu' },
+  intentions: { name: 'Intention', this: 'Cette intention', done: 'modifiée', save: 'Enregistrer l’intention' },
+  scenes: { name: 'Scène', this: 'Cette scène', done: 'modifiée', save: 'Enregistrer la scène' },
+  tons: { name: 'Ton', this: 'Ce ton', done: 'modifié', save: 'Enregistrer le ton' },
+} as const
 
 export function WorldsScreen() {
   const { worldId } = useParams<{ worldId: string }>()
@@ -50,53 +55,91 @@ export function WorldsScreen() {
   const { narrow } = useChrome()
   const registry = useWorldRegistry()
 
-  /* `?onglet=tons` opens the Tons tab: the tones workshop links here to change
-     a tone for the whole world (IT-10). Read once, at mount. */
-  const [tab, setTab] = useState<CatalogueTab>(() =>
-    new URLSearchParams(location.search).get('onglet') === 'tons' ? 'tons' : 'ordinaire',
-  )
+  /* `?onglet=` opens a tab: the tones workshop links to Tons, the Banque's
+     « ouvrir dans Mondes » to Scènes. Read once, at mount. */
+  const [tab, setTab] = useState<CatalogueTab>(() => {
+    const asked = new URLSearchParams(location.search).get('onglet') as CatalogueTab | null
+    return asked && TABS.includes(asked) ? asked : 'scenes'
+  })
+  const [branch, setBranch] = useState<SceneBranch>('ordinaires')
   const [dialogOpen, setDialogOpen] = useState(false)
-  /* The world a creation just made, consumed once ITS empty catalog has
-     loaded: one lands on its first place (§S8), because an empty catalog is
-     not something one came to look at.
-
-     IT HOLDS THE ID, NOT A BOOLEAN. Measured on the first build: a flag fired
-     the moment it was set, against the PREVIOUS world's places — `useWorldPlaces`
-     keeps the loaded catalog until the next one answers, so there is a window
-     where the route already names the new world and the list is still the old
-     one. Waiting for « this world, and it is empty » closes it without
-     touching the loader. */
+  /* The world a creation just made, consumed once ITS empty places have
+     loaded: one lands on creating its first place (§S8). It holds the id,
+     not a boolean: the loader keeps the previous world's list until the next
+     one answers, and a flag fired against the wrong world. */
   const [freshWorld, setFreshWorld] = useState<string | null>(null)
 
   const worlds = registry.worlds
   const selectedId = worldId ?? worlds?.[0]?.id ?? null
   const world = worlds?.find((w) => w.id === selectedId) ?? null
 
-  const ordinary = useWorldPlaces(selectedId)
-  const adult = useWorldPlaces(selectedId, { adulte: true })
+  const places = useWorldCatalog<WorldPlace>(selectedId, 'places')
+  const intentions = useWorldCatalog<WorldIntention>(selectedId, 'intentions')
+  const scenes = useWorldCatalog<WorldScene>(selectedId, 'scenes')
+  const adult = useWorldCatalog<WorldScene>(selectedId, 'scenes-adulte')
   const toneList = useWorldTones(selectedId)
 
-  /* The same warning for both catalogs: a retired place breaks the frame of
-     every character scene that references it, adult or not. */
-  const confirmRemoval = useCallback(
-    (place: Place) =>
-      confirm({
+  /* A place or an intention a scene uses cannot leave the world: the server
+     refuses it (`services/worlds.py`). Said BEFORE the question, with the
+     scenes named, so no confirmation is asked for a gesture that cannot happen. */
+  const usedBy = useCallback(
+    (field: 'place' | 'intention', value: string) =>
+      [...(scenes.entries ?? []), ...(adult.entries ?? [])]
+        .filter((s) => s[field] === value)
+        .map((s) => s.label || s.id),
+    [scenes.entries, adult.entries],
+  )
+  const refuseIfUsed = useCallback(
+    (field: 'place' | 'intention', value: string, name: string) => {
+      const users = usedBy(field, value)
+      if (!users.length) return false
+      toast(`« ${name} » sert encore aux scènes ${users.join(', ')} : change-les d’abord`)
+      return true
+    },
+    [usedBy, toast],
+  )
+
+  const placeEditor = useCatalogueEditor(places, PLACE_SPEC, {
+    onSaved: toast,
+    confirmRemoval: async (place) => {
+      if (refuseIfUsed('place', place.id, place.label || place.id)) return false
+      return confirm({
         title: `Retirer le lieu « ${place.label || place.id} » ?`,
         button: 'Retirer',
         danger: true,
-        body: (
-          <p>
-            Toute scène de personnage qui le référence (`world_ref`) perdra son cadre au prochain
-            enregistrement de son atelier — elle ne sera plus produisible sans être réassignée.
-          </p>
-        ),
-      }),
-    [confirm],
-  )
+        body: <p>Aucune scène de ce monde ne l’utilise. Il disparaît du monde livré.</p>,
+      })
+    },
+  })
+  const intentionEditor = useCatalogueEditor(intentions, INTENTION_SPEC, {
+    onSaved: toast,
+    confirmRemoval: async (intention) => {
+      if (refuseIfUsed('intention', intention.key, intention.label || intention.key)) return false
+      return confirm({
+        title: `Retirer l’intention « ${intention.label || intention.key} » ?`,
+        button: 'Retirer',
+        danger: true,
+        body: <p>Aucune scène de ce monde ne la porte. Les personnages ne la proposeront plus dans Produire.</p>,
+      })
+    },
+  })
+  const confirmSceneRemoval = (scene: WorldScene) =>
+    confirm({
+      title: `Retirer la scène « ${scene.label || scene.id} » ?`,
+      button: 'Retirer',
+      danger: true,
+      body: (
+        <p>
+          Les personnages qui la reprennent gardent sa dernière version, qui ne suivra plus aucune
+          correction du monde. Un personnage neuf ne la recevra pas.
+        </p>
+      ),
+    })
+  const sceneEditor = useCatalogueEditor(scenes, SCENE_SPEC, { onSaved: toast, confirmRemoval: confirmSceneRemoval })
+  const adultEditor = useCatalogueEditor(adult, SCENE_SPEC, { onSaved: toast, confirmRemoval: confirmSceneRemoval })
 
   /* A retired tone breaks no scene: one that still lists it simply stops
-     matching it. What the confirmation must say is the other half — a
-     character that adjusted it keeps that adjustment as a tone of its own. */
+     matching it. A character that adjusted it keeps its own setting. */
   const confirmToneRemoval = useCallback(
     (tone: WorldTone) =>
       confirm({
@@ -112,36 +155,28 @@ export function WorldsScreen() {
       }),
     [confirm],
   )
-
-  const handlers = useMemo(() => ({ onSaved: toast, confirmRemoval }), [toast, confirmRemoval])
-  const ordinaryEditor = useCatalogueEditor(ordinary, handlers)
-  const adultEditor = useCatalogueEditor(adult, handlers)
   const toneCatalogue = useToneCatalogue(toneList, { onSaved: toast, confirmRemoval: confirmToneRemoval })
-  const editor: CatalogueEditor = tab === 'adulte' ? adultEditor : ordinaryEditor
+
   const onTones = tab === 'tons'
-  const file = `WORLDS/${selectedId}${tab === 'adulte' ? '.adulte' : ''}.json`
+  const editor =
+    tab === 'lieux' ? placeEditor : tab === 'intentions' ? intentionEditor : branch === 'adultes' ? adultEditor : sceneEditor
+  const file = `WORLDS/${selectedId}${tab === 'scenes' && branch === 'adultes' ? '.adulte' : ''}.json`
+  const nouns = NOUNS[tab]
+
   /* What the chrome and the leave guard need, whichever catalog is open. */
   const pending = onTones
     ? {
         dirty: toneCatalogue.dirty,
-        name: toneCatalogue.draft.label || toneCatalogue.draft.key || 'ce ton',
+        name: toneCatalogue.draft.label || toneCatalogue.draft.key || 'sans nom',
         reset: toneCatalogue.reset,
+        save: toneCatalogue.save,
       }
-    : { dirty: editor.dirty, name: editor.draft.label || editor.draft.id || 'ce lieu', reset: editor.reset }
-
-  const savePlaceDraft = useCallback(async () => {
-    const draft = editor.draft
-    if (!draft.prompt.trim() || (editor.creatingNew && !draft.id.trim())) {
-      toast(
-        editor.creatingNew && !draft.id.trim()
-          ? 'un lieu a besoin d’un identifiant'
-          : 'un lieu a besoin d’un prompt : c’est le cadre que les scènes héritent',
-      )
-      return false
-    }
-    return editor.save({ ...draft, id: draft.id.trim(), prompt: draft.prompt.trim() })
-  }, [editor, toast])
-  const saveDraft = onTones ? toneCatalogue.save : savePlaceDraft
+    : {
+        dirty: editor.dirty,
+        name: editor.draft.label || editor.draft[editor.spec.idKey] || 'sans nom',
+        reset: editor.reset,
+        save: editor.save,
+      }
 
   /** Three honest issues before losing what is typed: write it, drop it, stay. */
   const leaveGuard = useCallback(async (): Promise<boolean> => {
@@ -152,26 +187,24 @@ export function WorldsScreen() {
       alt: 'Abandonner',
       body: (
         <p>
-          {onTones ? 'Ce ton' : 'Ce lieu'} n'est pas écrit dans <code>{file}</code>. Les
-          personnages de ce monde héritent toujours de ce que le fichier contient.
+          {nouns.this} n'est pas écrit{nouns.done.endsWith('e') ? 'e' : ''} dans <code>{file}</code>. Les
+          personnages de ce monde reçoivent toujours ce que le fichier contient.
         </p>
       ),
     })
     if (outcome === false) return false
-    if (outcome === true) return await saveDraft()
+    if (outcome === true) return await pending.save()
     pending.reset()
     return true
-  }, [confirm, pending, onTones, file, saveDraft])
+  }, [confirm, pending, nouns, file])
 
   const goToWorld = useCallback(
     async (id: string) => {
       if (id === selectedId) return
       if (!(await leaveGuard())) return
       /* `replace` when we came from the bare /worlds: the registry picked that
-         first world, the user did not, so Back should leave the screen rather
-         than walk back through a choice nobody made. Search carried forward
-         explicitly, or `CharacterContext` would re-add `?character=` a tick
-         later and push a second entry. */
+         first world, the user did not. Search carried forward explicitly, or
+         `CharacterContext` would re-add `?character=` and push a second entry. */
       navigate(
         { pathname: worldPlacesPath(id), search: location.search },
         { replace: location.pathname === PATHS.worlds },
@@ -189,7 +222,16 @@ export function WorldsScreen() {
     [tab, leaveGuard],
   )
 
-  const onOpenPlace = useCallback(
+  const onBranch = useCallback(
+    async (next: SceneBranch) => {
+      if (next === branch) return
+      if (!(await leaveGuard())) return
+      setBranch(next)
+    },
+    [branch, leaveGuard],
+  )
+
+  const onOpen = useCallback(
     async (id: string) => {
       if (!(await leaveGuard())) return
       if (onTones) toneCatalogue.open(id)
@@ -198,13 +240,13 @@ export function WorldsScreen() {
     [leaveGuard, editor, onTones, toneCatalogue],
   )
 
-  const onAddPlace = useCallback(async () => {
+  const onAdd = useCallback(async () => {
     if (!(await leaveGuard())) return
     if (onTones) toneCatalogue.add()
     else editor.add()
   }, [leaveGuard, editor, onTones, toneCatalogue])
 
-  const onClosePlace = useCallback(async () => {
+  const onClose = useCallback(async () => {
     if (!(await leaveGuard())) return
     if (onTones) toneCatalogue.close()
     else editor.close()
@@ -212,18 +254,18 @@ export function WorldsScreen() {
 
   useEffect(() => {
     if (!freshWorld || freshWorld !== selectedId) return
-    if (ordinary.places === null || ordinary.places.length > 0) return
+    if (places.entries === null || places.entries.length > 0) return
     setFreshWorld(null)
-    ordinaryEditor.add()
+    placeEditor.add()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [freshWorld, selectedId, ordinary.places])
+  }, [freshWorld, selectedId, places.entries])
 
   const onCreateWorld = async (fields: Parameters<typeof registry.create>[0]) => {
     const result = await registry.create(fields)
     if (result.erreur) return result.erreur
     toast(`monde « ${fields.label} » créé`)
     setDialogOpen(false)
-    setTab('ordinaire')
+    setTab('lieux')
     setFreshWorld(result.id!)
     navigate({ pathname: worldPlacesPath(result.id!), search: location.search })
     return null
@@ -236,33 +278,52 @@ export function WorldsScreen() {
     () =>
       pending.dirty && world
         ? {
-            title: onTones
-              ? `Ton « ${pending.name} » modifié`
-              : `Lieu « ${editor.draft.label || editor.draft.id || 'sans nom'} » modifié`,
+            title: `${nouns.name} « ${pending.name} » ${nouns.done}`,
             body: (
               <>
                 <code>{file}</code>
-                {/* Only when a route already answered it, and only from 1 up:
-                    `CHARACTERS/` is outside the repo, and « 0 personnage »
-                    would read as a measurement made on data that is absent. */}
+                {/* Only from 1 up: `CHARACTERS/` is outside the repo, and
+                    « 0 personnage » would read as a measurement. */}
                 {characters && characters > 0 ? (
-                  <> — {characters} personnage{characters > 1 ? 's' : ''} compose
-                    {characters > 1 ? 'nt' : ''} dans ce monde et hérite
-                    {characters > 1 ? 'nt' : ''} de ce {onTones ? 'ton' : 'cadre'}.</>
+                  <> — {characters} personnage{characters > 1 ? 's' : ''} de ce monde {characters > 1 ? 'le reçoivent' : 'le reçoit'}.</>
                 ) : (
-                  <> — les personnages de ce monde héritent de ce {onTones ? 'ton' : 'cadre'}.</>
+                  <> — les personnages de ce monde le reçoivent.</>
                 )}
               </>
             ),
-            saveLabel: onTones ? 'Enregistrer le ton' : 'Enregistrer le lieu',
-            onSave: () => void saveDraft(),
+            saveLabel: nouns.save,
+            onSave: () => void pending.save(),
             onRevert: () => pending.reset(),
           }
         : null,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pending.dirty, pending.name, onTones, editor.draft.label, editor.draft.id, world, file, characters, saveDraft],
+    [pending.dirty, pending.name, nouns, world, file, characters, pending.save],
   )
   useRegisterPendingSave(pendingSave)
+
+  /* The rows each list shows — computed here, so the column stays pure. */
+  const intentionLabel = (key?: string | null) =>
+    key ? (intentions.entries?.find((i) => i.key === key)?.label ?? key) : undefined
+  const placeLabel = (id?: string | null) => (id ? (places.entries?.find((p) => p.id === id)?.label ?? id) : '')
+  const sceneRows = (list: WorldScene[] | null): RowView[] | null =>
+    list?.map((s) => ({
+      id: s.id,
+      title: s.label || s.id,
+      tag: intentionLabel(s.intention),
+      line: [placeLabel(s.place), s.prompt].filter(Boolean).join(' · '),
+    })) ?? null
+  const column = (
+    rows: RowView[] | null,
+    ed: { creatingNew: boolean; selectedId: string | null; dirty: boolean },
+    error: string | null,
+    fallback: number,
+  ): ColumnCatalog => ({
+    rows,
+    editor: { creatingNew: ed.creatingNew, selectedId: ed.selectedId, dirty: ed.dirty },
+    error,
+    count: rows?.length ?? fallback,
+  })
+  const context: CatalogContext = { places: places.entries, intentions: intentions.entries, tones: toneList.tones }
 
   if (registry.failed) {
     return (
@@ -301,6 +362,12 @@ export function WorldsScreen() {
     )
   }
 
+  const takenIds = (editor.spec.idKey === 'key'
+    ? (intentions.entries ?? []).map((i) => i.key)
+    : ((tab === 'lieux' ? places.entries : branch === 'adultes' ? adult.entries : scenes.entries) ?? []).map(
+        (e) => e.id,
+      )) as string[]
+
   return (
     <div className={SHELL} id="worlds">
       {dialogOpen && (
@@ -326,7 +393,7 @@ export function WorldsScreen() {
         <div className="flex min-w-0 flex-1 items-center justify-center p-[24px]">
           <div className="empty max-w-[420px]">
             <b>Aucun monde pour l'instant</b>
-            Un monde porte le catalogue de lieux où les personnages composent leurs scènes.
+            Un monde porte les lieux, les intentions et les scènes où ses personnages composent.
             <div className="mt-[14px]">
               <button className="btn primary sm" data-new onClick={() => setDialogOpen(true)}>
                 Nouveau monde
@@ -341,14 +408,27 @@ export function WorldsScreen() {
               world={world}
               tab={tab}
               onTab={(next) => void onTab(next)}
-              ordinaryCount={ordinary.places?.length ?? world.scenes_count}
-              adultCount={adult.places?.length ?? 0}
-              ordinary={ordinary.places}
-              adult={adult.places}
-              ordinaryEditor={ordinaryEditor}
-              adultEditor={adultEditor}
-              ordinaryError={ordinary.error}
-              adultError={adult.error}
+              branch={branch}
+              onBranch={(next) => void onBranch(next)}
+              places={column(
+                places.entries?.map((p) => ({ id: p.id, title: p.label || p.id, line: p.prompt })) ?? null,
+                placeEditor,
+                places.error,
+                world.places_count,
+              )}
+              intentions={column(
+                intentions.entries?.map((i) => ({
+                  id: i.key,
+                  title: `${i.icon ? `${i.icon} ` : ''}${i.label || i.key}`,
+                  tag: i.key,
+                  line: i.prompt_add || 'aucun fragment de prompt',
+                })) ?? null,
+                intentionEditor,
+                intentions.error,
+                world.intentions_count,
+              )}
+              scenes={column(sceneRows(scenes.entries), sceneEditor, scenes.error, world.scenes_count)}
+              adult={column(sceneRows(adult.entries), adultEditor, adult.error, 0)}
               tones={toneList.tones}
               toneCatalogue={toneCatalogue}
               tonesError={toneList.error}
@@ -356,8 +436,8 @@ export function WorldsScreen() {
               narrow={narrow}
               worlds={worlds}
               onSelectWorld={(id) => void goToWorld(id)}
-              onOpenPlace={(id) => void onOpenPlace(id)}
-              onAddPlace={() => void onAddPlace()}
+              onOpen={(id) => void onOpen(id)}
+              onAdd={() => void onAdd()}
             />
           </div>
 
@@ -373,36 +453,34 @@ export function WorldsScreen() {
                   takenKeys={toneCatalogue.creatingNew ? (toneList.tones ?? []).map((t) => t.key) : []}
                   onPatch={toneCatalogue.patch}
                   onRemove={
-                    toneCatalogue.creatingNew
-                      ? undefined
-                      : () => void toneCatalogue.remove(toneCatalogue.selected!.key)
+                    toneCatalogue.creatingNew ? undefined : () => void toneCatalogue.remove(toneCatalogue.selected!.key)
                   }
-                  onClose={() => void onClosePlace()}
+                  onClose={() => void onClose()}
                 />
               ) : (
-                <div className="flex h-full items-center justify-center p-[24px]">
-                  <div className="empty text-[13px]">Ouvre un ton dans la liste, ou ajoutes-en un.</div>
-                </div>
+                <EmptyInspector noun="un ton" />
               )
-            ) : editor.selected ? (
-              <PlaceInspector
-                place={editor.creatingNew ? BLANK : toPatch(editor.selected)}
+            ) : editor.isOpen ? (
+              <EntryInspector
+                // a fresh inspector per entry: its autofocus and its identity row start over
+                key={`${tab}/${branch}/${editor.creatingNew ? '+' : editor.selectedId}`}
+                spec={editor.spec as typeof SCENE_SPEC}
                 draft={editor.draft}
+                saved={editor.saved}
+                context={context}
                 worldLabel={world.label}
-                saving={editor.saving}
                 status={editor.status}
-                idEditable={editor.creatingNew}
-                takenIds={(tab === 'adulte' ? adult.places : ordinary.places)?.map((p) => p.id) ?? []}
+                creating={editor.creatingNew}
+                takenIds={editor.creatingNew ? takenIds : []}
+                preview={tab === 'scenes' ? composedPrompt(editor.draft, places.entries) : undefined}
                 onPatch={editor.patch}
-                onRemove={
-                  editor.creatingNew ? undefined : () => void editor.remove(editor.selected!.id)
-                }
-                onClose={() => void onClosePlace()}
+                onRemove={editor.creatingNew ? undefined : () => void editor.remove(editor.selectedId!)}
+                onClose={() => void onClose()}
               />
             ) : (
-              <div className="flex h-full items-center justify-center p-[24px]">
-                <div className="empty text-[13px]">Ouvre un lieu dans la liste, ou ajoutes-en un.</div>
-              </div>
+              <EmptyInspector
+                noun={tab === 'lieux' ? 'un lieu' : tab === 'intentions' ? 'une intention' : 'une scène'}
+              />
             )}
           </div>
         </>
@@ -411,13 +489,13 @@ export function WorldsScreen() {
   )
 }
 
-const BLANK = { id: '', label: '', intention: '', prompt: '' }
-const toPatch = (place: Place) => ({
-  id: place.id ?? '',
-  label: place.label ?? '',
-  intention: place.intention ?? '',
-  prompt: place.prompt ?? '',
-})
+function EmptyInspector({ noun }: { noun: string }) {
+  return (
+    <div className="flex h-full items-center justify-center p-[24px]">
+      <div className="empty text-[13px]">Ouvre {noun} dans la liste, ou ajoutes-en.</div>
+    </div>
+  )
+}
 
 /** The loading state of the three columns (§S8) — `aria-hidden` on the column
     itself, so a screen reader hears the busy region, not six empty bars. */
