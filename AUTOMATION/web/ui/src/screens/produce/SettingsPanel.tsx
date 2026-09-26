@@ -15,6 +15,7 @@
    Ported from `renderReglages` / `majAffichage` in `static/create.js`. */
 import { useMemo } from 'react'
 
+import { formatLabel, useConfig } from '../../state/ConfigContext'
 import { BY_ID, PRESETS, SECTIONS, fmtVal, type Setting } from './settings'
 
 /** Every control's value, by setting id. Booleans for switches, strings for the
@@ -205,6 +206,7 @@ export function SettingsPanel({
   /* Deviation count, globally and per section. A folded section must say it
      hides a deviation, otherwise folding hides the very information the counter
      exists to give. */
+  const { formats } = useConfig()
   const { total, bySection } = useMemo(
     () => deviationCount(values, presetRef, nsfwRef),
     [values, presetRef, nsfwRef],
@@ -246,7 +248,11 @@ export function SettingsPanel({
           const body = section.items.map((item) => (
             <SettingRow
               key={item.id}
-              item={item}
+              item={
+                item.optionsFrom === 'formats'
+                  ? { ...item, options: [...(item.options ?? []), ...formats.map((f) => [f, formatLabel(f)] as [string, string])] }
+                  : item
+              }
               value={values[item.id]}
               reference={referenceOf(item, presetRef, nsfwRef)}
               master={item.lieA ? Boolean(values[item.lieA]) : true}

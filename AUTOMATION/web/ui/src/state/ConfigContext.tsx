@@ -35,6 +35,16 @@ type ConfigContextValue = {
   qcMains: QcBands
   /** The whole file, for whoever reads a key this layer must not get to choose. */
   config: CharacterConfig | null
+  /** The formats the character renders, in the file's order — the ONE list
+      (IT-10, chantier 3). The first is a new scene's default. */
+  formats: string[]
+}
+
+/** « 4:5 — portrait », « 16:9 — paysage »: what a ratio looks like, never
+    what it is for on some platform (that is the pack's business). */
+export function formatLabel(format: string): string {
+  const [w, h] = format.split(':').map(Number)
+  return `${format} — ${w > h ? 'paysage' : w < h ? 'portrait' : 'carré'}`
 }
 
 const Ctx = createContext<ConfigContextValue | null>(null)
@@ -81,7 +91,10 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     void load()
   }, [load, claimed])
 
-  const value = useMemo(() => ({ qc, qcMains, config }), [qc, qcMains, config])
+  const value = useMemo(
+    () => ({ qc, qcMains, config, formats: Object.keys((config?.formats as object) ?? {}) }),
+    [qc, qcMains, config],
+  )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>
 }
 

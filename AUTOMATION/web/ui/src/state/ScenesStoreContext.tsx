@@ -34,6 +34,7 @@ import { errorOf, type ActionLike, type Schema } from '../api/client'
 import { useApi } from '../api/useApi'
 import { useCharacter } from '../character/CharacterContext'
 import { useFaults } from './FaultsContext'
+import { useConfig } from './ConfigContext'
 
 export type SceneBank = Schema<'SceneBankResponse'>
 
@@ -239,7 +240,7 @@ export function draftFields(scene: Scene): Omit<SceneDraft, 'uid' | 'base'> {
     // folder: the card preselects the intention, and saving drops the dead key
     intention: scene.intention ?? scene.category ?? '',
     place: scene.place ?? '',
-    format: scene.format ?? '4:5',
+    format: scene.format ?? '',
     count: String(scene.count ?? 1),
     guidance: scene.guidance == null ? '' : String(scene.guidance),
     bandLo: String(band[0]),
@@ -317,7 +318,6 @@ export const NEW_SCENE: Scene = {
   tags: [],
   tones: [],
   intensity: 0,
-  format: '4:5',
   count: 1,
   prompt: '',
   wardrobe: { '0': 'everyday clothing' },
@@ -383,6 +383,7 @@ export function ScenesStoreProvider({ children }: { children: ReactNode }) {
   const api = useApi()
   const { claimed, sheet } = useCharacter()
   const { report } = useFaults()
+  const { formats } = useConfig()
   const [bank, setBank] = useState<SceneBank | null>(null)
   const [drafts, setDrafts] = useState<SceneDraft[]>([])
   const [anchor, setAnchorState] = useState('')
@@ -498,11 +499,14 @@ export function ScenesStoreProvider({ children }: { children: ReactNode }) {
      The world is stamped here — a draft that says on screen what will be
      written (ADR-0014 §4). */
   const addScene = useCallback((scene: Scene = NEW_SCENE) => {
-    const draft = draftOf(stampWorld({ ...scene }, world?.id ?? null))
+    // a scene born without a format takes the character's first one: its
+    // config.json is the one list (IT-10, chantier 3), never a '4:5' in code
+    const format = scene.format || formats[0]
+    const draft = draftOf(stampWorld({ ...scene, ...(format ? { format } : {}) }, world?.id ?? null))
     putDrafts((current) => [...current, draft])
     markDirty()
     return draft.uid
-  }, [markDirty, putDrafts, world])
+  }, [formats, markDirty, putDrafts, world])
 
   const removeScene = useCallback((index: number) => {
     putDrafts((current) => current.filter((_, i) => i !== index))

@@ -333,6 +333,16 @@ async function allerA(page, categorie, module) {
        'elle n existe que dans la page tant qu on n enregistre pas — le bandeau le dit');
   const idEdite = 'fumigation_edition_' + Date.now();
   await page.fill(champ('id'), idEdite);
+  // IT-10 chantier 3 : les boutons de format sont ceux de config.json, dans
+  // son ordre, et une scene neuve nait au premier — jamais une liste en dur
+  const formatsConfig = await page.evaluate(async () =>
+    Object.keys((await (await fetch('/api/config?character=lena')).json()).formats));
+  const boutonsFormat = await page.$$eval('[data-f="format"] button', e => e.map(x => x.textContent.trim()));
+  dire(JSON.stringify(boutonsFormat) === JSON.stringify(formatsConfig),
+       `boutons de format = config.json (${boutonsFormat.join(', ')})`);
+  dire(boutonsFormat.includes('16:9'), 'le 16:9 est proposé');
+  dire((await page.$eval('[data-f="format"]', e => e.dataset.value)) === formatsConfig[0],
+       `la scene neuve nait au premier format du personnage (${formatsConfig[0]})`);
 
   // design-pass screen-7c §5.2 : les trois miroirs du recapitulatif sont
   // RETIRES. La lumiere et la pose s'y lisent (texte tronque) et « Modifier »

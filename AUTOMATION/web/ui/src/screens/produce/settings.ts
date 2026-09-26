@@ -33,6 +33,8 @@ export type Setting = {
   /** Placeholder of an empty numeric field: what the server does without it. */
   vide?: string
   options?: [string, string][]
+  /** Options appended from config.json: the character's own list, never a copy. */
+  optionsFrom?: 'formats'
   bas?: string
   haut?: string
   /** Formatter: 'mp' renders bytes of surface as megapixels. */
@@ -61,13 +63,8 @@ export const SECTIONS: SettingSection[] = [
       },
       {
         id: 'format', dest: 'job', type: 'liste',
-        options: [
-          ['', '— celui de la scène —'],
-          ['4:5', '4:5 — feed Instagram'],
-          ['2:3', '2:3 — portrait classique'],
-          ['9:16', '9:16 — story'],
-          ['1:1', '1:1 — carré'],
-        ],
+        options: [['', '— celui de la scène —']],
+        optionsFrom: 'formats',
         label: 'Format imposé',
         quoi: 'Force le cadrage de tout le lot. Par défaut chaque scène garde le sien, qui a été choisi pour elle.',
       },

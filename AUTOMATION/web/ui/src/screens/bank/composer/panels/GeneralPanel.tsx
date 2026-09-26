@@ -14,18 +14,25 @@
    `data-value`, exactement comme `data-f="pose"` le fait depuis l'écran 7. */
 import { Fragment, useState, type RefObject } from 'react'
 
+import { useConfig } from '../../../../state/ConfigContext'
 import type { Creative } from '../../../../state/TaxonomyContext'
 import { bandOf, textToWardrobe, type SceneDraft } from '../../../../state/ScenesStoreContext'
 import type { SceneField } from '../../sceneChanges'
 import { InfoHint } from '../InfoHint'
 import { HEAD, listOf, listToText, warnIf } from './shared'
 
-const FORMATS = ['4:5', '2:3', '9:16', '1:1']
 const LEVELS = [3, 2, 1, 0]
 
 /* Vocabulary of the walk, for the intention selector. A scene carrying a key
    absent from creative.json KEEPS it: we add it to the list rather than let it
    vanish from the selector — hence from the scene. */
+/* The character's formats (config.json, the one list). A scene carrying a
+   format outside it KEEPS it on screen, like an intention outside the catalog:
+   the save refuses it and names the list, rather than the button vanishing. */
+function formatOptions(formats: string[], current: string | undefined) {
+  return current && !formats.includes(current) ? [...formats, current] : formats
+}
+
 function intentionOptions(creative: Creative | null, current: string) {
   const entries = (creative?.intentions ?? []).map((i) => [i.key, i.label] as [string, string])
   if (current && !entries.some(([key]) => key === current)) entries.push([current, current])
@@ -52,6 +59,7 @@ export function GeneralPanel({
   /** The ceiling is deduced from the outfits: this is where one changes it. */
   onGotoClothing: () => void
 }) {
+  const { formats } = useConfig()
   const band = bandOf({
     intensity: Number.parseInt(draft.bandLo, 10) || 0,
     wardrobe: textToWardrobe(draft.wardrobe),
@@ -130,13 +138,13 @@ export function GeneralPanel({
       <div className="grid grid-cols-[1fr] gap-[12px] @[620px]:grid-cols-[1.5fr_.8fr_1fr]">
         <Tile title="Format">
           <div
-            className="grid grid-cols-4 gap-[8px]"
+            className="grid grid-cols-[repeat(auto-fill,minmax(40px,1fr))] gap-[6px]"
             data-f="format"
             data-value={draft.format}
             role="group"
             aria-label="Format de l'image"
           >
-            {FORMATS.map((format) => {
+            {formatOptions(formats, draft.format).map((format) => {
               const [w, h] = format.split(':').map(Number)
               const on = draft.format === format
               return (
@@ -156,11 +164,14 @@ export function GeneralPanel({
                 >
                   {/* Le rapport est DESSINÉ : c'est ce qu'un « 9:16 » dans une
                       liste déroulante demandait d'imaginer. */}
-                  <span
-                    aria-hidden="true"
-                    className={`block rounded-[3px] border ${on ? 'border-acc' : 'border-dim2'}`}
-                    style={{ width: `${(w / h) * 34}px`, height: '34px' }}
-                  />
+                  {/* a fixed box: a wide ratio is drawn inside it, and the
+                      buttons of one row keep one height */}
+                  <span aria-hidden="true" className="flex size-[34px] items-center justify-center">
+                    <span
+                      className={`block rounded-[3px] border ${on ? 'border-acc' : 'border-dim2'}`}
+                      style={{ width: `${34 * Math.min(1, w / h)}px`, height: `${34 * Math.min(1, h / w)}px` }}
+                    />
+                  </span>
                   {format}
                 </button>
               )

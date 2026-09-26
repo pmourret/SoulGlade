@@ -394,6 +394,12 @@ const ONGLET = k => `[data-tab="${k}"]`;
   dire(!/undefined|NaN/.test(html), 'aucun « undefined » ni « NaN » dans le panneau peint');
   dire(!(await vu('#gearBody [data-rgs][data-niveau="edit"]')),
        "la section NSFW est absente hors du cran qui edite");
+  // IT-10 chantier 3 : « Format imposé » liste les formats de config.json
+  const formatsConfig = await page.evaluate(async () =>
+    Object.keys((await (await fetch('/api/config?character=lena')).json()).formats));
+  const imposables = await page.$$eval('#format option', e => e.map(x => x.value).filter(Boolean));
+  dire(JSON.stringify(imposables) === JSON.stringify(formatsConfig),
+       `format imposé = config.json (${imposables.join(', ')})`);
 
   console.log('\n[11] la pastille « mesuré » suit config.json');
   /* L'etat de la pastille se lit sur un ATTRIBUT, jamais dans son `class` :

@@ -42,7 +42,6 @@ export function sceneFromPlace(
     prompt: place.prompt ?? '',
     intensity: level,
     wardrobe: { [String(level)]: adult ? NATIVE_WARDROBE : '' },
-    format: '4:5',
     count: 1,
     tones: [],
     tags: [],
