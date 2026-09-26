@@ -423,11 +423,11 @@
           "ref": "DOCS/cadrage/2026-09-26-it10-c3-formats.md"
         },
         {
-          "s": "faire",
+          "s": "cours",
           "it": "IT-10",
           "t": "La pose porte son texte",
-          "d": "Un texte déduit à l'extraction, stocké avec le squelette en base, repris par le composeur à l'ajout de la pose. Ce qui écrit ce texte se tranche au cadrage.",
-          "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md"
+          "d": "Le texte naît de la photo à l'extraction (Qwen3-VL local), stocké avec le squelette. Après retouche il passe « à revoir » ; un bouton le réécrit par heuristique sur les points-clés puis LLM local. Le composeur remplit « En mots » s'il est vide.",
+          "ref": "DOCS/cadrage/2026-09-26-it10-c4-pose-texte.md"
         },
         {
           "s": "faire",
