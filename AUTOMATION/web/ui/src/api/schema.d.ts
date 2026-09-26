@@ -1168,6 +1168,86 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/outfits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Tenues de ce personnage
+         * @description The world's outfits, adjusted by this character, plus its own — each
+         *     with the text a scene that wears it receives.
+         */
+        get: operations["get_outfits_api_outfits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/outfits/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Créer une tenue */
+        post: operations["create_outfit_api_outfits_create_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/outfits/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ajuster le libellé ou les pièces d'une tenue
+         * @description Writes this character's adjustment — or the world's own entry with
+         *     `au_monde`, which only an outfit the world owns accepts.
+         */
+        post: operations["save_outfit_api_outfits_save_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/outfits/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retirer une tenue
+         * @description Removes the outfit from the layer it lives in — refused while a scene
+         *     wears it. On an adjusted world outfit only the adjustment goes.
+         */
+        post: operations["delete_outfit_api_outfits_delete_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/photo-editor/layers": {
         parameters: {
             query?: never;
@@ -3507,6 +3587,134 @@ export interface components {
             sources: components["schemas"]["NsfwSourceImage"][];
         } & {
             [key: string]: unknown;
+        };
+        /** OutfitCreateRequest */
+        OutfitCreateRequest: {
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Pieces
+             * @default []
+             */
+            pieces: components["schemas"]["OutfitPiece"][];
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * OutfitDeleteResponse
+         * @description `couche` is what was actually removed: `surcharge` means only this
+         *     character's tweak went, and the world's outfit came back.
+         */
+        OutfitDeleteResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Couche */
+            couche: string;
+        };
+        /**
+         * OutfitEntry
+         * @description One outfit as the catalogue shows it. `couche` says where it comes
+         *     from (`monde`, `surcharge`, `personnage`); `texte` is what a scene that
+         *     wears it receives, IN FULL; `erreur` says why it does not resolve, and
+         *     `texte` is then empty.
+         */
+        OutfitEntry: {
+            /** Key */
+            key: string;
+            /**
+             * Label
+             * @default
+             */
+            label: string;
+            /**
+             * Pieces
+             * @default []
+             */
+            pieces: components["schemas"]["OutfitPiece"][];
+            /**
+             * Couche
+             * @default personnage
+             */
+            couche: string;
+            /**
+             * Texte
+             * @default
+             */
+            texte: string;
+            /**
+             * Erreur
+             * @default
+             */
+            erreur: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /** OutfitKeyRequest */
+        OutfitKeyRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+        } & {
+            [key: string]: unknown;
+        };
+        /**
+         * OutfitPiece
+         * @description One piece: written text, or an asset of class `vetement` whose
+         *     fragment is read at resolution time. Exactly one of the two is set.
+         */
+        OutfitPiece: {
+            /** Text */
+            text?: string | null;
+            /** Asset */
+            asset?: string | null;
+        } & {
+            [key: string]: unknown;
+        };
+        /** OutfitResponse */
+        OutfitResponse: {
+            /** Ok */
+            ok: boolean;
+            outfit: components["schemas"]["OutfitEntry"];
+        };
+        /**
+         * OutfitSaveRequest
+         * @description Label and/or pieces. Omitted field = untouched, so adjusting one of
+         *     the two never freezes a copy of the other.
+         */
+        OutfitSaveRequest: {
+            /**
+             * Key
+             * @default
+             */
+            key: string;
+            /** Label */
+            label?: string | null;
+            /** Pieces */
+            pieces?: components["schemas"]["OutfitPiece"][] | null;
+            /**
+             * Au Monde
+             * @default false
+             */
+            au_monde: boolean;
+        } & {
+            [key: string]: unknown;
+        };
+        /** OutfitsResponse */
+        OutfitsResponse: {
+            /** Outfits */
+            outfits: components["schemas"]["OutfitEntry"][];
+            /** Marqueur */
+            marqueur: string;
         };
         /**
          * PackOption
@@ -7063,6 +7271,182 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ImageNotFound"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_outfits_api_outfits_get: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutfitsResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_outfit_api_outfits_create_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutfitCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutfitResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    save_outfit_api_outfits_save_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutfitSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutfitResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_outfit_api_outfits_delete_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutfitKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OutfitDeleteResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
                 };
             };
             /** @description Validation Error */

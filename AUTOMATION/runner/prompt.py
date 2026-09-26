@@ -13,6 +13,7 @@ from types import SimpleNamespace
 from . import OFM, load_json
 
 import env_config  # noqa: E402  (AUTOMATION/ sur le path via runner/__init__.py)
+import tenues as catalogue_tenues  # noqa: E402  (`tenues` est une locale de build_jobs)
 import universe    # noqa: E402
 import worlds      # noqa: E402
 
@@ -303,7 +304,13 @@ def load_creative(character_id):
     if world and worlds.exists(world):
         intentions, tones = worlds.merge_creative_vocab(
             world, data.get("intentions", []), data.get("tones", []))
-        data = {**data, "intentions": intentions, "tones": tones}
+        # Tenues et bibliotheque (IT-10 c5-c6) : lues par `build_jobs` pour
+        # resoudre une tenue referencee (`tenues.resoudre_banque`).
+        data = {**data, "intentions": intentions, "tones": tones,
+                worlds.CLE_OUTFITS: worlds.merge_outfits(
+                    world, data.get(worlds.CLE_OUTFITS, [])),
+                worlds.CLE_LIBRARY: worlds.merge_library(
+                    world, data.get(worlds.CLE_LIBRARY, []))}
     return data
 
 
@@ -430,6 +437,11 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     prefix, anchor, texture = data["prefix"], data["anchor"], data["texture"]
     direction = (data.get("direction") or "").strip()   # note de direction globale
     creative = load_creative(character_id) if creative is None else creative
+    # Une tenue referencee (« @cle ») devient son texte ICI, en amont de
+    # l'assemblage, comme le decor dans `load_scene_bank` : la suite ne lit que
+    # du texte. Sans reference, la banque ne change pas (IT-10 c6).
+    catalogue_tenues.resoudre_banque(data, creative.get(worlds.CLE_OUTFITS, []),
+                                     creative.get(worlds.CLE_LIBRARY, []))
     style = character_style(character_id)               # fige a la creation (J5)
 
     brut = getattr(args, "intensity", None)
