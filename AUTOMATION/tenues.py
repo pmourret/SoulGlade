@@ -30,12 +30,10 @@ QUI POSSEDE. Le monde possede, le personnage surcharge, champ par champ comme
 un ton (`worlds.merge_outfits`, ADR-0019). L'ADR-0014 §2 tient : un catalogue
 n'habille personne, c'est la scene du personnage qui y choisit une tenue.
 """
-import json
-import re
-
+import layered_catalog
 import worlds
 
-MARQUEUR = "@"
+MARQUEUR = layered_catalog.MARKER
 CHAMPS_AJUSTABLES = ("label", "pieces")
 
 
@@ -44,12 +42,8 @@ class TenueError(RuntimeError):
 
 
 # ------------------------------------------------------------ resolution (pure)
-def est_reference(ligne):
-    return isinstance(ligne, str) and ligne.strip().startswith(MARQUEUR)
-
-
-def cle_de(ligne):
-    return ligne.strip()[len(MARQUEUR):].strip()
+est_reference = layered_catalog.is_reference
+cle_de = layered_catalog.key_of
 
 
 def references(wardrobe):
@@ -124,68 +118,45 @@ def resoudre_banque(data, tenues, bibliotheque):
 
 
 # ------------------------------------------------------------- catalogue (E/S)
-# `runner` et `assets` s'importent dans les fonctions : `runner.prompt` importe
-# ce module pour `resoudre_banque`, et `assets` importe `runner`.
-def _monde(cid):
-    import runner as lb
-    wid = lb.character_world(cid)
-    return wid if wid and worlds.exists(wid) else None
+# La mecanique a couches (fusion, couche, surcharge, garde « portee par ») est
+# commune aux lumieres : `layered_catalog.Catalog`. Ne reste ici que ce qui
+# fait une tenue — des pieces, dont des assets. `assets` s'importe dans les
+# fonctions : `assets` importe ce module.
+def _resolveur(cid):
+    import assets
+    bibliotheque = assets.bibliotheque(cid)
+    return lambda tenue: texte(tenue, bibliotheque)
 
 
-def _propres(cid):
-    """(chemin de creative.json, contenu brut, tenues propres) — la vue NON
-    fusionnee, la seule qui dise ce qui appartient au personnage."""
-    import runner as lb
-    path = lb.creative_path(cid)
-    raw = lb.load_json(path) if path.exists() else {}
-    return path, raw, list(raw.get(worlds.CLE_OUTFITS, []))
+def _valider(cid, champs, au_monde):
+    import assets
+    if "pieces" in champs:
+        champs = {**champs, "pieces": _pieces_valides(
+            champs["pieces"], assets.bibliotheque(cid), au_monde)}
+    return champs
 
 
-def _ecrire_propres(path, raw, tenues):
-    raw[worlds.CLE_OUTFITS] = tenues
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+CATALOGUE = layered_catalog.Catalog(
+    worlds.CLE_OUTFITS, "tenue", TenueError, CHAMPS_AJUSTABLES,
+    resolver=_resolveur, validate=_valider,
+    uses=lambda scene, key: key in references(scene.get("wardrobe")))
 
 
 def fusion(cid):
     """Les tenues visibles par ce personnage, sans couche ni texte : ce que
     lit la resolution."""
-    wid = _monde(cid)
-    _, _, propres = _propres(cid)
-    return worlds.merge_outfits(wid, propres) if wid else list(propres)
+    return CATALOGUE.merged(cid)
 
 
 def catalogue(cid):
     """Les tenues de ce personnage, chacune avec sa couche (monde, surcharge,
     personnage) et son texte resolu — ou l'erreur qui l'empeche, pour que
     l'atelier la montre au lieu d'un texte faux."""
-    import assets
-    wid = _monde(cid)
-    _, _, propres = _propres(cid)
-    couches = worlds.outfit_layers(wid, propres)
-    bibliotheque = assets.bibliotheque(cid)
-    out = []
-    for t in fusion(cid):
-        try:
-            resolu, erreur = texte(t, bibliotheque), ""
-        except TenueError as e:
-            resolu, erreur = "", str(e)
-        out.append({**t, "couche": couches.get(t.get("key"), "personnage"),
-                    "texte": resolu, "erreur": erreur})
-    return out
+    return CATALOGUE.listing(cid)
 
 
 def trouver(cid, key):
-    entree = next((t for t in catalogue(cid) if t.get("key") == key), None)
-    if entree is None:
-        raise TenueError(f"tenue inconnue : « {key} »")
-    return entree
-
-
-def _slug(texte_):
-    import unicodedata
-    ascii_ = unicodedata.normalize("NFKD", texte_).encode("ascii", "ignore").decode()
-    return re.sub(r"[^a-z0-9]+", "-", ascii_.lower()).strip("-")[:40]
+    return CATALOGUE.find(cid, key)
 
 
 def _pieces_valides(pieces, bibliotheque, au_monde):
@@ -218,125 +189,32 @@ def _pieces_valides(pieces, bibliotheque, au_monde):
 
 def creer(cid, label, pieces, au_monde=False):
     """Une tenue neuve, au personnage ou a son monde. Rend sa fiche."""
-    import assets
-    label = str(label or "").strip()
-    if not label:
-        raise TenueError("une tenue porte un libellé")
-    wid = _monde(cid)
-    if au_monde and not wid:
-        raise TenueError("ce personnage n'a pas de monde : la tenue ne peut "
-                         "appartenir qu'à lui")
-    pieces = _pieces_valides(pieces, assets.bibliotheque(cid), au_monde)
-    prises = {t.get("key") for t in fusion(cid)}
-    base = _slug(label) or "tenue"
-    key, n = base, 1
-    while key in prises:
-        n += 1
-        key = f"{base}-{n}"
-    entree = {"key": key, "label": label, "pieces": pieces}
-    if au_monde:
-        worlds.save_outfits(wid, worlds.outfits(wid) + [entree])
-    else:
-        path, raw, propres = _propres(cid)
-        _ecrire_propres(path, raw, propres + [entree])
-    return trouver(cid, key)
+    return CATALOGUE.create(cid, label, {"pieces": pieces}, au_monde)
 
 
 def enregistrer(cid, key, champs, au_monde=False):
-    """Ecrit le libelle et/ou les pieces d'une tenue.
-
-    Par defaut cote PERSONNAGE : une tenue du monde y gagne une surcharge qui
-    ne porte que les champs ajustes (fusion champ par champ). `au_monde`
-    corrige la fiche du monde elle-meme — refuse sur une tenue qui ne lui
-    appartient pas."""
-    import assets
-    inconnus = [c for c in champs if c not in CHAMPS_AJUSTABLES]
-    if inconnus:
-        raise TenueError(f"champ non ajustable : {', '.join(inconnus)}")
-    champs = dict(champs)
-    if "label" in champs:
-        champs["label"] = str(champs["label"] or "").strip()
-        if not champs["label"]:
-            raise TenueError("une tenue porte un libellé")
-    if "pieces" in champs:
-        champs["pieces"] = _pieces_valides(champs["pieces"],
-                                           assets.bibliotheque(cid), au_monde)
-    entree = trouver(cid, key)
-    if au_monde:
-        if entree["couche"] == "personnage":
-            raise TenueError(f"« {entree.get('label') or key} » appartient au "
-                             f"personnage, pas au monde")
-        wid = _monde(cid)
-        worlds.save_outfits(wid, [{**t, **champs} if t.get("key") == key else t
-                                  for t in worlds.outfits(wid)])
-        return trouver(cid, key)
-    path, raw, propres = _propres(cid)
-    for i, t in enumerate(propres):
-        if t.get("key") == key:
-            propres[i] = {**t, **champs}
-            break
-    else:
-        propres.append({"key": key, **champs})
-    _ecrire_propres(path, raw, propres)
-    return trouver(cid, key)
-
-
-def _concernes(cid, au_monde):
-    """Les personnages dont une tenue ou un asset de cette couche habille les
-    scenes : lui seul, ou tous ceux de son monde."""
-    import runner as lb
-    if not au_monde:
-        return [cid]
-    wid = _monde(cid)
-    return [c for c in lb.list_characters() if lb.character_world(c) == wid]
+    """Ecrit le libelle et/ou les pieces d'une tenue — cote personnage par
+    defaut (une surcharge), au monde sur demande (`Catalog.save`)."""
+    return CATALOGUE.save(cid, key, champs, au_monde)
 
 
 def scenes_qui_portent(cid, key, au_monde=False):
     """« <personnage>/<scene> » de chaque scene qui reference la tenue `key` :
     celles de ce personnage, ou de tout son monde si la tenue en vient."""
-    import runner as lb
-    out = []
-    for c in _concernes(cid, au_monde):
-        path = lb.scenes_path(c)
-        if path.exists():
-            out += [f"{c}/{s.get('id')}" for s in lb.load_json(path).get("scenes", [])
-                    if isinstance(s, dict) and key in references(s.get("wardrobe"))]
-    return out
+    return CATALOGUE.scenes_using(cid, key, au_monde)
 
 
 def supprimer(cid, key):
-    """Retire une tenue de la couche ou elle vit, et rend cette couche.
-
-    - `personnage` : la tenue part ;
-    - `surcharge`  : seuls les ajustements partent, la tenue du monde revient ;
-    - `monde`      : la tenue part du monde.
-
-    Refuse tant qu'une scene de ce personnage la porte (precedent du lieu
-    qu'une scene utilise, IT-11 chantier 4). Une surcharge retiree n'est pas
-    concernee : la tenue reste, seule sa version change."""
-    entree = trouver(cid, key)
-    couche = entree["couche"]
-    if couche != "surcharge":
-        portee = scenes_qui_portent(cid, key, au_monde=couche == "monde")
-        if portee:
-            raise TenueError(f"« {entree.get('label') or key} » est portée par "
-                             f"{len(portee)} scène(s) : {', '.join(portee)} — la "
-                             f"retirer de ces scènes d'abord")
-    if couche == "monde":
-        wid = _monde(cid)
-        worlds.save_outfits(wid, [t for t in worlds.outfits(wid)
-                                  if t.get("key") != key])
-        return couche
-    path, raw, propres = _propres(cid)
-    _ecrire_propres(path, raw, [t for t in propres if t.get("key") != key])
-    return couche
+    """Retire une tenue de la couche ou elle vit, et rend cette couche ;
+    refuse tant qu'une scene la porte (`Catalog.delete`)."""
+    return CATALOGUE.delete(cid, key)
 
 
 def tenues_qui_portent(cid, asset_key, au_monde=False):
     """Libelles des tenues qui portent l'asset : celles que voit ce
     personnage, ou celles de tout son monde si l'asset en vient."""
     out = []
-    for c in _concernes(cid, au_monde):
+    for c in CATALOGUE.concerned(cid, au_monde):
         out += [t.get("label") or t.get("key") for t in fusion(c)
                 if any(isinstance(p, dict) and p.get("asset") == asset_key
                        for p in t.get("pieces") or [])
