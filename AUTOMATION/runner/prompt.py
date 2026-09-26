@@ -457,9 +457,10 @@ def build_jobs(scenes_file, args, character_id, creative=None):
     # du texte. Sans reference, la banque ne change pas (IT-10 c6).
     catalogue_tenues.resoudre_banque(data, creative.get(worlds.CLE_OUTFITS, []),
                                      creative.get(worlds.CLE_LIBRARY, []))
-    # La lumiere d'une scene (`light`, texte ou « @cle ») rejoint la fin de son
-    # prompt, apres le decor, et une variante « @cle » devient du texte (IT-10
-    # c7). Sans `light` ni reference, la banque ne change pas.
+    # La lumiere d'une scene (`light`, texte ou « @cle ») et ses variantes
+    # « @cle » deviennent du texte (IT-10 c7). La lumiere reste a part : elle se
+    # place apres le decor, et une variante prend sa place (7 bis). Sans `light`
+    # ni reference, la banque ne change pas.
     catalogue_lumieres.resolve_bank(data, creative.get(worlds.CLE_LIGHTS, []))
     style = character_style(character_id)               # fige a la creation (J5)
 
@@ -502,7 +503,14 @@ def build_jobs(scenes_file, args, character_id, creative=None):
         # amendement du texte de scene pour CE lancement seulement : il ne touche
         # pas scenes.json. N'a de sens qu'avec une seule scene retenue — c'est a
         # l'appelant de ne le passer que dans ce cas.
-        texte_scene = getattr(args, "scene_override", None) or scene["prompt"]
+        override = getattr(args, "scene_override", None)
+        texte_scene = override or scene["prompt"]
+        # Une scene qui porte une lumiere (IT-10 7 bis) : sa lumiere suit le
+        # decor, et une variante la REMPLACE — « meme scene, lumiere du soir »
+        # n'est pas eclairee deux fois. Sans lumiere, la variante reste en fin
+        # de prompt, a l'octet pres comme avant. Un texte amende pour ce
+        # lancement remplace le tout, lumiere comprise, comme avant.
+        lumiere = "" if override else scene.get("light") or ""
         # Quatre amendements COURTS, meme regle, meme portee (screen-3-produire
         # §B4) : lumiere/expression/pose/vetements pour CE lancement seulement,
         # jamais ecrits dans scenes.json. Absents par defaut (getattr replie
@@ -516,14 +524,18 @@ def build_jobs(scenes_file, args, character_id, creative=None):
 
         for tenue in tenues:
             for variant in variants:
+                texte, en_fin = texte_scene, variant
+                if lumiere:
+                    texte = ", ".join(t for t in (texte_scene, variant or lumiere) if t)
+                    en_fin = ""
                 habit = f"wearing {tenue}" if tenue else ""
                 # Position de la tenue : la migration l'a deplacee du milieu du
                 # prompt vers la fin, et l'A/B du 24/08/2026 a mesure -0.014
                 # d'identite (n=7, non concluant mais de signe constant). Le
                 # reglage existe pour pouvoir trancher par la mesure.
-                corps = ([("tenue", habit), ("scène", texte_scene)]
+                corps = ([("tenue", habit), ("scène", texte)]
                          if position == "apres_ancre"
-                         else [("scène", texte_scene), ("tenue", habit)])
+                         else [("scène", texte), ("tenue", habit)])
                 # Fragments ETIQUETES par leur source. Le prompt reste construit
                 # de la meme facon, dans le meme ordre ; on garde seulement d'ou
                 # vient chaque morceau, pour pouvoir le montrer avant de lancer.
@@ -538,7 +550,7 @@ def build_jobs(scenes_file, args, character_id, creative=None):
                              ("ton", (tone or {}).get("prompt_add", "")),
                              ("intention", (intention or {}).get("prompt_add", "")),
                              ("intensité", palier.get("prompt_add", "")),
-                             ("variante", variant)]
+                             ("variante", en_fin)]
                 assert_no_face([t for _, t in controles], scene["id"])
                 morceaux = [("préfixe + ancre", f"{prefix} {anchor}"),
                             *controles,

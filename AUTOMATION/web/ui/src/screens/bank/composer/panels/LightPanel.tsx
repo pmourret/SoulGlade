@@ -127,8 +127,8 @@ export function LightPanel({
       <div className="min-w-0">
         <span className={HEAD}>Variantes</span>
         <p className="tiny mt-[2px] mb-[8px]">
-          une image de plus chacune : son texte s'ajoute à la fin du prompt, après la lumière de
-          base — jamais une tenue
+          une image de plus chacune : elle prend la place de la lumière de base, ou, si la scène
+          n'en porte pas, s'ajoute à la fin du prompt — jamais une tenue
         </p>
         <div
           className={`flex flex-col gap-[6px] ${changed.has('variants') ? 'rounded-card border border-warn p-[6px]' : ''}`}

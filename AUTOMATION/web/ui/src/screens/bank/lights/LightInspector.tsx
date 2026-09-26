@@ -109,7 +109,7 @@ export function LightInspector({
         />
         <span className={`text-[11.5px] ${problem ? 'text-warn-txt' : 'text-dim2'}`} id="lightTextHint">
           {problem ||
-            'En anglais, comme le reste du prompt. Ajouté après le décor ; en variante, à la fin du prompt.'}
+            'En anglais, comme le reste du prompt. Ajouté après le décor ; en variante, à la place de la lumière de la scène.'}
         </span>
         {!isNew && light.erreur && (
           <span className="text-[12px] text-warn-txt" role="status">{light.erreur}</span>

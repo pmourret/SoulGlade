@@ -133,10 +133,12 @@ try:
             "sans `light` ni reference : la banque sort identique")
     s = lights.resolve_scene(scene("s1", light="@soir", variants=["@soir", "overcast"]),
                              CATALOGUE)
-    verifie(s["prompt"] == "reading on a sofa, warm low evening light"
-            and "light" not in s
+    verifie(s["prompt"] == "reading on a sofa"
+            and s["light"] == "warm low evening light"
             and s["variants"] == ["warm low evening light", "overcast"],
-            f"le champ rejoint le prompt, la variante devient du texte ({s})")
+            f"le champ devient du texte, a part du prompt ; la variante aussi ({s})")
+    verifie("light" not in lights.resolve_scene(scene("s1", light=" "), CATALOGUE),
+            "un `light` vide : la scene n'en porte pas")
     for cas, sc in (("lumiere inconnue", scene("s1", light="@nuit")),
                     ("variante inconnue", scene("s1", variants=["@nuit"])),
                     ("lumiere sans texte", scene("s1", light="@vide"))):
@@ -159,9 +161,8 @@ try:
     ecrire_scenes(CA, [scene("s1", place="salon", light="golden hour",
                              variants=["@soir"])])
     champ = prompts(CA)
-    verifie(len(en_dur) == 2 and en_dur == champ,
-            f"`light` + decor + variante « @ » == le tout en dur, a l'octet pres "
-            f"({champ[:1]})")
+    verifie(len(en_dur) == 2 and en_dur[0] == champ[0],
+            f"`light` + decor == le tout en dur, a l'octet pres ({champ[:1]})")
     ecrire_scenes(CA, [scene("s1", place="salon", light="@soir")])
     verifie(prompts(CA)[0].endswith(f"{SALON}, warm low evening light, film grain"),
             "la lumiere se place apres le decor")
@@ -344,6 +345,34 @@ try:
             == ["source", "direction", "quality", "temperature", "mood"]
             and r.json()["schemes"] and r.json()["palette"] and "_notes" not in r.json(),
             f"GET /api/lighting sert le vocabulaire ({r.status_code})")
+
+    # =========================================== [9] la variante remplace (7 bis)
+    print("\n[9] une variante remplace la lumiere de base, a l'octet pres")
+    tete, fin = "photo of a woman, reading on a sofa", "film grain"
+    ecrire_scenes(CA, [scene("s1", place="salon", variants=["blue hour dusk"])])
+    verifie(prompts(CA) == [f"{tete}, {SALON}, {fin}",
+                            f"{tete}, {SALON}, blue hour dusk, {fin}"],
+            "sans `light` : la variante reste en fin de prompt, comme avant")
+    ecrire_scenes(CA, [scene("s1", prompt=f"reading on a sofa, {SALON}, golden hour",
+                             variants=["blue hour dusk"])])
+    verifie(prompts(CA)[1] == f"{tete}, {SALON}, golden hour, blue hour dusk, {fin}",
+            "une lumiere ecrite dans le TEXTE n'est pas un champ : la variante s'ajoute")
+    ecrire_scenes(CA, [scene("s1", place="salon", light="golden hour",
+                             variants=["blue hour dusk", "@soir"])])
+    p = prompts(CA)
+    verifie(p == [f"{tete}, {SALON}, golden hour, {fin}",
+                  f"{tete}, {SALON}, blue hour dusk, {fin}",
+                  f"{tete}, {SALON}, blue hour dusk light, {fin}"],
+            f"avec `light` : la variante prend sa place, apres le decor ({p})")
+    jobs = lb.build_jobs(lb.scenes_path(CA), filtres(), character_id=CA)
+    verifie([j["variant"] for j in jobs] == ["", "blue hour dusk", "blue hour dusk light"]
+            and not any(f["source"] == "variante" for f in jobs[1]["fragments"]),
+            "le job garde sa variante, qui n'entre qu'une fois dans le prompt")
+    ecrire_scenes(CA, [scene("s1", place="salon", light="@neon",
+                             variants=["@soir"])])
+    verifie(prompts(CA)[1] == f"{tete}, {SALON}, blue hour dusk light, {fin}",
+            "une lumiere de fiche est remplacee comme une lumiere ecrite")
+    ecrire_scenes(CA, [])
 
 finally:
     for c in (CA, CA2, CB):

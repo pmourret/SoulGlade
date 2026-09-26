@@ -18,12 +18,14 @@ HOW A SCENE WEARS IT. Two places, both strings:
 
 WHERE IT RESOLVES. Upstream of the assembler, right after the place
 (ADR-0027 §4): `build_jobs` calls `resolve_bank` on the bank it has just
-read and composed, and the assembler receives a scene whose prompt already
-ends with its light — « <text>, <place>, <light> » — and whose variants are
-text. Two guarantees, locked by tests/test_lights.py (invariant 3): a bank
-without `light` and without `@` in its variants comes out unchanged; a scene
-carrying `light` assembles to the byte like the same scene with that text at
-the end of its prompt.
+read and composed, and receives scenes whose `light` and variants are text.
+The assembler places the light after the place — « <text>, <place>, <light> »
+— and a VARIANT OF A SCENE THAT CARRIES A LIGHT TAKES ITS PLACE (7 bis): « same
+scene, evening light » is lit once, not twice. Three guarantees, locked by
+tests/test_lights.py (invariant 3): a bank without `light` and without `@` in
+its variants comes out unchanged, variants at the end of the prompt as
+before; a scene carrying `light` assembles to the byte like the same scene
+with that text at the end of its prompt; its variant replaces that text.
 
 A DANGLING REFERENCE IS AN ERROR naming the scene, never a light that
 silently disappears from the render.
@@ -141,16 +143,18 @@ def resolve(line, lights):
 
 
 def resolve_scene(scene, lights):
-    """A copy of the scene whose variants are text and whose `light` has
-    joined the end of its prompt. Without `light` nor reference, equal to the
-    input."""
+    """A copy of the scene whose variants and `light` are text — kept apart
+    from the prompt, so that a variant can take the light's place
+    (`build_jobs`). An empty `light` is dropped: the scene carries none.
+    Without `light` nor reference, equal to the input."""
     out = dict(scene)
     if "variants" in out and isinstance(out["variants"], list):
         out["variants"] = [resolve(v, lights) for v in out["variants"]]
     if "light" in out:
         light = str(resolve(out.pop("light"), lights) or "").strip()
-        out["prompt"] = ", ".join(t for t in (str(out.get("prompt") or "").strip(), light)
-                                  if t)
+        out["prompt"] = str(out.get("prompt") or "").strip()
+        if light:
+            out["light"] = light
     return out
 
 
