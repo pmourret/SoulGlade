@@ -90,9 +90,12 @@ const ECRANS = [
   ['/bank/tones', 'Ateliers, Tons', [
     ['boite « Copier depuis… »', 'button:has-text("Copier depuis")', 'dialog[open]'],
   ]],
-  // Les ateliers d'IT-10 (chantiers 5 a 7) : une liste et un inspecteur, sans
-  // etat ouvert qu'Echap refermerait au-dessus de 1100 px.
-  ['/bank/assets', 'Ateliers, Assets'],
+  // Les ateliers d'IT-10 (chantiers 5 a 7) : une liste et un inspecteur. Les
+  // Assets ont un menu d'import sur « Toutes », leur vue d'arrivee.
+  ['/bank/assets', 'Ateliers, Assets', [
+    ['menu d import', '#btnAssetImport', '#assetClass'],
+  ]],
+  // Tenues et Lumieres : aucun etat ouvert qu'Echap refermerait au-dessus de 1100 px.
   ['/bank/outfits', 'Ateliers, Tenues'],
   ['/bank/lights', 'Ateliers, Lumieres'],
   ['/training', 'Entrainement'],

@@ -45,7 +45,10 @@ const FRAGMENT = 'a red linen dress, soft daylight';
   dire(await page.isVisible('#btnAssetImport'), 'et son bouton d\'import aussi');
 
   console.log('\n[2] import d\'une image, ComfyUI hors ligne — l\'asset naît sans fragment');
-  await page.selectOption('#assetClass', 'vetement');
+  // La classe se choisit AVANT l'import : on ouvre la sienne dans la colonne,
+  // et le bouton unique la suit (design-pass screen-assets §S1).
+  await page.click('[data-asset-class="vetement"]');
+  dire((await page.textContent('#btnAssetImport')).includes('Vêtement'), "le bouton d'import suit la classe ouverte");
   await page.setInputFiles('#assetFile', { name: 'Robe de fumigation.png', mimeType: 'image/png', buffer: PNG });
   await page.waitForFunction(
     (n) => document.querySelectorAll('#bankAssets [data-asset]').length > n,
@@ -78,10 +81,34 @@ const FRAGMENT = 'a red linen dress, soft daylight';
        'la couche est dite : propre au personnage');
   await page.fill('#assetFragment', FRAGMENT);
   await page.click('#btnAssetSave');
+  /* On attend le FRAGMENT sur la carte, pas l'absence de « sans fragment » :
+     un modèle qui a répondu à l'import laisse la carte sans cette mention
+     avant même l'enregistrement, et l'attente passait alors à vide. */
   await page.waitForFunction(
-    (c) => !document.querySelector(c).textContent.includes('sans fragment'),
-    carte, { timeout: 10000 });
-  dire(true, 'enregistré : la carte ne dit plus « sans fragment »');
+    ([c, f]) => document.querySelector(c).textContent.includes(f),
+    [carte, FRAGMENT], { timeout: 10000 });
+  dire(true, 'enregistré : la carte montre le fragment lui-même');
+
+  console.log('\n[3b] un dépôt sur une ligne de classe importe comme cette classe');
+  const classesApi = async () =>
+    Object.fromEntries((await (await page.request.get(BASE + '/api/assets?character=lena')).json())
+      .assets.map((a) => [a.key, a.classe]));
+  const avantDepot = Object.keys(await classesApi());
+  await page.evaluate((png) => {
+    const dt = new DataTransfer();
+    const octets = Uint8Array.from(atob(png), (c) => c.charCodeAt(0));
+    dt.items.add(new File([octets], 'Decor de fumigation.png', { type: 'image/png' }));
+    const ligne = document.querySelector('#assetFilter [data-asset-class="decor"]');
+    for (const type of ['dragenter', 'dragover', 'drop'])
+      ligne.dispatchEvent(new DragEvent(type, { dataTransfer: dt, bubbles: true, cancelable: true }));
+  }, PNG.toString('base64'));
+  // La grille reste sur « Vêtements » : le décor ne s'y montre pas, c'est la
+  // bibliothèque qu'on lit.
+  await page.waitForSelector('#assetImportBand', { state: 'detached', timeout: 30000 });
+  const apresDepot = await classesApi();
+  const depose = Object.keys(apresDepot).filter((k) => !avantDepot.includes(k))[0];
+  const classeDeposee = apresDepot[depose];
+  dire(classeDeposee === 'decor', `l'asset déposé sur « Décors » est un décor (${classeDeposee})`);
 
   console.log('\n[4] le composeur va le chercher — panneau Vêtements, catégorie pièces');
   await page.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
@@ -108,6 +135,7 @@ const FRAGMENT = 'a red linen dress, soft daylight';
   console.log('\n[5] NETTOYAGE : retrait UNIQUEMENT de ce que ce test a créé');
   await page.goto(BASE + '/bank/assets?character=lena', { waitUntil: 'networkidle' });
   await page.waitForSelector('#bankAssets');
+  await page.click('[data-asset-class="all"]');
   const aRetirer = (await cles()).filter((k) => !avant.includes(k));
   console.log('   à retirer :', aRetirer);
   for (const k of aRetirer) {
