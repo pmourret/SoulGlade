@@ -263,7 +263,15 @@ export function SceneComposer({
                     onGoto={setTab}
                   />
                 )}
-                {section.key === 'ai' && <AiPanel draft={draft} />}
+                {section.key === 'ai' && (
+                  <AiPanel
+                    draft={draft}
+                    enhancer={enhancer}
+                    worldLinked={worldLinked}
+                    lockedNote={lockedNote}
+                    onPatch={onPatch}
+                  />
+                )}
                 {section.key === 'json' && (
                   <JsonPanel
                     draft={draft}

@@ -13,6 +13,11 @@ import type { components } from './schema'
 import { useApi } from './useApi'
 
 type EnhanceResponse = components['schemas']['EnhanceResponse']
+type EnhanceSceneResponse = components['schemas']['EnhanceSceneResponse']
+/** What the AI panel sends: the three fragments, a free instruction, and
+    optionally the one fragment to rewrite or a request for another version. */
+export type EnhanceSceneBody = components['schemas']['EnhanceSceneRequest']
+export type ScenePart = 'base' | 'light' | 'pose'
 
 /** The fragment kinds the server knows (`enhance.KINDS`), "edit" apart. */
 export type EnhanceKind = 'place' | 'intention' | 'tone' | 'scene' | 'pose' | 'light' | 'outfit'
@@ -27,7 +32,15 @@ export type EnhanceFn = (text: string) => Promise<EnhanceOutcome>
 /** What a screen passes down to its fields: the call for a kind, and whether
     ComfyUI — which serves the model — is up. One prop, not two, through the
     screens that only forward it. */
-export type Enhancer = { enhance: (kind: EnhanceKind) => EnhanceFn; comfy: boolean }
+export type SceneOutcome =
+  | { ok: true; parts: Record<ScenePart, string>; translated: boolean; lost: Record<ScenePart, string[]> }
+  | { ok: false; erreur: string }
+
+export type Enhancer = {
+  enhance: (kind: EnhanceKind) => EnhanceFn
+  enhanceScene: (body: EnhanceSceneBody) => Promise<SceneOutcome>
+  comfy: boolean
+}
 
 export function useEnhancer(): Enhancer {
   const api = useApi()
@@ -42,5 +55,20 @@ export function useEnhancer(): Enhancer {
     },
     [api],
   )
-  return useMemo(() => ({ enhance, comfy }), [enhance, comfy])
+  const enhanceScene = useCallback(
+    async (body: EnhanceSceneBody): Promise<SceneOutcome> => {
+      const response = await api.post<EnhanceSceneResponse>('/api/enhance/scene', body)
+      const error = errorOf(response)
+      if (error) return { ok: false, erreur: error }
+      const lost = response.lost ?? {}
+      return {
+        ok: true,
+        parts: { base: response.base, light: response.light, pose: response.pose },
+        translated: response.translated,
+        lost: { base: lost.base ?? [], light: lost.light ?? [], pose: lost.pose ?? [] },
+      }
+    },
+    [api],
+  )
+  return useMemo(() => ({ enhance, enhanceScene, comfy }), [enhance, enhanceScene, comfy])
 }

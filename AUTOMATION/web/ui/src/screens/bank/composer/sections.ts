@@ -65,6 +65,14 @@ export const SECTIONS: Section[] = [
     fields: ['promptBase', 'place'],
     model: 'champs prompt et place · le décor du lieu rejoint le prompt au lancement',
   },
-  { key: 'ai', label: 'Amélioration IA', icon: 'robot', fields: [], model: 'aucun champ écrit — pas encore branché' },
+  /* `fields` reste vide : Appliquer écrit les fragments des onglets Scène,
+     Lumière et Pose, et c'est là que leur point de modification doit mener. */
+  {
+    key: 'ai',
+    label: 'Amélioration IA',
+    icon: 'robot',
+    fields: [],
+    model: 'propose une réécriture de prompt, prompt_light et prompt_pose · Appliquer l’écrit dans le brouillon',
+  },
   { key: 'json', label: 'JSON final', icon: 'terminal', fields: [], model: 'la scène telle qu’elle sera écrite, comparée à ce qui est sur le disque' },
 ]

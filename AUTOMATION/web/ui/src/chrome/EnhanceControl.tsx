@@ -85,28 +85,7 @@ export function EnhanceControl({
 
       {shown && (
         <div className="mt-[8px] rounded-card border border-line bg-panel px-[12px] py-[10px]" data-enhance-proposal>
-          {shown.translated ? (
-            <div className="grid gap-[10px] sm:grid-cols-2">
-              <div>
-                <span className="lab">Actuel</span>
-                <p className="m-0 mt-[4px] text-[12.5px] text-dim">{shown.before}</p>
-              </div>
-              <div>
-                <span className="lab">Proposé (traduit)</span>
-                <p className="m-0 mt-[4px] text-[12.5px]" data-enhance-text>
-                  {shown.text}
-                </p>
-              </div>
-            </div>
-          ) : (
-            <Compared before={shown.before} after={shown.text} />
-          )}
-
-          {shown.lost.length > 0 && (
-            <p className="tiny mt-[8px] mb-0" data-enhance-lost>
-              Mots non repris : {shown.lost.join(', ')}
-            </p>
-          )}
+          <ProposalView before={shown.before} after={shown.text} translated={shown.translated} lost={shown.lost} />
 
           <div className="mt-[10px] flex items-center gap-[8px]">
             <button
@@ -127,6 +106,47 @@ export function EnhanceControl({
         </div>
       )}
     </div>
+  )
+}
+
+/** One proposal against the text it answers for: a word diff in the same
+    language, the two texts side by side after a translation, and the words
+    not kept said in words. Shared with the composer's AI panel. */
+export function ProposalView({
+  before,
+  after,
+  translated,
+  lost,
+}: {
+  before: string
+  after: string
+  translated: boolean
+  lost: string[]
+}) {
+  return (
+    <>
+      {translated ? (
+        <div className="grid gap-[10px] sm:grid-cols-2">
+          <div>
+            <span className="lab">Actuel</span>
+            <p className="m-0 mt-[4px] text-[12.5px] text-dim">{before}</p>
+          </div>
+          <div>
+            <span className="lab">Proposé (traduit)</span>
+            <p className="m-0 mt-[4px] text-[12.5px]" data-enhance-text>
+              {after}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <Compared before={before} after={after} />
+      )}
+      {lost.length > 0 && (
+        <p className="tiny mt-[8px] mb-0" data-enhance-lost>
+          Mots non repris : {lost.join(', ')}
+        </p>
+      )}
+    </>
   )
 }
 

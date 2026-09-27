@@ -9,6 +9,8 @@
      4. TAPER dans le champ retire une proposition devenue sans objet ;
      5. UN ÉCHEC s'affiche avec sa cause (`role="alert"`) ;
      6. COMFYUI HORS LIGNE : le bouton est désactivé ;
+     6b. LE PANNEAU IA : trois fragments, un seul Ctrl+Z, variante, portée,
+        scène du monde verrouillée ;
      7. LE CATALOGUE DE MONDE : le décor d'un lieu s'améliore avec son type ;
      8. RIEN N'EST ÉCRIT : aucun enregistrement, disque intact.
 
@@ -49,7 +51,7 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
     body.comfy = comfy;
     await route.fulfill({ response: real, json: body });
   });
-  await page.route('**/api/enhance?*', async (route) => {
+  await page.route(/\/api\/enhance(\/scene)?\?/, async (route) => {
     sent.push(route.request().postDataJSON());
     const [status, body] = replies.shift() || [500, { ok: false, erreur: 'aucune réponse prévue' }];
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
@@ -121,6 +123,59 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
   await off.page.fill(FIELD, 'standing');
   say(await off.page.isDisabled(inField('[data-enhance-run]')), 'bouton desactive sans ComfyUI');
   say(off.sent.length === 0, 'aucune requete partie');
+
+  console.log('\n[6b] le panneau IA : la scene entiere');
+  // les trois fragments de la scene neuve, chacun dans son onglet
+  await page.fill(FIELD, 'standing holding a mug');
+  await page.click('[data-tab="light"]');
+  await page.fill('#sceneInspector [data-f="prompt_light"]', 'window light');
+  await page.click('[data-tab="pose"]');
+  await page.fill('#sceneInspector [data-f="prompt_pose"]', 'standing');
+  await page.waitForTimeout(900);            // un pas d'annulation par pause de frappe
+  await page.click('[data-tab="ai"]');
+  await page.waitForSelector('[data-ai-panel]');
+  const proposed = { base: 'standing, holding a warm mug', light: 'soft window light from the left', pose: 'standing' };
+  sent.length = 0;
+  replies.push([200, { ok: true, ...proposed, translated: false, lost: { base: [], light: [], pose: [] } }]);
+  await page.click('[data-ai-panel] button:has-text("Plus naturel")');
+  await page.click('[data-ai-run]');
+  await page.waitForSelector('[data-ai-proposal]');
+  say(JSON.stringify(sent[0]) === JSON.stringify({ base: 'standing holding a mug', light: 'window light',
+                                                    pose: 'standing', instruction: 'Plus naturel', only: null, vary: false }),
+      `requete : trois fragments, consigne du raccourci (${JSON.stringify(sent[0])})`);
+  say((await page.textContent('[data-ai-summary]')).includes('2 fragments changent'),
+      'resume : 2 fragments changent (la pose est identique)');
+  say(!(await page.isVisible('[data-ai-part="pose"]')), 'un fragment inchange n est pas compare');
+  replies.push([200, { ok: true, ...proposed, light: 'warm lamp glow', translated: false, lost: { base: [], light: [], pose: [] } }]);
+  await page.click('[data-ai-vary]');
+  await page.waitForSelector('[data-ai-part="light"]:has-text("warm lamp glow")');
+  say(sent[1]?.vary === true, 'Proposer autre chose : vary envoye');
+  await page.click('[data-ai-apply]');
+  const valueIn = async (tab, f) => {
+    await page.click(`[data-tab="${tab}"]`);
+    return page.inputValue(`#sceneInspector [data-f="${f}"]`);
+  };
+  say((await valueIn('recap', 'prompt_base')) === proposed.base && (await valueIn('light', 'prompt_light')) === 'warm lamp glow',
+      'Appliquer : les fragments changes sont dans leurs champs');
+  await page.locator('#sceneInspector').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  say((await valueIn('recap', 'prompt_base')) === 'standing holding a mug' && (await valueIn('light', 'prompt_light')) === 'window light',
+      'un seul Ctrl+Z rend les deux fragments');
+  await page.click('[data-tab="ai"]');
+  await page.click('[data-ai-scope="light"]');
+  replies.push([200, { ok: true, ...proposed, base: 'standing holding a mug', translated: false, lost: { base: [], light: [], pose: [] } }]);
+  await page.click('[data-ai-run]');
+  await page.waitForSelector('[data-ai-proposal]');
+  say(sent[2]?.only === 'light', 'portee Lumiere : only envoye');
+  // une scene reprise du monde : ses fragments sont verrouilles, le panneau aussi
+  let locked = null;
+  for (const card of await page.$$('[data-scene-card]:not([data-new])')) {
+    await card.click();
+    await page.click('[data-tab="ai"]');
+    if ((await page.textContent('[data-ai-panel]')).includes('repris du monde')) { locked = card; break; }
+  }
+  say(locked !== null && await page.isDisabled('[data-ai-run]'), 'scene reprise du monde : Proposer desactive');
 
   console.log('\n[7] le catalogue de monde : le decor d un lieu');
   const world = await open(nav, { comfy: true, path: '/worlds/slow-life/places' });
