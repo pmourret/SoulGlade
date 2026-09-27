@@ -11,7 +11,9 @@
    same `value`/`onChange`, there is no second copy to drift. */
 import { useState } from 'react'
 
+import type { EnhanceKind, Enhancer } from '../../../api/useEnhance'
 import { Dialog } from '../../../chrome/Dialog'
+import { EnhanceControl } from '../../../chrome/EnhanceControl'
 import { Icon } from '../../../chrome/Icon'
 import { InfoHint } from './InfoHint'
 
@@ -28,6 +30,8 @@ export function PromptField({
   changed,
   hideLabel,
   minHeight,
+  enhancer,
+  enhanceKind,
 }: {
   /** `data-f` on the compact textarea — the browser fumigation's hook. */
   dataField: string
@@ -60,6 +64,10 @@ export function PromptField({
   hideLabel?: boolean
   /** Taller box for the one fragment a panel is built around (le décor). */
   minHeight?: string
+  /** « Améliorer » under the field (IT-10 chantier 8), for the kind of
+      fragment it holds. Both or neither. */
+  enhancer?: Enhancer
+  enhanceKind?: EnhanceKind
 }) {
   const [editing, setEditing] = useState(false)
   const fieldId = `scene-prompt-${dataField}`
@@ -113,6 +121,16 @@ export function PromptField({
           </button>
         </div>
       </div>
+      {enhancer && enhanceKind && (
+        <EnhanceControl
+          label={label}
+          kind={enhanceKind}
+          value={value}
+          onApply={onChange}
+          enhancer={enhancer}
+          disabled={disabled}
+        />
+      )}
       {disabled && lockedNote && <p className="tiny mt-[4px] mb-0">{lockedNote}</p>}
 
       <Dialog

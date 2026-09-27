@@ -22,6 +22,7 @@
    LE CATALOGUE remplace la ligne « Templates de lumière : bientôt ». Il ne
    crée rien ici : une lumière se crée dans l'atelier (Lumières), d'où la
    corriger corrige toutes les scènes qui la portent. */
+import type { Enhancer } from '../../../../api/useEnhance'
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../../../app/routes'
@@ -46,6 +47,7 @@ export function LightPanel({
   changed,
   onPatch,
   onGoto,
+  enhancer,
 }: {
   draft: SceneDraft
   /** The décor of the scene's place: the light comes right after it. */
@@ -61,6 +63,8 @@ export function LightPanel({
   changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
   onGoto: (section: SectionKey) => void
+  /** « Améliorer » on the prompt fragment (IT-10 chantier 8). */
+  enhancer?: Enhancer
 }) {
   const variants = draft.variants.split('\n').filter((line, index, all) =>
     // une ligne vide en cours de saisie reste, une ligne vide finale ne compte pas
@@ -134,6 +138,8 @@ export function LightPanel({
         ) : (
           <PromptField
             dataField="prompt_light"
+              enhancer={enhancer}
+              enhanceKind="light"
             label="Lumière de la scène"
             hideLabel
             hint="Ajoutée au prompt au lancement, après le décor du lieu."

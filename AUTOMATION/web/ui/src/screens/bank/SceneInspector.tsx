@@ -19,6 +19,7 @@
    the original object (`base`): every key it does not display crosses the save
    untouched — `world` and `origin` among them. See ScenesStoreContext for the
    incident that rule comes from. */
+import type { Enhancer } from '../../api/useEnhance'
 import { useCallback, useEffect, useRef } from 'react'
 
 import type { Creative } from '../../state/TaxonomyContext'
@@ -69,6 +70,7 @@ export function SceneInspector({
   onClose,
   onSaveDocument,
   onRevert,
+  enhancer,
 }: {
   draft: SceneDraft
   /** The same scene as the last save left it — the JSON panel compares the
@@ -106,6 +108,8 @@ export function SceneInspector({
   /** Drop every pending change — the banner's own gesture, offered again from
       the JSON panel. */
   onRevert: () => void
+  /** « Améliorer » on the prompt fragments, handed down to the panels. */
+  enhancer: Enhancer
 }) {
   /* A scene taken from the world (ADR-0027 §5) never owns its frame: `prompt`
      and `intention` are re-read from the world server-side on every save, so
@@ -264,6 +268,7 @@ export function SceneInspector({
         changed={changed}
         narrow={narrow}
         onPatch={patch}
+        enhancer={enhancer}
         onSaveDocument={onSaveDocument}
         onRevert={onRevert}
       />

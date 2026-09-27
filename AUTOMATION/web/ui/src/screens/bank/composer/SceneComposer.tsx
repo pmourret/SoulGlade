@@ -23,6 +23,7 @@
    l'ajoute après le décor. `sceneFragments` découpe pour les vues colorées,
    sans jamais rejoindre. `wardrobe` n'est pas un quatrième fragment : la tenue est
    injectée par niveau à la génération, jamais fondue dans le prompt. */
+import type { Enhancer } from '../../../api/useEnhance'
 import { useEffect, useRef, useState } from 'react'
 import * as Tabs from '@radix-ui/react-tabs'
 
@@ -65,6 +66,7 @@ export function SceneComposer({
   onPatch,
   onSaveDocument,
   onRevert,
+  enhancer,
 }: {
   draft: SceneDraft
   /** The same scene as the last save left it — the JSON panel compares
@@ -102,6 +104,8 @@ export function SceneComposer({
   onSaveDocument: () => void
   /** Drop every pending change — the same action as the banner's « Annuler ». */
   onRevert: () => void
+  /** « Améliorer » on the prompt fragments, handed down to the panels. */
+  enhancer: Enhancer
 }) {
   const [tab, setTab] = useState<SectionKey>('general')
   const idRef = useRef<HTMLInputElement | null>(null)
@@ -210,6 +214,7 @@ export function SceneComposer({
                 )}
                 {section.key === 'light' && (
                   <LightPanel
+                    enhancer={enhancer}
                     draft={draft}
                     decor={decorOf(places, draft.place)}
                     lights={lights}
@@ -234,6 +239,7 @@ export function SceneComposer({
                 )}
                 {section.key === 'pose' && (
                   <PosePanel
+                    enhancer={enhancer}
                     draft={draft}
                     poses={posesWithLabels}
                     worldLinked={worldLinked}
@@ -244,6 +250,7 @@ export function SceneComposer({
                 )}
                 {section.key === 'recap' && (
                   <RecapPanel
+                    enhancer={enhancer}
                     draft={draft}
                     places={places}
                     lights={lights}

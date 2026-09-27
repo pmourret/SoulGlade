@@ -15,6 +15,7 @@
    ajoute au lancement, puis la lumière de la scène, qui les suit depuis
    IT-10 c7 (`lights.resolve_bank`). Les couleurs et le découpage
    viennent de `sceneFragments`, comme pour l'aperçu de droite (invariant 3). */
+import type { Enhancer } from '../../../../api/useEnhance'
 import { useToast } from '../../../../chrome/ToastContext'
 import type { SceneDraft } from '../../../../state/ScenesStoreContext'
 import type { WorldPlace } from '../../../worlds/useWorldCatalog'
@@ -38,6 +39,7 @@ export function RecapPanel({
   changed,
   onPatch,
   onGoto,
+  enhancer,
 }: {
   draft: SceneDraft
   /** The places of the character's world (IT-11 chantier 5). */
@@ -52,6 +54,8 @@ export function RecapPanel({
   changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
   onGoto: (section: SectionKey) => void
+  /** « Améliorer » on the prompt fragment (IT-10 chantier 8). */
+  enhancer?: Enhancer
 }) {
   const toast = useToast()
   const decor = decorOf(places, draft.place)
@@ -88,6 +92,8 @@ export function RecapPanel({
             <div className="mt-[6px]">
               <PromptField
                 dataField="prompt_base"
+              enhancer={enhancer}
+              enhanceKind="scene"
                 label="Ce qui s'y passe — action, cadrage"
                 hideLabel
                 minHeight="min-h-[120px]"

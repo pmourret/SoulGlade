@@ -10,6 +10,7 @@
    de vingt vignettes pour dire « c'est celle-ci » coûtait la moitié du
    panneau à une décision déjà prise. « Changer » la rouvre, et elle est
    ouverte d'office quand il n'y a rien à montrer. */
+import type { Enhancer } from '../../../../api/useEnhance'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -44,6 +45,7 @@ export function PosePanel({
   lockedNote,
   changed,
   onPatch,
+  enhancer,
 }: {
   draft: SceneDraft
   poses: PoseSummary[]
@@ -51,6 +53,8 @@ export function PosePanel({
   lockedNote: string
   changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
+  /** « Améliorer » on the prompt fragment (IT-10 chantier 8). */
+  enhancer?: Enhancer
 }) {
   const options = poseOptions(poses, draft.pose)
   // Same `label || name` fallback as `PoseCard`'s own accessible name.
@@ -88,6 +92,8 @@ export function PosePanel({
           >
             <PromptField
               dataField="prompt_pose"
+              enhancer={enhancer}
+              enhanceKind="pose"
               label="Prompt de pose"
               hideLabel
               placeholder="ex : leaning against the doorway, arms crossed"

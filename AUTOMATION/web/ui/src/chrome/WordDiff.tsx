@@ -8,8 +8,8 @@
 
    Le calcul vit dans `lib/diff.ts`, pur et testé à part : ce fichier ne fait
    que peindre ce qu'il rend. */
-import type { Span } from '../../../lib/diff'
-import { diffWords } from '../../../lib/diff'
+import type { Span } from '../lib/diff'
+import { diffWords } from '../lib/diff'
 
 /** One side of a rewritten line: the untouched runs plain, the ones that
     moved on their own ground. */

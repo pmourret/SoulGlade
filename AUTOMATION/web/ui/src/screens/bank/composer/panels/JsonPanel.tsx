@@ -33,7 +33,7 @@ import {
 import { countChanges, diffLines, diffWords, type Row } from '../../../../lib/diff'
 import type { SceneField } from '../../sceneChanges'
 import type { SectionKey } from '../sections'
-import { WordLine } from '../WordDiff'
+import { WordLine } from '../../../../chrome/WordDiff'
 import { HEAD } from './shared'
 
 const LAYOUT_KEY = 'soulglade.diff.layout'

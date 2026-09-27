@@ -65,6 +65,7 @@ TESTS = [
     "test_bank",          # banque de scenes + poses + rail d'outils (ecran 5)
     "test_worlds",        # catalogues d'un monde, ordinaire et adulte (ecran Mondes)
     "test_bank_world",    # banque : « + Depuis le monde », arme ou non (ecran 5)
+    "test_enhance",       # « Améliorer » un fragment : proposition, Appliquer, rien d'écrit (IT-10 c8)
     "test_review",        # Revue et Galerie, pieges `v` et /api/mesurer (ecran 6)
     "test_editor",        # editeur photo : recadrage, copie, ecrasement (ecran 6)
     "test_photo_editor_advanced",  # editeur photo avance : calques, courbes/HSL, perspective, masques (ecran 6)

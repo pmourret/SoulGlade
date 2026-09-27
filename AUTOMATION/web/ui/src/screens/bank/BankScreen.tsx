@@ -32,6 +32,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 import { useApi } from '../../api/useApi'
+import { useEnhancer } from '../../api/useEnhance'
 import { useChrome } from '../../chrome/ChromeContext'
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { REVERT_CONFIRM } from '../../chrome/DirtyBar'
@@ -73,6 +74,7 @@ const RETURN_TO_WORLD_CONFIRM = {
 
 export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'assets' | 'outfits' | 'lights' }) {
   const api = useApi()
+  const enhancer = useEnhancer()
   const toast = useToast()
   const confirm = useConfirm()
   const { narrow } = useChrome()
@@ -516,6 +518,7 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
             {bench.selected ? (
               <SceneInspector
                 draft={bench.selected}
+                enhancer={enhancer}
                 saved={saved.get(bench.selected.base.id ?? '')}
                 creative={creative}
                 poses={poses}
