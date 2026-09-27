@@ -13,7 +13,9 @@
    had to look for.
 
    Ported from `renderReglages` / `majAffichage` in `static/create.js`. */
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
+
+import { useRovingChoice } from '../../chrome/useRovingChoice'
 
 import { formatLabel, useConfig } from '../../state/ConfigContext'
 import { BY_ID, PRESETS, SECTIONS, fmtVal, type Setting } from './settings'
@@ -106,10 +108,16 @@ export function valuesFor(
 const SECTION =
   'mt-[14px] border-t border-t-line pt-[14px] first:mt-0 first:[border-top:0] first:pt-0'
 const SECTION_TITLE = 'lab'
-const BADGE_BASE = 'rounded-[5px] border px-[6px] py-[2px] text-[10px] uppercase tracking-[.6px]'
+/* `flex-none` + `nowrap`: « jamais mesuré » broke over two lines in 340 px
+   (screen-20, constat 8). No opacity on the « off » state any more: at .55 it
+   read 2.5:1. Regular weight, not 600: capitals AND a weight are the `.lab`
+   signature, which a badge never carries (charter, test_charte [1]). */
+const BADGE_BASE =
+  'flex-none whitespace-nowrap rounded-[5px] border px-[6px] py-[2px] text-[10.5px] ' +
+  'uppercase tracking-[.06em]'
 const BADGE_ON = 'border-mes-line bg-mes-bg text-ok'
-const BADGE_OFF = 'border-line bg-transparent text-dim2 opacity-55'
-const BADGE = BADGE_BASE + ' ' + BADGE_ON
+const BADGE_OFF = 'border-line bg-transparent text-dim2'
+const BADGE_WARN = 'border-warn-line bg-warn-bg text-warn-txt'
 const ROW = 'mb-[16px] last:mb-0'
 const ROW_HEAD = 'mb-[6px] flex items-center gap-[8px]'
 const HELP = 'mt-[6px] mb-0 text-[12.5px] leading-[1.6] text-dim'
@@ -207,6 +215,15 @@ export function SettingsPanel({
      hides a deviation, otherwise folding hides the very information the counter
      exists to give. */
   const { formats } = useConfig()
+  const [explain, setExplain] = useState<Explain>(readExplain)
+  const pickExplain = (next: Explain) => {
+    setExplain(next)
+    try {
+      localStorage.setItem(EXPLAIN_KEY, next)
+    } catch {
+      /* private browsing, storage refused: the choice lasts the session */
+    }
+  }
   const { total, bySection } = useMemo(
     () => deviationCount(values, presetRef, nsfwRef),
     [values, presetRef, nsfwRef],
@@ -237,11 +254,10 @@ export function SettingsPanel({
           Revenir aux valeurs mesurées
         </button>
       </div>
-      <p className="mt-0 mb-[18px] text-[12.5px] leading-[1.6] text-dim">
-        Chaque réglage dit ce qu'il fait et ce qu'il coûte. Les valeurs marquées{' '}
-        <b className={BADGE}>mesuré</b> sont celles validées par les tests du projet :
-        s'en écarter est permis, mais c'est un choix, pas un réglage neutre.
+      <p className="mt-0 mb-[10px] text-[12px] text-dim2">
+        Badge <b>mesuré</b> : valeur validée par les tests. S'en écarter est un choix.
       </p>
+      <ExplanationsChoice value={explain} onPick={pickExplain} />
       <div id="gearBody">
         {SECTIONS.map((section) => {
           if (section.niveau === 'edit' && !editTier) return null
@@ -255,8 +271,9 @@ export function SettingsPanel({
               }
               value={values[item.id]}
               reference={referenceOf(item, presetRef, nsfwRef)}
-              master={item.lieA ? Boolean(values[item.lieA]) : true}
+              masterLabel={item.lieA && !values[item.lieA] ? BY_ID[item.lieA].label : null}
               nsfwLevel={nsfwLevel}
+              deviationsOnly={explain === 'ecarts'}
               onChange={onChange}
             />
           ))
@@ -291,7 +308,7 @@ export function SettingsPanel({
                 <summary
                   className="flex cursor-pointer items-baseline gap-[10px] [list-style:none]
                              [&::-webkit-details-marker]:hidden
-                             before:text-[11px] before:text-acc before:content-['▸']
+                             before:text-[11px] before:text-dim before:content-['▸']
                              [[open]>&]:before:content-['▾']"
                 >
                   <h4 className={`${SECTION_TITLE} m-0 inline`}>{section.titre}</h4>
@@ -302,6 +319,52 @@ export function SettingsPanel({
             </section>
           )
         })}
+      </div>
+    </div>
+  )
+}
+
+/* « Explications : Toutes · Écarts seulement » (screen-20 S3). The panel ran to
+   922 px for one section against 719 of visible inspector; once the texts are
+   known, only the rows that moved need theirs. Kept per browser, default
+   « Toutes » so a first visit reads everything. */
+type Explain = 'toutes' | 'ecarts'
+const EXPLAIN_KEY = 'studio.reglages-explications'
+const EXPLAIN_OPTIONS: [Explain, string][] = [['toutes', 'Toutes'], ['ecarts', 'Écarts seulement']]
+const EXPLAIN_IDS = EXPLAIN_OPTIONS.map(([key]) => key)
+
+function readExplain(): Explain {
+  try {
+    return localStorage.getItem(EXPLAIN_KEY) === 'ecarts' ? 'ecarts' : 'toutes'
+  } catch {
+    return 'toutes'
+  }
+}
+
+function ExplanationsChoice({ value, onPick }: { value: Explain; onPick: (next: Explain) => void }) {
+  const roving = useRovingChoice(EXPLAIN_IDS, value)
+  return (
+    <div className="mb-[18px] flex items-center gap-[8px] text-[12px] text-dim2">
+      <span id="explainLab">Explications :</span>
+      <div className="seg" role="radiogroup" aria-labelledby="explainLab" id="explainSeg">
+        {EXPLAIN_OPTIONS.map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            ref={roving.registerRef(key)}
+            role="radio"
+            aria-checked={value === key}
+            tabIndex={roving.tabIndexFor(key)}
+            /* `.seg button` is 13.5 px, off the scale: a global debt, not
+               this screen's to settle; brought to 12 here. */
+            className={`px-[10px]! py-[4px]! text-[12px]! ${value === key ? 'on' : ''}`}
+            data-explain={key}
+            onClick={() => onPick(key)}
+            onKeyDown={(event) => roving.onKeyDown(event, key, (id) => onPick(id as Explain))}
+          >
+            {label}
+          </button>
+        ))}
       </div>
     </div>
   )
@@ -319,80 +382,121 @@ function SectionDeviations({ titre, n }: { titre: string; n: number }) {
   )
 }
 
+/* What a setting does, then what it costs, for EVERY kind (screen-20 S2): a
+   switch used to drop its `cout`, so « Reprise des mains » never said +35 s.
+   The cost stays INSIDE the `data-rgq` paragraph, where the fumigation reads
+   it. `quiet` (« Écarts seulement », S3) hides it visually only: it stays in
+   the DOM, the field keeps pointing at it through `aria-describedby`, and the
+   row that holds the focus shows it again. */
+function Help({ item, quiet }: { item: Setting; quiet: boolean }) {
+  return (
+    <p
+      className={`${HELP}${quiet ? ' sr-only group-focus-within:not-sr-only' : ''}`}
+      id={`q_${item.id}`}
+      data-rgq
+    >
+      {item.quoi}
+      {item.cout && <span className="mt-[2px] block text-dim2" data-cout>{item.cout}</span>}
+    </p>
+  )
+}
+
 function SettingRow({
   item,
   value,
   reference,
-  master,
+  masterLabel,
   nsfwLevel,
+  deviationsOnly,
   onChange,
 }: {
   item: Setting
   value: string | boolean
   reference: unknown
-  master: boolean
+  /** The label of the switch this setting depends on, when that switch is off. */
+  masterLabel: string | null
   nsfwLevel: boolean
+  deviationsOnly: boolean
   onChange: (id: string, value: string | boolean) => void
 }) {
   const hasReference = reference !== '' && reference !== undefined
   const measured = hasReference && sameAsReference(item, value, reference)
-  /* A setting depending on a switch that is off no longer has an effect: say
-     so, rather than let it look live. */
-  const inert = !master
-  const disabled =
-    (item.id === 'noqc' && nsfwLevel) ||
-    (item.dest === 'preset' && false)
-  const classes = `${ROW}${inert ? ' opacity-[.42]' : ''}`
   /* A setting moved away from its measured value says so in the WARNING
      family, not in the accent (§S4). The accent is the studio's « this is
      selected » colour — on a panel where a dozen rows can be off at once it
-     read as decoration, and it carried no more meaning than the grey badge
-     next to it. A deviation is a warning: it is a choice one is answerable
-     for, which is exactly what `--warn-txt` says everywhere else. */
+     read as decoration. A deviation is a choice one is answerable for, which
+     is exactly what `--warn-txt` says everywhere else. */
   const off = hasReference && !measured
+  /* A setting depending on a switch that is off no longer has an effect. It
+     used to fade to .42, which took its text under 4.5:1 (3.53 and 2.32,
+     measured 27/09): the field is disabled instead, and a line says why. */
+  const inert = masterLabel !== null
+  const disabled = inert || (item.id === 'noqc' && nsfwLevel)
+  const quiet = deviationsOnly && !off
+  const describedBy = `q_${item.id}${inert ? ` x_${item.id}` : ''}`
   /* A real <label for>, not a bold word next to the field: a screen reader
-     read « Format imposé » as an unnamed list (audit of 27/09). */
-  const title = `text-[13.5px] font-semibold ${off ? 'text-warn-txt' : ''}`
+     read « Format imposé » as an unnamed list (audit of 27/09). Same size and
+     weight for the four kinds (screen-20 S2): the switch's `<b>` made it 700. */
+  const title = `text-[13px] font-semibold ${off ? 'text-warn-txt' : ''}`
   const field = `${FIELD} ${off ? FIELD_OFF : FIELD_REF}`
+  const inertLine = inert && (
+    <p className="mt-[6px] mb-0 text-[12px] text-warn-txt" id={`x_${item.id}`}>
+      Sans effet : {masterLabel} est coupée.
+    </p>
+  )
 
   if (item.type === 'bool') {
     return (
-      <div className={classes} data-rg data-id={item.id}>
-        <label className="flex cursor-pointer items-center gap-[8px] text-[13.5px]">
-          <input
-            className={`w-auto ${inert ? 'pointer-events-none' : ''}`}
-            type="checkbox"
-            id={item.id}
-            checked={Boolean(value)}
-            disabled={disabled}
-            title={disabled ? "indisponible au niveau NSFW — protège l'enchaînement automatique" : ''}
-            onChange={(e) => onChange(item.id, e.target.checked)}
-          />{' '}
-          <b>{item.label}</b>
-        </label>
-        <p className={`${HELP} ml-[26px]`} data-rgq>{item.quoi}</p>
-        {/* The `title` above is mouse-only: the same reason, visible, so a
-            keyboard/screen-reader user gets it too (cadrage — pas seulement
-            au survol). */}
-        {disabled && (
-          <p className={`${HELP} ml-[26px]`}>
-            indisponible au niveau NSFW — protège l'enchaînement automatique
-          </p>
-        )}
+      <div className={`${ROW} group`} data-rg data-id={item.id}>
+        <div className={ROW_HEAD}>
+          <label className={`flex min-w-0 flex-1 cursor-pointer items-center gap-[8px] ${title}`}>
+            <input
+              className="w-auto"
+              type="checkbox"
+              id={item.id}
+              checked={Boolean(value)}
+              disabled={disabled}
+              aria-describedby={describedBy}
+              onChange={(e) => onChange(item.id, e.target.checked)}
+            />
+            {item.label}
+          </label>
+          {/* A switch had no badge at all, so a cut refiner only said so in
+              the tab counter. Written only when it deviates: at rest the
+              switch's own state is the whole story. */}
+          {off && (
+            <span
+              className={`${BADGE_BASE} ${BADGE_WARN}`}
+              id={`m_${item.id}`}
+              data-mes
+              data-off="1"
+              tabIndex={0}
+              data-hint-text={`valeur mesurée du projet : ${reference ? 'actif' : 'coupé'}`}
+            >
+              mesuré : {reference ? 'actif' : 'coupé'}
+            </span>
+          )}
+        </div>
+        <div className="ml-[26px]">
+          <Help item={item} quiet={quiet} />
+          {inertLine}
+        </div>
       </div>
     )
   }
 
   if (item.type === 'liste') {
     return (
-      <div className={classes} data-rg data-id={item.id}>
+      <div className={`${ROW} group`} data-rg data-id={item.id}>
         <div className={ROW_HEAD}>
           <label className={title} htmlFor={item.id}>{item.label}</label>
         </div>
         <select
-          className={`${field}${inert ? ' pointer-events-none' : ''}`}
+          className={field}
           id={item.id}
           value={String(value)}
+          disabled={disabled}
+          aria-describedby={describedBy}
           onChange={(e) => onChange(item.id, e.target.value)}
         >
           {(item.options ?? []).map(([v, l]) => (
@@ -401,37 +505,41 @@ function SettingRow({
             </option>
           ))}
         </select>
-        <p className={HELP} data-rgq>{item.quoi}</p>
+        <Help item={item} quiet={quiet} />
+        {inertLine}
       </div>
     )
   }
 
   if (item.type === 'nombre') {
     return (
-      <div className={classes} data-rg data-id={item.id}>
+      <div className={`${ROW} group`} data-rg data-id={item.id}>
         <div className={ROW_HEAD}>
           <label className={title} htmlFor={item.id}>{item.label}</label>
         </div>
         <input
-          className={`${field}${inert ? ' pointer-events-none' : ''}`}
+          className={field}
           type="number"
           id={item.id}
           min={item.min}
           max={item.max}
           placeholder={item.vide ?? ''}
           value={String(value)}
+          disabled={disabled}
+          aria-describedby={describedBy}
           onChange={(e) => onChange(item.id, e.target.value)}
         />
-        <p className={HELP} data-rgq>{item.quoi}</p>
+        <Help item={item} quiet={quiet} />
+        {inertLine}
       </div>
     )
   }
 
   return (
-    <div className={classes} data-rg data-id={item.id}>
+    <div className={`${ROW} group`} data-rg data-id={item.id}>
       <div className={ROW_HEAD}>
-        <label className={title} htmlFor={item.id}>{item.label}</label>
-        <span className="flex-1" />
+        {/* The title is what wraps (`min-w-0 flex-1`), never the badge. */}
+        <label className={`min-w-0 flex-1 ${title}`} htmlFor={item.id}>{item.label}</label>
         <span
           className={`text-[13px] font-semibold tabular-nums ${off ? 'text-warn-txt' : 'text-txt'}`}
           id={`v_${item.id}`}
@@ -451,7 +559,7 @@ function SettingRow({
             `hasReference`, le compteur d'ecarts ne le compte pas). Le mot suit
             maintenant la meme verite. */}
         <span
-          className={`${BADGE_BASE} ${measured ? BADGE_ON : BADGE_OFF}`}
+          className={`${BADGE_BASE} ${measured ? BADGE_ON : off ? BADGE_WARN : BADGE_OFF}`}
           id={`m_${item.id}`}
           data-mes
           data-off={measured ? undefined : '1'}
@@ -462,9 +570,7 @@ function SettingRow({
             : "ce réglage n'a jamais été mesuré : sa valeur est un point de départ"}
         >
           {/* §S4: a deviated setting prints the value it left, right here.
-              It was only in the hint bubble, which meant one had to hover the
-              badge to learn what « hors valeur mesurée » was measured AT. At
-              rest the word stands alone, which is what the fumigation reads. */}
+              At rest the word stands alone, which is what the fumigation reads. */}
           {hasReference ? (off ? `mesuré ${fmtVal(item, reference as number)}` : 'mesuré') : 'jamais mesuré'}
         </span>
       </div>
@@ -491,13 +597,15 @@ function SettingRow({
           />
         )}
         <input
-          className={`${SLIDER}${inert ? ' pointer-events-none' : ''}`}
+          className={SLIDER}
           type="range"
           id={item.id}
           min={item.min}
           max={item.max}
           step={item.pas}
           value={String(value)}
+          disabled={disabled}
+          aria-describedby={describedBy}
           onChange={(e) => onChange(item.id, e.target.value)}
         />
       </div>
@@ -505,10 +613,8 @@ function SettingRow({
         <span>{item.bas}</span>
         <span>{item.haut}</span>
       </div>
-      <p className={HELP} data-rgq>
-        {item.quoi}
-        {item.cout && <span className="mt-[4px] block text-dim2" data-cout> {item.cout}</span>}
-      </p>
+      <Help item={item} quiet={quiet} />
+      {inertLine}
     </div>
   )
 }

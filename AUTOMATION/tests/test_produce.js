@@ -403,6 +403,26 @@ const ONGLET = k => `[data-tab="${k}"]`;
   // audit du 27/09 : le titre d'un reglage est un vrai <label for>
   dire((await page.$eval('label[for="format"]', e => e.textContent.trim()).catch(() => '')) === 'Format imposé',
        'le select « Format imposé » est nommé par son label');
+  // screen-20 S3 : « Écarts seulement » masque l'explication d'un reglage au
+  // repos VISUELLEMENT — elle reste dans le DOM, liee au champ, et revient au
+  // focus. Remis sur « Toutes » a la fin : le choix est retenu par navigateur.
+  await page.click('#explainSeg [data-explain="ecarts"]');
+  await page.waitForTimeout(200);
+  const repos = await page.$eval('#q_count', e => ({
+    cache: e.getBoundingClientRect().width <= 1,
+    texte: e.textContent.trim().length > 0,
+    lie: (document.getElementById('count').getAttribute('aria-describedby') || '').split(' ').includes('q_count'),
+  }));
+  dire(repos.cache && repos.texte && repos.lie,
+       'en « Écarts seulement », l explication au repos est masquee mais lue et liee au champ');
+  await page.focus('#count');
+  await page.waitForTimeout(100);
+  dire(await page.$eval('#q_count', e => e.getBoundingClientRect().width > 1),
+       'le champ qui a le focus montre son explication');
+  await page.click('#explainSeg [data-explain="toutes"]');
+  await page.waitForTimeout(200);
+  dire(await page.$eval('#q_seed', e => e.getBoundingClientRect().width > 1),
+       '« Toutes » la rend visible a nouveau');
 
   console.log('\n[11] la pastille « mesuré » suit config.json');
   /* L'etat de la pastille se lit sur un ATTRIBUT, jamais dans son `class` :
@@ -519,7 +539,11 @@ const ONGLET = k => `[data-tab="${k}"]`;
          'la section NSFW du panneau apparait a ce cran');
     dire(await page.isDisabled('#noqc'),
          "« Sans contrôle d'identité » est inerte ici : le cran s'appuie sur le verdict");
-    dire(((await page.getAttribute('#noqc', 'title')) || '').includes('NSFW'),
+    // screen-20 S2 : la raison n'est plus un `title` (souris seule) doublé d'un
+    // paragraphe, c'est le `cout` du réglage, visible et lu par aria-describedby.
+    dire(await page.$eval('#noqc', e =>
+           (document.getElementById(e.getAttribute('aria-describedby')?.split(' ')[0] || '')
+             ?.querySelector('[data-cout]')?.textContent || '').includes('NSFW')),
          'et il DIT pourquoi');
   } else {
     console.log("      (aucun cran d'edition : personnage desarme ou pack sans graphe)");
