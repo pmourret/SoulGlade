@@ -10047,12 +10047,23 @@
               }
             ],
             "title": "Asset"
+          },
+          "slot": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slot"
           }
         },
         "additionalProperties": true,
         "type": "object",
         "title": "OutfitPiece",
-        "description": "One piece: written text, or an asset of class `vetement` whose\nfragment is read at resolution time. Exactly one of the two is set."
+        "description": "One piece: written text, or an asset of class `vetement` whose\nfragment is read at resolution time. Exactly one of the two is set.\n`slot` says where it is worn (`tenues.EMPLACEMENTS`, design-pass tenues);\nabsent on a piece composed before the slots. It never changes the text."
       },
       "OutfitResponse": {
         "properties": {

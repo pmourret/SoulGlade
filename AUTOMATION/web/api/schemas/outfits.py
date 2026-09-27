@@ -6,11 +6,14 @@ from pydantic import BaseModel, ConfigDict
 
 class OutfitPiece(BaseModel):
     """One piece: written text, or an asset of class `vetement` whose
-    fragment is read at resolution time. Exactly one of the two is set."""
+    fragment is read at resolution time. Exactly one of the two is set.
+    `slot` says where it is worn (`tenues.EMPLACEMENTS`, design-pass tenues);
+    absent on a piece composed before the slots. It never changes the text."""
     model_config = ConfigDict(extra="allow")
 
     text: Optional[str] = None
     asset: Optional[str] = None
+    slot: Optional[str] = None
 
 
 class OutfitEntry(BaseModel):

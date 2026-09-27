@@ -4420,12 +4420,16 @@ export interface components {
          * OutfitPiece
          * @description One piece: written text, or an asset of class `vetement` whose
          *     fragment is read at resolution time. Exactly one of the two is set.
+         *     `slot` says where it is worn (`tenues.EMPLACEMENTS`, design-pass tenues);
+         *     absent on a piece composed before the slots. It never changes the text.
          */
         OutfitPiece: {
             /** Text */
             text?: string | null;
             /** Asset */
             asset?: string | null;
+            /** Slot */
+            slot?: string | null;
         } & {
             [key: string]: unknown;
         };

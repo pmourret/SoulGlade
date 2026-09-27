@@ -23,6 +23,12 @@ texte. Une banque sans `@` sort identique ; une scene qui reference une tenue
 s'assemble a l'octet pres comme la meme scene qui en porterait le texte en dur
 (invariant 3, tests/test_tenues.py).
 
+L'EMPLACEMENT D'UNE PIECE (design-pass tenues, DOCS/design-pass/screen-tenues.md).
+Une piece peut porter `slot`, une cle de `EMPLACEMENTS` : ou elle se porte sur
+le corps. C'est l'ecran qui s'en sert, pour ranger et pour enregistrer les
+pieces deja triees dans l'ordre du prompt ; `texte` et `resoudre` ne le lisent
+pas, donc une tenue avec ou sans emplacement donne le meme texte a l'octet.
+
 UNE REFERENCE PENDANTE EST UNE ERREUR — tenue inconnue, asset inconnu, asset
 sans fragment. Jamais une tenue vide qui partirait au rendu en silence.
 
@@ -35,6 +41,12 @@ import worlds
 
 MARQUEUR = layered_catalog.MARKER
 CHAMPS_AJUSTABLES = ("label", "pieces")
+# Les emplacements d'une piece, dans l'ordre du prompt. La meme liste vit dans
+# l'ecran (`screens/bank/outfits/outfitSlots.ts`) ; test_tenues.py verifie
+# que les deux sont identiques.
+EMPLACEMENTS = ("onepiece", "top", "outer", "bottom", "legwear", "feet",
+                "under_top", "under_bottom", "head", "eyes", "ears", "neck",
+                "waist", "hands", "wrists", "carried")
 
 
 class TenueError(RuntimeError):
@@ -179,11 +191,19 @@ def _pieces_valides(pieces, bibliotheque, au_monde):
                 raise TenueError(f"« {asset.get('label') or asset['key']} » "
                                  f"appartient au personnage : une tenue du monde "
                                  f"ne peut porter que des assets du monde")
-            propres.append({"asset": piece["asset"]})
+            propre = {"asset": piece["asset"]}
         elif isinstance(piece, dict) and str(piece.get("text") or "").strip():
-            propres.append({"text": str(piece["text"]).strip()})
+            propre = {"text": str(piece["text"]).strip()}
         else:
             raise TenueError("pièce vide : écrire un texte ou choisir un asset")
+        # L'emplacement n'est ecrit que s'il est donne : une piece sans lui
+        # s'ecrit exactement comme avant les emplacements.
+        slot = piece.get("slot")
+        if slot is not None:
+            if slot not in EMPLACEMENTS:
+                raise TenueError(f"emplacement inconnu : « {slot} »")
+            propre["slot"] = slot
+        propres.append(propre)
     return propres
 
 

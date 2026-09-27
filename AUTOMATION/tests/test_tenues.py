@@ -281,6 +281,47 @@ try:
             and propres(CA) == [],
             f"POST /api/outfits/delete retire une tenue non portee ({r.status_code})")
 
+    # =========================================== [8] emplacements (design-pass tenues)
+    print("\n[8] l'emplacement d'une piece ne change pas un octet du rendu")
+    sans_slot = [{"text": "a white linen shirt"}, {"asset": "jean-bleu"},
+                 {"text": "a thin gold necklace"}]
+    avec_slot = [{"text": "a white linen shirt", "slot": "top"},
+                 {"asset": "jean-bleu", "slot": "bottom"},
+                 {"text": "a thin gold necklace", "slot": "neck"}]
+    t_sans = {"key": "jour", "label": "Jour", "pieces": sans_slot}
+    t_avec = {**t_sans, "pieces": avec_slot}
+    verifie(tenues.texte(t_avec, biblio) == tenues.texte(t_sans, biblio),
+            "le texte d'une tenue est le meme avec ou sans emplacement")
+    lignes = {"1": ["@jour", "a slip dress"]}
+    verifie(tenues.resoudre(lignes, [t_avec], biblio)
+            == tenues.resoudre(lignes, [t_sans], biblio),
+            "la resolution d'une scene aussi")
+
+    tenues.creer(CA, "Jour", sans_slot)
+    jour = lambda: next(o for o in propres(CA) if o["key"] == "jour")  # noqa: E731
+    verifie(jour()["pieces"] == sans_slot,
+            "sans emplacement, la tenue s'ecrit sur disque comme avant (aucune cle slot)")
+    ecrire_scenes(CA, [scene("s-jour", {"1": "@jour"})])
+    avant = prompts(CA)
+    tenues.enregistrer(CA, "jour", {"pieces": avec_slot})
+    verifie(jour()["pieces"] == avec_slot, "un emplacement connu est garde a l'ecriture")
+    verifie(bool(avant) and "a white linen shirt" in avant[0] and prompts(CA) == avant,
+            "le prompt assemble est identique a l'octet, emplacements poses (invariant 3)")
+    try:
+        tenues.enregistrer(CA, "jour", {"pieces": [{"text": "a hat", "slot": "chapeau"}]})
+        verifie(False, "un emplacement inconnu est ecrit en silence")
+    except tenues.TenueError as e:
+        verifie("emplacement inconnu" in str(e), f"un emplacement inconnu est refuse ({e})")
+    r = CLIENT.post(f"/api/outfits/create?character={CA}",
+                    json={"label": "Nuit", "pieces": [{"text": "a robe", "slot": "nulle-part"}]})
+    verifie(r.status_code == 400, f"la route le refuse aussi ({r.status_code})")
+    r = CLIENT.post(f"/api/outfits/create?character={CA}",
+                    json={"label": "Nuit", "pieces": [{"text": "a robe", "slot": "onepiece"},
+                                                      {"text": "slippers"}]})
+    verifie(r.status_code == 200 and r.json()["outfit"]["pieces"][0].get("slot") == "onepiece"
+            and "slot" not in next(o for o in propres(CA) if o["key"] == "nuit")["pieces"][1],
+            f"par la route : l'emplacement donne est garde, l'absent reste absent ({r.status_code})")
+
 finally:
     for c in (CA, CA2, CB):
         shutil.rmtree(OFM / "CHARACTERS" / c, ignore_errors=True)
