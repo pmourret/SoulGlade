@@ -322,6 +322,15 @@ try:
             and "slot" not in next(o for o in propres(CA) if o["key"] == "nuit")["pieces"][1],
             f"par la route : l'emplacement donne est garde, l'absent reste absent ({r.status_code})")
 
+    # La meme liste vit dans l'ecran : lue dans le fichier, jamais recopiee.
+    import re                                               # noqa: E402
+    table = (AUTOMATION / "web" / "ui" / "src" / "screens" / "bank" / "outfits"
+             / "outfitSlots.ts").read_text(encoding="utf-8")
+    bloc = table[table.index("export const SLOTS"):table.index("export const ZONES")]
+    ecran = tuple(re.findall(r"key: '([a-z_]+)'", bloc))
+    verifie(ecran == tenues.EMPLACEMENTS,
+            f"EMPLACEMENTS est la table de outfitSlots.ts, dans le meme ordre ({len(ecran)} cles)")
+
 finally:
     for c in (CA, CA2, CB):
         shutil.rmtree(OFM / "CHARACTERS" / c, ignore_errors=True)

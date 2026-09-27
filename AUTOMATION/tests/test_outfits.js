@@ -45,10 +45,23 @@ const LABEL = 'Tenue de fumigation';
   dire(await page.isVisible('#bankView [data-vue="outfits"]'), 'l\'onglet « Tenues » est là');
 
   console.log('\n[2] créer une tenue de deux pièces écrites');
-  await page.click('#btnOutfitNew');
+  /* Design-pass tenues: with no outfit the new sheet is already open and
+     « Créer la tenue » is the only call; « Nouvelle tenue » only exists next
+     to a list. A piece is written on its slot: the sweater on Haut (Buste),
+     the jeans on Bas (Taille et jambes) — Haut comes before Bas in the
+     prompt, so the sentence is the one it always was. */
+  if (avant.length === 0) {
+    dire(!(await page.isVisible('#btnOutfitNew')) && await page.isVisible('#outfitsEmpty'),
+         'aucune tenue : la fiche neuve est ouverte, un seul appel de création');
+  } else {
+    await page.click('#btnOutfitNew');
+  }
   await page.waitForSelector('#outfitInspector');
   await page.fill('#outfitLabel', LABEL);
-  for (const piece of ['a beige knit sweater', 'light blue denim jeans']) {
+  for (const [zone, slot, piece] of [['torso', 'top', 'a beige knit sweater'],
+                                     ['legs', 'bottom', 'light blue denim jeans']]) {
+    await page.click(`[data-outfit-zone="${zone}"]:visible`);
+    await page.click(`[data-outfit-slot="${slot}"] [data-slot-toggle]`);
     await page.fill('#outfitWritten', piece);
     await page.press('#outfitWritten', 'Enter');
   }

@@ -1,7 +1,7 @@
 /* State and mutations behind the outfit catalogue (IT-10 chantier 6).
 
    The four routes of `/api/outfits` and nothing else: OutfitsView composes,
-   this hook loads and mutates, OutfitInspector only shows (frontend.md, the
+   this hook loads and mutates, OutfitSheet only shows (frontend.md, the
    three roles). Every entry carries its `couche`, its `texte` — what a scene
    that wears it receives, resolved by the server — and its `erreur` when it
    does not resolve.
