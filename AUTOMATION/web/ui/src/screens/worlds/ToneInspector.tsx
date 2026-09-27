@@ -9,6 +9,8 @@
    a character's photos, and a world has no character: the workshop sets it
    for ONE character (its own adjustment), and the hint says so rather than
    suggesting the world's range is edited there. */
+import type { Enhancer } from '../../api/useEnhance'
+import { EnhanceControl } from '../../chrome/EnhanceControl'
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../app/routes'
@@ -32,6 +34,7 @@ export function ToneInspector({
   onPatch,
   onRemove,
   onClose,
+  enhancer,
 }: {
   /** What is on disk; the comparison that lights a modified field. */
   tone: WorldTone
@@ -43,6 +46,8 @@ export function ToneInspector({
   onPatch: (patch: Partial<TonePatch>) => void
   onRemove?: () => void
   onClose: () => void
+  /** « Améliorer » under the prompt fragment (IT-10 chantier 8). */
+  enhancer: Enhancer
 }) {
   const key = draft.key.trim()
   const keyProblem = !key
@@ -164,6 +169,13 @@ export function ToneInspector({
               value={draft.prompt_add}
               aria-describedby="tonePromptHint"
               onChange={(e) => onPatch({ prompt_add: e.target.value })}
+            />
+            <EnhanceControl
+              label="Fragment de prompt"
+              kind="tone"
+              value={draft.prompt_add}
+              onApply={(text) => onPatch({ prompt_add: text })}
+              enhancer={enhancer}
             />
             <span className={HINT} id="tonePromptHint">
               Ajouté au prompt de chaque image produite avec ce ton : une attitude, une

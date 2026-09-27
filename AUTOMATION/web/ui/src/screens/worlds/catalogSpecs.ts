@@ -9,6 +9,7 @@
    range that is not a text field, and it was delivered and audited on 25/09.
 
    PURE DATA AND FUNCTIONS (`.claude/rules/frontend.md`): no React, no API. */
+import type { EnhanceKind } from '../../api/useEnhance'
 import { ID_RE, TONE_KEY_RE, slugify, toneKey } from './slugify'
 import type { WorldIntention, WorldPlace, WorldScene } from './useWorldCatalog'
 import type { WorldTone } from './useWorldTones'
@@ -30,6 +31,8 @@ export type FieldSpec = {
   hint?: string
   /** For a select: the choices, value then label, « aucun » first. */
   options?: (ctx: CatalogContext) => [string, string][]
+  /** A prompt fragment « Améliorer » can rewrite, and its kind (IT-10 chantier 8). */
+  enhance?: EnhanceKind
 }
 
 export type CatalogSpec<T> = {
@@ -79,7 +82,7 @@ export const PLACE_SPEC: CatalogSpec<WorldPlace> = {
   titleNew: 'Nouveau lieu',
   fields: [
     { name: 'label', label: 'Nom du lieu', kind: 'text' },
-    { name: 'prompt', label: 'Décor', kind: 'textarea', hint: DECOR_HINT },
+    { name: 'prompt', label: 'Décor', kind: 'textarea', hint: DECOR_HINT, enhance: 'place' },
   ],
   toDraft: (place) => ({ id: str(place?.id), label: str(place?.label), prompt: str(place?.prompt) }),
   toEntry: (draft, previous) => ({
@@ -108,6 +111,7 @@ export const INTENTION_SPEC: CatalogSpec<WorldIntention> = {
       name: 'prompt_add',
       label: 'Fragment de prompt',
       kind: 'textarea',
+      enhance: 'intention',
       hint: 'Ajouté au prompt de chaque scène de cette intention, à tous les niveaux. Peut rester vide.',
     },
     {
@@ -172,6 +176,7 @@ export const SCENE_SPEC: CatalogSpec<WorldScene> = {
       name: 'prompt',
       label: 'Ce qui s’y passe',
       kind: 'textarea',
+      enhance: 'scene',
       hint: 'Action, cadrage, lumière. Jamais le visage, jamais la tenue : chaque personnage porte la sienne.',
     },
     {

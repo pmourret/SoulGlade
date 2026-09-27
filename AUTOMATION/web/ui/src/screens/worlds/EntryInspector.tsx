@@ -10,6 +10,8 @@
    the base and export folders; renaming it would orphan all of them, and
    nothing here repairs that. While creating, it follows the name until typed
    by hand — the proposal the world and tone ids already get (`slugify.ts`). */
+import type { Enhancer } from '../../api/useEnhance'
+import { EnhanceControl } from '../../chrome/EnhanceControl'
 import { Icon } from '../../chrome/Icon'
 import { selectOptions, type CatalogContext, type CatalogSpec, type Draft } from './catalogSpecs'
 
@@ -33,6 +35,7 @@ export function EntryInspector<T>({
   onPatch,
   onRemove,
   onClose,
+  enhancer,
 }: {
   spec: CatalogSpec<T>
   draft: Draft
@@ -50,6 +53,8 @@ export function EntryInspector<T>({
   /** Absent while creating: there is nothing on disk to retire yet. */
   onRemove?: () => void
   onClose: () => void
+  /** « Améliorer » under the fields whose spec names a kind. */
+  enhancer: Enhancer
 }) {
   const idKey = spec.idKey
   const id = (draft[idKey] ?? '').trim()
@@ -160,6 +165,15 @@ export function EntryInspector<T>({
                   {field.label}
                 </label>
                 {control}
+                {field.enhance && (
+                  <EnhanceControl
+                    label={field.label}
+                    kind={field.enhance}
+                    value={draft[field.name] ?? ''}
+                    onApply={(text) => onPatch({ [field.name]: text })}
+                    enhancer={enhancer}
+                  />
+                )}
                 {field.hint && (
                   <span className={HINT} id={hintId}>
                     {field.hint}

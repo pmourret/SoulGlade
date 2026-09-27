@@ -9,7 +9,8 @@
      4. TAPER dans le champ retire une proposition devenue sans objet ;
      5. UN ÉCHEC s'affiche avec sa cause (`role="alert"`) ;
      6. COMFYUI HORS LIGNE : le bouton est désactivé ;
-     7. RIEN N'EST ÉCRIT : aucun enregistrement de banque, disque intact.
+     7. LE CATALOGUE DE MONDE : le décor d'un lieu s'améliore avec son type ;
+     8. RIEN N'EST ÉCRIT : aucun enregistrement, disque intact.
 
    AUCUN MODÈLE, AUCUNE DONNÉE MODIFIÉE. Le serveur de test tourne sans
    ComfyUI : `/api/enhance` est un bouchon réseau, et l'état système est
@@ -25,7 +26,7 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
 const FIELD = '#sceneInspector [data-f="prompt_base"]';
 const inField = sel => `#sceneInspector .f:has([data-f="prompt_base"]) ${sel}`;
 
-async function open(nav, { comfy }) {
+async function open(nav, { comfy, path = '/bank/scenes' }) {
   const page = await nav.newPage({ viewport: { width: 1500, height: 950 } });
   const errors = [];
   const sent = [];
@@ -40,7 +41,7 @@ async function open(nav, { comfy }) {
     if (r.status() >= 400 && !r.url().includes('/api/enhance')) errors.push(`HTTP ${r.status()} : ${r.url()}`);
   });
   page.on('request', r => {
-    if (r.method() === 'POST' && /\/api\/scenes(\?|$)/.test(r.url())) saves.push(r.url());
+    if (r.method() !== 'GET' && /\/api\/(scenes|worlds)(\/|\?|$)/.test(r.url())) saves.push(r.url());
   });
   await page.route('**/api/state?*', async (route) => {
     const real = await route.fetch();
@@ -53,7 +54,8 @@ async function open(nav, { comfy }) {
     const [status, body] = replies.shift() || [500, { ok: false, erreur: 'aucune réponse prévue' }];
     await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
   });
-  await page.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
+  await page.goto(BASE + path + '?character=lena', { waitUntil: 'networkidle' });
+  if (path !== '/bank/scenes') return { page, errors, sent, saves, replies };
   await page.click('#btnAddScene');
   await page.waitForSelector('#sceneInspector');
   await page.click('[data-tab="recap"]');
@@ -120,12 +122,29 @@ async function open(nav, { comfy }) {
   say(await off.page.isDisabled(inField('[data-enhance-run]')), 'bouton desactive sans ComfyUI');
   say(off.sent.length === 0, 'aucune requete partie');
 
-  console.log('\n[7] rien n est ecrit');
-  say(saves.length === 0 && off.saves.length === 0, 'aucun enregistrement de banque');
+  console.log('\n[7] le catalogue de monde : le decor d un lieu');
+  const world = await open(nav, { comfy: true, path: '/worlds/slow-life/places' });
+  await world.page.locator('#worldPlaces [role="tab"]:has-text("Lieux")').click();
+  await world.page.click('#worldPlaces [data-entry-row]');
+  await world.page.waitForSelector('#entry-prompt');
+  const inDecor = sel => `div:has(> #entry-prompt) ${sel}`;
+  const decor = await world.page.inputValue('#entry-prompt');
+  world.replies.push([200, { ok: true, text: 'a sunlit room, plants on the sill', translated: false, lost: [] }]);
+  await world.page.click(inDecor('[data-enhance-run]'));
+  await world.page.waitForSelector(inDecor('[data-enhance-proposal]'));
+  await world.page.click(inDecor('[data-enhance-apply]'));
+  say(world.sent[0]?.kind === 'place' && world.sent[0]?.text === decor,
+      `type « place », texte du decor (${JSON.stringify(world.sent[0])})`);
+  say((await world.page.inputValue('#entry-prompt')) === 'a sunlit room, plants on the sill',
+      'Appliquer : dans le champ du lieu');
+
+  console.log('\n[8] rien n est ecrit');
+  const writes = [...saves, ...off.saves, ...world.saves];
+  say(writes.length === 0, `aucun enregistrement (${writes.join(', ')})`);
   say((await bank(page)) === before, 'banque sur le disque intacte');
 
-  console.log('\n[8] aucune erreur JS');
-  const all = [...errors, ...off.errors];
+  console.log('\n[9] aucune erreur JS');
+  const all = [...errors, ...off.errors, ...world.errors];
   say(all.length === 0, `${all.length} erreur(s)`);
   all.forEach(e => console.log('      ' + e.slice(0, 150)));
 

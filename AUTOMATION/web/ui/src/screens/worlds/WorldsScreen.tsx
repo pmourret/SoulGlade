@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
+import { useEnhancer } from '../../api/useEnhance'
 import { useChrome } from '../../chrome/ChromeContext'
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { useRegisterPendingSave, type PendingSave } from '../../chrome/PendingSaveContext'
@@ -47,6 +48,7 @@ const NOUNS = {
 } as const
 
 export function WorldsScreen() {
+  const enhancer = useEnhancer()
   const { worldId } = useParams<{ worldId: string }>()
   const navigate = useNavigate()
   const location = useLocation()
@@ -452,6 +454,7 @@ export function WorldsScreen() {
                   creating={toneCatalogue.creatingNew}
                   takenKeys={toneCatalogue.creatingNew ? (toneList.tones ?? []).map((t) => t.key) : []}
                   onPatch={toneCatalogue.patch}
+                  enhancer={enhancer}
                   onRemove={
                     toneCatalogue.creatingNew ? undefined : () => void toneCatalogue.remove(toneCatalogue.selected!.key)
                   }
@@ -474,6 +477,7 @@ export function WorldsScreen() {
                 takenIds={editor.creatingNew ? takenIds : []}
                 preview={tab === 'scenes' ? composedPrompt(editor.draft, places.entries) : undefined}
                 onPatch={editor.patch}
+                enhancer={enhancer}
                 onRemove={editor.creatingNew ? undefined : () => void editor.remove(editor.selectedId!)}
                 onClose={() => void onClose()}
               />

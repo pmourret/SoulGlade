@@ -16,6 +16,7 @@
    tone is created with its world (Référentiel › Mondes, onglet Tons). Here a
    character ADJUSTS one: its expression range, and — through `ToneTextCard` —
    its own label and prompt fragment, with the way back to the world's. */
+import { useEnhancer } from '../../api/useEnhance'
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 
@@ -86,6 +87,7 @@ function ToneWorkshopInner({
   const { open: openLightbox } = useLightbox()
   const { world, bank } = useScenes()
   const toneText = useToneText()
+  const enhancer = useEnhancer()
   const toneTrial = useRenderTrial('/api/tones/essai')
   const {
     tone, params, dirty, reset,
@@ -321,6 +323,7 @@ function ToneWorkshopInner({
             world={world}
             onAdjust={(fields) => toneText.adjust(currentRow.key, fields)}
             onRevert={() => toneText.revert(currentRow.key)}
+            enhancer={enhancer}
           />
         )}
         {currentRow && (

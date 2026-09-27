@@ -13,6 +13,8 @@
    the world, and the link says so. Its own immediate save, NOT the chrome's
    banner: the banner already carries the expression range, and one banner for
    two drafts would save both on one Ctrl S. */
+import type { Enhancer } from '../../api/useEnhance'
+import { EnhanceControl } from '../../chrome/EnhanceControl'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -28,11 +30,14 @@ const LAYER_TEXT: Record<ToneRow['couche'], string> = {
 
 export function ToneTextCard({
   tone, world, onAdjust, onRevert,
+  enhancer,
 }: {
   tone: ToneRow
   world: { id: string; label: string } | null
   onAdjust: (fields: ToneTextFields) => Promise<string | null>
   onRevert: () => Promise<string | null>
+  /** « Améliorer » under the fragment (IT-10 chantier 8). */
+  enhancer: Enhancer
 }) {
   const [editing, setEditing] = useState<{ label: string; prompt_add: string } | null>(null)
   const [busy, setBusy] = useState(false)
@@ -106,6 +111,13 @@ export function ToneTextCard({
             className="min-h-[64px] resize-y"
             value={editing.prompt_add}
             onChange={(e) => setEditing({ ...editing, prompt_add: e.target.value })}
+          />
+          <EnhanceControl
+            label="Fragment de prompt"
+            kind="tone"
+            value={editing.prompt_add}
+            onApply={(text) => setEditing({ ...editing, prompt_add: text })}
+            enhancer={enhancer}
           />
           <span className="text-[11.5px] text-dim2">
             Écrit pour ce personnage seulement. L'essai de rendu ci-dessous montre ce que ce
