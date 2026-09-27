@@ -4,7 +4,7 @@ liste ; le LIEU aussi, et son decor n'est jamais reecrit par le modele : il
 rejoint la scene au lancement (ADR-0027, IT-11 chantier 6).
 
 Utilise le modele de langage local deja present dans ComfyUI (noeud coeur
-`TextGenerate` alimente par `qwen3vl_4b_fp8_scaled`). Rien ne sort de la machine,
+`TextGenerate`, modele regle dans PLATFORM/llm.json). Rien ne sort de la machine,
 aucune API payante.
 
 Le resultat est une PROPOSITION : le runner ne l'enregistre pas, l'interface
@@ -14,8 +14,6 @@ import json
 import re
 import time
 import urllib.request
-
-CLIP_MODEL = "qwen3vl_4b_fp8_scaled.safetensors"
 
 SYSTEM = """You are a scene writer for a photo series about one recurring model.
 The user describes in French what they want to show. You output SCENE PROMPTS

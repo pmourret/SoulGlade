@@ -1760,6 +1760,58 @@
         }
       }
     },
+    "/api/enhance": {
+      "post": {
+        "summary": "Proposer une version améliorée d'un fragment de prompt",
+        "description": "One button, three steps (`enhance.enhance`): a French fragment is\ntranslated, then improved for its kind; an edit instruction is only\ntranslated. Takes no character: the model sees the fragment and nothing\nelse. Writes nothing, the user accepts the proposal where the field lives.\nExecutor + broad except, see backend.md.",
+        "operationId": "enhance_fragment_api_enhance_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnhanceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnhanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ComfyUI hors ligne"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/expression/preview": {
       "post": {
         "summary": "Aperçu d'une expression sur une photo déjà produite, sans l'enregistrer",
@@ -7301,6 +7353,58 @@
         ],
         "title": "EditToolState",
         "description": "`nsfw_batch.edit_tool_state()`. Two conditions, never one (J7): the\ncharacter's registry is armed AND its pack declares an edit graph.\n`reason` is the text the interface shows instead of the missing step."
+      },
+      "EnhanceRequest": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "title": "Kind"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "EnhanceRequest",
+        "description": "A fragment to improve (IT-10 chantier 8). `kind` is a key of\n`enhance.KINDS`, or \"edit\" for an edit instruction, which is only\ntranslated. FORBIDS extra keys: the model never receives a character, so\nnever its identity anchor (invariant 3) — a payload that tries is refused\nrather than silently cut."
+      },
+      "EnhanceResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "text": {
+            "type": "string",
+            "title": "Text"
+          },
+          "translated": {
+            "type": "boolean",
+            "title": "Translated"
+          },
+          "lost": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Lost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "text",
+          "translated",
+          "lost"
+        ],
+        "title": "EnhanceResponse",
+        "description": "A proposal, written nowhere. `translated` says the input was not in\nEnglish: the interface then shows both texts side by side, since a word\ndiff between two languages means nothing. `lost` lists the words of the\ninput the proposal still drops after one retry that named them: shown,\nnever hidden, and the user decides."
       },
       "ErrorResponse": {
         "properties": {

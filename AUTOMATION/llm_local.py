@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 """Parler au modele de langage LOCAL, celui que ComfyUI sert deja.
 
-Le noeud coeur `TextGenerate`, alimente par `qwen3vl_4b_fp8_scaled` (declare au
-manifeste, ADR-0022), est un modele VISION-LANGAGE : son entree `image` est
+Le noeud coeur `TextGenerate`, alimente par le modele de PLATFORM/llm.json
+(`qwen3vl_4b_fp8_scaled` par defaut, declare au manifeste, ADR-0022), est un
+modele VISION-LANGAGE : son entree `image` est
 optionnelle. Le meme appel fait donc la reformulation et la lecture d'image.
 Rien ne sort de la machine, aucune API payante, aucune dependance de plus.
 
@@ -23,6 +24,7 @@ DOCS/cadrage/2026-09-10-legendage-du-jeu-d-entrainement.md.
 import json
 import shutil
 import time
+import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
@@ -31,10 +33,12 @@ import env_config
 
 COMFY_INPUT = env_config.comfyui_input()
 
-# Le modele servi par ComfyUI. `type="krea2"` vient de compose.build_graph :
-# c'est le chargeur que ce CLIP attend, pas un choix.
-CLIP_MODEL = "qwen3vl_4b_fp8_scaled.safetensors"
-CLIP_TYPE = "krea2"
+# Le modele servi par ComfyUI, regle a la couche plateforme (IT-10 chantier 8) :
+# le changer dans PLATFORM/llm.json le change pour tous les appelants.
+SETTINGS_PATH = Path(__file__).resolve().parents[1] / "PLATFORM" / "llm.json"
+_SETTINGS = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+CLIP_MODEL = _SETTINGS["model"]
+CLIP_TYPE = _SETTINGS["loader_type"]
 
 # Prefixe des copies temporaires dans ComfyUI/input. Meme convention que
 # expression.py : reconnaissable, et nettoye par l'appelant.
@@ -85,6 +89,12 @@ def _soumettre(graphe, comfy_url, timeout, client_id):
         headers={"Content-Type": "application/json"})
     try:
         pid = json.load(urllib.request.urlopen(req, timeout=60))["prompt_id"]
+    except urllib.error.HTTPError as e:
+        corps = e.read().decode("utf-8", "replace")
+        if "clip_name" in corps:
+            raise LLMError(f"modele de langage « {CLIP_MODEL} » absent de ComfyUI "
+                           f"(dossier text_encoders) — reglage : PLATFORM/llm.json") from e
+        raise LLMError(f"soumission refusee par ComfyUI : {corps[:200]}") from e
     except Exception as e:                                   # noqa: BLE001
         raise LLMError(f"soumission refusee par ComfyUI : {e}") from e
     t0 = time.time()

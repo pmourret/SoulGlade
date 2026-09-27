@@ -750,6 +750,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/enhance": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proposer une version améliorée d'un fragment de prompt
+         * @description One button, three steps (`enhance.enhance`): a French fragment is
+         *     translated, then improved for its kind; an edit instruction is only
+         *     translated. Takes no character: the model sees the fragment and nothing
+         *     else. Writes nothing, the user accepts the proposal where the field lives.
+         *     Executor + broad except, see backend.md.
+         */
+        post: operations["enhance_fragment_api_enhance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/expression/preview": {
         parameters: {
             query?: never;
@@ -3010,6 +3034,41 @@ export interface components {
             reason?: string | null;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * EnhanceRequest
+         * @description A fragment to improve (IT-10 chantier 8). `kind` is a key of
+         *     `enhance.KINDS`, or "edit" for an edit instruction, which is only
+         *     translated. FORBIDS extra keys: the model never receives a character, so
+         *     never its identity anchor (invariant 3) — a payload that tries is refused
+         *     rather than silently cut.
+         */
+        EnhanceRequest: {
+            /** Kind */
+            kind: string;
+            /**
+             * Text
+             * @default
+             */
+            text: string;
+        };
+        /**
+         * EnhanceResponse
+         * @description A proposal, written nowhere. `translated` says the input was not in
+         *     English: the interface then shows both texts side by side, since a word
+         *     diff between two languages means nothing. `lost` lists the words of the
+         *     input the proposal still drops after one retry that named them: shown,
+         *     never hidden, and the user decides.
+         */
+        EnhanceResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Text */
+            text: string;
+            /** Translated */
+            translated: boolean;
+            /** Lost */
+            lost: string[];
         };
         /**
          * ErrorResponse
@@ -7039,6 +7098,55 @@ export interface operations {
             };
             /** @description Le composeur a échoué */
             500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    enhance_fragment_api_enhance_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnhanceRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnhanceResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description ComfyUI hors ligne */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

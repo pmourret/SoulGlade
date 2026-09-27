@@ -1,0 +1,13 @@
+{
+  "model": "qwen3vl_4b_fp8_scaled.safetensors",
+  "loader_type": "krea2",
+  "_notes": [
+    "Le modele de langage local de toute la plateforme : composeur, legendeur,",
+    "analyse d'assets, texte de pose, amelioration des prompts. ComfyUI le",
+    "charge par CLIPLoader (dossier text_encoders) et le fait parler par",
+    "TextGenerate. Le changer ici suffit ; un modele neuf se declare au",
+    "manifeste (invariant 12). `loader_type` est le `type` que CLIPLoader",
+    "attend pour ce modele. Choisi et mesure le 27/09 :",
+    "DOCS/cadrage/2026-09-27-it10-c8-amelioration-ia.md"
+  ]
+}

@@ -12,11 +12,16 @@ the problems they return into a status code.
 """
 import asyncio
 import json
+import logging
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 import compose as composer
+import enhance as enhancer
+import env_config
+import llm_local
+import logs
 import nsfw_batch
 import pose_tools
 import runner as lb
@@ -25,8 +30,8 @@ import worlds
 
 from ..dependencies import RequiredCharacterId
 from ..schemas.bank import (
-    ComposeRequest, ComposeResponse, CreativeResponse, SceneBankRejected,
-    SceneBankResponse, SceneBankSaveRequest, ToneKeyRequest, ToneTextRequest,
+    ComposeRequest, ComposeResponse, CreativeResponse, EnhanceRequest, EnhanceResponse,
+    SceneBankRejected, SceneBankResponse, SceneBankSaveRequest, ToneKeyRequest, ToneTextRequest,
 )
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
 from ..services.bank import (
@@ -38,6 +43,7 @@ from ..services.creative import (
 )
 
 router = APIRouter(responses=ERROR_RESPONSES)
+LOG = logging.getLogger("bank")
 
 
 
@@ -290,3 +296,27 @@ async def compose_scenes(payload: ComposeRequest, character_id: RequiredCharacte
         existing.add(sc["id"])
     ss.push_log(f"composeur : {len(scenes)} scene(s) proposee(s) pour « {brief[:60]} »")
     return {"ok": True, "scenes": scenes, "brut": raw[:2000]}
+
+
+@router.post("/api/enhance", response_model=EnhanceResponse,
+             responses={503: {"description": "ComfyUI hors ligne"}},
+             summary="Proposer une version améliorée d'un fragment de prompt")
+async def enhance_fragment(payload: EnhanceRequest):
+    """One button, three steps (`enhance.enhance`): a French fragment is
+    translated, then improved for its kind; an edit instruction is only
+    translated. Takes no character: the model sees the fragment and nothing
+    else. Writes nothing, the user accepts the proposal where the field lives.
+    Executor + broad except, see backend.md."""
+    if not await ss.comfy_alive():
+        return JSONResponse({"ok": False, "erreur": "ComfyUI hors ligne"},
+                            status_code=503)
+    try:
+        result = await asyncio.get_running_loop().run_in_executor(
+            None, enhancer.enhance, payload.kind, payload.text, env_config.comfy_url())
+    except (ValueError, llm_local.LLMError) as e:
+        return JSONResponse({"ok": False, "erreur": str(e)}, status_code=400)
+    except Exception as e:                                   # noqa: BLE001
+        msg = logs.report(LOG, e, "amélioration d'un fragment")
+        ss.push_log(msg, journal=False)
+        return JSONResponse({"ok": False, "erreur": msg}, status_code=500)
+    return {"ok": True, **result}

@@ -180,6 +180,30 @@ class ComposeRequest(BaseModel):
     count: Optional[int] = None
 
 
+class EnhanceRequest(BaseModel):
+    """A fragment to improve (IT-10 chantier 8). `kind` is a key of
+    `enhance.KINDS`, or "edit" for an edit instruction, which is only
+    translated. FORBIDS extra keys: the model never receives a character, so
+    never its identity anchor (invariant 3) — a payload that tries is refused
+    rather than silently cut."""
+    model_config = ConfigDict(extra="forbid")
+
+    kind: str
+    text: str = ""
+
+
+class EnhanceResponse(BaseModel):
+    """A proposal, written nowhere. `translated` says the input was not in
+    English: the interface then shows both texts side by side, since a word
+    diff between two languages means nothing. `lost` lists the words of the
+    input the proposal still drops after one retry that named them: shown,
+    never hidden, and the user decides."""
+    ok: bool
+    text: str
+    translated: bool
+    lost: list[str]
+
+
 class ComposeResponse(BaseModel):
     """Proposed scenes, ready to be reviewed — never written to the bank on
     their own. `brut` is the LLM's raw answer, truncated to 2000 characters, so

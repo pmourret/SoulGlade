@@ -219,7 +219,7 @@ instruire, dans cet ordre (règle 6 : les données avant l'hypothèse) :
 |---|---|---|
 | 1 | **Le service** | `AUTOMATION/enhance.py` : détection de la langue, traduction, amélioration par type, lecture de la réponse JSON. Le réglage `PLATFORM/llm.json`. Une route `POST /api/enhance` qui reçoit un type, un texte et le genre du sujet, et rend le texte proposé et s'il y a eu traduction. |
 | 2 | **Le bouton sur les fragments** | Dans `PromptField` (3 sites du composeur) et sur les champs des familles A et B-10. Comparaison `WordDiff`, ou côte à côte après une traduction. Accepter ou laisser. |
-| 3 | **La scène entière** | `AiPanel` : consigne, raccourcis, les trois fragments ensemble ou un seul. |
+| 3 | **La scène entière** | `AiPanel` : consigne, raccourcis, les trois fragments ensemble ou un seul. **Rouvre la méthode, sur le modèle de Maestro** (décidé le 27/09) : dialecte du modèle d'image porté par le pack, consigne libre prioritaire, et le cas de Qwen Image Edit pour la famille D. |
 | 4 | **Les consignes d'édition** | Le même bouton sur `EditStep` et `AiRetouchPanel`, en traduction seule. |
 | 5 | **Audit UX/UI vérifié en vrai** | Sur chaque écran touché (skill `audit-ux-ui`). |
 
@@ -229,6 +229,70 @@ fragment de génération, interdire le sujet (« She ») et interdire tout
 ajout qui n'est pas une précision de ce qui est écrit. Le genre du sujet
 vient du personnage, jamais de l'ancre ; le champ qui le porte reste à
 identifier.
+
+### Étape 1 : la consigne sur le banc (27/09, trois itérations)
+
+| Défaut du premier banc | Remède | Résultat |
+|---|---|---|
+| Impératif (« Stand upright ») | règle et exemple dans la consigne | corrigé |
+| « She » en tête | règle dans la consigne | corrigé |
+| Style télégraphique | exemple de phrase naturelle | corrigé |
+| « sa chemise » → « her shirt » | règle, puis exemple : **sans effet** | corrigé par construction : `son/sa/ses` deviennent `le/la/les` avant le modèle |
+| Consigne d'édition gonflée | traduction seule | corrigé par construction |
+| Idées perdues | température 0,6 → 0,2 | **reste** : « naked », « sensual », « just after a shower » disparaissent, systématiquement (deux passages identiques) |
+| Décor inventé (« dust motes, exposed brick wall ») | règle « rien d'ajouté » | **reste** |
+
+Les pertes touchent les mots adultes : `qwen3vl_4b` ne refuse pas, il
+adoucit en réécrivant. Trois itérations faites : la suite est un choix de
+Pierre.
+
+**Tranché le 27/09 (Pierre).**
+- **Les pertes se contrôlent dans le code (option A).** Chaque mot de
+  l'entrée, hors mots outils et pronoms, doit se retrouver dans la sortie,
+  comparé par sa racine. S'il en manque, le modèle est relancé une fois, en
+  nommant les mots oubliés. Ce qui manque encore part dans `lost`, que
+  l'interface signale.
+- **Les ajouts, eux, se montrent dans la comparaison**, sans contrôle.
+
+Résultat sur le banc : « naked » et « just after a shower » reviennent
+après la relance. Reste signalée une vraie perte : « sensual ». Restent
+aussi signalés des synonymes : « raised » devenu « lifted », « looking »
+devenu « head turned », le verbe « coming ». Une relance ajoute environ 2 s,
+pour 6 s au plus.
+
+**Emprunté à Maestro (27/09).** Son guide pour le contenu adulte
+(`services/llm_guides/enhance/nsfw_shared.md`) porte la règle « ne jamais
+édulcorer ni adoucir ». Ajoutée seule à la consigne, elle garde « naked »,
+« sensual », « looking » et « raised » dès le premier appel. Il ne reste
+qu'un signalement, « coming ». Le décor inventé, lui, reste et s'allonge
+encore dans la cuisine.
+
+### Ce que Maestro fait d'autre, et qui n'entre pas ici
+
+- **Un dialecte par modèle d'image** (`llm_guides/dialect/`, `enhance/`).
+  Le guide Flux demande de la prose, jamais des listes séparées par des
+  virgules. Il interdit aussi les mots de qualité (« 8k », « masterpiece »).
+  Chez nous, c'est la **couche pack** qui connaît la famille du modèle
+  (invariant 7). Mais les fragments sont assemblés par l'assembleur verrouillé
+  à l'octet (invariant 3). Le dialecte vaut donc pour la scène entière
+  (étape 3), ou pour un chantier sur l'assemblage, pas pour un fragment isolé.
+- **Le dialecte de Qwen Image Edit** remet en cause « traduction seule »
+  pour la famille D. Selon Maestro, ce modèle ignore les formules du genre
+  « keep everything else identical ». Il faut aussi lui décrire ce qui
+  devient visible quand un vêtement est retiré, parce qu'il ne le devine
+  pas. À mesurer sur de vraies éditions avant de rouvrir la décision du
+  27/09.
+- **Image fixe : pas de verbe de mouvement** (« walking », « reaching »)
+  dans une scène ou une pose. C'est une règle de consigne, à mesurer au banc.
+- **Texte dans l'image entre guillemets** pour Flux, spécifique au pack,
+  comme le dialecte.
+- **Une consigne libre ajoutée au texte** : chez Maestro, `@` ajoute une
+  consigne prioritaire et `@@` remplace la consigne de base. C'est la
+  consigne de l'étape 3 (`AiPanel`).
+- **Des nettoyages déterministes après le modèle** (vêtements, remplissage
+  narratif, répétitions). C'est la même philosophie que notre contrôle des
+  pertes et nos possessifs : garantir dans le code ce que la consigne n'obtient
+  pas du modèle.
 
 ## Hors périmètre
 
