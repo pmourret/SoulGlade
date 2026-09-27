@@ -10,6 +10,8 @@
    library; the asset piece reads its fragment when the scene is launched, so
    correcting the asset corrects every outfit that wears it. The order of the
    pieces is the order of the prompt. */
+import type { Enhancer } from '../../../api/useEnhance'
+import { EnhanceControl } from '../../../chrome/EnhanceControl'
 import { useEffect, useState } from 'react'
 
 import type { LibraryPick } from '../assets/libraryPicks'
@@ -37,6 +39,7 @@ const samePieces = (a: OutfitPiece[], b: OutfitPiece[]) =>
 
 export function OutfitInspector({
   outfit, garments, busy, worldLabel, onSave, onCreate, onDelete,
+  enhancer,
 }: {
   /** `null` = a new outfit, not yet written anywhere. */
   outfit: OutfitEntry | null
@@ -49,6 +52,8 @@ export function OutfitInspector({
   onSave: (fields: { label: string; pieces: OutfitPiece[] }, toWorld: boolean) => void
   onCreate: (label: string, pieces: OutfitPiece[], toWorld: boolean) => void
   onDelete: () => void
+  /** « Améliorer » on the piece being written (IT-10 chantier 8). */
+  enhancer: Enhancer
 }) {
   const [label, setLabel] = useState(outfit?.label ?? '')
   const [pieces, setPieces] = useState<OutfitPiece[]>(outfit?.pieces ?? [])
@@ -214,6 +219,14 @@ export function OutfitInspector({
             Ajouter
           </button>
         </div>
+        <EnhanceControl
+          label="pièce écrite"
+          kind="outfit"
+          value={written}
+          onApply={setWritten}
+          enhancer={enhancer}
+          disabled={busy}
+        />
 
         {garments.length > 0 && (
           <div className="flex flex-col gap-[4px]">

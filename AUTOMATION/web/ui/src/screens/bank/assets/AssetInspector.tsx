@@ -10,6 +10,8 @@
    THE FRAGMENT IS A PROPOSAL. The vision model wrote it and it is sometimes
    wrong; it is an ordinary editable field, and « Analyser l'image » rewrites
    it on demand — never in the background, never over an edit in progress. */
+import type { EnhanceKind, Enhancer } from '../../../api/useEnhance'
+import { EnhanceControl } from '../../../chrome/EnhanceControl'
 import { useEffect, useState } from 'react'
 
 import type { AssetClass, AssetEntry } from './useAssetLibrary'
@@ -30,8 +32,14 @@ const LAYER: Record<string, { label: string; hint: string }> = {
   },
 }
 
+/* The kind of a fragment follows the scene field its class lands in, never
+   the class's own name (invariant 7): a class with no destination — a
+   reference — has nothing to improve for. */
+const ENHANCE_BY_FIELD: Record<string, EnhanceKind | undefined> = { wardrobe: 'outfit', prompt: 'place' }
+
 export function AssetInspector({
   asset, classes, busy, comfy, src, onSave, onAnalyse, onDelete,
+  enhancer,
 }: {
   asset: AssetEntry
   classes: AssetClass[]
@@ -43,9 +51,12 @@ export function AssetInspector({
   onSave: (fields: { label?: string; fragment?: string }, auMonde: boolean) => void
   onAnalyse: () => void
   onDelete: () => void
+  /** « Améliorer » on the fragment, for a class that lands in a scene field. */
+  enhancer: Enhancer
 }) {
   const [label, setLabel] = useState(asset.label ?? '')
   const [fragment, setFragment] = useState(asset.fragment ?? '')
+  const enhanceKind = ENHANCE_BY_FIELD[classes.find((c) => c.key === asset.classe)?.champ ?? '']
   /* Only offered on an asset the world owns — and OFF by default: the common
      gesture is adjusting it here, correcting the world is the deliberate one. */
   const [toWorld, setToWorld] = useState(false)
@@ -98,6 +109,16 @@ export function AssetInspector({
           placeholder="aucun fragment — « Analyser l'image » en propose un"
           onChange={(event) => setFragment(event.target.value)}
         />
+        {enhanceKind && (
+          <EnhanceControl
+            label="Fragment de prompt"
+            kind={enhanceKind}
+            value={fragment}
+            onApply={setFragment}
+            enhancer={enhancer}
+            disabled={busy}
+          />
+        )}
         <span className="text-[11.5px] text-dim2">
           Ce que l'asset ajoute au prompt. Proposé par le modèle local, corrigeable ici.
         </span>

@@ -8,6 +8,8 @@
    scrolls: adjusting a direction and not seeing the sentence move would hide
    the one thing the sheet is for. Rewritten by hand, the sentence wins and the
    sheet says so; it no longer overwrites it. */
+import type { Enhancer } from '../../../api/useEnhance'
+import { EnhanceControl } from '../../../chrome/EnhanceControl'
 import { useEffect, useMemo, useState } from 'react'
 
 import { LightEffectsField } from './LightEffectsField'
@@ -47,6 +49,7 @@ const blank = (setup: Setup) => same(setup, null)
 export function LightInspector({
   light, busy, marker, worldLabel, vocabulary, customEffects,
   onSave, onCreate, onDelete, onCreateEffect, onDeleteEffect, onDraft,
+  enhancer,
 }: {
   /** `null` = a new light, not yet written anywhere. */
   light: LightEntry | null
@@ -67,6 +70,8 @@ export function LightInspector({
   onDeleteEffect: (effect: LightEffectEntry) => void
   /** Told of every change of the sheet, for the render trial. */
   onDraft: (draft: LightDraft) => void
+  /** « Améliorer » on the hand-written text (IT-10 chantier 8). */
+  enhancer: Enhancer
 }) {
   const [label, setLabel] = useState(light?.label ?? '')
   const [setup, setSetup] = useState<Setup>(normal(light?.setup))
@@ -247,6 +252,14 @@ export function LightInspector({
               disabled={busy}
               aria-describedby="lightTextHint"
               onChange={(event) => setHand(event.target.value)}
+            />
+            <EnhanceControl
+              label="Texte écrit à la main"
+              kind="light"
+              value={hand}
+              onApply={setHand}
+              enhancer={enhancer}
+              disabled={busy}
             />
             <span className="text-[11.5px] text-dim2" id="lightTextHint" data-light-hand>
               Texte écrit à la main : la fiche ne l'écrase plus. En anglais, comme le reste du prompt.

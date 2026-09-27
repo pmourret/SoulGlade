@@ -11,6 +11,7 @@
    holding both hand close-ups, the selection and the tools. Every canvas
    shares the SAME pose and selection: dragging a fingertip in a close-up and
    watching it move on the body is one edit, not a sync between two. */
+import { useEnhancer } from '../../api/useEnhance'
 import { useState, type ReactNode } from 'react'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 
@@ -54,6 +55,7 @@ function PoseEditorInner({
   source: PoseEditorSource
   createTemplateIntent?: boolean
 }) {
+  const enhancer = useEnhancer()
   const {
     pose, name, loading, loadError, saving, dirty, update, applyAction, save, saveAsPreset,
     undo, redo, canUndo, canRedo, text, textStale, setText, rewriteText, rewriting,
@@ -267,6 +269,7 @@ function PoseEditorInner({
           {/* First: after a retouch its « à revoir » must be seen without
               scrolling past the two hand views (audit 26/09, 1024 px). */}
           <PoseTextPanel
+            enhancer={enhancer}
             text={text}
             stale={textStale}
             rewriting={rewriting}

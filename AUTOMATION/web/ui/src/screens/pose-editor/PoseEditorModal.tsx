@@ -15,6 +15,7 @@
    page (the composer's own pose grid, `PosesView`) may keep showing the
    pre-edit render until the page reloads or that `<img>` remounts. Not fixed
    here: no caller needs it yet — revisit if it turns out to matter. */
+import { useEnhancer } from '../../api/useEnhance'
 import { useLocation, useNavigate } from 'react-router-dom'
 
 import { PATHS } from '../../app/routes'
@@ -39,6 +40,7 @@ export function PoseEditorModal({
       plain overwrite, a fresh one otherwise. */
   onSaved: (name: string) => void
 }) {
+  const enhancer = useEnhancer()
   const {
     pose, name, loading, loadError, saving, dirty, update, save, undo, redo, canUndo, canRedo,
     text, textStale, setText, rewriteText, rewriting,
@@ -144,6 +146,7 @@ export function PoseEditorModal({
 
       {pose && (
         <PoseTextPanel
+          enhancer={enhancer}
           inline
           text={text}
           stale={textStale}

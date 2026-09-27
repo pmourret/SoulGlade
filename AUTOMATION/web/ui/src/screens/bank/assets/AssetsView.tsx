@@ -13,6 +13,7 @@
    A GRID AND NOT A TABLE, which is the one departure: a garment or a décor is
    recognised by its image, where a skeleton is recognised by its label and
    its usage count. */
+import { useEnhancer } from '../../../api/useEnhance'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useChrome } from '../../../chrome/ChromeContext'
@@ -35,6 +36,7 @@ const KEPT_HINT =
   "L'image est gardée dans la bibliothèque (INPUTS/ASSETS/, hors dépôt) — c'est ce qui la rend réutilisable d'une scène à l'autre"
 
 export function AssetsView({ nav }: { nav: ReactNode }) {
+  const enhancer = useEnhancer()
   const api = useApi()
   const toast = useToast()
   const confirm = useConfirm()
@@ -344,6 +346,7 @@ export function AssetsView({ nav }: { nav: ReactNode }) {
               </button>
             )}
             <AssetInspector
+              enhancer={enhancer}
               asset={selectedAsset}
               classes={classes}
               busy={busyKeys.has(selectedAsset.key)}

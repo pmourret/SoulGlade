@@ -11,6 +11,7 @@
    `BankScreen`, the same list and 340 px inspector that becomes a drawer
    under 1100 px. The row says the text in full on two lines: a light is
    recognised by what it says. */
+import { useEnhancer } from '../../../api/useEnhance'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 import { useChrome } from '../../../chrome/ChromeContext'
@@ -30,6 +31,7 @@ import { useLights, type LightEffectEntry, type LightEntry, type LightFields } f
 const NEW = '\u0000new'
 
 export function LightsView({ nav }: { nav: ReactNode }) {
+  const enhancer = useEnhancer()
   const toast = useToast()
   const confirm = useConfirm()
   const { narrow } = useChrome()
@@ -275,6 +277,7 @@ export function LightsView({ nav }: { nav: ReactNode }) {
               </button>
             )}
             <LightInspector
+              enhancer={enhancer}
               light={selected === NEW ? null : selectedLight}
               busy={busy}
               marker={marker}

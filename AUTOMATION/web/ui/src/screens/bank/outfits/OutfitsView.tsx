@@ -11,6 +11,7 @@
    1100 px. A LIST AND NOT A GRID: an outfit is recognised by what it says,
    and what it says is the text a scene receives — shown on the row, in full
    on two lines. */
+import { useEnhancer } from '../../../api/useEnhance'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 
 import { useChrome } from '../../../chrome/ChromeContext'
@@ -28,6 +29,7 @@ import { useOutfits, type OutfitEntry, type OutfitPiece } from './useOutfits'
 const NEW = '\u0000new'
 
 export function OutfitsView({ nav }: { nav: ReactNode }) {
+  const enhancer = useEnhancer()
   const api = useApi()
   const toast = useToast()
   const confirm = useConfirm()
@@ -204,6 +206,7 @@ export function OutfitsView({ nav }: { nav: ReactNode }) {
               </button>
             )}
             <OutfitInspector
+              enhancer={enhancer}
               outfit={selected === NEW ? null : selectedOutfit}
               garments={garments}
               busy={busy}

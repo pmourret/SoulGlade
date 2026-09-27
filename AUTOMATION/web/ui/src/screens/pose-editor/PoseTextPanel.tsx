@@ -3,6 +3,8 @@
    extraction; after a retouch it is marked « à revoir », never rewritten in
    silence: the button rewrites it from the skeleton as it is now. Shared by
    the full screen (side panel) and the composer's modal (`inline`). */
+import type { Enhancer } from '../../api/useEnhance'
+import { EnhanceControl } from '../../chrome/EnhanceControl'
 import { useId, useState } from 'react'
 
 export function PoseTextPanel({
@@ -12,6 +14,7 @@ export function PoseTextPanel({
   onChange,
   onRewrite,
   inline = false,
+  enhancer,
 }: {
   text: string
   stale: boolean
@@ -20,6 +23,8 @@ export function PoseTextPanel({
   /** Resolves to an error to show, or null. */
   onRewrite: () => Promise<string | null>
   inline?: boolean
+  /** « Améliorer » on the pose text (IT-10 chantier 8). */
+  enhancer: Enhancer
 }) {
   const fieldId = useId()
   const [error, setError] = useState<string | null>(null)
@@ -54,6 +59,7 @@ export function PoseTextPanel({
           placeholder="ex : standing, left arm raised above the head"
           onChange={(event) => onChange(event.target.value)}
         />
+        <EnhanceControl label="Texte de la pose" kind="pose" value={text} onApply={onChange} enhancer={enhancer} />
         <p className="tiny mt-[4px] mb-0">
           {stale
             ? 'Le squelette a changé depuis que ce texte a été écrit.'

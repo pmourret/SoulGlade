@@ -218,7 +218,7 @@ instruire, dans cet ordre (règle 6 : les données avant l'hypothèse) :
 | # | Étape | Ce qu'elle livre |
 |---|---|---|
 | 1 | **Le service** | `AUTOMATION/enhance.py` : détection de la langue, traduction, amélioration par type, lecture de la réponse JSON. Le réglage `PLATFORM/llm.json`. Une route `POST /api/enhance` qui reçoit un type, un texte et le genre du sujet, et rend le texte proposé et s'il y a eu traduction. |
-| 2 | **Le bouton sur les fragments** | Dans `PromptField` (3 sites du composeur) et sur les champs des familles A et B-10. Comparaison `WordDiff`, ou côte à côte après une traduction. Accepter ou laisser. |
+| 2 | **Le bouton sur les fragments** | Dans `PromptField` (3 sites du composeur) et sur les champs des familles A et B-10. Comparaison `WordDiff`, ou côte à côte après une traduction. Accepter ou laisser. **Livré le 27/09.** Sur les tenues, le bouton ne porte que la pièce en cours d'écriture : une pièce déjà posée tient sur une ligne compacte, qu'un bloc de proposition casserait. |
 | 3 | **La scène entière** | `AiPanel` : consigne, raccourcis, les trois fragments ensemble ou un seul. **Rouvre la méthode, sur le modèle de Maestro** (décidé le 27/09) : dialecte du modèle d'image porté par le pack, consigne libre prioritaire, et le cas de Qwen Image Edit pour la famille D. |
 | 4 | **Les consignes d'édition** | Le même bouton sur `EditStep` et `AiRetouchPanel`, en traduction seule. |
 | 5 | **Audit UX/UI vérifié en vrai** | Sur chaque écran touché (skill `audit-ux-ui`). |
