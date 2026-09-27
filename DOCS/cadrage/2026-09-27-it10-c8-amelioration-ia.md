@@ -220,7 +220,7 @@ instruire, dans cet ordre (règle 6 : les données avant l'hypothèse) :
 | 1 | **Le service** | `AUTOMATION/enhance.py` : détection de la langue, traduction, amélioration par type, lecture de la réponse JSON. Le réglage `PLATFORM/llm.json`. Une route `POST /api/enhance` qui reçoit un type, un texte et le genre du sujet, et rend le texte proposé et s'il y a eu traduction. |
 | 2 | **Le bouton sur les fragments** | Dans `PromptField` (3 sites du composeur) et sur les champs des familles A et B-10. Comparaison `WordDiff`, ou côte à côte après une traduction. Accepter ou laisser. **Livré le 27/09.** Sur les tenues, le bouton ne porte que la pièce en cours d'écriture : une pièce déjà posée tient sur une ligne compacte, qu'un bloc de proposition casserait. |
 | 3 | **La scène entière** | `AiPanel` : consigne, raccourcis, les trois fragments ensemble ou un seul. **Rouvre la méthode, sur le modèle de Maestro** (décidé le 27/09) : dialecte du modèle d'image porté par le pack, consigne libre prioritaire, et le cas de Qwen Image Edit pour la famille D. **Livré le 27/09** : un appel par fragment, sans contexte ; « Proposer autre chose », portée, Appliquer en un seul geste annulable. À l'audit (étape 5) : les mots non repris sont en anglais sous un texte d'origine français. |
-| 3 bis | **Le moteur llama.cpp** | Décidé le 27/09 sur la comparaison de l'étape 3 : `PLATFORM/llm.json` choisit le moteur (ComfyUI ou `llama-server`). Installation par le manifeste, lancement, surveillance et place en VRAM ; Gemma 4 E4B heretic y devient le modèle par défaut. Cadrage à écrire avant le code. |
+| 3 bis | **Le moteur llama.cpp** | Décidé le 27/09 sur la comparaison de l'étape 3 : `PLATFORM/llm.json` choisit le moteur (ComfyUI ou `llama-server`). Installation par le manifeste, lancement, surveillance et place en VRAM ; Gemma 4 E4B heretic y devient le modèle par défaut. **Cadré le 27/09** (section « Étape 3 bis ») : ComfyUI et `qwen3vl_4b` en repli, cohabitation mesurée. |
 | 4 | **Les consignes d'édition** | Le même bouton sur `EditStep` et `AiRetouchPanel`, en traduction seule. |
 | 5 | **Audit UX/UI vérifié en vrai** | Sur chaque écran touché (skill `audit-ux-ui`). |
 
@@ -342,6 +342,94 @@ Avec les règles finales, Gemma l'emporte nettement, alors qu'avec les
 règles de l'étape 1 il perdait des idées. Le passer par défaut demande de
 brancher un serveur externe (`llama-server`) : à l'installer, le lancer, le
 surveiller, le déclarer, et gérer sa place en VRAM à côté de ComfyUI.
+
+### Étape 3 bis : le moteur `llama-server` (27/09)
+
+**Tranché par Pierre le 27/09.** `llama-server` devient le moteur de
+l'améliorateur, avec Gemma 4 E4B heretic. ComfyUI et `qwen3vl_4b` restent le
+repli. Écartés : écrire un moteur maison (il existerait en double, puisque
+ComfyUI a déjà le sien), et Gemma 4 officiel dans ComfyUI (mesure ci-dessous).
+
+**Ce qui a été mesuré le 27/09**, sur le banc des règles finales (10 fragments
+et 4 scènes), avec un appel de chauffe avant chaque série :
+
+| | `qwen3vl_4b` (ComfyUI) | Gemma 4 E4B officiel fp8 (ComfyUI) | Gemma 4 E4B heretic Q4 (`llama-server`) |
+|---|---|---|---|
+| Un fragment | 2 à 6 s | 5 à 12 s | 0,4 à 1,2 s |
+| Une scène | 13 à 16 s | 14 à 23 s | 1 à 2 s |
+| Refus | 0 | 0 | 0 |
+| « elle lit, assise » | action perdue | action perdue | action gardée |
+| Mots signalés (fragments) | 4 | 8, puis 4 sans pénalité de répétition | 1 |
+| VRAM | environ 5 Go | environ 9 Go | environ 3 Go |
+
+- **ComfyUI sait faire tourner Gemma 4** (v0.26, `comfy/text_encoders/gemma4.py`,
+  réflexion coupée par défaut). Mais sa boucle de génération est 5 à 10 fois
+  plus lente que llama.cpp sur le même modèle : c'est le moteur, pas le modèle.
+- **La pénalité de répétition de ComfyUI (1,05) n'explique pas les pertes.**
+  À 1,0, les mots signalés passent de 8 à 4, mais l'action reste perdue.
+- **La cohabitation tient**, mesurée sur une vraie image de production
+  (`lena_master_prod_ui.json`, carte de 16 Go) :
+
+  | | Image | Pic de VRAM | Erreur |
+  |---|---|---|---|
+  | ComfyUI seul | 38,5 s | 15,9 Go | aucune |
+  | `llama-server` chargé, au repos | 38,2 s | 15,2 Go | aucune |
+  | `llama-server` chargé, un appel toutes les 3 s | 58,6 s | 15,2 Go | aucune ; 19 appels à 2,1 s |
+
+  **Au repos, `llama-server` ne coûte rien à la génération.** Il ne la
+  ralentit que s'il calcule en même temps, et c'est un geste de
+  l'utilisateur, pas une rafale.
+
+**Ce que livre l'étape.**
+
+1. **Le réglage.** `PLATFORM/llm.json` reçoit une entrée `server` : fichier
+   du modèle, port, couches sur la carte, taille du contexte, minutes
+   d'inactivité avant l'arrêt. Rien de tout ça n'est écrit dans le code
+   (invariant 4). `model` et `loader_type` restent le moteur ComfyUI, celui
+   du repli et des usages avec image.
+2. **La déclaration** (invariant 12). Le manifeste reçoit une section
+   `llm_server`, hors de ComfyUI : l'exécutable llama.cpp épinglé à la
+   version `b10809` (archive CUDA 12.4, 242 Mo, plus 373 Mo de bibliothèques
+   CUDA) et le GGUF `Abhiray/gemma-4-E4B-it-heretic-GGUF`
+   (`Q4_K_M`, 5,3 Go). Chaque entrée porte son `url`.
+3. **Le module `AUTOMATION/llm_server.py`**, sur le patron de
+   `comfy_server.py` :
+   - il sonde le port avant de lancer, et ne démarre jamais une seconde
+     instance ;
+   - il lance le serveur à la première demande, sans fenêtre, avec son
+     journal dans un fichier ;
+   - il l'arrête après N minutes d'inactivité, mais seulement une instance
+     qu'il a lancée lui-même ;
+   - il appelle `/v1/chat/completions` avec `enable_thinking: false`,
+     toujours.
+4. **Le repli.** `enhance` passe par `llm_server`. Si l'exécutable ou le
+   modèle manque, ou si le serveur ne démarre pas, l'appel repart par
+   ComfyUI et `qwen3vl_4b`, et la cause part dans le journal. L'utilisateur
+   ne voit pas le moteur ; il ne voit une erreur que si les deux échouent.
+5. **L'installation**, par une commande explicite
+   (`python AUTOMATION/llm_server.py --install`) qui télécharge dans
+   `.toolchain/llama/`. Jamais au démarrage de l'application : 6 Go ne se
+   téléchargent pas sans qu'on le demande. Sans installation, le repli
+   suffit.
+6. **Les tests.** Un faux serveur remplace `llama-server`. Ils vérifient :
+   - le repli sur ComfyUI quand l'exécutable manque ou que le serveur ne
+     répond pas ;
+   - qu'aucune seconde instance ne se lance si le port répond déjà ;
+   - que `enable_thinking: false` part dans chaque requête ;
+   - que l'ancre n'est jamais reçue, comme aujourd'hui ;
+   - l'arrêt après inactivité, et seulement pour une instance lancée par
+     nous.
+7. **Le banc réel et l'essai dans l'interface**, avec le moteur installé par
+   la commande et non celui de Maestro.
+
+**Hors de l'étape.**
+- **Les usages avec image** (le légendeur, l'analyse d'assets, le
+  composeur) restent sur ComfyUI et `qwen3vl_4b`. Les passer à Gemma
+  demanderait son projecteur de vision (`mmproj`, 1 Go) et un banc à eux.
+- **Un bouton d'installation dans l'écran Application.** Il va au tableau
+  de bord si la commande ne suffit pas.
+- **Une machine sans carte NVIDIA.** L'archive épinglée est CUDA ; une
+  autre carte garde le repli.
 
 ## Hors périmètre
 
