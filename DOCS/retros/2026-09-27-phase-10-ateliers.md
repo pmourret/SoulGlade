@@ -7,12 +7,15 @@ Cadrages de chantier : `2026-09-26-it10-c3-…` à `-c7bis-…`, et
 
 Huit chantiers prévus. Sept livrés ici, avec un chantier 7 bis ajouté en
 route. Le chantier 2 (les intentions) est parti en IT-11, qui l'a livré avec
-les lieux et les scènes du monde (ADR-0027). Un audit UX vérifié en vrai est
-tracé dans les commits de quatre chantiers : les tons (`da1c406`), la pose
-(`d655959`), le studio de lumière (`1fa5d8a`) et l'amélioration IA
-(`4a6f967`). Pour les formats, l'importeur, les tenues et le créateur de
-lumière, aucun commit ne le nomme : le critère de sortie « chacun avec son
-audit » n'est pas prouvé pour ces quatre-là.
+les lieux et les scènes du monde (ADR-0027). Chaque chantier a son audit UX
+vérifié en vrai, tracé dans ses commits : les tons (`da1c406`), la pose
+(`d655959`), l'importeur (`dd3d3bf`), les tenues (`15622f5`), le créateur de
+lumière (`ad10753`), le studio de lumière (`1fa5d8a`), l'amélioration IA
+(`4a6f967`) et les formats (audit fait à la clôture, voir la section 2).
+
+Un premier jet de cette rétro affirmait que quatre chantiers n'avaient pas
+d'audit. La recherche n'avait lu que les titres des commits, et trois audits
+étaient écrits dans leur corps. Seul celui des formats manquait vraiment.
 
 ## 1. Qu'a-t-on livré qui n'était pas prévu ?
 
@@ -41,6 +44,17 @@ audit » n'est pas prouvé pour ces quatre-là.
   (`4a57819`).
 
 ## 2. Qu'est-ce qui était prévu et qui n'a pas été livré ?
+
+- **L'audit des formats** (chantier 3), inscrit à son critère de sortie, n'a
+  pas été fait au moment du chantier. Il a été fait à la clôture, à 1440 et
+  1024, chez Léna (cinq formats) et chez Abyssiaelle (1:1 seul). Les formats
+  du personnage sont bien les seuls proposés, dans le composeur comme dans
+  Produire. Il a trouvé deux défauts, corrigés :
+  - à 1024, « Nouvelle scène » laissait le tiroir des scènes ouvert sur la
+    scène neuve, et Escape fermait la scène au lieu du tiroir ;
+  - les titres des réglages de Produire, « Format imposé » compris, étaient
+    des mots en gras sans lien avec leur champ. Ce sont maintenant de vrais
+    `<label for>`.
 
 - **Les intentions** (chantier 2) : sorties en IT-11 le 26/09, livrées là-bas.
 - **La traduction de la consigne de la Retouche IA** (chantier 8, étape 4) :
@@ -84,5 +98,10 @@ d'horizon viennent de cette itération :
   déterminisme) ;
 - le réclairage par graphe ;
 - les flèches du clavier dans les sélecteurs segmentés du studio.
+
+Pierre prévoit une passe de design, avec Claude Design, sur les ateliers
+créés ou remaniés ici : tons, formats, pose, assets, tenues, lumières et
+amélioration IA. Les audits de cette itération ont porté sur le parcours,
+le clavier, les états et les erreurs, pas sur l'apparence.
 
 La suite est à choisir dans la file du tableau de bord.

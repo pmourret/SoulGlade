@@ -134,10 +134,10 @@
     },
     {
       "id": "IT-10",
-      "state": "now",
+      "state": "done",
       "titre": "Les ateliers font ce qu'ils annoncent",
-      "quoi": "Ce qu'un ton fait à l'image était invisible dans l'atelier, et sa passe d'expression dégradait les selfies que Produire lui imposait. Le même défaut est ailleurs : des panneaux sans serveur, des catalogues du monde sans créateur, une pose sans son texte. Un outil livré passe avant toute capacité neuve.",
-      "dod": "Les huit chantiers livrés, chacun avec son audit vérifié en vrai. Aucun panneau n'annonce une capacité qu'aucun serveur ne rend, et un monde neuf reçoit ses tons sans qu'on ouvre un JSON.",
+      "quoi": "Les ateliers annonçaient plus qu'ils ne rendaient : un ton invisible qui dégradait les selfies, des panneaux sans serveur, des catalogues sans créateur, une pose sans texte. Chaque atelier fait maintenant ce qu'il annonce, jusqu'à l'amélioration des prompts par un modèle local.",
+      "dod": "Les huit chantiers sont livrés, chacun avec son audit vérifié en vrai (les intentions en IT-11). Aucun atelier n'annonce une capacité sans serveur ; un monde neuf reçoit ses tons depuis l'interface.",
       "epics": "E3",
       "ref": "DOCS/cadrage/2026-09-25-it10-ateliers.md",
       "dep": "IT-11"
