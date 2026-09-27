@@ -55,7 +55,7 @@ export function RecapPanel({
   onPatch: (patch: Partial<SceneDraft>) => void
   onGoto: (section: SectionKey) => void
   /** « Améliorer » on the prompt fragment (IT-10 chantier 8). */
-  enhancer?: Enhancer
+  enhancer: Enhancer
 }) {
   const toast = useToast()
   const decor = decorOf(places, draft.place)
@@ -88,12 +88,12 @@ export function RecapPanel({
         <div className="flex gap-[10px]">
           <Step n={1} color={FRAGMENT_COLORS.base} />
           <div className="min-w-0 flex-1">
-            <span className={HEAD}>Ce qui s'y passe</span>
-            <div className="mt-[6px]">
+            <div>
               <PromptField
                 dataField="prompt_base"
-              enhancer={enhancer}
-              enhanceKind="scene"
+                enhancer={enhancer}
+                enhanceKind="scene"
+                head={<span className={HEAD}>Ce qui s'y passe</span>}
                 label="Ce qui s'y passe — action, cadrage"
                 hideLabel
                 minHeight="min-h-[120px]"

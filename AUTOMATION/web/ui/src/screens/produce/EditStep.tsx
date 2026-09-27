@@ -18,7 +18,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { errorOf, type ActionLike, type Schema } from '../../api/client'
 import { useApi } from '../../api/useApi'
 import { useEnhancer } from '../../api/useEnhance'
-import { EnhanceControl } from '../../chrome/EnhanceControl'
+import { EnhanceTrigger } from '../../chrome/EnhanceTrigger'
+import { RevisionView } from '../../chrome/RevisionView'
+import { useEnhance } from '../../chrome/useEnhance'
 import { useConfig } from '../../state/ConfigContext'
 
 type Instructions = Schema<'NsfwInstructionsResponse'>
@@ -48,6 +50,16 @@ export function EditStep({
 }) {
   const api = useApi()
   const enhancer = useEnhancer()
+  /* Translated only, never improved: an improved instruction changes what the
+     edit does (IT-10 chantier 8, measured 27/09). « Traduire » sits at the end
+     of the step's title row, the translation is read in the field. */
+  const enhance = useEnhance({
+    label: "Instruction d'édition",
+    kind: 'edit',
+    value: instruction,
+    onApply: onInstruction,
+    enhancer,
+  })
   const { qc } = useConfig()
   const [preamble, setPreamble] = useState('')
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
@@ -81,23 +93,26 @@ export function EditStep({
        inspector's « Instruction » tab it is the tab panel that owns the
        column height and the scrolling. `number` still marks the ONE case
        where this is a step of a short sequence rather than the whole panel. */
-    <div className={number != null ? 'mb-[30px]' : undefined} id="stepEdit">
+    <div className={number != null ? 'mb-[30px]' : undefined} id="stepEdit" data-enhance ref={enhance.rootRef}>
       {/* Title and sub-line STACKED, not side by side. As a tab of the 340 px
           inspector the old baseline row broke « Instruction d'édition » over
           two lines AND wrapped its hint next to it, for four lines of heading
           above a one-line field (seen in the capture, audit of the 23/09).
           Stacked it is two. */}
-      <h2 className="lab block">
-        {number != null && (
-          <>
-            <i className="not-italic text-acc" data-num>{number}</i> ·{' '}
-          </>
-        )}
-        Instruction d'édition
-        <span className="tiny mt-[2px] block normal-case tracking-normal">
-          en anglais, court et concret
-        </span>
-      </h2>
+      <div className="flex flex-wrap items-start gap-[6px]">
+        <h2 className="lab block">
+          {number != null && (
+            <>
+              <i className="not-italic text-acc" data-num>{number}</i> ·{' '}
+            </>
+          )}
+          Instruction d'édition
+          <span className="tiny mt-[2px] block normal-case tracking-normal">
+            en anglais, court et concret
+          </span>
+        </h2>
+        <EnhanceTrigger enhance={enhance} />
+      </div>
 
       {/* `produce.css` also carried a `details.preamb` rule resetting the top
           margin, border and padding of this fold — it never applied: it had the
@@ -117,21 +132,14 @@ export function EditStep({
         </p>
       </details>
 
-      <textarea
-        id="editInstr"
-        placeholder="ex: unbuttoned shirt"
-        value={instruction}
-        onChange={(event) => onInstruction(event.target.value)}
-      />
-      {/* Translated only, never improved: an improved instruction changes
-          what the edit does (IT-10 chantier 8, measured 27/09). */}
-      <EnhanceControl
-        label="Instruction d'édition"
-        kind="edit"
-        value={instruction}
-        onApply={onInstruction}
-        enhancer={enhancer}
-      />
+      <RevisionView enhance={enhance}>
+        <textarea
+          id="editInstr"
+          placeholder="ex: unbuttoned shirt"
+          value={instruction}
+          onChange={(event) => onInstruction(event.target.value)}
+        />
+      </RevisionView>
 
       {/* Instruction alerts: a panel, never a block. */}
       <div className="flex flex-col gap-[6px]" id="instrAlertes">

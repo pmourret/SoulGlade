@@ -14,7 +14,9 @@
    banner: the banner already carries the expression range, and one banner for
    two drafts would save both on one Ctrl S. */
 import type { Enhancer } from '../../api/useEnhance'
-import { EnhanceControl } from '../../chrome/EnhanceControl'
+import { EnhanceTrigger } from '../../chrome/EnhanceTrigger'
+import { RevisionView } from '../../chrome/RevisionView'
+import { useEnhance } from '../../chrome/useEnhance'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 
@@ -40,6 +42,15 @@ export function ToneTextCard({
   enhancer: Enhancer
 }) {
   const [editing, setEditing] = useState<{ label: string; prompt_add: string } | null>(null)
+  /* « Améliorer » in the head row while the text is being edited, the
+     proposal read in the field (design-pass screen-ameliorer). */
+  const enhance = useEnhance({
+    label: 'Fragment de prompt',
+    kind: 'tone',
+    value: editing?.prompt_add ?? '',
+    onApply: (text) => setEditing((current) => current && { ...current, prompt_add: text }),
+    enhancer,
+  })
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openedFor, setOpenedFor] = useState(tone.key)
@@ -66,13 +77,16 @@ export function ToneTextCard({
       id="toneText"
       aria-label={`Ce que le ton ${tone.label} ajoute à l'image`}
       className="flex-none border-b border-b-line bg-panel px-[14px] py-[10px]"
+      data-enhance
+      ref={enhance.rootRef}
     >
-      <div className="flex items-baseline gap-[8px]">
+      <div className="flex min-h-[24px] items-center gap-[8px]">
         <span className="lab flex-none">Ajouté au prompt</span>
         <span className="min-w-0 flex-1 truncate text-[12px] text-dim" data-tone-layer={tone.couche}>
           ton {LAYER_TEXT[tone.couche]}
           {inherits && world ? ` « ${world.label} »` : ''}
         </span>
+        {editing && <EnhanceTrigger enhance={enhance} />}
         {!editing && (
           <>
             {canRevert && (
@@ -105,20 +119,15 @@ export function ToneTextCard({
               onChange={(e) => setEditing({ ...editing, label: e.target.value })}
             />
           </div>
-          <textarea
-            id="toneTextPrompt"
-            aria-label="Fragment de prompt"
-            className="min-h-[64px] resize-y"
-            value={editing.prompt_add}
-            onChange={(e) => setEditing({ ...editing, prompt_add: e.target.value })}
-          />
-          <EnhanceControl
-            label="Fragment de prompt"
-            kind="tone"
-            value={editing.prompt_add}
-            onApply={(text) => setEditing({ ...editing, prompt_add: text })}
-            enhancer={enhancer}
-          />
+          <RevisionView enhance={enhance}>
+            <textarea
+              id="toneTextPrompt"
+              aria-label="Fragment de prompt"
+              className="min-h-[64px] resize-y"
+              value={editing.prompt_add}
+              onChange={(e) => setEditing({ ...editing, prompt_add: e.target.value })}
+            />
+          </RevisionView>
           <span className="text-[11.5px] text-dim2">
             Écrit pour ce personnage seulement. L'essai de rendu ci-dessous montre ce que ce
             fragment change à l'image.

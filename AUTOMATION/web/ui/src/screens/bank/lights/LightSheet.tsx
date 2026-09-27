@@ -11,7 +11,9 @@
    thing the sheet is for; then the body, in a grid. Rewritten by hand, the
    sentence wins and the sheet says so; it no longer overwrites it. */
 import type { Enhancer } from '../../../api/useEnhance'
-import { EnhanceControl } from '../../../chrome/EnhanceControl'
+import { EnhanceTrigger } from '../../../chrome/EnhanceTrigger'
+import { RevisionView } from '../../../chrome/RevisionView'
+import { useEnhance } from '../../../chrome/useEnhance'
 import { useEffect, useMemo, useState } from 'react'
 
 import { LightEffectsField } from './LightEffectsField'
@@ -85,6 +87,17 @@ export function LightSheet({
   /* The sentence written by hand, or `null` when the sheet composes it. A
      light of chantier 7 (a text, no sheet) opens written by hand. */
   const [hand, setHand] = useState<string | null>(light?.text ? light.text : null)
+  /* « Améliorer » on the hand-written text, in the head row « Ce que la scène
+     reçoit » (design-pass screen-ameliorer §S1); the proposal is read in the
+     field. Only offered while there is a hand-written text. */
+  const enhance = useEnhance({
+    label: 'Texte écrit à la main',
+    kind: 'light',
+    value: hand ?? '',
+    onApply: setHand,
+    enhancer,
+    disabled: busy,
+  })
   /* On a world light: correct the world rather than adjust it here. On a new
      light: create it in the world. OFF by default both ways — the world is
      inherited by every character in it. */
@@ -176,7 +189,8 @@ export function LightSheet({
         </button>
       </div>
 
-      <div className="flex flex-none flex-col gap-[8px] border-b border-b-line bg-panel2 px-[16px] py-[12px]">
+      <div className="flex flex-none flex-col gap-[8px] border-b border-b-line bg-panel2 px-[16px] py-[12px]"
+           data-enhance ref={enhance.rootRef}>
         <div className="flex items-center gap-[8px]">
           <span className="lab flex-none">Ce que la scène reçoit</span>
           {hand !== null && (
@@ -193,10 +207,13 @@ export function LightSheet({
               Écrire à la main
             </button>
           ) : (
-            <button type="button" className="btn sm flex-none" id="btnLightSheet" disabled={disabled}
-                    onClick={() => setHand(null)}>
-              Revenir à la fiche
-            </button>
+            <>
+              <EnhanceTrigger enhance={enhance} />
+              <button type="button" className="btn sm flex-none" id="btnLightSheet"
+                      disabled={disabled || Boolean(enhance.revision)} onClick={() => setHand(null)}>
+                Revenir à la fiche
+              </button>
+            </>
           )}
         </div>
         {hand === null ? (
@@ -207,23 +224,17 @@ export function LightSheet({
         ) : (
           <>
             <label className="sr-only" htmlFor="lightText">Texte écrit à la main</label>
-            <textarea
-              id="lightText"
-              className={`min-h-[80px] w-full font-code text-[13px] ${problem ? 'border-warn!' : ''}`}
-              value={hand}
-              placeholder="warm low sunlight from the side, long soft shadows"
-              disabled={busy}
-              aria-describedby="lightTextHint"
-              onChange={(event) => setHand(event.target.value)}
-            />
-            <EnhanceControl
-              label="Texte écrit à la main"
-              kind="light"
-              value={hand}
-              onApply={setHand}
-              enhancer={enhancer}
-              disabled={busy}
-            />
+            <RevisionView enhance={enhance}>
+              <textarea
+                id="lightText"
+                className={`min-h-[80px] w-full font-code text-[13px] ${problem ? 'border-warn!' : ''}`}
+                value={hand}
+                placeholder="warm low sunlight from the side, long soft shadows"
+                disabled={busy}
+                aria-describedby="lightTextHint"
+                onChange={(event) => setHand(event.target.value)}
+              />
+            </RevisionView>
             <span className="tiny" id="lightTextHint">En anglais, comme le reste du prompt.</span>
           </>
         )}

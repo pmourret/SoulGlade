@@ -27,7 +27,7 @@ export type EnhanceOutcome =
   | { ok: true; text: string; translated: boolean; lost: string[] }
   | { ok: false; erreur: string }
 
-/** `enhance(text)` for ONE kind — what a field hands to its `EnhanceControl`. */
+/** `enhance(text)` for ONE kind — what a field hands to its `useEnhance`. */
 export type EnhanceFn = (text: string) => Promise<EnhanceOutcome>
 
 /** What a screen passes down to its fields: the call for a kind, and whether

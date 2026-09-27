@@ -11,7 +11,9 @@ import { Link } from 'react-router-dom'
 
 import type { Enhancer } from '../../../api/useEnhance'
 import { PATHS } from '../../../app/routes'
-import { EnhanceControl } from '../../../chrome/EnhanceControl'
+import { EnhanceTrigger } from '../../../chrome/EnhanceTrigger'
+import { RevisionView } from '../../../chrome/RevisionView'
+import { useEnhance } from '../../../chrome/useEnhance'
 import type { LibraryPick } from '../assets/libraryPicks'
 import { pieceFragment, pieceName, pieceProblem, type Garments } from './outfitPieces'
 import { proposeSlot, slotNumber, slotsOfZone, zoneLabel, type Slot, type ZoneKey } from './outfitSlots'
@@ -127,6 +129,10 @@ function SlotBody({
   onUndo: () => void
 }) {
   const [written, setWritten] = useState('')
+  /* « Améliorer » in the head row of « Écrire une pièce », the proposal read
+     in the field (design-pass screen-ameliorer): « Poser » waits for it. */
+  const enhance = useEnhance({ label: 'pièce écrite', kind: 'outfit', value: written, onApply: setWritten, enhancer, disabled: busy })
+  const revising = Boolean(enhance.revision)
   const proposed = garments
     .filter((g) => g.fragment.trim())
     .map((g) => ({ g, hit: proposeSlot(g.fragment) }))
@@ -239,29 +245,32 @@ function SlotBody({
         )}
       </div>
 
-      <div className="flex flex-col gap-[5px]">
-        <label className="lab" htmlFor="outfitWritten">Écrire une pièce</label>
-        <div className="flex gap-[6px]">
-          <input
-            id="outfitWritten"
-            className="min-w-0 flex-1 font-code text-[12px]"
-            placeholder="light blue denim jeans"
-            value={written}
-            disabled={busy}
-            onChange={(event) => setWritten(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault()
-                write()
-              }
-            }}
-          />
-          <button type="button" className="btn sm" disabled={busy || !written.trim()} onClick={write}>
+      <div className="flex flex-col gap-[5px]" data-enhance ref={enhance.rootRef}>
+        <div className="flex min-h-[24px] flex-wrap items-center gap-[6px]">
+          <label className="lab" htmlFor="outfitWritten">Écrire une pièce</label>
+          <EnhanceTrigger enhance={enhance} />
+        </div>
+        <div className="flex items-start gap-[6px]">
+          <RevisionView enhance={enhance} className="min-w-0 flex-1">
+            <input
+              id="outfitWritten"
+              className="font-code text-[12px]"
+              placeholder="light blue denim jeans"
+              value={written}
+              disabled={busy}
+              onChange={(event) => setWritten(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.preventDefault()
+                  write()
+                }
+              }}
+            />
+          </RevisionView>
+          <button type="button" className="btn sm" disabled={busy || revising || !written.trim()} onClick={write}>
             Poser
           </button>
         </div>
-        <EnhanceControl label="pièce écrite" kind="outfit" value={written} onApply={setWritten}
-                        enhancer={enhancer} disabled={busy} />
       </div>
     </div>
   )

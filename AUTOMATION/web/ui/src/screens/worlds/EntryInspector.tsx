@@ -11,7 +11,7 @@
    nothing here repairs that. While creating, it follows the name until typed
    by hand — the proposal the world and tone ids already get (`slugify.ts`). */
 import type { Enhancer } from '../../api/useEnhance'
-import { EnhanceControl } from '../../chrome/EnhanceControl'
+import { EnhanceField } from '../../chrome/EnhanceField'
 import { Icon } from '../../chrome/Icon'
 import { selectOptions, type CatalogContext, type CatalogSpec, type Draft } from './catalogSpecs'
 
@@ -161,18 +161,24 @@ export function EntryInspector<T>({
               )
             return (
               <div key={field.name} className={FIELD}>
-                <label className={LABEL} htmlFor={inputId(field.name)}>
-                  {field.label}
-                </label>
-                {control}
-                {field.enhance && (
-                  <EnhanceControl
+                {field.enhance ? (
+                  <EnhanceField
                     label={field.label}
+                    htmlFor={inputId(field.name)}
                     kind={field.enhance}
                     value={draft[field.name] ?? ''}
                     onApply={(text) => onPatch({ [field.name]: text })}
                     enhancer={enhancer}
-                  />
+                  >
+                    {control}
+                  </EnhanceField>
+                ) : (
+                  <>
+                    <label className={LABEL} htmlFor={inputId(field.name)}>
+                      {field.label}
+                    </label>
+                    {control}
+                  </>
                 )}
                 {field.hint && (
                   <span className={HINT} id={hintId}>

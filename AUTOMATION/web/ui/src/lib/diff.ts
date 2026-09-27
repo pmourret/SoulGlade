@@ -142,11 +142,16 @@ const tokens = (text: string) =>
 
 /** Word-level comparison of two lines, as two independent runs of spans: what
     the before side shows (same + del) and what the after side shows
-    (same + add). Concatenating either side's `text` gives back its line. */
-export function diffWords(before: string, after: string): { before: Span[]; after: Span[] } {
+    (same + add). Concatenating either side's `text` gives back its line.
+
+    `run` is the SAME walk as ONE sequence, removals at their place among the
+    additions (tracked changes, design-pass screen-ameliorer §S2): filled in
+    the same loop as the two sides, it cannot disagree with them. */
+export function diffWords(before: string, after: string): { before: Span[]; after: Span[]; run: Span[] } {
   const raw = walk(tokens(before), tokens(after), (x, y) => x === y)
   const left: Span[] = []
   const right: Span[] = []
+  const run: Span[] = []
   /* Adjacent spans of the same kind are merged: « a » « b » « c » removed in
      a row is ONE strike-through, not three. */
   const push = (into: Span[], kind: Span['kind'], text: string) => {
@@ -155,6 +160,7 @@ export function diffWords(before: string, after: string): { before: Span[]; afte
     else into.push({ kind, text })
   }
   for (const step of raw) {
+    push(run, step.kind, step.value)
     if (step.kind === 'same') {
       push(left, 'same', step.value)
       push(right, 'same', step.value)
@@ -164,7 +170,7 @@ export function diffWords(before: string, after: string): { before: Span[]; afte
       push(right, 'add', step.value)
     }
   }
-  return { before: left, after: right }
+  return { before: left, after: right, run }
 }
 
 /** How many lines each side gains and loses — the `+N` / `−N` of the header. */

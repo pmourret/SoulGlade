@@ -17,7 +17,7 @@
    it rewrites, and not among the foot's verbs where it read as a third way
    to save. */
 import type { EnhanceKind, Enhancer } from '../../../api/useEnhance'
-import { EnhanceControl } from '../../../chrome/EnhanceControl'
+import { EnhanceField } from '../../../chrome/EnhanceField'
 import { useEffect, useState } from 'react'
 
 import { proposeSlot, slotOf } from '../outfits/outfitSlots'
@@ -85,6 +85,16 @@ export function AssetInspector({
      never by the class's name (invariant 7). Read on the draft, so it follows
      the text being corrected. */
   const proposed = field === 'wardrobe' ? proposeSlot(fragment) : null
+  const fragmentField = (
+    <textarea
+      id="assetFragment"
+      className="min-h-[92px] w-full font-code text-[12px]"
+      value={fragment}
+      disabled={busy}
+      placeholder="aucun fragment — « Analyser l'image » en propose un"
+      onChange={(event) => setFragment(event.target.value)}
+    />
+  )
 
   return (
     <div className="flex h-full min-h-0 flex-col" id="assetInspector">
@@ -122,31 +132,33 @@ export function AssetInspector({
         </div>
 
         <div className="flex flex-col gap-[4px]">
-          <label className="lab" htmlFor="assetFragment">Fragment de prompt</label>
-          <textarea
-            id="assetFragment"
-            className="min-h-[92px] w-full font-code text-[12px]"
-            value={fragment}
-            disabled={busy}
-            placeholder="aucun fragment — « Analyser l'image » en propose un"
-            onChange={(event) => setFragment(event.target.value)}
-          />
+          {/* « Améliorer » sits in the head row of the field (design-pass
+              screen-ameliorer §S1); a class the model has no rules for keeps
+              a bare label. */}
+          {enhanceKind ? (
+            <EnhanceField
+              label="Fragment de prompt"
+              htmlFor="assetFragment"
+              kind={enhanceKind}
+              value={fragment}
+              onApply={setFragment}
+              enhancer={enhancer}
+              disabled={busy}
+            >
+              {fragmentField}
+            </EnhanceField>
+          ) : (
+            <>
+              <label className="lab" htmlFor="assetFragment">Fragment de prompt</label>
+              {fragmentField}
+            </>
+          )}
           <div className="flex flex-wrap items-start gap-[6px]">
-            {enhanceKind && (
-              <EnhanceControl
-                label="Fragment de prompt"
-                kind={enhanceKind}
-                value={fragment}
-                onApply={setFragment}
-                enhancer={enhancer}
-                disabled={busy}
-              />
-            )}
             {/* Le repère porte sur l'ENVELOPPE : un bouton désactivé n'émet
                 aucun événement de souris, donc l'état où la lecture compte est
                 précisément celui où elle ne s'afficherait pas (même note que la
                 banque de poses). */}
-            <span className="mt-[6px]" data-hint-text={comfy ? undefined : 'nécessite ComfyUI en ligne'}>
+            <span data-hint-text={comfy ? undefined : 'nécessite ComfyUI en ligne'}>
               <button
                 type="button"
                 className="btn sm"

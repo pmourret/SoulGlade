@@ -9,7 +9,6 @@
    Le calcul vit dans `lib/diff.ts`, pur et testé à part : ce fichier ne fait
    que peindre ce qu'il rend. */
 import type { Span } from '../lib/diff'
-import { diffWords } from '../lib/diff'
 
 /** One side of a rewritten line: the untouched runs plain, the ones that
     moved on their own ground. */
@@ -35,8 +34,28 @@ export function WordLine({ spans, side }: { spans: Span[]; side: 'del' | 'add' }
   )
 }
 
-/** Both sides of a rewritten line at once, for a caller that has the two
-    strings and no reason to call `diffWords` itself. */
-export function wordSides(before: string, after: string) {
-  return diffWords(before, after)
+/** The whole rewrite as ONE paragraph, tracked-changes style (design-pass
+    screen-ameliorer §S2): the additions on their ground, the removals struck
+    through at their place only when asked for. Each moved run is named for a
+    reader who sees neither the colour nor the strike. */
+export function WordRun({ spans, showRemoved }: { spans: Span[]; showRemoved: boolean }) {
+  return (
+    <>
+      {spans.map((span, index) =>
+        span.kind === 'same' ? (
+          <span key={index}>{span.text}</span>
+        ) : span.kind === 'add' ? (
+          <span key={index} className="rounded-[2px]" style={{ backgroundColor: 'var(--diff-add-word)' }}>
+            <span className="sr-only">ajouté : </span>
+            {span.text}
+          </span>
+        ) : showRemoved ? (
+          <del key={index} className="rounded-[2px] text-inherit" style={{ backgroundColor: 'var(--diff-del-word)' }}>
+            <span className="sr-only">retiré : </span>
+            {span.text}
+          </del>
+        ) : null,
+      )}
+    </>
+  )
 }

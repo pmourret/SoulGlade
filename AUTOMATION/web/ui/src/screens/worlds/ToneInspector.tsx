@@ -10,7 +10,7 @@
    for ONE character (its own adjustment), and the hint says so rather than
    suggesting the world's range is edited there. */
 import type { Enhancer } from '../../api/useEnhance'
-import { EnhanceControl } from '../../chrome/EnhanceControl'
+import { EnhanceField } from '../../chrome/EnhanceField'
 import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../app/routes'
@@ -160,23 +160,22 @@ export function ToneInspector({
           )}
 
           <div className={FIELD}>
-            <label className={LABEL} htmlFor="tonePrompt">
-              Fragment de prompt
-            </label>
-            <textarea
-              id="tonePrompt"
-              className={`min-h-[90px] resize-y ${changed('prompt_add')}`}
-              value={draft.prompt_add}
-              aria-describedby="tonePromptHint"
-              onChange={(e) => onPatch({ prompt_add: e.target.value })}
-            />
-            <EnhanceControl
+            <EnhanceField
               label="Fragment de prompt"
+              htmlFor="tonePrompt"
               kind="tone"
               value={draft.prompt_add}
               onApply={(text) => onPatch({ prompt_add: text })}
               enhancer={enhancer}
-            />
+            >
+              <textarea
+                id="tonePrompt"
+                className={`min-h-[90px] resize-y ${changed('prompt_add')}`}
+                value={draft.prompt_add}
+                aria-describedby="tonePromptHint"
+                onChange={(e) => onPatch({ prompt_add: e.target.value })}
+              />
+            </EnhanceField>
             <span className={HINT} id="tonePromptHint">
               Ajouté au prompt de chaque image produite avec ce ton : une attitude, une
               lumière, un cadrage. L'essai de rendu d'Ateliers › Tons montre ce qu'il change.

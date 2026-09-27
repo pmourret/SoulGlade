@@ -8,13 +8,20 @@
    THE COMPACT FIELD STAYS EDITABLE. The modal is comfort for a LONG fragment,
    not the only way in — a two-word correction should not force an overlay
    open (studio-wide "simplification du parcours" direction). Both write the
-   same `value`/`onChange`, there is no second copy to drift. */
-import { useState } from 'react'
+   same `value`/`onChange`, there is no second copy to drift.
+
+   « AMÉLIORER » IS IN THE HEAD ROW (design-pass screen-ameliorer §S1): the
+   panel's own heading comes in as `head`, what it carries on the right
+   (counter, « modifié ») as `headExtra`, then the trigger. A proposal is read
+   IN the field, read-only; the pencil and the cross wait for it to close. */
+import { useState, type ReactNode } from 'react'
 
 import type { EnhanceKind, Enhancer } from '../../../api/useEnhance'
 import { Dialog } from '../../../chrome/Dialog'
-import { EnhanceControl } from '../../../chrome/EnhanceControl'
+import { EnhanceTrigger } from '../../../chrome/EnhanceTrigger'
 import { Icon } from '../../../chrome/Icon'
+import { RevisionView } from '../../../chrome/RevisionView'
+import { useEnhance } from '../../../chrome/useEnhance'
 import { InfoHint } from './InfoHint'
 
 export function PromptField({
@@ -32,6 +39,9 @@ export function PromptField({
   minHeight,
   enhancer,
   enhanceKind,
+  head,
+  headExtra,
+  beforeField,
 }: {
   /** `data-f` on the compact textarea — the browser fumigation's hook. */
   dataField: string
@@ -64,37 +74,51 @@ export function PromptField({
   hideLabel?: boolean
   /** Taller box for the one fragment a panel is built around (le décor). */
   minHeight?: string
-  /** « Améliorer » under the field (IT-10 chantier 8), for the kind of
-      fragment it holds. Both or neither. */
-  enhancer?: Enhancer
-  enhanceKind?: EnhanceKind
+  /** « Améliorer » (IT-10 chantier 8), for the kind of fragment it holds. */
+  enhancer: Enhancer
+  enhanceKind: EnhanceKind
+  /** The panel's heading of this field, left of the head row. */
+  head?: ReactNode
+  /** What the head row carries on the right, before « Améliorer ». */
+  headExtra?: ReactNode
+  /** Said between the head row and the field (a warning about its text). */
+  beforeField?: ReactNode
 }) {
   const [editing, setEditing] = useState(false)
   const fieldId = `scene-prompt-${dataField}`
   const border = changed ? 'var(--warn)' : accentColor
+  const enhance = useEnhance({ label, kind: enhanceKind, value, onApply: onChange, enhancer, disabled })
+  const revising = Boolean(enhance.revision)
 
   return (
-    <div className="f">
-      <label htmlFor={fieldId} className={hideLabel ? 'sr-only' : undefined}>
-        <span>
-          {label}
-          {hint && !hideLabel && <InfoHint text={hint} />}
-        </span>
-      </label>
+    <div className="f" data-enhance ref={enhance.rootRef}>
+      <div className="mb-[6px] flex min-h-[24px] max-w-[880px] flex-wrap items-center gap-[6px]">
+        {head}
+        <label htmlFor={fieldId} className={hideLabel ? 'sr-only' : undefined}>
+          <span>
+            {label}
+            {hint && !hideLabel && <InfoHint text={hint} />}
+          </span>
+        </label>
+        <EnhanceTrigger enhance={enhance} extra={headExtra} />
+      </div>
+      {beforeField}
       {/* La MESURE DE LECTURE est ici, plus sur le panneau (amendement du
           24/09 au §S4.3 de screen-7b) : un fragment de prompt ne dépasse pas
           880 px de large, quelle que soit la place que le panneau a prise. */}
       <div className="flex max-w-[880px] items-start gap-[6px]">
-        <textarea
-          id={fieldId}
-          data-f={dataField}
-          className={`resize-y ${minHeight ?? 'min-h-[78px]'}`}
-          style={border ? { borderColor: border } : undefined}
-          value={value}
-          placeholder={placeholder}
-          disabled={disabled}
-          onChange={(e) => onChange(e.target.value)}
-        />
+        <RevisionView enhance={enhance} className="min-w-0 flex-1">
+          <textarea
+            id={fieldId}
+            data-f={dataField}
+            className={`resize-y ${minHeight ?? 'min-h-[78px]'}`}
+            style={border ? { borderColor: border } : undefined}
+            value={value}
+            placeholder={placeholder}
+            disabled={disabled}
+            onChange={(e) => onChange(e.target.value)}
+          />
+        </RevisionView>
         <div className="flex flex-col gap-[5px]">
           <button
             type="button"
@@ -102,7 +126,7 @@ export function PromptField({
                        text-dim hover:text-txt disabled:cursor-not-allowed disabled:opacity-40
                        focus-visible:outline-2 focus-visible:outline-focus focus-visible:outline-offset-2"
             aria-label={`Modifier « ${label} » dans une fenêtre plus confortable`}
-            disabled={disabled}
+            disabled={disabled || revising}
             onClick={() => setEditing(true)}
           >
             <Icon name="pencil" className="h-[14px] w-[14px]" />
@@ -114,23 +138,13 @@ export function PromptField({
                        disabled:opacity-40 focus-visible:outline-2 focus-visible:outline-focus
                        focus-visible:outline-offset-2"
             aria-label={`Vider « ${label} »`}
-            disabled={disabled || !value}
+            disabled={disabled || revising || !value}
             onClick={() => onChange('')}
           >
             <span aria-hidden="true">×</span>
           </button>
         </div>
       </div>
-      {enhancer && enhanceKind && (
-        <EnhanceControl
-          label={label}
-          kind={enhanceKind}
-          value={value}
-          onApply={onChange}
-          enhancer={enhancer}
-          disabled={disabled}
-        />
-      )}
       {disabled && lockedNote && <p className="tiny mt-[4px] mb-0">{lockedNote}</p>}
 
       <Dialog

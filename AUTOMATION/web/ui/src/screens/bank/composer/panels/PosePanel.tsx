@@ -54,7 +54,7 @@ export function PosePanel({
   changed: Set<SceneField>
   onPatch: (patch: Partial<SceneDraft>) => void
   /** « Améliorer » on the prompt fragment (IT-10 chantier 8). */
-  enhancer?: Enhancer
+  enhancer: Enhancer
 }) {
   const options = poseOptions(poses, draft.pose)
   // Same `label || name` fallback as `PoseCard`'s own accessible name.
@@ -85,15 +85,15 @@ export function PosePanel({
       <div className="grid grid-cols-2 gap-[16px] max-[860px]:grid-cols-[1fr]">
         {/* En mots */}
         <div>
-          <span className={HEAD}>En mots · rejoint le prompt</span>
           <div
-            className="mt-[8px] border-l-[3px] pl-[10px]"
+            className="border-l-[3px] pl-[10px]"
             style={{ borderColor: FRAGMENT_COLORS.pose }}
           >
             <PromptField
               dataField="prompt_pose"
               enhancer={enhancer}
               enhanceKind="pose"
+              head={<span className={HEAD}>En mots · rejoint le prompt</span>}
               label="Prompt de pose"
               hideLabel
               placeholder="ex : leaning against the doorway, arms crossed"

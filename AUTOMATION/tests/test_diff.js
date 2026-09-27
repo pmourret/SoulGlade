@@ -106,6 +106,32 @@ console.log('\n[8] scene jamais enregistree : tout est en ajout')
   dire(vide.length === 0, 'et deux textes vides ne produisent aucune ligne')
 }
 
+console.log('\n[9] la sequence unique (suivi de modifications) sort du MEME parcours que les deux cotes')
+{
+  const recolle = (spans, garder) => spans.filter((s) => garder.includes(s.kind)).map((s) => s.text).join('')
+  const cas = [
+    // la lumiere reelle des constats du 27/09 (proposition du modele local)
+    ['soft window light from the left, warm tones, gentle shadows on her face, dust in the air',
+     'soft window light from the left, warm tones, gentle shadows upon the face, visible dust motes suspended in the air'],
+    ['golden hour light', 'blue hour light'],
+    ['a sunlit kitchen', 'a sunlit kitchen, golden hour'],
+    ['one two three four', 'four'],
+    ['', 'tout neuf'],
+  ]
+  for (const [a, b] of cas) {
+    const { before, after, run } = diffWords(a, b)
+    dire(recolle(run, ['same', 'del']) === a && recolle(run, ['same', 'add']) === b,
+         `run se recolle en ses deux textes (« ${a.slice(0, 24)}… »)`)
+    dire(recolle(run, ['del']) === recolle(before, ['del']) && recolle(run, ['add']) === recolle(after, ['add']),
+         '  et ses retraits / ajouts sont exactement ceux des deux cotes')
+  }
+  const identique = diffWords('same text here', 'same text here').run
+  dire(identique.length === 1 && identique[0].kind === 'same', 'texte identique : une seule etendue « same »')
+  dire(!diffWords('a sunlit kitchen', 'a sunlit kitchen, golden hour').run.some((s) => s.kind === 'del'),
+       'ajout seul : aucun retrait')
+  dire(!diffWords('one two three four', 'four').run.some((s) => s.kind === 'add'), 'retrait seul : aucun ajout')
+}
+
 console.log('\n' + '='.repeat(70))
 console.log(ko ? `${ko} ECHEC(S)` : 'tout est vert')
 console.log('='.repeat(70))

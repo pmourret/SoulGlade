@@ -1,12 +1,14 @@
 /* Browser smoke test of « Améliorer » on a prompt fragment (IT-10 chantier 8).
 
    Ce que ce test tient, dans le composeur de la Banque :
-     1. SAME LANGUAGE : la proposition se compare mot à mot ; Rejeter ne
-        change rien, Appliquer écrit la proposition DANS LE CHAMP ;
+     1. SAME LANGUAGE : la proposition se lit DANS LE CHAMP, en lecture seule,
+        ajouts surlignés, retraits sur demande ; Rejeter ne change rien,
+        Appliquer écrit la proposition dans le champ ;
      2. LA REQUÊTE porte le type du fragment et son texte, rien d'autre ;
-     3. TRADUIT : les deux textes côte à côte, et les mots non repris dits en
-        toutes lettres ;
-     4. TAPER dans le champ retire une proposition devenue sans objet ;
+     3. TRADUIT : aucun surlignage, l'original à un clic, et les mots non
+        repris dits en toutes lettres, en avertissement ;
+     4. LA VALEUR CHANGE AILLEURS (Ctrl+Z) : la révision se ferme sans rien
+        écrire, le focus revient au déclencheur ;
      5. UN ÉCHEC s'affiche avec sa cause (`role="alert"`) ;
      6. COMFYUI HORS LIGNE : le bouton est désactivé ;
      6b. LE PANNEAU IA : trois fragments, un seul Ctrl+Z, variante, portée,
@@ -84,37 +86,70 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
   console.log('\n[1] meme langue : comparaison, Rejeter, puis Appliquer');
   say(await page.isDisabled(inField('[data-enhance-run]')), 'champ vide : bouton desactive');
   await page.fill(FIELD, 'standing holding a mug');
-  replies.push([200, { ok: true, text: 'standing, holding a warm mug', translated: false, lost: [] }]);
+  replies.push([200, { ok: true, text: 'standing, holding a warm cup', translated: false, lost: [] }]);
   await run();
   await page.waitForSelector(proposal);
-  const shown = await page.textContent(proposal);
-  say(shown.includes('Actuel') && shown.includes('Proposé') && !shown.includes('traduit'),
-      'comparaison mot a mot, Actuel / Propose');
+  say(!(await page.isVisible(FIELD)) && (await page.getAttribute(proposal, 'aria-readonly')) === 'true',
+      'revision dans le champ : le champ cede sa place, lecture seule');
+  say((await page.textContent(inField('[data-enhance-text]'))).includes('warm cup'), 'le texte propose est lu dans le champ');
+  const removed = () => page.$$eval(inField('[data-enhance-proposal] del'), e => e.map(x => x.textContent).join(''));
+  say((await removed()) === '', 'au repos : aucun retrait montre');
+  await page.click(inField('button:has-text("Voir les retraits")'));
+  say((await removed()).includes('mug'), `Voir les retraits : « mug » barre a sa place (${await removed()})`);
   say(!(await page.isVisible(inField('[data-enhance-lost]'))), 'aucun mot perdu : pas de ligne');
   await page.click(inField('[data-enhance-reject]'));
   say(!(await page.isVisible(proposal)) && (await page.inputValue(FIELD)) === 'standing holding a mug',
       'Rejeter : proposition fermee, champ intact');
-  replies.push([200, { ok: true, text: 'standing, holding a warm mug', translated: false, lost: [] }]);
+  replies.push([200, { ok: true, text: 'standing, holding a warm cup', translated: false, lost: [] }]);
   await run();
   await page.waitForSelector(proposal);
   await page.click(inField('[data-enhance-apply]'));
-  say((await page.inputValue(FIELD)) === 'standing, holding a warm mug', 'Appliquer : la proposition est dans le champ');
+  say((await page.inputValue(FIELD)) === 'standing, holding a warm cup', 'Appliquer : la proposition est dans le champ');
+  replies.push([200, { ok: true, text: 'standing, holding a warm mug', translated: false, lost: [] }]);
+  await run();
+  await page.waitForSelector(proposal);
+  await page.click(inField('button:has-text("Voir les retraits")'));
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(100);
+  say(!(await page.isVisible(proposal)) && (await page.inputValue(FIELD)) === 'standing, holding a warm cup'
+      && (await page.isVisible('#sceneInspector')),
+      'Echap depuis un bouton de la revision : rejetee, champ intact, l inspecteur reste ouvert');
 
   console.log('\n[2] la requete : le type et le texte, rien d autre');
   say(JSON.stringify(sent[0]) === JSON.stringify({ kind: 'scene', text: 'standing holding a mug' }),
       `corps envoye ${JSON.stringify(sent[0])}`);
 
-  console.log('\n[3] traduit : cote a cote, mots non repris');
+  console.log('\n[3] traduit : aucun surlignage, l original a un clic, mots non repris');
+  await page.waitForTimeout(900);            // un pas d'annulation par pause de frappe
   await page.fill(FIELD, 'allongée, sensuelle, lumière douce');
+  await page.waitForTimeout(900);
   replies.push([200, { ok: true, text: 'lying down, soft light', translated: true, lost: ['sensual'] }]);
   await run();
   await page.waitForSelector(proposal);
-  say((await page.textContent(proposal)).includes('Proposé (traduit)'), 'propose (traduit), cote a cote');
+  say((await page.textContent('#sceneInspector .f:has([data-f="prompt_base"])')).includes('Traduit en anglais')
+      && (await page.$$(inField('[data-enhance-proposal] [style*="diff-add-word"]'))).length === 0,
+      'traduit en anglais, aucun surlignage');
+  await page.click(inField('button:has-text("Voir l’original")'));
+  say((await page.textContent(inField('[data-enhance-original]'))).includes('allongée'), 'Voir l original : le francais deplie');
   say((await page.textContent(inField('[data-enhance-lost]'))).includes('sensual'), 'mots non repris : sensual');
+  const warn = await page.evaluate(sel => {
+    const probe = document.createElement('span');
+    probe.style.color = 'var(--warn-txt)';
+    document.body.append(probe);
+    const want = getComputedStyle(probe).color;
+    probe.remove();
+    return getComputedStyle(document.querySelector(sel)).color === want;
+  }, inField('[data-enhance-lost]'));
+  say(warn, 'mots non repris en --warn-txt, un avertissement');
 
-  console.log('\n[4] taper retire une proposition sans objet');
-  await page.fill(FIELD, 'allongée, sensuelle, lumière douce, draps');
-  say(!(await page.isVisible(proposal)), 'le champ a change : plus de proposition');
+  console.log('\n[4] la valeur change ailleurs (Ctrl+Z) : la revision se ferme sans rien ecrire');
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  const after = await page.inputValue(FIELD);
+  say(!(await page.isVisible(proposal)) && after !== 'lying down, soft light',
+      `revision fermee, rien d ecrit (champ : « ${after} »)`);
+  say(await page.evaluate(() => document.activeElement?.hasAttribute('data-enhance-run')),
+      'le focus revient au declencheur');
 
   console.log('\n[5] un echec dit sa cause');
   replies.push([400, { ok: false, erreur: 'réponse illisible du modèle local' }]);
@@ -186,7 +221,7 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
   await world.page.locator('#worldPlaces [role="tab"]:has-text("Lieux")').click();
   await world.page.click('#worldPlaces [data-entry-row]');
   await world.page.waitForSelector('#entry-prompt');
-  const inDecor = sel => `div:has(> #entry-prompt) ${sel}`;
+  const inDecor = sel => `[data-enhance]:has(#entry-prompt) ${sel}`;
   const decor = await world.page.inputValue('#entry-prompt');
   world.replies.push([200, { ok: true, text: 'a sunlit room, plants on the sill', translated: false, lost: [] }]);
   await world.page.click(inDecor('[data-enhance-run]'));
@@ -250,11 +285,19 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
   say((await focused()) === 'proposal', `la proposition prend le focus a son arrivee (${await focused()})`);
   say((await kb.page.textContent(inField('[data-enhance-lost]'))).startsWith('Mots de la traduction non repris'),
       'apres une traduction : « mots de la traduction non repris »');
-  await kb.page.keyboard.press('Tab');
   await kb.page.keyboard.press('Enter');
   await kb.page.waitForTimeout(100);
-  say((await kb.page.inputValue(FIELD)) === 'reading a book', 'Tab puis Entree : Appliquer, au clavier seul');
+  say((await kb.page.inputValue(FIELD)) === 'reading a book', 'Entree sur la revision : Appliquer, au clavier seul');
   say((await focused()) === 'run', `apres Appliquer, le focus revient au bouton (${await focused()})`);
+  kb.replies.push([200, { ok: true, text: 'reading a thick book', translated: false, lost: [] }]);
+  await kb.page.keyboard.press('Enter');
+  await kb.page.waitForSelector(inField('[data-enhance-proposal]'));
+  await kb.page.waitForTimeout(100);
+  await kb.page.keyboard.press('Escape');
+  await kb.page.waitForTimeout(100);
+  say((await kb.page.inputValue(FIELD)) === 'reading a book' && !(await kb.page.isVisible(inField('[data-enhance-proposal]'))),
+      'Echap : la proposition est rejetee, le champ intact');
+  say((await focused()) === 'run', `apres Echap, le focus revient au bouton (${await focused()})`);
 
   kb.replies.push([400, { ok: false, erreur: 'réponse illisible du modèle local' }]);
   await kb.page.click(inField('[data-enhance-run]'));

@@ -64,7 +64,7 @@ export function LightPanel({
   onPatch: (patch: Partial<SceneDraft>) => void
   onGoto: (section: SectionKey) => void
   /** « Améliorer » on the prompt fragment (IT-10 chantier 8). */
-  enhancer?: Enhancer
+  enhancer: Enhancer
 }) {
   const variants = draft.variants.split('\n').filter((line, index, all) =>
     // une ligne vide en cours de saisie reste, une ligne vide finale ne compte pas
@@ -76,6 +76,23 @@ export function LightPanel({
   const base = lightLine(draft.promptLight, lights, marker)
   const carries = draft.promptLight.trim() !== ''
   const written = lightWordsIn(`${composePrompt(draft)} ${decor}`, words)
+  const lightHead = <span className={HEAD}>Lumière de la scène</span>
+  const lightCount = (
+    <span className="text-[11px] text-dim2">
+      {base.reference ? 'du catalogue' : `${draft.promptLight.length} car.`}
+      {changed.has('promptLight') && <b className="ml-[8px] text-warn-txt">modifié</b>}
+    </span>
+  )
+  const alreadyWritten = written.length > 0 && (
+    <p className="m-0 mb-[8px] flex items-start gap-[6px] text-[12px] text-warn-txt" role="status"
+       id="lightAlreadyWritten">
+      <Icon name="warn" className="mt-[2px] h-[11px] w-[11px] flex-none" aria-hidden="true" />
+      <span>
+        Ce texte décrit déjà une lumière ({written.map((w) => `« ${w} »`).join(', ')}) : une
+        lumière posée ici, ou une variante, s'y ajoute.
+      </span>
+    </p>
+  )
 
   return (
     <div className="flex flex-col gap-[16px]">
@@ -91,55 +108,51 @@ export function LightPanel({
           à côte dès que le panneau a la place, empilées en dessous. */}
       <div className="grid items-start gap-[18px] @[1100px]:grid-cols-2">
       <div className="min-w-0">
-        <div className="mb-[4px] flex items-baseline justify-between gap-[10px]">
-          <span className={HEAD}>Lumière de la scène</span>
-          <span className="text-[11px] text-dim2">
-            {base.reference ? 'du catalogue' : `${draft.promptLight.length} car.`}
-            {changed.has('promptLight') && <b className="ml-[8px] text-warn-txt">modifié</b>}
-          </span>
-        </div>
-        {written.length > 0 && (
-          <p className="m-0 mb-[8px] flex items-start gap-[6px] text-[12px] text-warn-txt" role="status"
-             id="lightAlreadyWritten">
-            <Icon name="warn" className="mt-[2px] h-[11px] w-[11px] flex-none" aria-hidden="true" />
-            <span>
-              Ce texte décrit déjà une lumière ({written.map((w) => `« ${w} »`).join(', ')}) : une
-              lumière posée ici, ou une variante, s'y ajoute.
-            </span>
-          </p>
-        )}
+        {/* The heading and what it carries: its own row over the catalogue
+            line, the head row of the field over a written one (design-pass
+            screen-ameliorer §S1: « Améliorer » at the end of it). */}
         {base.reference ? (
-          <div
-            className={`flex flex-col gap-[8px] rounded-card border p-[10px] ${
-              changed.has('promptLight') ? 'border-warn' : 'border-line'
-            }`}
-            data-f="prompt_light"
-            data-value={draft.promptLight}
-          >
-            <LineView view={base} line={draft.promptLight.trim()} />
-            {worldLinked ? (
-              <p className="tiny m-0">{lockedNote}</p>
-            ) : (
-              <div className="flex flex-wrap gap-[6px]">
-                <button
-                  type="button"
-                  className="btn sm"
-                  disabled={!base.text}
-                  onClick={() => onPatch({ promptLight: base.text })}
-                >
-                  Écrire à la main
-                </button>
-                <button type="button" className="btn sm" onClick={() => onPatch({ promptLight: '' })}>
-                  Retirer
-                </button>
-              </div>
-            )}
-          </div>
+          <>
+            <div className="mb-[4px] flex items-baseline justify-between gap-[10px]">
+              {lightHead}
+              {lightCount}
+            </div>
+            {alreadyWritten}
+            <div
+              className={`flex flex-col gap-[8px] rounded-card border p-[10px] ${
+                changed.has('promptLight') ? 'border-warn' : 'border-line'
+              }`}
+              data-f="prompt_light"
+              data-value={draft.promptLight}
+            >
+              <LineView view={base} line={draft.promptLight.trim()} />
+              {worldLinked ? (
+                <p className="tiny m-0">{lockedNote}</p>
+              ) : (
+                <div className="flex flex-wrap gap-[6px]">
+                  <button
+                    type="button"
+                    className="btn sm"
+                    disabled={!base.text}
+                    onClick={() => onPatch({ promptLight: base.text })}
+                  >
+                    Écrire à la main
+                  </button>
+                  <button type="button" className="btn sm" onClick={() => onPatch({ promptLight: '' })}>
+                    Retirer
+                  </button>
+                </div>
+              )}
+            </div>
+          </>
         ) : (
           <PromptField
             dataField="prompt_light"
-              enhancer={enhancer}
-              enhanceKind="light"
+            enhancer={enhancer}
+            enhanceKind="light"
+            head={lightHead}
+            headExtra={lightCount}
+            beforeField={alreadyWritten}
             label="Lumière de la scène"
             hideLabel
             hint="Ajoutée au prompt au lancement, après le décor du lieu."
