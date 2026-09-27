@@ -1,21 +1,21 @@
-/* Browser smoke test of Référentiel › Mondes — registry, four catalogs and
-   their inspectors, at /worlds and /worlds/:id/places (IT-11 chantier 4,
-   ADR-0027).
+/* Browser smoke test of Référentiel › Mondes — the world as a book: menu,
+   four chapters and the adult branch, and their inspector, at /worlds and
+   /worlds/:id/places (IT-11 chantier 4, ADR-0027, design-pass 19).
 
    Ce que ce test tient, sur le parcours du critère de sortie d'IT-11 :
 
      1. UN MONDE NEUF SE REMPLIT DEPUIS L'ECRAN, sans JSON : il est cree par le
-        dialogue, s'ouvre sur Lieux en creation, recoit un lieu, une intention,
-        une scene qui les CHOISIT dans les listes (aperçu du prompt compose
-        visible), et un ton.
+        dialogue, s'ouvre sur un nouveau lieu, recoit un lieu, une intention,
+        une scene creee PAR LA PHRASE « intention au lieu » (apercu du prompt
+        compose visible), et un ton.
      2. LES IDENTIFIANTS SE FIGENT A LA CREATION : proposes depuis le nom, ils ne
         sont plus editables une fois l'entree enregistree.
-     3. UN LIEU UTILISE NE SE RETIRE PAS : le geste est refuse avant meme la
-        question, et le message nomme la scene.
+     3. UN LIEU UTILISE NE SE RETIRE PAS : « Retirer » est desactive, et la
+        raison nomme la scene sous le bouton.
      4. LA BRANCHE ADULTE EST ANNONCEE, JAMAIS IMPOSEE (arbitrage du 21/09) : son
-        nombre est sur le selecteur de l'onglet Scenes, son contenu n'apparait
-        qu'une fois choisie, avec son bandeau et son fichier. Lu sur slow-life,
-        sans rien y ecrire.
+        chapitre est replie et dit son nombre, son contenu n'apparait qu'une
+        fois affiche, avec son bandeau et son fichier. Lu sur slow-life, sans
+        rien y ecrire.
 
    IL NETTOIE. Le monde qu'il cree n'a pas de route de suppression : il est
    retire du disque a la fin, par son chemin exact (WORLDS/<id>.json), jamais
@@ -47,8 +47,7 @@ const FICHIER = path.join(__dirname, '..', '..', 'WORLDS', `${NEUF}.json`);
 
   let ko = 0;
   const dire = (bon, quoi) => { console.log(`   ${bon ? 'ok  ' : 'ECHEC'} ${quoi}`); if (!bon) ko++; };
-  const onglet = (nom) => page.locator(`#worldPlaces [role="tab"]:has-text("${nom}")`);
-  const lignes = () => page.$$eval('#worldPlaces [data-entry-row] b', e => e.map(x => x.textContent.trim()));
+  const cartes = (bloc = '#worldPlaces') => page.$$eval(`${bloc} [data-entry-row] b`, e => e.map(x => x.textContent.trim()));
   const enregistrer = async () => {
     await page.waitForSelector('#pendingBar');
     await page.click('#btnPendingSave');
@@ -59,16 +58,18 @@ const FICHIER = path.join(__dirname, '..', '..', 'WORLDS', `${NEUF}.json`);
   try {
     fs.rmSync(FICHIER, { force: true });
 
-    console.log('\n[1] un monde neuf s ouvre sur Lieux, en creation');
+    console.log('\n[1] un monde neuf s ouvre sur un nouveau lieu');
     await page.goto(`${BASE}/worlds?character=lena`, { waitUntil: 'networkidle' });
-    await page.click('#worlds [data-new]');
+    await page.click('#worldPick');
+    await page.click('#worldMenu [data-new]');
     await page.fill('#nwLabel', 'Zz essai monde');
     await page.fill('#nwId', NEUF);
     await page.click('[data-new-open] button.btn.primary');
     await page.waitForSelector('#entryInspector[data-entry="lieu"]', { timeout: 6000 }).catch(() => {});
     dire(Boolean(await page.$('#entryInspector[data-entry="lieu"]')),
          'le monde cree ouvre l inspecteur d un premier lieu');
-    dire(await onglet('Lieux').getAttribute('aria-selected') === 'true', 'sur l onglet Lieux');
+    dire(/Il faut d'abord un lieu/.test(await page.textContent('#scenesBlock')),
+         'le chapitre Quoi ? dit ce qui lui manque');
     dire(await page.evaluate(() => document.activeElement?.id) === 'entry-label',
          'le focus est dans le nom');
 
@@ -77,15 +78,13 @@ const FICHIER = path.join(__dirname, '..', '..', 'WORLDS', `${NEUF}.json`);
     dire(await page.inputValue('#entryIdInput') === 'petite_cuisine', 'l identifiant est propose depuis le nom');
     await page.fill('#entry-prompt', 'small sunlit kitchen, wooden shelves');
     await enregistrer();
-    dire((await lignes()).includes('Petite cuisine'), 'le lieu est enregistre et liste');
+    dire((await cartes('#lieuxBlock')).includes('Petite cuisine'), 'le lieu est enregistre, en carte');
     dire(!(await page.$('#entryIdInput')) && (await page.textContent('#entryId')).trim() === 'petite_cuisine',
          'son identifiant n est plus editable');
 
     console.log('\n[3] une intention, avec un ton propose seulement parmi ceux du monde');
-    await onglet('Intentions').click();
-    await page.waitForTimeout(150);
-    dire(/intention/i.test(await page.textContent('#intentionsBlock')), 'l onglet vide dit ce qu est une intention');
-    await page.click('#intentionsBlock button:has-text("Créer la première intention")');
+    dire(/intention/i.test(await page.textContent('#intentionsBlock')), 'le chapitre vide dit ce qu est une intention');
+    await page.click('#intentionsBlock button:has-text("Première intention")');
     await page.waitForSelector('#entryInspector[data-entry="intention"]');
     await page.fill('#entry-label', 'Cuisine maison');
     dire(await page.inputValue('#entryIdInput') === 'cuisine_maison', 'la cle est proposee depuis le nom');
@@ -93,48 +92,47 @@ const FICHIER = path.join(__dirname, '..', '..', 'WORLDS', `${NEUF}.json`);
     dire(tons.length === 1 && tons[0] === '', 'un monde sans ton ne propose que « aucun »');
     await page.fill('#entry-prompt_add', 'home cooking, everyday gestures');
     await enregistrer();
-    dire((await lignes()).some(l => l.includes('Cuisine maison')), 'l intention est enregistree');
+    dire((await cartes('#intentionsBlock')).some(l => l.includes('Cuisine maison')), 'l intention est enregistree');
 
-    console.log('\n[4] une scene qui choisit son intention et son lieu dans les listes');
-    await onglet('Scènes').click();
-    await page.waitForTimeout(150);
-    await page.click('#btnAddEntry');
+    console.log('\n[4] une scene creee par la phrase « intention au lieu »');
+    dire(await page.inputValue('#sceneNewIntention') === 'cuisine_maison'
+         && await page.inputValue('#sceneNewPlace') === 'petite_cuisine',
+         'la phrase propose la seule intention et le seul lieu');
+    await page.click('#scenesBlock button:has-text("Créer")');
     await page.waitForSelector('#entryInspector[data-entry="scène"]');
+    await page.waitForTimeout(150);
+    dire(await page.evaluate(() => document.activeElement?.id) === 'entry-prompt',
+         'le focus est dans « Ce qui s y passe »');
+    dire(await page.inputValue('#entry-intention') === 'cuisine_maison'
+         && await page.inputValue('#entry-place') === 'petite_cuisine',
+         'la scene porte l intention et le lieu de la phrase');
     await page.fill('#entry-label', 'Cuisine au matin');
-    await page.selectOption('#entry-intention', 'cuisine_maison');
-    await page.selectOption('#entry-place', 'petite_cuisine');
+    await page.fill('#entryIdInput', 'cuisine_au_matin');
     await page.fill('#entry-prompt', 'stirring a pot, morning light');
     const apercu = (await page.textContent('#entryPreview')).trim();
     dire(apercu === 'stirring a pot, morning light, small sunlit kitchen, wooden shelves',
          `l apercu compose la scene et son decor : « ${apercu} »`);
     await enregistrer();
-    dire((await lignes()).includes('Cuisine au matin'), 'la scene est enregistree');
+    dire((await cartes('#scenesBlock')).includes('Cuisine au matin'), 'la scene est enregistree, sous son intention');
     const surDisque = JSON.parse(fs.readFileSync(FICHIER, 'utf8'));
     const sc = surDisque.scenes.find(s => s.id === 'cuisine_au_matin');
     dire(sc && sc.intention === 'cuisine_maison' && sc.place === 'petite_cuisine' && !('intensity' in sc),
          'le fichier porte la scene avec ses deux references, sans niveau non demande');
 
     console.log('\n[5] un lieu utilise ne se retire pas, et le dit');
-    await onglet('Lieux').click();
-    await page.waitForTimeout(150);
-    await page.click('#worldPlaces [data-entry-row="petite_cuisine"]');
-    await page.click('#btnEntryRemove');
-    await page.waitForTimeout(300);
-    dire(!(await page.$('#cfOui')), 'aucune question n est posee pour un geste impossible');
-    dire(/Cuisine au matin/.test(await page.textContent('#toastTxt')), 'le message nomme la scene');
-    dire((await lignes()).includes('Petite cuisine'), 'et le lieu est toujours la');
+    await page.click('#lieuxBlock [data-entry-row="petite_cuisine"]');
+    await page.waitForSelector('#entryInspector[data-entry="lieu"]');
+    dire(await page.isDisabled('#btnEntryRemove'), 'Retirer est desactive');
+    dire(/Cuisine au matin/.test(await page.textContent('#entryRemoveWhy')), 'la raison nomme la scene');
+    dire(/Sert à 1 scène/.test(await page.textContent('#entryUsers')), 'le lieu dit « Sert a 1 scene »');
 
     console.log('\n[6] un ton, et l intention peut alors le proposer');
-    await onglet('Tons').click();
-    await page.waitForTimeout(150);
     await page.click('#tonesEmpty button');
     await page.waitForSelector('#toneKey');
     await page.fill('#toneLabel', 'Doux');
     await page.fill('#tonePrompt', 'soft window light');
     await enregistrer();
-    await onglet('Intentions').click();
-    await page.waitForTimeout(150);
-    await page.click('#worldPlaces [data-entry-row="cuisine_maison"]');
+    await page.click('#intentionsBlock [data-entry-row="cuisine_maison"]');
     await page.selectOption('#entry-tone', 'doux');
     await enregistrer();
     const relu = JSON.parse(fs.readFileSync(FICHIER, 'utf8'));
@@ -143,13 +141,14 @@ const FICHIER = path.join(__dirname, '..', '..', 'WORLDS', `${NEUF}.json`);
 
     console.log('\n[7] la branche adulte de slow-life : annoncee, jamais imposee');
     await page.goto(`${BASE}/worlds/slow-life/places?character=lena&onglet=scenes`, { waitUntil: 'networkidle' });
-    await page.waitForSelector('#worldPlaces [data-entry-row]');
-    const ordinaires = await lignes();
-    dire(/\d/.test(await page.textContent('#branchAdultes')), 'le selecteur Adultes annonce son nombre');
-    dire(!(await page.$('#adulteBanner')), 'et rien d adulte n est a l ecran au chargement');
+    await page.waitForSelector('#scenesBlock [data-entry-row]');
+    const ordinaires = await cartes('#scenesBlock');
+    dire(/\d+ scènes? adultes?/.test(await page.textContent('#adultesBlock')), 'le chapitre Adultes annonce son nombre');
+    dire(!(await page.$('#adulteBanner')) && (await cartes('#adultesBlock')).length === 0,
+         'et rien d adulte n est a l ecran au chargement');
     await page.click('#branchAdultes');
     await page.waitForTimeout(200);
-    const adultes = await lignes();
+    const adultes = await cartes('#adultesBlock');
     dire(adultes.length > 0 && !adultes.some(a => ordinaires.includes(a)),
          `la branche liste ses propres scenes (${adultes.length}), aucune dans les ordinaires`);
     dire(/slow-life\.adulte\.json/.test(await page.textContent('#adulteBanner')),

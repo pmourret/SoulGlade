@@ -1,3 +1,5 @@
+> **Structure remplacée le 2026-09-27** par `screen-19-mondes-livret.md` (le livret du monde, option 19d). Les invariants ci-dessous restent.
+
 # Écran 11 : Référentiel, Mondes (trois colonnes : mondes, lieux, lieu)
 
 Périmètre validé par l'utilisateur le 2026-09-23. Maquette validée : `Revue UX 11 - Mondes.dc.html`, option **11a** (A1 nominal, A2 nouveau monde, A3 catalogue adulte vide). L'option 11b est écartée.

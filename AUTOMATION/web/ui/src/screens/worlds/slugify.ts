@@ -51,3 +51,14 @@ export const TONE_KEY_RE = /^[a-z0-9_]+$/
 export function toneKey(name: string): string {
   return slugify(name).replace(/^id_/, '').replace(/-/g, '_')
 }
+
+/** The id a new scene of that name gets: its slug, suffixed `_2`, `_3`… when
+    the catalog already holds it. Two scenes on the same intention and place
+    are allowed (the scene sentence names them alike), a duplicate id is not. */
+export function freeId(label: string, taken: string[]): string {
+  const base = slugify(label)
+  if (!base || !taken.includes(base)) return base
+  let n = 2
+  while (taken.includes(`${base}_${n}`)) n++
+  return `${base}_${n}`
+}

@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom'
 
 import { PATHS } from '../../app/routes'
 import { Icon } from '../../chrome/Icon'
+import type { EntryUsers } from './EntryInspector'
 import { TONE_KEY_RE, toneKey } from './slugify'
 import type { TonePatch } from './useToneCatalogue'
 import type { WorldTone } from './useWorldTones'
@@ -31,8 +32,10 @@ export function ToneInspector({
   status,
   creating,
   takenKeys,
+  users,
   onPatch,
   onRemove,
+  onOpenScene,
   onClose,
   enhancer,
 }: {
@@ -43,8 +46,12 @@ export function ToneInspector({
   status: string | null
   creating: boolean
   takenKeys: string[]
+  /** The scenes that cite this tone. Retiring it breaks none of them, so the
+      list informs; it never disables « Retirer ». */
+  users: EntryUsers
   onPatch: (patch: Partial<TonePatch>) => void
   onRemove?: () => void
+  onOpenScene: (id: string) => void
   onClose: () => void
   /** « Améliorer » under the prompt fragment (IT-10 chantier 8). */
   enhancer: Enhancer
@@ -60,6 +67,7 @@ export function ToneInspector({
   const changed = (field: 'label' | 'prompt_add') =>
     draft[field] !== (tone[field] ?? '') ? CHANGED : ''
   const expression = Object.keys(tone.expression ?? {})
+  const userCount = users.shown.length + users.hidden
 
   /* While creating, the key follows the name until it is typed by hand — the
      same proposal the world and place ids get (`slugify.ts`). */
@@ -80,15 +88,11 @@ export function ToneInspector({
       }}
       className="flex h-full min-h-0 flex-col"
     >
-      <header className="flex h-[52px] flex-none items-center gap-[10px] border-b border-b-line px-[16px]">
-        <b className="min-w-0 flex-1 truncate text-[15px] font-[650]">
+      <header className="flex h-[48px] flex-none items-center gap-[10px] border-b border-b-line px-[16px]">
+        <b className="min-w-0 flex-1 truncate text-[14px] font-[650]">
           {draft.label || draft.key || 'Nouveau ton'}
         </b>
-        {onRemove && (
-          <button type="button" className="link flex-none text-danger-txt" id="btnToneRemove" onClick={onRemove}>
-            Retirer…
-          </button>
-        )}
+        <span className="flex-none text-[11.5px] text-dim2">ton</span>
       </header>
 
       <p className="m-0 flex flex-none items-start gap-[7px] border-b border-b-line px-[16px]
@@ -102,7 +106,7 @@ export function ToneInspector({
       </p>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-[16px]">
-        <div className="flex max-w-[720px] flex-col gap-[14px]">
+        <div className="flex flex-col gap-[14px]">
           <div className={FIELD}>
             <label className={LABEL} htmlFor="toneLabel">
               Nom du ton
@@ -118,46 +122,6 @@ export function ToneInspector({
               onChange={(e) => onLabel(e.target.value)}
             />
           </div>
-
-          {creating ? (
-            <div className={FIELD}>
-              <label className={LABEL} htmlFor="toneKey">
-                Clé
-              </label>
-              <div className="flex items-center gap-[10px]">
-                <input
-                  id="toneKey"
-                  className="font-code max-w-[280px]"
-                  spellCheck={false}
-                  aria-describedby="toneKeyNote"
-                  value={draft.key}
-                  onChange={(e) => onPatch({ key: e.target.value })}
-                />
-                <span
-                  id="toneKeyNote"
-                  className={`flex items-center gap-[5px] text-[11.5px] ${keyProblem ? 'text-warn-txt' : 'text-dim2'}`}
-                >
-                  {key && (
-                    <span aria-hidden="true" className="text-[9px]">
-                      {keyProblem ? '◆' : '●'}
-                    </span>
-                  )}
-                  {key ? (keyProblem ?? 'valide') : 'proposée depuis le nom'}
-                </span>
-              </div>
-              <span className={HINT}>
-                figée une fois créée : les scènes, le journal et les exports la citent
-              </span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-[96px_minmax(0,1fr)] items-baseline gap-[10px]">
-              <span className={LABEL}>Clé</span>
-              <span className="min-w-0">
-                <code className="font-code text-[12px] leading-[normal]">{tone.key}</code>
-                <span className={`ml-[8px] ${HINT}`}>figée, citée par les scènes et le journal</span>
-              </span>
-            </div>
-          )}
 
           <div className={FIELD}>
             <EnhanceField
@@ -200,6 +164,31 @@ export function ToneInspector({
             )}
           </div>
 
+          {!creating && (
+            <div className={FIELD} id="toneUsers">
+              <span className={LABEL}>
+                Sert à {userCount ? `${userCount} scène${userCount > 1 ? 's' : ''}` : 'aucune scène'}
+              </span>
+              {users.shown.length > 0 && (
+                <ul className="m-0 flex list-none flex-col gap-[2px] p-0">
+                  {users.shown.map((u) => (
+                    <li key={u.id}>
+                      <button type="button" className="link text-left" onClick={() => onOpenScene(u.id)}>
+                        {u.label}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {users.hidden > 0 && (
+                <span className={HINT}>
+                  et {users.hidden} scène{users.hidden > 1 ? 's' : ''} adulte{users.hidden > 1 ? 's' : ''}, dans la
+                  branche à part
+                </span>
+              )}
+            </div>
+          )}
+
           {status && (
             <p className="m-0 text-[12px] text-dim" role="status">
               {status}
@@ -207,6 +196,49 @@ export function ToneInspector({
           )}
         </div>
       </div>
+
+      {/* The foot, like a place's (design-pass 19 §S5): the key, then Retirer. */}
+      <footer className="flex min-h-[52px] flex-none items-center gap-[10px] border-t border-t-line px-[16px] py-[8px]">
+        {creating ? (
+          <div className="flex min-w-0 flex-1 flex-col gap-[3px]">
+            <div className="flex items-center gap-[8px]">
+              <label className={LABEL} htmlFor="toneKey">
+                Clé
+              </label>
+              <input
+                id="toneKey"
+                className="font-code h-[28px] min-w-0 flex-1 py-0 text-[12px]"
+                spellCheck={false}
+                aria-describedby="toneKeyNote"
+                value={draft.key}
+                onChange={(e) => onPatch({ key: e.target.value })}
+              />
+            </div>
+            <span
+              id="toneKeyNote"
+              className={`flex items-center gap-[5px] text-[11.5px] ${keyProblem ? 'text-warn-txt' : 'text-dim2'}`}
+            >
+              {key && (
+                <span aria-hidden="true" className="text-[9px]">
+                  {keyProblem ? '◆' : '●'}
+                </span>
+              )}
+              {key ? (keyProblem ?? 'valide') : 'proposée depuis le nom'} · figée une fois créée
+            </span>
+          </div>
+        ) : (
+          <span className="min-w-0 truncate text-[12px] text-dim2" data-hint-text="figée, citée par les scènes et le journal">
+            <span className="sr-only">Clé </span>
+            <code className="font-code text-[12px] leading-[normal] text-dim2">{tone.key}</code>
+            <span className="sr-only"> : figée, citée par les scènes et le journal</span>
+          </span>
+        )}
+        {onRemove && (
+          <button type="button" className="link ml-auto flex-none text-danger-txt" id="btnToneRemove" onClick={onRemove}>
+            Retirer…
+          </button>
+        )}
+      </footer>
     </section>
   )
 }

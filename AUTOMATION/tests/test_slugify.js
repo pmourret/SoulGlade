@@ -14,7 +14,7 @@
    scenes qui en derivent — il ne se renomme plus jamais apres. C'est le genre
    de regression qu'aucune fumigation navigateur ne verrait, parce que l'ecran
    marche parfaitement avec un mauvais identifiant. */
-import { ID_RE, isValidId, slugify, TONE_KEY_RE, toneKey } from '../web/ui/src/screens/worlds/slugify.ts'
+import { freeId, ID_RE, isValidId, slugify, TONE_KEY_RE, toneKey } from '../web/ui/src/screens/worlds/slugify.ts'
 
 let ko = 0
 const dire = (bon, quoi) => {
@@ -76,6 +76,15 @@ for (const [nom, attendu] of [['Joueur', 'joueur'], ['Mélancolique', 'melancoli
 dire(noms.map(toneKey).filter(Boolean).every((k) => TONE_KEY_RE.test(k)),
      'toute cle proposee passe la validation du serveur')
 dire(!TONE_KEY_RE.test('slow-life') && !TONE_KEY_RE.test('Joueur'), 'tiret et majuscule refuses')
+
+console.log('\n[8] l identifiant d une scene creee par la phrase reste libre (ecran 19)')
+/* Deux scenes sur le meme couple intention-lieu sont permises, et la phrase
+   leur propose le meme nom : sans suffixe, la seconde serait refusee a
+   l'enregistrement pour un doublon que l'utilisateur n'a pas tape. */
+dire(freeId('Sport au parc', []) === 'sport_au_parc', 'libre : le slug tel quel')
+dire(freeId('Sport au parc', ['sport_au_parc']) === 'sport_au_parc_2', 'pris : suffixe _2')
+dire(freeId('Sport au parc', ['sport_au_parc', 'sport_au_parc_2']) === 'sport_au_parc_3', 'pris deux fois : _3')
+dire(ID_RE.test(freeId('3 collines', ['id_3_collines'])), 'le suffixe garde un identifiant valide')
 
 console.log(`\n${'='.repeat(70)}`)
 console.log(ko === 0 ? 'tout est vert' : `${ko} ECHEC(S)`)

@@ -1,51 +1,64 @@
 /* Référentiel > Mondes — ONE screen for both `/worlds` and
-   `/worlds/:worldId/places` (design-pass screen-11), with a world's four
-   catalogs: Lieux, Intentions, Scènes (and their adult branch), Tons
-   (ADR-0027, IT-11 chantier 4).
+   `/worlds/:worldId/places`: a world read as a book (design-pass 19,
+   option 19d). A screen bar with the world picker, a table of contents, the
+   book of the world's four catalogs and its adult branch (ADR-0027), and an
+   inspector that always holds an entry.
 
    THE SELECTED WORLD IS DERIVED, NEVER STORED: `worldId` comes from the route,
    and falls back to the first row of the registry — the same reasoning as
    `activeCategory` in `app/routes.ts`.
 
-   THE SAVE BELONGS TO THE CHROME. An entry is edited in the third column and
-   written by the `DirtyBar` (§S5.4). That is also what makes leaving a
-   modified entry a QUESTION rather than a silent loss: changing world, tab or
-   branch, or opening another entry, all pass through `leaveGuard`. */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+   THE INSPECTOR IS NEVER EMPTY (§S1). Opening a world opens its first scene;
+   without one, the first entry of the first chapter that has one; an empty
+   world opens « Nouveau lieu ». The same rule catches a removal and Escape.
+
+   THE SAVE BELONGS TO THE CHROME. An entry is edited in the inspector and
+   written by the `DirtyBar` (screen-11 §S5.4). That is also what makes leaving
+   a modified entry a QUESTION rather than a silent loss: changing world,
+   opening another card, adding, folding the adult branch, all pass through
+   `leaveGuard`. */
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { useEnhancer } from '../../api/useEnhance'
-import { useChrome } from '../../chrome/ChromeContext'
 import { useConfirm } from '../../chrome/ConfirmContext'
 import { useRegisterPendingSave, type PendingSave } from '../../chrome/PendingSaveContext'
 import { useToast } from '../../chrome/ToastContext'
 import { PATHS, worldPlacesPath } from '../../app/routes'
-import { CatalogueColumn, type CatalogueTab, type ColumnCatalog, type RowView, type SceneBranch } from './CatalogueColumn'
-import { INTENTION_SPEC, PLACE_SPEC, SCENE_SPEC, composedPrompt, type CatalogContext } from './catalogSpecs'
-import { EntryInspector } from './EntryInspector'
+import { blockOf, CHAPTERS, type Chapter } from './bookChapters'
+import { BookToc } from './BookToc'
+import { INTENTION_SPEC, PLACE_SPEC, SCENE_SPEC, composedPrompt, type CatalogContext, type Draft } from './catalogSpecs'
+import { EntryInspector, type EntryUsers } from './EntryInspector'
 import { NewWorldDialog } from './NewWorldDialog'
+import { freeId } from './slugify'
 import { ToneInspector } from './ToneInspector'
+import { scenesUsing } from './usedBy'
 import { useCatalogueEditor } from './useCatalogueEditor'
 import { useToneCatalogue } from './useToneCatalogue'
 import { useWorldCatalog, type WorldIntention, type WorldPlace, type WorldScene } from './useWorldCatalog'
 import { useWorldTones, type WorldTone } from './useWorldTones'
 import { useWorldRegistry } from './useWorldRegistry'
-import { WorldList } from './WorldList'
+import { WorldBook, type SceneBranch } from './WorldBook'
+import { WorldMenu } from './WorldMenu'
 
-const SHELL = 'screen flex h-full min-h-0 overflow-hidden'
-const LEFT = 'flex w-[260px] shrink-0 flex-col overflow-hidden border-r border-line max-[1100px]:hidden'
-const MIDDLE = 'flex w-[400px] shrink-0 flex-col overflow-hidden border-r border-line max-[1100px]:w-[340px]'
-const RIGHT = 'flex min-w-0 flex-1 flex-col overflow-hidden bg-panel2'
-
-const TABS: CatalogueTab[] = ['lieux', 'intentions', 'scenes', 'tons']
+const SHELL = 'screen flex h-full min-h-0 flex-col overflow-hidden'
+const BAR = 'flex h-[48px] flex-none items-center gap-[12px] border-b border-b-line px-[16px]'
+/* 240 and 340: the charter's scale (DESIGN.md, « Les largeurs de colonne »).
+   Under 1100 px the contents fall into pills over the book, never the centre. */
+const TOC = 'w-[240px] shrink-0 overflow-y-auto border-r border-r-line max-[1100px]:hidden'
+const INSPECTOR = 'flex w-[340px] shrink-0 flex-col overflow-hidden border-l border-l-line bg-panel2'
 
 /** « <noun> » with its article and agreement, for the banner and questions. */
-const NOUNS = {
+const NOUNS: Record<Chapter, { name: string; this: string; done: string; save: string }> = {
   lieux: { name: 'Lieu', this: 'Ce lieu', done: 'modifié', save: 'Enregistrer le lieu' },
   intentions: { name: 'Intention', this: 'Cette intention', done: 'modifiée', save: 'Enregistrer l’intention' },
   scenes: { name: 'Scène', this: 'Cette scène', done: 'modifiée', save: 'Enregistrer la scène' },
+  adultes: { name: 'Scène adulte', this: 'Cette scène', done: 'modifiée', save: 'Enregistrer la scène' },
   tons: { name: 'Ton', this: 'Ce ton', done: 'modifié', save: 'Enregistrer le ton' },
-} as const
+}
+
+/** `?onglet=` of the tones workshop and of the Banque: a chapter, read once. */
+const LINKED: Chapter[] = ['lieux', 'intentions', 'scenes', 'tons']
 
 export function WorldsScreen() {
   const enhancer = useEnhancer()
@@ -54,22 +67,27 @@ export function WorldsScreen() {
   const location = useLocation()
   const toast = useToast()
   const confirm = useConfirm()
-  const { narrow } = useChrome()
   const registry = useWorldRegistry()
 
-  /* `?onglet=` opens a tab: the tones workshop links to Tons, the Banque's
-     « ouvrir dans Mondes » to Scènes. Read once, at mount. */
-  const [tab, setTab] = useState<CatalogueTab>(() => {
-    const asked = new URLSearchParams(location.search).get('onglet') as CatalogueTab | null
-    return asked && TABS.includes(asked) ? asked : 'scenes'
-  })
+  /* The chapter a link asked for, consumed once the book can scroll to it. */
+  const asked = useRef<Chapter | null>(
+    (() => {
+      const value = new URLSearchParams(location.search).get('onglet') as Chapter | null
+      return value && LINKED.includes(value) ? value : null
+    })(),
+  )
+  /* Which catalog the inspector holds. Its entry is the editor's own state. */
+  const [active, setActive] = useState<Chapter>(asked.current ?? 'scenes')
   const [branch, setBranch] = useState<SceneBranch>('ordinaires')
+  const [current, setCurrent] = useState<Chapter>(asked.current ?? 'lieux')
   const [dialogOpen, setDialogOpen] = useState(false)
-  /* The world a creation just made, consumed once ITS empty places have
-     loaded: one lands on creating its first place (§S8). It holds the id,
-     not a boolean: the loader keeps the previous world's list until the next
-     one answers, and a flag fired against the wrong world. */
-  const [freshWorld, setFreshWorld] = useState<string | null>(null)
+  /* What the scene sentence set, posed once the new scene's draft exists: a
+     patch in the same gesture as `add()` would be wiped by the draft reset
+     that `add()` itself triggers (`useCatalogueEditor`, keyed draft). */
+  const [seed, setSeed] = useState<{ chapter: 'scenes' | 'adultes'; draft: Draft } | null>(null)
+  const [seededFocus, setSeededFocus] = useState(false)
+  const bookRef = useRef<HTMLDivElement | null>(null)
+  const jumpedAt = useRef(0)
 
   const worlds = registry.worlds
   const selectedId = worldId ?? worlds?.[0]?.id ?? null
@@ -81,49 +99,25 @@ export function WorldsScreen() {
   const adult = useWorldCatalog<WorldScene>(selectedId, 'scenes-adulte')
   const toneList = useWorldTones(selectedId)
 
-  /* A place or an intention a scene uses cannot leave the world: the server
-     refuses it (`services/worlds.py`). Said BEFORE the question, with the
-     scenes named, so no confirmation is asked for a gesture that cannot happen. */
-  const usedBy = useCallback(
-    (field: 'place' | 'intention', value: string) =>
-      [...(scenes.entries ?? []), ...(adult.entries ?? [])]
-        .filter((s) => s[field] === value)
-        .map((s) => s.label || s.id),
-    [scenes.entries, adult.entries],
-  )
-  const refuseIfUsed = useCallback(
-    (field: 'place' | 'intention', value: string, name: string) => {
-      const users = usedBy(field, value)
-      if (!users.length) return false
-      toast(`« ${name} » sert encore aux scènes ${users.join(', ')} : change-les d’abord`)
-      return true
-    },
-    [usedBy, toast],
-  )
-
   const placeEditor = useCatalogueEditor(places, PLACE_SPEC, {
     onSaved: toast,
-    confirmRemoval: async (place) => {
-      if (refuseIfUsed('place', place.id, place.label || place.id)) return false
-      return confirm({
+    confirmRemoval: (place) =>
+      confirm({
         title: `Retirer le lieu « ${place.label || place.id} » ?`,
         button: 'Retirer',
         danger: true,
         body: <p>Aucune scène de ce monde ne l’utilise. Il disparaît du monde livré.</p>,
-      })
-    },
+      }),
   })
   const intentionEditor = useCatalogueEditor(intentions, INTENTION_SPEC, {
     onSaved: toast,
-    confirmRemoval: async (intention) => {
-      if (refuseIfUsed('intention', intention.key, intention.label || intention.key)) return false
-      return confirm({
+    confirmRemoval: (intention) =>
+      confirm({
         title: `Retirer l’intention « ${intention.label || intention.key} » ?`,
         button: 'Retirer',
         danger: true,
         body: <p>Aucune scène de ce monde ne la porte. Les personnages ne la proposeront plus dans Produire.</p>,
-      })
-    },
+      }),
   })
   const confirmSceneRemoval = (scene: WorldScene) =>
     confirm({
@@ -159,25 +153,25 @@ export function WorldsScreen() {
   )
   const toneCatalogue = useToneCatalogue(toneList, { onSaved: toast, confirmRemoval: confirmToneRemoval })
 
-  const onTones = tab === 'tons'
-  const editor =
-    tab === 'lieux' ? placeEditor : tab === 'intentions' ? intentionEditor : branch === 'adultes' ? adultEditor : sceneEditor
-  const file = `WORLDS/${selectedId}${tab === 'scenes' && branch === 'adultes' ? '.adulte' : ''}.json`
-  const nouns = NOUNS[tab]
+  const editors = { lieux: placeEditor, intentions: intentionEditor, scenes: sceneEditor, adultes: adultEditor }
+  const onTones = active === 'tons'
+  const editor = onTones ? null : editors[active]
+  const file = `WORLDS/${selectedId}${active === 'adultes' ? '.adulte' : ''}.json`
+  const nouns = NOUNS[active]
 
   /* What the chrome and the leave guard need, whichever catalog is open. */
-  const pending = onTones
+  const pending = editor
     ? {
-        dirty: toneCatalogue.dirty,
-        name: toneCatalogue.draft.label || toneCatalogue.draft.key || 'sans nom',
-        reset: toneCatalogue.reset,
-        save: toneCatalogue.save,
-      }
-    : {
         dirty: editor.dirty,
         name: editor.draft.label || editor.draft[editor.spec.idKey] || 'sans nom',
         reset: editor.reset,
         save: editor.save,
+      }
+    : {
+        dirty: toneCatalogue.dirty,
+        name: toneCatalogue.draft.label || toneCatalogue.draft.key || 'sans nom',
+        reset: toneCatalogue.reset,
+        save: toneCatalogue.save,
       }
 
   /** Three honest issues before losing what is typed: write it, drop it, stay. */
@@ -200,10 +194,20 @@ export function WorldsScreen() {
     return true
   }, [confirm, pending, nouns, file])
 
+  /* Leaving a chapter closes what it held: a card opened later starts clean,
+     and no « creating » state waits unseen in a catalog the inspector left. */
+  const closeActive = () => (editor ? editor.close() : toneCatalogue.close())
+  const closeAll = () => {
+    Object.values(editors).forEach((e) => e.close())
+    toneCatalogue.close()
+  }
+
   const goToWorld = useCallback(
     async (id: string) => {
       if (id === selectedId) return
       if (!(await leaveGuard())) return
+      closeAll()
+      setBranch('ordinaires')
       /* `replace` when we came from the bare /worlds: the registry picked that
          first world, the user did not. Search carried forward explicitly, or
          `CharacterContext` would re-add `?character=` and push a second entry. */
@@ -212,63 +216,138 @@ export function WorldsScreen() {
         { replace: location.pathname === PATHS.worlds },
       )
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectedId, leaveGuard, navigate, location.search, location.pathname],
   )
 
-  const onTab = useCallback(
-    async (next: CatalogueTab) => {
-      if (next === tab) return
-      if (!(await leaveGuard())) return
-      setTab(next)
-    },
-    [tab, leaveGuard],
-  )
-
-  const onBranch = useCallback(
-    async (next: SceneBranch) => {
-      if (next === branch) return
-      if (!(await leaveGuard())) return
-      setBranch(next)
-    },
-    [branch, leaveGuard],
-  )
-
-  const onOpen = useCallback(
-    async (id: string) => {
-      if (!(await leaveGuard())) return
-      if (onTones) toneCatalogue.open(id)
-      else editor.open(id)
-    },
-    [leaveGuard, editor, onTones, toneCatalogue],
-  )
-
-  const onAdd = useCallback(async () => {
+  const onOpen = async (chapter: Chapter, id: string) => {
     if (!(await leaveGuard())) return
-    if (onTones) toneCatalogue.add()
-    else editor.add()
-  }, [leaveGuard, editor, onTones, toneCatalogue])
+    if (chapter !== active) closeActive()
+    setActive(chapter)
+    if (chapter === 'tons') toneCatalogue.open(id)
+    else editors[chapter].open(id)
+  }
 
-  const onClose = useCallback(async () => {
+  const onAdd = async (chapter: Chapter) => {
     if (!(await leaveGuard())) return
-    if (onTones) toneCatalogue.close()
-    else editor.close()
-  }, [leaveGuard, editor, onTones, toneCatalogue])
+    if (chapter !== active) closeActive()
+    setActive(chapter)
+    setSeededFocus(false)
+    if (chapter === 'tons') toneCatalogue.add()
+    else editors[chapter].add()
+  }
+
+  const onCreateScene = async (chapter: 'scenes' | 'adultes', intention: string, place: string) => {
+    if (!(await leaveGuard())) return
+    if (chapter !== active) closeActive()
+    const target = editors[chapter]
+    const label = `${intentions.entries?.find((i) => i.key === intention)?.label || intention} au ${
+      places.entries?.find((p) => p.id === place)?.label || place
+    }`
+    const taken = ((chapter === 'adultes' ? adult.entries : scenes.entries) ?? []).map((s) => s.id)
+    setActive(chapter)
+    setSeededFocus(true)
+    target.add()
+    setSeed({ chapter, draft: { label, id: freeId(label, taken), intention, place } })
+  }
 
   useEffect(() => {
-    if (!freshWorld || freshWorld !== selectedId) return
-    if (places.entries === null || places.entries.length > 0) return
-    setFreshWorld(null)
+    if (!seed || !editors[seed.chapter].creatingNew) return
+    editors[seed.chapter].patch(seed.draft)
+    setSeed(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed, sceneEditor.creatingNew, adultEditor.creatingNew])
+
+  const onClose = async () => {
+    if (!(await leaveGuard())) return
+    closeActive()
+  }
+
+  const onBranch = async (next: SceneBranch) => {
+    if (next === branch) return
+    if (next === 'ordinaires' && active === 'adultes') {
+      if (!(await leaveGuard())) return
+      adultEditor.close()
+      setActive('scenes')
+    }
+    setBranch(next)
+  }
+
+  /* §S1 — the inspector is never empty. Runs whenever the open catalog holds
+     nothing: at opening, after a removal, after Escape, after a world change.
+     The open chapter comes first, then the reading order of the spec. */
+  const loaded = places.entries && intentions.entries && scenes.entries && toneList.tones
+  const activeOpen = editor ? editor.isOpen : toneCatalogue.creatingNew || toneCatalogue.selected !== null
+  useEffect(() => {
+    if (!world || !loaded || activeOpen || seed) return
+    const first: Record<Chapter, string | undefined> = {
+      lieux: places.entries![0]?.id,
+      intentions: intentions.entries![0]?.key,
+      scenes: scenes.entries![0]?.id,
+      tons: toneList.tones![0]?.key,
+      adultes: branch === 'adultes' ? adult.entries?.[0]?.id : undefined,
+    }
+    const order: Chapter[] = [active, 'scenes', 'lieux', 'intentions', 'tons']
+    const chapter = order.find((c) => first[c])
+    if (chapter) {
+      if (chapter !== active) setActive(chapter)
+      if (chapter === 'tons') toneCatalogue.open(first.tons!)
+      else editors[chapter].open(first[chapter]!)
+      return
+    }
+    // An empty world: « Nouveau lieu », which the book's first row also offers.
+    setActive('lieux')
+    setSeededFocus(false)
     placeEditor.add()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [freshWorld, selectedId, places.entries])
+  }, [world, loaded, activeOpen, active, branch, seed, places.entries, intentions.entries, scenes.entries, toneList.tones, adult.entries])
+
+  /* ---------------------------------------------------------- the book's scroll */
+  const scrollToChapter = useCallback((chapter: Chapter) => {
+    const box = bookRef.current
+    const target = document.getElementById(blockOf(chapter))
+    if (!box || !target) return
+    // Manual scrollTop, never `scrollIntoView` (it would scroll the shell too).
+    const pills = box.querySelector<HTMLElement>('nav')?.offsetHeight ?? 0
+    box.scrollTop = target.offsetTop - pills - 12
+    jumpedAt.current = Date.now()
+    setCurrent(chapter)
+  }, [])
+
+  /* The chapter marked in the contents: the first whose bottom is below a line
+     a third of the way down (capped at 120 px). A jump from the contents wins
+     for a moment: a short last chapter never reaches the top. */
+  const onScroll = useCallback(() => {
+    if (Date.now() - jumpedAt.current < 250) return
+    const box = bookRef.current
+    if (!box) return
+    const line = box.scrollTop + Math.min(120, box.clientHeight / 3)
+    const seen = CHAPTERS.find((c) => {
+      const el = document.getElementById(c.block)
+      return el && el.offsetTop + el.offsetHeight > line
+    })
+    if (seen) setCurrent(seen.id)
+  }, [])
+
+  const onGo = (chapter: Chapter) => {
+    if (chapter === 'adultes' && branch === 'ordinaires') setBranch('adultes')
+    scrollToChapter(chapter)
+  }
+
+  useEffect(() => {
+    if (!asked.current || !loaded) return
+    scrollToChapter(asked.current)
+    asked.current = null
+  }, [loaded, scrollToChapter])
 
   const onCreateWorld = async (fields: Parameters<typeof registry.create>[0]) => {
     const result = await registry.create(fields)
     if (result.erreur) return result.erreur
     toast(`monde « ${fields.label} » créé`)
     setDialogOpen(false)
-    setTab('lieux')
-    setFreshWorld(result.id!)
+    closeAll()
+    setActive('lieux')
+    setBranch('ordinaires')
     navigate({ pathname: worldPlacesPath(result.id!), search: location.search })
     return null
   }
@@ -303,30 +382,6 @@ export function WorldsScreen() {
   )
   useRegisterPendingSave(pendingSave)
 
-  /* The rows each list shows — computed here, so the column stays pure. */
-  const intentionLabel = (key?: string | null) =>
-    key ? (intentions.entries?.find((i) => i.key === key)?.label ?? key) : undefined
-  const placeLabel = (id?: string | null) => (id ? (places.entries?.find((p) => p.id === id)?.label ?? id) : '')
-  const sceneRows = (list: WorldScene[] | null): RowView[] | null =>
-    list?.map((s) => ({
-      id: s.id,
-      title: s.label || s.id,
-      tag: intentionLabel(s.intention),
-      line: [placeLabel(s.place), s.prompt].filter(Boolean).join(' · '),
-    })) ?? null
-  const column = (
-    rows: RowView[] | null,
-    ed: { creatingNew: boolean; selectedId: string | null; dirty: boolean },
-    error: string | null,
-    fallback: number,
-  ): ColumnCatalog => ({
-    rows,
-    editor: { creatingNew: ed.creatingNew, selectedId: ed.selectedId, dirty: ed.dirty },
-    error,
-    count: rows?.length ?? fallback,
-  })
-  const context: CatalogContext = { places: places.entries, intentions: intentions.entries, tones: toneList.tones }
-
   if (registry.failed) {
     return (
       <div className={SHELL} id="worlds">
@@ -351,47 +406,38 @@ export function WorldsScreen() {
   if (worlds === null) {
     return (
       <div className={SHELL} id="worlds" aria-busy="true">
-        <div className={LEFT} aria-hidden="true">
-          <Skeletons rows={6} />
+        <div className={BAR} aria-hidden="true">
+          <div className="h-[32px] w-[180px] rounded-[6px] bg-panel" />
         </div>
-        <div className={MIDDLE} aria-hidden="true">
-          <Skeletons rows={5} />
-        </div>
-        <div className={RIGHT} aria-hidden="true">
-          <Skeletons rows={4} />
+        <div className="flex min-h-0 flex-1" aria-hidden="true">
+          <div className={TOC}>
+            <Skeletons rows={5} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <Skeletons rows={6} />
+          </div>
+          <div className={INSPECTOR}>
+            <Skeletons rows={4} />
+          </div>
         </div>
       </div>
     )
   }
 
-  const takenIds = (editor.spec.idKey === 'key'
-    ? (intentions.entries ?? []).map((i) => i.key)
-    : ((tab === 'lieux' ? places.entries : branch === 'adultes' ? adult.entries : scenes.entries) ?? []).map(
-        (e) => e.id,
-      )) as string[]
+  const dialog = dialogOpen && (
+    <NewWorldDialog
+      packs={registry.packs}
+      creating={registry.creating}
+      takenIds={worlds.map((w) => w.id)}
+      onCreate={onCreateWorld}
+      onClose={() => setDialogOpen(false)}
+    />
+  )
 
-  return (
-    <div className={SHELL} id="worlds">
-      {dialogOpen && (
-        <NewWorldDialog
-          packs={registry.packs}
-          creating={registry.creating}
-          takenIds={worlds.map((w) => w.id)}
-          onCreate={onCreateWorld}
-          onClose={() => setDialogOpen(false)}
-        />
-      )}
-
-      <div className={LEFT}>
-        <WorldList
-          worlds={worlds}
-          selectedId={selectedId}
-          onSelect={(id) => void goToWorld(id)}
-          onNew={() => setDialogOpen(true)}
-        />
-      </div>
-
-      {world === null ? (
+  if (world === null) {
+    return (
+      <div className={SHELL} id="worlds">
+        {dialog}
         <div className="flex min-w-0 flex-1 items-center justify-center p-[24px]">
           <div className="empty max-w-[420px]">
             <b>Aucun monde pour l'instant</b>
@@ -403,106 +449,169 @@ export function WorldsScreen() {
             </div>
           </div>
         </div>
-      ) : (
-        <>
-          <div className={MIDDLE} id="worldPlaces">
-            <CatalogueColumn
-              world={world}
-              tab={tab}
-              onTab={(next) => void onTab(next)}
-              branch={branch}
-              onBranch={(next) => void onBranch(next)}
-              places={column(
-                places.entries?.map((p) => ({ id: p.id, title: p.label || p.id, line: p.prompt })) ?? null,
-                placeEditor,
-                places.error,
-                world.places_count,
-              )}
-              intentions={column(
-                intentions.entries?.map((i) => ({
-                  id: i.key,
-                  title: `${i.icon ? `${i.icon} ` : ''}${i.label || i.key}`,
-                  tag: i.key,
-                  line: i.prompt_add || 'aucun fragment de prompt',
-                })) ?? null,
-                intentionEditor,
-                intentions.error,
-                world.intentions_count,
-              )}
-              scenes={column(sceneRows(scenes.entries), sceneEditor, scenes.error, world.scenes_count)}
-              adult={column(sceneRows(adult.entries), adultEditor, adult.error, 0)}
-              tones={toneList.tones}
-              toneCatalogue={toneCatalogue}
-              tonesError={toneList.error}
-              tonesCount={toneList.tones?.length ?? world.tones_count ?? 0}
-              narrow={narrow}
-              worlds={worlds}
-              onSelectWorld={(id) => void goToWorld(id)}
-              onOpen={(id) => void onOpen(id)}
-              onAdd={() => void onAdd()}
-            />
-          </div>
+      </div>
+    )
+  }
 
-          <div className={RIGHT}>
-            {onTones ? (
-              toneCatalogue.selected ? (
-                <ToneInspector
-                  tone={toneCatalogue.selected}
-                  draft={toneCatalogue.draft}
-                  worldLabel={world.label}
-                  status={toneCatalogue.status}
-                  creating={toneCatalogue.creatingNew}
-                  takenKeys={toneCatalogue.creatingNew ? (toneList.tones ?? []).map((t) => t.key) : []}
-                  onPatch={toneCatalogue.patch}
-                  enhancer={enhancer}
-                  onRemove={
-                    toneCatalogue.creatingNew ? undefined : () => void toneCatalogue.remove(toneCatalogue.selected!.key)
-                  }
-                  onClose={() => void onClose()}
-                />
-              ) : (
-                <EmptyInspector noun="un ton" />
-              )
-            ) : editor.isOpen ? (
-              <EntryInspector
-                // a fresh inspector per entry: its autofocus and its identity row start over
-                key={`${tab}/${branch}/${editor.creatingNew ? '+' : editor.selectedId}`}
-                spec={editor.spec as typeof SCENE_SPEC}
-                draft={editor.draft}
-                saved={editor.saved}
-                context={context}
+  const counts: Record<Chapter, number> = {
+    lieux: places.entries?.length ?? world.places_count,
+    intentions: intentions.entries?.length ?? world.intentions_count,
+    scenes: scenes.entries?.length ?? world.scenes_count,
+    tons: toneList.tones?.length ?? world.tones_count ?? 0,
+    adultes: adult.entries?.length ?? 0,
+  }
+
+  /* The scenes an entry serves: ordinary ones named, adult ones named only
+     while their chapter is unfolded (arbitration of 21/09), else counted. */
+  const usersOf = (field: 'place' | 'intention' | 'tone', value: string): EntryUsers => {
+    const named = (list: WorldScene[]) => list.map((s) => ({ id: s.id, label: s.label || s.id }))
+    const ordinary = scenesUsing(scenes.entries ?? [], field, value)
+    const adults = scenesUsing(adult.entries ?? [], field, value)
+    return branch === 'adultes'
+      ? { shown: named([...ordinary, ...adults]), hidden: 0 }
+      : { shown: named(ordinary), hidden: adults.length }
+  }
+  const onOpenScene = (id: string) =>
+    void onOpen(scenes.entries?.some((s) => s.id === id) ? 'scenes' : 'adultes', id)
+
+  const context: CatalogContext = { places: places.entries, intentions: intentions.entries, tones: toneList.tones }
+  const takenIds = !editor
+    ? []
+    : ((editor.spec.idKey === 'key'
+        ? (intentions.entries ?? []).map((i) => i.key)
+        : ((active === 'lieux' ? places.entries : active === 'adultes' ? adult.entries : scenes.entries) ?? []).map(
+            (e) => e.id,
+          )) as string[])
+  const selection = editor
+    ? {
+        chapter: active,
+        id: editor.selectedId,
+        creating: editor.creatingNew,
+        dirty: editor.dirty ? nouns.done : null,
+      }
+    : {
+        chapter: active,
+        id: toneCatalogue.selectedKey,
+        creating: toneCatalogue.creatingNew,
+        dirty: toneCatalogue.dirty ? nouns.done : null,
+      }
+  const families = world.compatible_families ?? []
+
+  return (
+    <div className={SHELL} id="worlds">
+      {dialog}
+
+      <div className={BAR}>
+        <WorldMenu
+          worlds={worlds}
+          current={world}
+          onSelect={(id) => void goToWorld(id)}
+          onNew={() => setDialogOpen(true)}
+        />
+        <span className="min-w-0 truncate text-[12.5px] text-dim2">
+          {[
+            families.join(', '),
+            characters && characters > 0
+              ? `${characters} personnage${characters > 1 ? 's' : ''} y ${characters > 1 ? 'vivent' : 'vit'}`
+              : '',
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </span>
+      </div>
+
+      <div className="flex min-h-0 flex-1">
+        <aside className={TOC}>
+          <BookToc counts={counts} current={current} onGo={onGo} />
+        </aside>
+
+        <WorldBook
+          world={world}
+          bookRef={bookRef}
+          onScroll={onScroll}
+          counts={counts}
+          current={current}
+          places={places.entries}
+          intentions={intentions.entries}
+          scenes={scenes.entries}
+          adult={adult.entries}
+          tones={toneList.tones}
+          errors={{
+            lieux: places.error,
+            intentions: intentions.error,
+            scenes: scenes.error,
+            tons: toneList.error,
+            adultes: adult.error,
+          }}
+          selection={selection}
+          branch={branch}
+          onBranch={(next) => void onBranch(next)}
+          onOpen={(chapter, id) => void onOpen(chapter, id)}
+          onAdd={(chapter) => void onAdd(chapter)}
+          onCreateScene={(chapter, intention, place) => void onCreateScene(chapter, intention, place)}
+          onGo={onGo}
+        />
+
+        <div className={INSPECTOR}>
+          {onTones ? (
+            toneCatalogue.selected && (
+              <ToneInspector
+                tone={toneCatalogue.selected}
+                draft={toneCatalogue.draft}
                 worldLabel={world.label}
-                status={editor.status}
-                creating={editor.creatingNew}
-                takenIds={editor.creatingNew ? takenIds : []}
-                preview={tab === 'scenes' ? composedPrompt(editor.draft, places.entries) : undefined}
-                onPatch={editor.patch}
+                status={toneCatalogue.status}
+                creating={toneCatalogue.creatingNew}
+                takenKeys={toneCatalogue.creatingNew ? (toneList.tones ?? []).map((t) => t.key) : []}
+                users={usersOf('tone', toneCatalogue.selected.key)}
+                onPatch={toneCatalogue.patch}
                 enhancer={enhancer}
-                onRemove={editor.creatingNew ? undefined : () => void editor.remove(editor.selectedId!)}
+                onRemove={
+                  toneCatalogue.creatingNew ? undefined : () => void toneCatalogue.remove(toneCatalogue.selected!.key)
+                }
+                onOpenScene={onOpenScene}
                 onClose={() => void onClose()}
               />
-            ) : (
-              <EmptyInspector
-                noun={tab === 'lieux' ? 'un lieu' : tab === 'intentions' ? 'une intention' : 'une scène'}
+            )
+          ) : (
+            editor!.isOpen && (
+              <EntryInspector
+                // a fresh inspector per entry: its autofocus and its identity row start over
+                key={`${active}/${editor!.creatingNew ? '+' : editor!.selectedId}`}
+                spec={editor!.spec as typeof SCENE_SPEC}
+                draft={editor!.draft}
+                saved={editor!.saved}
+                context={context}
+                worldLabel={world.label}
+                status={editor!.status}
+                creating={editor!.creatingNew}
+                takenIds={editor!.creatingNew ? takenIds : []}
+                preview={
+                  active === 'scenes' || active === 'adultes' ? composedPrompt(editor!.draft, places.entries) : undefined
+                }
+                users={
+                  active === 'lieux' && editor!.selectedId
+                    ? usersOf('place', editor!.selectedId)
+                    : active === 'intentions' && editor!.selectedId
+                      ? usersOf('intention', editor!.selectedId)
+                      : undefined
+                }
+                focusField={seededFocus ? 'prompt' : 'label'}
+                onPatch={editor!.patch}
+                enhancer={enhancer}
+                onRemove={editor!.creatingNew ? undefined : () => void editor!.remove(editor!.selectedId!)}
+                onOpenScene={onOpenScene}
+                onClose={() => void onClose()}
               />
-            )}
-          </div>
-        </>
-      )}
+            )
+          )}
+        </div>
+      </div>
     </div>
   )
 }
 
-function EmptyInspector({ noun }: { noun: string }) {
-  return (
-    <div className="flex h-full items-center justify-center p-[24px]">
-      <div className="empty text-[13px]">Ouvre {noun} dans la liste, ou ajoutes-en.</div>
-    </div>
-  )
-}
-
-/** The loading state of the three columns (§S8) — `aria-hidden` on the column
-    itself, so a screen reader hears the busy region, not six empty bars. */
+/** The loading state (§S8 of screen-11) — `aria-hidden` on the column itself,
+    so a screen reader hears the busy region, not six empty bars. */
 function Skeletons({ rows }: { rows: number }) {
   return (
     <div className="flex flex-col gap-[10px] p-[12px]">

@@ -14,12 +14,17 @@
 
    A FUNCTION, NOT A HOOK: it reads the DOM it is given and returns nothing. */
 export function moveFocusInList(event: React.KeyboardEvent<HTMLElement>): void {
-  if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
+  /* A grid of cards (the world's book, design-pass 19) reads in DOM order:
+     → and ↓ go to the next card, ← and ↑ to the previous one. */
+  const step = { ArrowDown: 1, ArrowRight: 1, ArrowUp: -1, ArrowLeft: -1 }[event.key as 'ArrowDown']
+  if (!step) return
   const current = event.currentTarget
-  const list = current.closest('[role="listbox"]')
+  const list = current.closest('[role="listbox"], [data-arrow-group]')
   if (!list) return
-  const options = Array.from(list.querySelectorAll<HTMLElement>('[role="option"]'))
-  const next = options[options.indexOf(current) + (event.key === 'ArrowDown' ? 1 : -1)]
+  // ← → only in a grid: a listbox keeps them for its own text and widgets.
+  if (!list.hasAttribute('data-arrow-group') && (event.key === 'ArrowLeft' || event.key === 'ArrowRight')) return
+  const options = Array.from(list.querySelectorAll<HTMLElement>('[role="option"], [data-arrow-item]'))
+  const next = options[options.indexOf(current) + step]
   if (!next) return
   event.preventDefault()
   next.focus()

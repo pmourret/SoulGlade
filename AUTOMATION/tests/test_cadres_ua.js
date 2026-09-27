@@ -100,7 +100,9 @@ const ECRANS = [
   ['/bank/lights', 'Ateliers, Lumieres'],
   ['/training', 'Entrainement'],
   ['/worlds', 'Mondes', [
-    ['modale « Nouveau monde »', 'button:has-text("Nouveau monde")', 'dialog[open]'],
+    // Le livret (design-pass 19) : « + Nouveau monde » vit dans le menu du
+    // monde, a deux clics ; la modale reste couverte par test_worlds.
+    ['menu du monde', '#worldPick', '#worldMenu'],
   ]],
   // Application montre UNE section a la fois depuis le 25/09 (design-pass
   // screen-12) : chaque section est un ecran pour la sonde. Les etats ouverts

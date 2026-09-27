@@ -237,9 +237,8 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
 
   console.log('\n[7] le catalogue de monde : le decor d un lieu');
   const world = await open(nav, { comfy: true, path: '/worlds/slow-life/places' });
-  await world.page.locator('#worldPlaces [role="tab"]:has-text("Lieux")').click();
-  await world.page.click('#worldPlaces [data-entry-row]');
-  await world.page.waitForSelector('#entry-prompt');
+  await world.page.click('#lieuxBlock [data-entry-row]');
+  await world.page.waitForSelector('#entryInspector[data-entry="lieu"] #entry-prompt');
   const inDecor = sel => `[data-enhance]:has(#entry-prompt) ${sel}`;
   const decor = await world.page.inputValue('#entry-prompt');
   world.replies.push([200, { ok: true, text: 'a sunlit room, plants on the sill', translated: false, lost: [] }]);
