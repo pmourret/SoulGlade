@@ -11,8 +11,9 @@
         écrire, le focus revient au déclencheur ;
      5. UN ÉCHEC s'affiche avec sa cause (`role="alert"`) ;
      6. COMFYUI HORS LIGNE : le bouton est désactivé ;
-     6b. LE PANNEAU IA : trois fragments, un seul Ctrl+Z, variante, portée,
-        scène du monde verrouillée ;
+     6b. LE PANNEAU IA : trois fragments, un seul Ctrl+Z, une case Garder
+        décochée qui reste telle quelle, variante, portée, scène du monde
+        verrouillée ;
      7. LE CATALOGUE DE MONDE : le décor d'un lieu s'améliore avec son type ;
      7b. L'INSTRUCTION D'ÉDITION : « Traduire », type « edit », et « rien à
          traduire » quand elle est déjà en anglais ;
@@ -189,6 +190,7 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
   await page.click('[data-ai-vary]');
   await page.waitForSelector('[data-ai-part="light"]:has-text("warm lamp glow")');
   say(sent[1]?.vary === true, 'Proposer autre chose : vary envoye');
+  say((await page.textContent('[data-ai-apply]')).trim() === 'Appliquer 2 fragments', 'deux cases cochees : « Appliquer 2 fragments »');
   await page.click('[data-ai-apply]');
   const valueIn = async (tab, f) => {
     await page.click(`[data-tab="${tab}"]`);
@@ -201,12 +203,29 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
   await page.waitForTimeout(300);
   say((await valueIn('recap', 'prompt_base')) === 'standing holding a mug' && (await valueIn('light', 'prompt_light')) === 'window light',
       'un seul Ctrl+Z rend les deux fragments');
+  // une case decochee : ce fragment reste tel quel, les autres partent en un seul pas
+  await page.click('[data-tab="ai"]');
+  replies.push([200, { ok: true, ...proposed, translated: false, lost: { base: [], light: [], pose: [] } }]);
+  await page.click('[data-ai-run]');
+  await page.waitForSelector('[data-ai-proposal]');
+  await page.uncheck('[data-ai-keep="base"]');
+  say((await page.textContent('[data-ai-part="base"]')).includes('écarté, reste tel quel')
+      && (await page.textContent('[data-ai-apply]')).trim() === 'Appliquer 1 fragment',
+      'Ce qui s y passe decoche : « ecarte », « Appliquer 1 fragment »');
+  await page.click('[data-ai-apply]');
+  say((await valueIn('recap', 'prompt_base')) === 'standing holding a mug'
+      && (await valueIn('light', 'prompt_light')) === proposed.light,
+      'Appliquer : seule la lumiere change, le fragment ecarte reste tel quel');
+  await page.locator('#sceneInspector').click({ position: { x: 5, y: 5 } });
+  await page.keyboard.press('Control+z');
+  await page.waitForTimeout(300);
+  say((await valueIn('light', 'prompt_light')) === 'window light', 'un seul Ctrl+Z le rend');
   await page.click('[data-tab="ai"]');
   await page.click('[data-ai-scope="light"]');
   replies.push([200, { ok: true, ...proposed, base: 'standing holding a mug', translated: false, lost: { base: [], light: [], pose: [] } }]);
   await page.click('[data-ai-run]');
   await page.waitForSelector('[data-ai-proposal]');
-  say(sent[2]?.only === 'light', 'portee Lumiere : only envoye');
+  say(sent[3]?.only === 'light', 'portee Lumiere : only envoye');
   // une scene reprise du monde : ses fragments sont verrouilles, le panneau aussi
   let locked = null;
   for (const card of await page.$$('[data-scene-card]:not([data-new])')) {
