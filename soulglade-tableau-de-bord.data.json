@@ -508,6 +508,11 @@
           "s": "faire",
           "t": "File d'attente côté serveur",
           "d": "elle n'existe pas ; l'interface le compense — à décider"
+        },
+        {
+          "s": "dette",
+          "t": "Un réglage sans valeur de référence ment sur sa valeur",
+          "d": "Vu au design-pass 20 (27/09). Clé absente du config.json : Produire affiche 0.00, le curseur se place au milieu et le lancement envoie NaN (hdenoise chez Léna, rdenoise chez Abyssiaelle). Même famille : guidance mesurée à 6.0 chez Abyssiaelle pour un curseur borné à 5."
         }
       ]
     },
