@@ -16,7 +16,11 @@
 
    WORDS NOT KEPT ARE SAID IN WORDS. The server checked the proposal still
    carries every word of the input and names the ones it dropped (`lost`);
-   a synonym shows up there too, and the user is the judge. */
+   a synonym shows up there too, and the user is the judge.
+
+   NOTHING TO CHANGE IS SAID, NOT SHOWN. An English edit instruction comes
+   back as it went (it is only translated): a comparison of a text with
+   itself would ask the user to find a difference that is not there. */
 import { useState } from 'react'
 
 import type { EnhanceKind, Enhancer } from '../api/useEnhance'
@@ -48,6 +52,9 @@ export function EnhanceControl({
   const [error, setError] = useState<string | null>(null)
   const shown = proposal && proposal.before === value ? proposal : null
   const { comfy } = enhancer
+  /* An edit instruction is only translated: the button says so. */
+  const translateOnly = kind === 'edit'
+  const action = translateOnly ? 'Traduire' : 'Améliorer'
 
   async function run() {
     const before = value
@@ -69,11 +76,11 @@ export function EnhanceControl({
           type="button"
           className="btn sm"
           data-enhance-run
-          aria-label={`Améliorer « ${label} » par l'IA`}
+          aria-label={`${action} « ${label} » par l'IA`}
           disabled={busy || disabled || !comfy || !value.trim()}
           onClick={() => void run()}
         >
-          {busy ? 'Amélioration…' : 'Améliorer'}
+          {busy ? (translateOnly ? 'Traduction…' : 'Amélioration…') : action}
         </button>
       </span>
 
@@ -83,7 +90,15 @@ export function EnhanceControl({
         </p>
       )}
 
-      {shown && (
+      {shown && shown.text === shown.before && (
+        <p className="tiny mt-[4px] mb-0" data-enhance-same>
+          {translateOnly
+            ? 'Rien à traduire : l’instruction est déjà en anglais.'
+            : 'Rien à changer : l’IA ne propose aucune modification.'}
+        </p>
+      )}
+
+      {shown && shown.text !== shown.before && (
         <div className="mt-[8px] rounded-card border border-line bg-panel px-[12px] py-[10px]" data-enhance-proposal>
           <ProposalView before={shown.before} after={shown.text} translated={shown.translated} lost={shown.lost} />
 

@@ -19,8 +19,9 @@ type EnhanceSceneResponse = components['schemas']['EnhanceSceneResponse']
 export type EnhanceSceneBody = components['schemas']['EnhanceSceneRequest']
 export type ScenePart = 'base' | 'light' | 'pose'
 
-/** The fragment kinds the server knows (`enhance.KINDS`), "edit" apart. */
-export type EnhanceKind = 'place' | 'intention' | 'tone' | 'scene' | 'pose' | 'light' | 'outfit'
+/** The fragment kinds the server knows (`enhance.KINDS`), and "edit": an
+    edit instruction, only ever translated, never improved. */
+export type EnhanceKind = 'place' | 'intention' | 'tone' | 'scene' | 'pose' | 'light' | 'outfit' | 'edit'
 
 export type EnhanceOutcome =
   | { ok: true; text: string; translated: boolean; lost: string[] }

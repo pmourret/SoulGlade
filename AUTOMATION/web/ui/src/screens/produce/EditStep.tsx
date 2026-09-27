@@ -17,6 +17,8 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { errorOf, type ActionLike, type Schema } from '../../api/client'
 import { useApi } from '../../api/useApi'
+import { useEnhancer } from '../../api/useEnhance'
+import { EnhanceControl } from '../../chrome/EnhanceControl'
 import { useConfig } from '../../state/ConfigContext'
 
 type Instructions = Schema<'NsfwInstructionsResponse'>
@@ -45,6 +47,7 @@ export function EditStep({
   output: string
 }) {
   const api = useApi()
+  const enhancer = useEnhancer()
   const { qc } = useConfig()
   const [preamble, setPreamble] = useState('')
   const [history, setHistory] = useState<HistoryEntry[] | null>(null)
@@ -119,6 +122,15 @@ export function EditStep({
         placeholder="ex: unbuttoned shirt"
         value={instruction}
         onChange={(event) => onInstruction(event.target.value)}
+      />
+      {/* Translated only, never improved: an improved instruction changes
+          what the edit does (IT-10 chantier 8, measured 27/09). */}
+      <EnhanceControl
+        label="Instruction d'édition"
+        kind="edit"
+        value={instruction}
+        onApply={onInstruction}
+        enhancer={enhancer}
       />
 
       {/* Instruction alerts: a panel, never a block. */}

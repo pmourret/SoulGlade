@@ -12,6 +12,8 @@
      6b. LE PANNEAU IA : trois fragments, un seul Ctrl+Z, variante, portée,
         scène du monde verrouillée ;
      7. LE CATALOGUE DE MONDE : le décor d'un lieu s'améliore avec son type ;
+     7b. L'INSTRUCTION D'ÉDITION : « Traduire », type « edit », et « rien à
+         traduire » quand elle est déjà en anglais ;
      8. RIEN N'EST ÉCRIT : aucun enregistrement, disque intact.
 
    AUCUN MODÈLE, AUCUNE DONNÉE MODIFIÉE. Le serveur de test tourne sans
@@ -192,6 +194,40 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
       `type « place », texte du decor (${JSON.stringify(world.sent[0])})`);
   say((await world.page.inputValue('#entry-prompt')) === 'a sunlit room, plants on the sill',
       'Appliquer : dans le champ du lieu');
+
+  console.log('\n[7b] l instruction d edition : traduite, jamais amelioree');
+  const prod = await open(nav, { comfy: true, path: '/produce' });
+  const editTier = await prod.page.$('#intSel button[data-edit]');
+  if (editTier) {
+    await editTier.click();
+    await prod.page.waitForTimeout(1200);
+    if (await prod.page.isVisible('#armBox[open]')) {
+      await prod.page.click('#cfOui');
+      await prod.page.waitForTimeout(1000);
+    }
+    await prod.page.click('[data-tab="instruction"]');
+    await prod.page.waitForSelector('#editInstr');
+    const inEdit = sel => `#stepEdit ${sel}`;
+    say((await prod.page.textContent(inEdit('[data-enhance-run]'))).trim() === 'Traduire',
+        'le bouton dit « Traduire », pas « Améliorer »');
+    await prod.page.fill('#editInstr', 'déboutonne complètement sa chemise');
+    prod.replies.push([200, { ok: true, text: 'unbutton the shirt completely', translated: true, lost: [] }]);
+    await prod.page.click(inEdit('[data-enhance-run]'));
+    await prod.page.waitForSelector(inEdit('[data-enhance-proposal]'));
+    say(prod.sent[0]?.kind === 'edit', `type « edit » envoye (${JSON.stringify(prod.sent[0])})`);
+    await prod.page.click(inEdit('[data-enhance-apply]'));
+    say((await prod.page.inputValue('#editInstr')) === 'unbutton the shirt completely',
+        'Appliquer : la traduction dans le champ');
+    prod.replies.push([200, { ok: true, text: 'unbutton the shirt completely', translated: false, lost: [] }]);
+    await prod.page.click(inEdit('[data-enhance-run]'));
+    await prod.page.waitForSelector(inEdit('[data-enhance-same]'));
+    say(!(await prod.page.isVisible(inEdit('[data-enhance-proposal]'))),
+        'deja en anglais : « rien a traduire », aucune comparaison d un texte avec lui-meme');
+  } else {
+    console.log("      (aucun cran d'edition pour ce personnage : section sautee)");
+  }
+  prod.errors.forEach(e => errors.push(e));
+  await prod.page.close();
 
   console.log('\n[8] rien n est ecrit');
   const writes = [...saves, ...off.saves, ...world.saves];

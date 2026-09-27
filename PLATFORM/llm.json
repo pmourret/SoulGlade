@@ -3,7 +3,7 @@
   "loader_type": "krea2",
   "server": {
     "model_file": "gemma-4-E4B-it-heretic-Q4_K_M.gguf",
-    "port": 8199,
+    "port": 8177,
     "gpu_layers": 99,
     "context": 4096,
     "sleep_idle_seconds": 300,
