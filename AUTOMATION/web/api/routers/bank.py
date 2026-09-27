@@ -26,11 +26,13 @@ import nsfw_batch
 import pose_tools
 import runner as lb
 import shared_state as ss
+import universe
 import worlds
 
 from ..dependencies import RequiredCharacterId
 from ..schemas.bank import (
     ComposeRequest, ComposeResponse, CreativeResponse, EnhanceRequest, EnhanceResponse,
+    EnhanceSceneRequest, EnhanceSceneResponse,
     SceneBankRejected, SceneBankResponse, SceneBankSaveRequest, ToneKeyRequest, ToneTextRequest,
 )
 from ..schemas.common import ActionResponse, ERROR_RESPONSES
@@ -298,25 +300,56 @@ async def compose_scenes(payload: ComposeRequest, character_id: RequiredCharacte
     return {"ok": True, "scenes": scenes, "brut": raw[:2000]}
 
 
-@router.post("/api/enhance", response_model=EnhanceResponse,
-             responses={503: {"description": "ComfyUI hors ligne"}},
-             summary="Proposer une version améliorée d'un fragment de prompt")
-async def enhance_fragment(payload: EnhanceRequest):
-    """One button, three steps (`enhance.enhance`): a French fragment is
-    translated, then improved for its kind; an edit instruction is only
-    translated. Takes no character: the model sees the fragment and nothing
-    else. Writes nothing, the user accepts the proposal where the field lives.
-    Executor + broad except, see backend.md."""
+def _model_family(cid):
+    """The model family of the character's pack — the ONLY thing the
+    enhancer's model learns about the character (never its anchor)."""
+    return universe.model_family(lb.character_universe(cid))
+
+
+async def _enhance_call(fn, context):
+    """The shared guard of the enhancer routes: ComfyUI up, the blocking call
+    in an executor, and every failure turned into a JSON body the screen
+    shows. Executor + broad except, see backend.md."""
     if not await ss.comfy_alive():
         return JSONResponse({"ok": False, "erreur": "ComfyUI hors ligne"},
                             status_code=503)
     try:
-        result = await asyncio.get_running_loop().run_in_executor(
-            None, enhancer.enhance, payload.kind, payload.text, env_config.comfy_url())
+        result = await asyncio.get_running_loop().run_in_executor(None, fn)
     except (ValueError, llm_local.LLMError) as e:
         return JSONResponse({"ok": False, "erreur": str(e)}, status_code=400)
     except Exception as e:                                   # noqa: BLE001
-        msg = logs.report(LOG, e, "amélioration d'un fragment")
+        msg = logs.report(LOG, e, context)
         ss.push_log(msg, journal=False)
         return JSONResponse({"ok": False, "erreur": msg}, status_code=500)
     return {"ok": True, **result}
+
+
+@router.post("/api/enhance", response_model=EnhanceResponse,
+             responses={503: {"description": "ComfyUI hors ligne"}},
+             summary="Proposer une version améliorée d'un fragment de prompt")
+async def enhance_fragment(payload: EnhanceRequest, character_id: RequiredCharacterId):
+    """One button, three steps (`enhance.enhance`): a French fragment is
+    translated, then improved for its kind, in the dialect of the character's
+    model family; an edit instruction is only translated. The model sees the
+    fragment and that family, nothing else. Writes nothing, the user accepts
+    the proposal where the field lives."""
+    family = _model_family(character_id)
+    return await _enhance_call(
+        lambda: enhancer.enhance(payload.kind, payload.text, env_config.comfy_url(), family=family),
+        "amélioration d'un fragment")
+
+
+@router.post("/api/enhance/scene", response_model=EnhanceSceneResponse,
+             responses={503: {"description": "ComfyUI hors ligne"}},
+             summary="Proposer une version améliorée des trois fragments d'une scène")
+async def enhance_scene(payload: EnhanceSceneRequest, character_id: RequiredCharacterId):
+    """The composer's AI panel (`enhance.enhance_scene`): the three fragments
+    in one call, coherent with each other, under a free instruction that
+    outranks the rules. Writes nothing: « Appliquer » is the draft's."""
+    family = _model_family(character_id)
+    fragments = {"base": payload.base, "light": payload.light, "pose": payload.pose}
+    return await _enhance_call(
+        lambda: enhancer.enhance_scene(fragments, payload.instruction, only=payload.only,
+                                       vary=payload.vary, comfy_url=env_config.comfy_url(),
+                                       family=family),
+        "amélioration d'une scène")

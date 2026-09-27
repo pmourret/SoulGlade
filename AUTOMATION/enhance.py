@@ -14,7 +14,8 @@ The rules come from the bench of 27/09 on qwen3vl_4b, see
 DOCS/cadrage/2026-09-27-it10-c8-amelioration-ia.md: a prose instruction makes
 the model answer « user » or nothing, a framed one with a JSON answer works;
 the first rules let it switch to the imperative, add a « She », and invent a
-camera angle.
+camera angle. The prompt carries NO example: under a user instruction, the
+model returned the example itself, word for word, as the rewrite (27/09).
 """
 import json
 import re
@@ -63,6 +64,18 @@ Answer with one JSON object and nothing else:
 {"text": "<translation>"}
 """
 
+# What every rewrite must keep, whatever the image model. The writing STYLE is
+# not here: it is the dialect of the model family (PLATFORM/llm.json), after
+# Maestro's per-model guides (27/09). ENRICHING is allowed, within the role of
+# the fragment (Pierre, 27/09): under « add nothing », the Flux dialect left
+# the model copying its input; what it adds shows in the comparison.
+RULES = """- Keep every idea of OLD, each one in its own phrase. Drop nothing.
+- Never euphemize or soften: explicit, adult or sensual words stay exactly as written.
+- Add the concrete visual specifics the image model needs, consistent with OLD and within the role of this fragment only (no light in a pose, no person in a place): materials, textures, colors, spatial arrangement. Never change what happens, never add a person, never add style or quality words. Do not pad with generic phrases.
+- Never an imperative ("stand", "capture").
+- No subject at the start: no "she", "he", "the woman".
+- English only, at most 40 words per fragment."""
+
 IMPROVE = """You improve prompt fragments for an image generation model.
 
 The fragment is %(what)s
@@ -70,17 +83,11 @@ The fragment is %(what)s
 OLD: %(text)s
 
 Task: rewrite OLD to be more precise and visual.
-- Keep every idea of OLD, each one in its own phrase. Drop nothing.
-- Never euphemize or soften: explicit, adult or sensual words stay exactly as written.
-- Only make precise what OLD already says: add no object, no person, no camera angle, no style or quality words that OLD does not imply. Do not pad with generic phrases.
-- Natural English phrases with their articles and prepositions ("sitting on the windowsill"), never an imperative ("stand", "capture").
-- No subject at the start: no "she", "he", "the woman".
-- English only, comma-separated phrases, at most 40 words.
+%(rules)s
 
-Example for a scene:
-OLD: sitting at a cafe table, looking away, afternoon light
-{"text": "sitting at a small cafe table, gaze turned away from the camera, warm late afternoon light"}
-
+How this image model reads a prompt:
+%(dialect)s
+%(instruction)s
 Answer with one JSON object and nothing else:
 {"text": "<rewritten fragment>"}
 """
@@ -94,6 +101,17 @@ _POSSESSIVE = re.compile(r"\b(son|sa|ses)\b", re.I)
 
 def neutral_possessives(text):
     return _POSSESSIVE.sub(lambda m: POSSESSIVES[m.group(1).lower()], text)
+
+
+DIALECTS = llm_local.SETTINGS.get("dialects", {})
+
+
+def dialect(family):
+    """The writing rules of an image model family, as prompt lines. A family
+    with no dialect written yet gets the generic one: adding a family is its
+    own iteration, and writes its dialect (skill `nouvel-pack`)."""
+    rules = DIALECTS.get(family or "") or DIALECTS.get("generic") or []
+    return "\n".join(f"- {r}" for r in rules)
 
 
 _ANSWER = re.compile(r'"text"\s*:\s*("(?:[^"\\]|\\.)*")')
@@ -139,11 +157,23 @@ Rewrite OLD again and keep every one of them.
 """
 
 
-def enhance(kind, text, comfy_url=None):
+# Maestro's wording for a user instruction appended to its enhancer guide.
+INSTRUCTION = """
+Follow these additional user instructions with higher priority if they conflict with the rules above:
+%s
+"""
+
+
+def enhance(kind, text, comfy_url=None, family=None, instruction="", vary=False):
     """{"text", "translated", "lost"} for a fragment of `kind` (KINDS, or "edit").
 
     `lost` lists the words of the input the proposal still drops after one
-    retry that names them: the interface says so, the user decides.
+    retry that names them: the interface says so, the user decides. With an
+    `instruction` — the AI panel's free text, which outranks the rules —
+    dropping words may be the very request (« plus court »): the lost words
+    are reported, never retried. `vary` asks for another version, at a freer
+    temperature. `family` is the model family of the character's pack — the
+    only thing the model ever learns about the character.
 
     Raises ValueError on a bad request, `llm_local.LLMError` when the model
     fails: the gesture was asked for, its failure is shown."""
@@ -157,10 +187,47 @@ def enhance(kind, text, comfy_url=None):
         text = _ask(TRANSLATE % {"text": neutral_possessives(text)}, 0.2, comfy_url)
     if kind == EDIT:
         return {"text": text, "translated": translated, "lost": []}
-    prompt = IMPROVE % {"what": KINDS[kind], "text": text}
-    improved = _ask(prompt, 0.2, comfy_url)
+    instruction = " ".join((instruction or "").split())
+    prompt = IMPROVE % {"what": KINDS[kind], "text": text, "rules": RULES,
+                        "dialect": dialect(family),
+                        "instruction": INSTRUCTION % instruction if instruction else ""}
+    temperature = 0.7 if vary else 0.2
+    improved = _ask(prompt, temperature, comfy_url)
     lost = lost_words(text, improved)
-    if lost:
-        improved = _ask(prompt + RETRY % {"lost": ", ".join(lost)}, 0.2, comfy_url)
+    if lost and not instruction:
+        improved = _ask(prompt + RETRY % {"lost": ", ".join(lost)}, temperature, comfy_url)
         lost = lost_words(text, improved)
     return {"text": improved, "translated": translated, "lost": lost}
+
+
+# The three fragments of a composer scene, and the kind each one is.
+SCENE_PARTS = {"base": "scene", "light": "light", "pose": "pose"}
+
+
+def enhance_scene(fragments, instruction="", only=None, vary=False, comfy_url=None, family=None):
+    """The AI panel of the composer (IT-10 chantier 8, step 3): each non-empty
+    fragment improved on its own, under the same instruction.
+
+    ONE CALL PER FRAGMENT, NO CONTEXT, measured 27/09 on qwen3vl_4b: the three
+    fragments in one JSON answer came back copied, and a « vary » gave the same
+    text three times; each fragment seeing the other two wrote the light into
+    the pose and the action, which the assembler would then say three times.
+    Alone, each keeps its role, and a « vary » is a real other version.
+
+    `only` names the one fragment to rewrite; the others, and every empty
+    fragment, come back unchanged.
+    {"base", "light", "pose", "translated", "lost": {part: [words]}}."""
+    if only is not None and only not in SCENE_PARTS:
+        raise ValueError(f"fragment inconnu « {only} »")
+    parts = {k: " ".join((fragments.get(k) or "").split()) for k in SCENE_PARTS}
+    targets = [k for k in ([only] if only else SCENE_PARTS) if parts[k]]
+    if not targets:
+        raise ValueError("rien à améliorer : la scène est vide")
+    out = {**parts, "translated": False, "lost": {k: [] for k in SCENE_PARTS}}
+    for k in targets:
+        r = enhance(SCENE_PARTS[k], parts[k], comfy_url, family=family,
+                    instruction=instruction, vary=vary)
+        out[k] = r["text"]
+        out["lost"][k] = r["lost"]
+        out["translated"] = out["translated"] or r["translated"]
+    return out

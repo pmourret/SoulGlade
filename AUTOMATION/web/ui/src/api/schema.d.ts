@@ -762,12 +762,34 @@ export interface paths {
         /**
          * Proposer une version améliorée d'un fragment de prompt
          * @description One button, three steps (`enhance.enhance`): a French fragment is
-         *     translated, then improved for its kind; an edit instruction is only
-         *     translated. Takes no character: the model sees the fragment and nothing
-         *     else. Writes nothing, the user accepts the proposal where the field lives.
-         *     Executor + broad except, see backend.md.
+         *     translated, then improved for its kind, in the dialect of the character's
+         *     model family; an edit instruction is only translated. The model sees the
+         *     fragment and that family, nothing else. Writes nothing, the user accepts
+         *     the proposal where the field lives.
          */
         post: operations["enhance_fragment_api_enhance_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/enhance/scene": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Proposer une version améliorée des trois fragments d'une scène
+         * @description The composer's AI panel (`enhance.enhance_scene`): the three fragments
+         *     in one call, coherent with each other, under a free instruction that
+         *     outranks the rules. Writes nothing: « Appliquer » is the draft's.
+         */
+        post: operations["enhance_scene_api_enhance_scene_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3069,6 +3091,63 @@ export interface components {
             translated: boolean;
             /** Lost */
             lost: string[];
+        };
+        /**
+         * EnhanceSceneRequest
+         * @description The three fragments of a composer scene and a free instruction (IT-10
+         *     chantier 8, step 3). `only` rewrites one fragment, the other two riding
+         *     along as context; `vary` asks for another version. FORBIDS extra keys,
+         *     for the same reason as `EnhanceRequest`.
+         */
+        EnhanceSceneRequest: {
+            /**
+             * Base
+             * @default
+             */
+            base: string;
+            /**
+             * Light
+             * @default
+             */
+            light: string;
+            /**
+             * Pose
+             * @default
+             */
+            pose: string;
+            /**
+             * Instruction
+             * @default
+             */
+            instruction: string;
+            /** Only */
+            only?: ("base" | "light" | "pose") | null;
+            /**
+             * Vary
+             * @default false
+             */
+            vary: boolean;
+        };
+        /**
+         * EnhanceSceneResponse
+         * @description The three fragments proposed, written nowhere; `lost` per fragment,
+         *     as in `EnhanceResponse`.
+         */
+        EnhanceSceneResponse: {
+            /** Ok */
+            ok: boolean;
+            /** Base */
+            base: string;
+            /** Light */
+            light: string;
+            /** Pose */
+            pose: string;
+            /** Translated */
+            translated: boolean;
+            /** Lost */
+            lost: {
+                [key: string]: string[];
+            };
         };
         /**
          * ErrorResponse
@@ -7107,7 +7186,10 @@ export interface operations {
     };
     enhance_fragment_api_enhance_post: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -7125,6 +7207,58 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EnhanceResponse"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+            /** @description ComfyUI hors ligne */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    enhance_scene_api_enhance_scene_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnhanceSceneRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnhanceSceneResponse"];
                 };
             };
             /** @description Requête refusée */

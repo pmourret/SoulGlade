@@ -1763,17 +1763,37 @@
     "/api/enhance": {
       "post": {
         "summary": "Proposer une version améliorée d'un fragment de prompt",
-        "description": "One button, three steps (`enhance.enhance`): a French fragment is\ntranslated, then improved for its kind; an edit instruction is only\ntranslated. Takes no character: the model sees the fragment and nothing\nelse. Writes nothing, the user accepts the proposal where the field lives.\nExecutor + broad except, see backend.md.",
+        "description": "One button, three steps (`enhance.enhance`): a French fragment is\ntranslated, then improved for its kind, in the dialect of the character's\nmodel family; an edit instruction is only translated. The model sees the\nfragment and that family, nothing else. Writes nothing, the user accepts\nthe proposal where the field lives.",
         "operationId": "enhance_fragment_api_enhance_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
         "requestBody": {
+          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/EnhanceRequest"
               }
             }
-          },
-          "required": true
+          }
         },
         "responses": {
           "200": {
@@ -1782,6 +1802,78 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EnhanceResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ComfyUI hors ligne"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/enhance/scene": {
+      "post": {
+        "summary": "Proposer une version améliorée des trois fragments d'une scène",
+        "description": "The composer's AI panel (`enhance.enhance_scene`): the three fragments\nin one call, coherent with each other, under a free instruction that\noutranks the rules. Writes nothing: « Appliquer » is the draft's.",
+        "operationId": "enhance_scene_api_enhance_scene_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnhanceSceneRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnhanceSceneResponse"
                 }
               }
             }
@@ -7405,6 +7497,100 @@
         ],
         "title": "EnhanceResponse",
         "description": "A proposal, written nowhere. `translated` says the input was not in\nEnglish: the interface then shows both texts side by side, since a word\ndiff between two languages means nothing. `lost` lists the words of the\ninput the proposal still drops after one retry that named them: shown,\nnever hidden, and the user decides."
+      },
+      "EnhanceSceneRequest": {
+        "properties": {
+          "base": {
+            "type": "string",
+            "title": "Base",
+            "default": ""
+          },
+          "light": {
+            "type": "string",
+            "title": "Light",
+            "default": ""
+          },
+          "pose": {
+            "type": "string",
+            "title": "Pose",
+            "default": ""
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction",
+            "default": ""
+          },
+          "only": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "base",
+                  "light",
+                  "pose"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Only"
+          },
+          "vary": {
+            "type": "boolean",
+            "title": "Vary",
+            "default": false
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EnhanceSceneRequest",
+        "description": "The three fragments of a composer scene and a free instruction (IT-10\nchantier 8, step 3). `only` rewrites one fragment, the other two riding\nalong as context; `vary` asks for another version. FORBIDS extra keys,\nfor the same reason as `EnhanceRequest`."
+      },
+      "EnhanceSceneResponse": {
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "title": "Ok"
+          },
+          "base": {
+            "type": "string",
+            "title": "Base"
+          },
+          "light": {
+            "type": "string",
+            "title": "Light"
+          },
+          "pose": {
+            "type": "string",
+            "title": "Pose"
+          },
+          "translated": {
+            "type": "boolean",
+            "title": "Translated"
+          },
+          "lost": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "type": "object",
+            "title": "Lost"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ok",
+          "base",
+          "light",
+          "pose",
+          "translated",
+          "lost"
+        ],
+        "title": "EnhanceSceneResponse",
+        "description": "The three fragments proposed, written nowhere; `lost` per fragment,\nas in `EnhanceResponse`."
       },
       "ErrorResponse": {
         "properties": {

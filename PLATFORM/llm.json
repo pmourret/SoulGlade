@@ -1,6 +1,25 @@
 {
   "model": "qwen3vl_4b_fp8_scaled.safetensors",
   "loader_type": "krea2",
+  "dialects": {
+    "flux": [
+      "Natural English descriptive phrases with their articles and prepositions, comma-separated, never a pile of keywords or tags.",
+      "No quality or resolution words (8k, masterpiece, ultra-detailed, high quality).",
+      "A still photograph: static poses and states, no motion verbs that imply duration (walking, reaching, turning).",
+      "Light, when the fragment has some: its source, direction, quality and color.",
+      "Any visible text (sign, label, screen, print) is quoted exactly, in quotation marks.",
+      "Describe what is there, never what is not: no negative phrasing."
+    ],
+    "sdxl": [
+      "Short descriptive tags separated by commas, articles dropped (\"windowsill, reading book, medium shot\").",
+      "The most important element first.",
+      "No long sentences."
+    ],
+    "generic": [
+      "Natural English phrases with their articles and prepositions, comma-separated.",
+      "No quality or resolution words (8k, masterpiece)."
+    ]
+  },
   "_notes": [
     "Le modele de langage local de toute la plateforme : composeur, legendeur,",
     "analyse d'assets, texte de pose, amelioration des prompts. ComfyUI le",
@@ -8,6 +27,10 @@
     "TextGenerate. Le changer ici suffit ; un modele neuf se declare au",
     "manifeste (invariant 12). `loader_type` est le `type` que CLIPLoader",
     "attend pour ce modele. Choisi et mesure le 27/09 :",
-    "DOCS/cadrage/2026-09-27-it10-c8-amelioration-ia.md"
+    "DOCS/cadrage/2026-09-27-it10-c8-amelioration-ia.md",
+    "`dialects` : comment chaque FAMILLE de modele d'image lit un prompt",
+    "(guides officiels, repris de Maestro). Le pack declare sa famille",
+    "(universe.json / model_family) ; une famille sans dialecte recoit",
+    "`generic`. Ajouter une famille ecrit son dialecte ici (skill nouvel-pack)."
   ]
 }

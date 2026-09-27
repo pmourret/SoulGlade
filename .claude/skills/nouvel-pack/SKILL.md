@@ -32,6 +32,13 @@ modeles-par-pack.md` pour ce qui existe déjà avant d'introduire une
 troisième famille — deux univers qui pourraient partager une famille de
 modèle ne doivent pas en avoir deux implémentations séparées.
 
+**Une famille neuve écrit son dialecte** dans `PLATFORM/llm.json` /
+`dialects` : comment ce modèle d'image lit un prompt, d'après son guide
+officiel. C'est ce que l'améliorateur de prompts applique aux fragments de
+ce pack. Sans dialecte, il retombe sur `generic`, qui marche mais ignore ce
+que le modèle attend (décidé le 27/09, cadrage
+`2026-09-27-it10-c8-amelioration-ia.md`).
+
 ## Étape 2 — Mécanisme de verrou d'identité
 
 Si la famille de modèle choisie a déjà une implémentation dans

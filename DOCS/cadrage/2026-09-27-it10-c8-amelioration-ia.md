@@ -220,6 +220,7 @@ instruire, dans cet ordre (règle 6 : les données avant l'hypothèse) :
 | 1 | **Le service** | `AUTOMATION/enhance.py` : détection de la langue, traduction, amélioration par type, lecture de la réponse JSON. Le réglage `PLATFORM/llm.json`. Une route `POST /api/enhance` qui reçoit un type, un texte et le genre du sujet, et rend le texte proposé et s'il y a eu traduction. |
 | 2 | **Le bouton sur les fragments** | Dans `PromptField` (3 sites du composeur) et sur les champs des familles A et B-10. Comparaison `WordDiff`, ou côte à côte après une traduction. Accepter ou laisser. **Livré le 27/09.** Sur les tenues, le bouton ne porte que la pièce en cours d'écriture : une pièce déjà posée tient sur une ligne compacte, qu'un bloc de proposition casserait. |
 | 3 | **La scène entière** | `AiPanel` : consigne, raccourcis, les trois fragments ensemble ou un seul. **Rouvre la méthode, sur le modèle de Maestro** (décidé le 27/09) : dialecte du modèle d'image porté par le pack, consigne libre prioritaire, et le cas de Qwen Image Edit pour la famille D. |
+| 3 bis | **Le moteur llama.cpp** | Décidé le 27/09 sur la comparaison de l'étape 3 : `PLATFORM/llm.json` choisit le moteur (ComfyUI ou `llama-server`). Installation par le manifeste, lancement, surveillance et place en VRAM ; Gemma 4 E4B heretic y devient le modèle par défaut. Cadrage à écrire avant le code. |
 | 4 | **Les consignes d'édition** | Le même bouton sur `EditStep` et `AiRetouchPanel`, en traduction seule. |
 | 5 | **Audit UX/UI vérifié en vrai** | Sur chaque écran touché (skill `audit-ux-ui`). |
 
@@ -293,6 +294,54 @@ encore dans la cuisine.
   narratif, répétitions). C'est la même philosophie que notre contrôle des
   pertes et nos possessifs : garantir dans le code ce que la consigne n'obtient
   pas du modèle.
+
+### Étape 3 : la scène entière et la méthode de Maestro (27/09)
+
+**Tranché par Pierre le 27/09.**
+- **Le dialecte vit dans la plateforme, par famille**
+  (`PLATFORM/llm.json` / `dialects`). Une famille sans dialecte reçoit
+  `generic`. Ajouter une famille est une itération à part entière, qui
+  écrit son dialecte (skill `nouvel-pack`).
+- **On suit les guides officiels, au niveau du fragment.** La mise en
+  prose du **prompt assemblé**, que le guide Flux demande, est un chantier
+  à part : elle touche l'assembleur (invariant 3), l'ancre et le
+  déterminisme de la production. Versée à l'horizon.
+- **« Proposer autre chose » existe** : température 0,7.
+- **La scène se réécrit fragment par fragment, sans contexte.** Chaque
+  fragment passe par l'appel du bouton « Améliorer », sous la consigne
+  libre, qui passe en priorité.
+- **L'améliorateur enrichit, dans le rôle du fragment**, selon la règle de
+  Maestro : matières, textures, disposition. Il ne change jamais ce qui se
+  passe et n'ajoute jamais de personne.
+
+**Ce qui a mené là (banc du 27/09, `qwen3vl_4b`, trois itérations).**
+- **Les trois fragments dans une seule réponse JSON** : copiés à
+  l'identique, et « autre chose » rendait trois fois le même texte.
+- **Un appel par fragment, avec les deux autres en contexte** : la
+  lumière débordait dans la pose et dans l'action, et l'assembleur l'aurait
+  dite trois fois.
+- **Sous « n'ajoute rien », le dialecte Flux laissait le modèle
+  recopier** son entrée : l'amélioration était presque nulle.
+- **L'exemple écrit dans la consigne a été recopié tel quel** sous une
+  consigne libre. Il est retiré.
+- **Une consigne libre qui réduit le texte** (« plus court ») peut vouloir
+  la perte : dans ce cas, les mots manquants sont signalés, sans relance.
+
+**`qwen3vl_4b` et Gemma 4 comparés sur les règles finales** (même banc,
+`llama-server` de Maestro lancé à la main puis arrêté) :
+
+| | `qwen3vl_4b` | Gemma 4 E4B heretic |
+|---|---|---|
+| Action de « Ce qui s'y passe » | souvent perdue (« Book open on windowsill… ») | gardée |
+| Texte adulte | recopié | enrichi sans être adouci |
+| Scène entière | 13 à 16 s | environ 2 s |
+| Mots signalés | vraies pertes et synonymes | presque uniquement des synonymes |
+| Débordement de rôle | lumière dans l'action, remplissage dans la pose | lumière dans l'action, **vêtements inventés dans la pose** |
+
+Avec les règles finales, Gemma l'emporte nettement, alors qu'avec les
+règles de l'étape 1 il perdait des idées. Le passer par défaut demande de
+brancher un serveur externe (`llama-server`) : à l'installer, le lancer, le
+surveiller, le déclarer, et gérer sa place en VRAM à côté de ComfyUI.
 
 ## Hors périmètre
 

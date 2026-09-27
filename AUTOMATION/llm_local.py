@@ -36,9 +36,9 @@ COMFY_INPUT = env_config.comfyui_input()
 # Le modele servi par ComfyUI, regle a la couche plateforme (IT-10 chantier 8) :
 # le changer dans PLATFORM/llm.json le change pour tous les appelants.
 SETTINGS_PATH = Path(__file__).resolve().parents[1] / "PLATFORM" / "llm.json"
-_SETTINGS = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
-CLIP_MODEL = _SETTINGS["model"]
-CLIP_TYPE = _SETTINGS["loader_type"]
+SETTINGS = json.loads(SETTINGS_PATH.read_text(encoding="utf-8"))
+CLIP_MODEL = SETTINGS["model"]
+CLIP_TYPE = SETTINGS["loader_type"]
 
 # Prefixe des copies temporaires dans ComfyUI/input. Meme convention que
 # expression.py : reconnaissable, et nettoye par l'appelant.

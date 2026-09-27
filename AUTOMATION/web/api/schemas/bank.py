@@ -204,6 +204,32 @@ class EnhanceResponse(BaseModel):
     lost: list[str]
 
 
+class EnhanceSceneRequest(BaseModel):
+    """The three fragments of a composer scene and a free instruction (IT-10
+    chantier 8, step 3). `only` rewrites one fragment, the other two riding
+    along as context; `vary` asks for another version. FORBIDS extra keys,
+    for the same reason as `EnhanceRequest`."""
+    model_config = ConfigDict(extra="forbid")
+
+    base: str = ""
+    light: str = ""
+    pose: str = ""
+    instruction: str = ""
+    only: Optional[Literal["base", "light", "pose"]] = None
+    vary: bool = False
+
+
+class EnhanceSceneResponse(BaseModel):
+    """The three fragments proposed, written nowhere; `lost` per fragment,
+    as in `EnhanceResponse`."""
+    ok: bool
+    base: str
+    light: str
+    pose: str
+    translated: bool
+    lost: dict[str, list[str]]
+
+
 class ComposeResponse(BaseModel):
     """Proposed scenes, ready to be reviewed — never written to the bank on
     their own. `brut` is the LLM's raw answer, truncated to 2000 characters, so
