@@ -14,6 +14,8 @@
      7. LE CATALOGUE DE MONDE : le décor d'un lieu s'améliore avec son type ;
      7b. L'INSTRUCTION D'ÉDITION : « Traduire », type « edit », et « rien à
          traduire » quand elle est déjà en anglais ;
+     7c. LE FOCUS n'est jamais perdu (proposition, Appliquer, erreur, panneau IA),
+         une erreur périmée s'en va, les mots perdus d'une traduction le disent ;
      8. RIEN N'EST ÉCRIT : aucun enregistrement, disque intact.
 
    AUCUN MODÈLE, AUCUNE DONNÉE MODIFIÉE. Le serveur de test tourne sans
@@ -227,7 +229,59 @@ async function open(nav, { comfy, path = '/bank/scenes' }) {
     console.log("      (aucun cran d'edition pour ce personnage : section sautee)");
   }
   prod.errors.forEach(e => errors.push(e));
+  // the page polls /api/state through a route: close it with a request in flight
+  await prod.page.unrouteAll({ behavior: 'ignoreErrors' });
   await prod.page.close();
+
+  console.log('\n[7c] le focus n est jamais perdu, une erreur perimee s en va (audit du 27/09)');
+  const kb = await open(nav, { comfy: true });
+  const focused = () => kb.page.evaluate(() => {
+    const a = document.activeElement;
+    return a?.hasAttribute('data-enhance-run') ? 'run' : a?.hasAttribute('data-enhance-proposal') ? 'proposal'
+      : a?.hasAttribute('data-ai-run') ? 'ai-run' : a?.hasAttribute('data-ai-proposal') ? 'ai-proposal'
+      : a?.tagName;
+  });
+  await kb.page.fill(FIELD, 'elle lit un livre assise');
+  kb.replies.push([200, { ok: true, text: 'reading a book', translated: true, lost: ['sitting'] }]);
+  await kb.page.focus(inField('[data-enhance-run]'));
+  await kb.page.keyboard.press('Enter');
+  await kb.page.waitForSelector(inField('[data-enhance-proposal]'));
+  await kb.page.waitForTimeout(100);
+  say((await focused()) === 'proposal', `la proposition prend le focus a son arrivee (${await focused()})`);
+  say((await kb.page.textContent(inField('[data-enhance-lost]'))).startsWith('Mots de la traduction non repris'),
+      'apres une traduction : « mots de la traduction non repris »');
+  await kb.page.keyboard.press('Tab');
+  await kb.page.keyboard.press('Enter');
+  await kb.page.waitForTimeout(100);
+  say((await kb.page.inputValue(FIELD)) === 'reading a book', 'Tab puis Entree : Appliquer, au clavier seul');
+  say((await focused()) === 'run', `apres Appliquer, le focus revient au bouton (${await focused()})`);
+
+  kb.replies.push([400, { ok: false, erreur: 'réponse illisible du modèle local' }]);
+  await kb.page.click(inField('[data-enhance-run]'));
+  await kb.page.waitForSelector(inField('[role="alert"]'));
+  await kb.page.waitForTimeout(100);
+  say((await focused()) === 'run', `apres une erreur, le focus reste sur le bouton (${await focused()})`);
+  await kb.page.fill(FIELD, 'reading a novel');
+  await kb.page.waitForTimeout(100);
+  say(!(await kb.page.isVisible(inField('[role="alert"]'))), 'le texte change : l erreur perimee s en va');
+
+  await kb.page.click('[data-tab="ai"]');
+  await kb.page.waitForSelector('[data-ai-panel]');
+  kb.replies.push([200, { ok: true, base: 'reading a novel by the window', light: '', pose: '', translated: false,
+                          lost: { base: [], light: [], pose: [] } }]);
+  await kb.page.focus('[data-ai-run]');
+  await kb.page.keyboard.press('Enter');
+  await kb.page.waitForSelector('[data-ai-proposal]');
+  await kb.page.waitForTimeout(100);
+  say((await focused()) === 'ai-proposal', `panneau IA : la proposition prend le focus (${await focused()})`);
+  await kb.page.click('[data-ai-reject]');
+  await kb.page.waitForTimeout(100);
+  say((await focused()) === 'ai-run', `panneau IA : apres Rejeter, le focus revient a Proposer (${await focused()})`);
+  kb.errors.filter(e => !/status of 400/.test(e)).forEach(e => errors.push(e));
+  kb.saves.forEach(u => saves.push(u));
+  // the page polls /api/state through a route: close it with a request in flight
+  await kb.page.unrouteAll({ behavior: 'ignoreErrors' });
+  await kb.page.close();
 
   console.log('\n[8] rien n est ecrit');
   const writes = [...saves, ...off.saves, ...world.saves];

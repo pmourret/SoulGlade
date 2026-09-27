@@ -16,10 +16,10 @@
 
    « PROPOSER AUTRE CHOSE » relance la même demande à une température plus
    libre : mesuré le 27/09, c'est une vraie autre version. */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import type { Enhancer, ScenePart } from '../../../../api/useEnhance'
-import { ProposalView } from '../../../../chrome/EnhanceControl'
+import { ProposalView, useFocusAfter } from '../../../../chrome/EnhanceControl'
 import type { SceneDraft } from '../../../../state/ScenesStoreContext'
 
 const SHORTCUTS = [
@@ -63,6 +63,11 @@ export function AiPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [proposal, setProposal] = useState<Proposal | null>(null)
+  /* The focus is never dropped: see EnhanceControl. */
+  const rootRef = useRef<HTMLDivElement>(null)
+  const runRef = useRef<HTMLButtonElement>(null)
+  const proposalRef = useRef<HTMLDivElement>(null)
+  const focusAfter = useFocusAfter(rootRef)
 
   const current = fragmentsOf(draft)
   const shown =
@@ -83,20 +88,30 @@ export function AiPanel({
       vary,
     })
     setBusy(false)
-    if (!outcome.ok) setError(outcome.erreur)
-    else setProposal({ before, after: outcome.parts, translated: outcome.translated, lost: outcome.lost })
+    if (!outcome.ok) {
+      setError(outcome.erreur)
+      focusAfter(runRef)
+      return
+    }
+    setProposal({ before, after: outcome.parts, translated: outcome.translated, lost: outcome.lost })
+    focusAfter(proposalRef)
+  }
+
+  function close() {
+    setProposal(null)
+    focusAfter(runRef)
   }
 
   function apply() {
     if (!shown) return
     onPatch(Object.fromEntries(changed.map(({ key, field }) => [field, shown.after[key]])))
-    setProposal(null)
+    close()
   }
 
   return (
     /* Un champ, des puces et une comparaison : ce panneau garde sa mesure de
        lecture plutôt que de s'étaler sur toute la colonne. */
-    <div className="flex max-w-[880px] flex-col gap-[14px]" data-ai-panel>
+    <div className="flex max-w-[880px] flex-col gap-[14px]" data-ai-panel ref={rootRef}>
       <div>
         <label className="tiny mb-[4px] block" htmlFor="aiInstruction">
           Consigne <span className="text-dim2">(facultative)</span>
@@ -147,6 +162,7 @@ export function AiPanel({
       <div className="flex items-center gap-[12px]">
         <span data-hint-text={enhancer.comfy ? undefined : 'nécessite ComfyUI en ligne'}>
           <button
+            ref={runRef}
             type="button"
             className="btn primary"
             data-ai-run
@@ -170,7 +186,13 @@ export function AiPanel({
       )}
 
       {shown && (
-        <div className="rounded-card border border-line bg-panel px-[12px] py-[10px]" data-ai-proposal>
+        <div
+          ref={proposalRef}
+          tabIndex={-1}
+          aria-label="Réécriture proposée"
+          className="rounded-card border border-line bg-panel px-[12px] py-[10px]"
+          data-ai-proposal
+        >
           <p className="m-0 mb-[8px] text-[12.5px]" data-ai-summary>
             {changed.length === 0
               ? 'Aucun fragment ne change.'
@@ -206,7 +228,7 @@ export function AiPanel({
             <button type="button" className="btn sm" data-ai-vary disabled={busy} onClick={() => void run(true)}>
               Proposer autre chose
             </button>
-            <button type="button" className="btn sm" data-ai-reject onClick={() => setProposal(null)}>
+            <button type="button" className="btn sm" data-ai-reject onClick={close}>
               Rejeter
             </button>
           </div>

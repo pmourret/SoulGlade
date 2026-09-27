@@ -461,7 +461,7 @@
           "s": "cours",
           "it": "IT-10",
           "t": "Amélioration des prompts par IA",
-          "d": "« Améliorer » sur chaque fragment et panneau IA de la scène, dialecte par famille, mots perdus signalés, Gemma 4 par llama-server avec ComfyUI en repli, instruction d’édition traduite. Reste l’audit.",
+          "d": "« Améliorer » sur chaque fragment et panneau IA de la scène, dialecte par famille, mots perdus signalés, Gemma 4 par llama-server avec ComfyUI en repli, instruction d’édition traduite, audit vérifié en vrai. Reste la rétro.",
           "ref": "DOCS/cadrage/2026-09-27-it10-c8-amelioration-ia.md"
         }
       ]
@@ -1396,6 +1396,10 @@
   "horizon": {
     "note": "Ce qui n'entre dans aucune itération et n'a pas de date. Relu à chaque fermeture d'itération : ce qui parle encore peut monter en EPIC, par cadrage explicite.",
     "items": [
+      {
+        "t": "Flèches du clavier dans les sélecteurs segmentés",
+        "d": "(27 septembre 2026) Relevé à l’audit du chantier 8 d’IT-10 : les dix groupes `role=radiogroup` du studio offrent un arrêt de tabulation par option et ne répondent pas aux flèches, contre le motif ARIA. Un correctif partagé pour tous, pas un écran à la fois."
+      },
       {
         "t": "Mettre en prose le prompt assemblé pour Flux",
         "d": "(27 septembre 2026) Le guide officiel de Flux veut le prompt entier en un paragraphe de prose ; l'assembleur joint des fragments par des virgules. Une passe de mise en prose verrait l'ancre, rendrait la production non déterministe et toucherait l'invariant 3. Écarté du chantier 8 d'IT-10, qui applique le guide au niveau du fragment."
