@@ -458,10 +458,10 @@
           "ref": "DOCS/cadrage/2026-09-26-it10-c7bis-studio-lumiere.md"
         },
         {
-          "s": "cours",
+          "s": "fait",
           "it": "IT-10",
           "t": "Amélioration des prompts par IA",
-          "d": "« Améliorer » sur chaque fragment et panneau IA de la scène, dialecte par famille, mots perdus signalés, Gemma 4 par llama-server avec ComfyUI en repli, instruction d’édition traduite, audit vérifié en vrai. Reste la rétro.",
+          "d": "« Améliorer » sur chaque fragment, panneau IA de la scène, instruction d’édition traduite. Gemma 4 par llama-server, ComfyUI en repli ; dialecte par famille, mots perdus signalés.",
           "ref": "DOCS/cadrage/2026-09-27-it10-c8-amelioration-ia.md"
         }
       ]
