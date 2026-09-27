@@ -350,6 +350,8 @@ function SettingRow({
      next to it. A deviation is a warning: it is a choice one is answerable
      for, which is exactly what `--warn-txt` says everywhere else. */
   const off = hasReference && !measured
+  /* A real <label for>, not a bold word next to the field: a screen reader
+     read « Format imposé » as an unnamed list (audit of 27/09). */
   const title = `text-[13.5px] font-semibold ${off ? 'text-warn-txt' : ''}`
   const field = `${FIELD} ${off ? FIELD_OFF : FIELD_REF}`
 
@@ -385,7 +387,7 @@ function SettingRow({
     return (
       <div className={classes} data-rg data-id={item.id}>
         <div className={ROW_HEAD}>
-          <b className={title}>{item.label}</b>
+          <label className={title} htmlFor={item.id}>{item.label}</label>
         </div>
         <select
           className={`${field}${inert ? ' pointer-events-none' : ''}`}
@@ -408,7 +410,7 @@ function SettingRow({
     return (
       <div className={classes} data-rg data-id={item.id}>
         <div className={ROW_HEAD}>
-          <b className={title}>{item.label}</b>
+          <label className={title} htmlFor={item.id}>{item.label}</label>
         </div>
         <input
           className={`${field}${inert ? ' pointer-events-none' : ''}`}
@@ -428,7 +430,7 @@ function SettingRow({
   return (
     <div className={classes} data-rg data-id={item.id}>
       <div className={ROW_HEAD}>
-        <b className={title}>{item.label}</b>
+        <label className={title} htmlFor={item.id}>{item.label}</label>
         <span className="flex-1" />
         <span
           className={`text-[13px] font-semibold tabular-nums ${off ? 'text-warn-txt' : 'text-txt'}`}

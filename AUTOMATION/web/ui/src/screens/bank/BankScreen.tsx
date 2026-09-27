@@ -446,7 +446,17 @@ export function BankScreen({ view }: { view: 'scenes' | 'poses' | 'tones' | 'ass
                 </button>
               </div>
               <div className="flex items-center gap-[6px]">
-                <button className="btn primary sm flex-1" id="btnAddScene" onClick={bench.add}>
+                {/* Like opening a card: the new scene opens in the composer,
+                    and a drawer left open would cover it while the focus sits
+                    in its id field underneath (audit of 27/09, at 1024). */}
+                <button
+                  className="btn primary sm flex-1"
+                  id="btnAddScene"
+                  onClick={() => {
+                    bench.add()
+                    if (narrow) closeList()
+                  }}
+                >
                   Nouvelle scène
                 </button>
                 {world && (

@@ -400,6 +400,9 @@ const ONGLET = k => `[data-tab="${k}"]`;
   const imposables = await page.$$eval('#format option', e => e.map(x => x.value).filter(Boolean));
   dire(JSON.stringify(imposables) === JSON.stringify(formatsConfig),
        `format imposé = config.json (${imposables.join(', ')})`);
+  // audit du 27/09 : le titre d'un reglage est un vrai <label for>
+  dire((await page.$eval('label[for="format"]', e => e.textContent.trim()).catch(() => '')) === 'Format imposé',
+       'le select « Format imposé » est nommé par son label');
 
   console.log('\n[11] la pastille « mesuré » suit config.json');
   /* L'etat de la pastille se lit sur un ATTRIBUT, jamais dans son `class` :

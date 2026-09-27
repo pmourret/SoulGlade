@@ -809,6 +809,21 @@ async function allerA(page, categorie, module) {
        `aucune trace laissee par la fumigation (${restant.length} ecart(s))`);
   restant.slice(0, 6).forEach(e => console.log('      ' + e));
 
+  console.log('\n[16b] en largeur etroite, « Nouvelle scène » ferme le tiroir (audit du 27/09)');
+  /* A 1024 la liste est un tiroir. Une carte ouverte le fermait, « Nouvelle
+     scène » non : le tiroir couvrait la scene neuve, dont le champ d'id avait
+     le focus dessous, et Escape fermait la scene au lieu du tiroir. */
+  const etroit = await nav.newPage({ viewport: { width: 1024, height: 900 } });
+  await etroit.goto(BASE + '/bank/scenes?character=lena', { waitUntil: 'networkidle' });
+  await etroit.click('#btnScenesDrawer');
+  await etroit.waitForSelector('#sceneListPanel');
+  await etroit.click('#btnAddScene');
+  await etroit.waitForSelector('#sceneInspector');
+  dire(!(await etroit.isVisible('#sceneListPanel')), 'le tiroir se ferme sur la scene neuve');
+  dire(await etroit.evaluate(() => document.activeElement?.id === 'sceneId'),
+       'et le focus est dans son champ d id, a decouvert');
+  await etroit.close();
+
   console.log('\n[17] aucune erreur JS sur tout le parcours');
   dire(erreurs.length === 0, `${erreurs.length} erreur(s)`);
   erreurs.forEach(e => console.log('      ' + e.slice(0, 150)));
