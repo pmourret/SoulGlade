@@ -86,6 +86,7 @@ TESTS = [
     "test_character_filter",  # unitaire pur : recherche du registre (ecran 14)
     "test_wizard_missing",  # unitaire pur : ce qui manque a chaque etape du wizard (ecran 14)
     "test_light_compose",   # unitaire : la phrase d'une fiche, ecran == serveur (IT-10 7 bis)
+    "test_color_name",      # unitaire pur : nom anglais d une couleur d effet libre (design-pass lumieres)
 
     "test_charte",        # transverse, statique : sur-titre, barres, rayon de pack
     "test_cadres_ua",     # transverse : le cadre du navigateur sur un <button>

@@ -131,6 +131,10 @@ details.adjsec[open] > :not(summary){margin:0 0 16px}
 .chip-t:hover{border-color:var(--dim2);color:var(--txt)}
 .chip-t.on{background:var(--pri);border-color:var(--pri);
            color:var(--on-pri);font-weight:600}
+/* The light sheet (design-pass lumieres, S3.4): the picked chip is the text
+   colour laid flat, with a tick drawn inside it — it reads by shape, and
+   follows the character's neutral where `--pri` would not. */
+#lightInspector .chip-t.on{background:var(--txt);border-color:var(--txt);color:var(--bg)}
 
 /* -------------------------------------------------------- empty states */
 .empty{text-align:center;color:var(--dim);padding:60px 20px}

@@ -1,16 +1,22 @@
 /* The effects of a studio sheet (IT-10 7 bis) — presentational.
 
    Several at once. An effect whose fragment says `{color}` takes a colour: a
-   swatch of the short palette, or the user's own words (« deep violet »).
+   swatch of the short palette, or « Autre… », the free colour picked on a
+   wheel and stored as the user's own English words (« deep violet »). The
+   grid runs in three columns; a ticked effect that takes a colour spans the
+   whole row to carry its swatches (design-pass lumieres, S3/S6).
    The user's own effects (`light_effects`) sit under the platform's, and a
    new one is created right here: a label, an English fragment. */
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
+import { oklchToHex } from '../../../chrome/theme/oklch'
+import { colorFromName, frenchName } from './colorName'
+import { EffectColorPicker } from './EffectColorPicker'
 import type { LightEffectEntry } from './useLights'
 import { takesColor, type EffectChoice, type EffectDef, type Vocabulary } from './lightCompose'
 
 function EffectRow({
-  effect, choice, vocabulary, disabled, mark, onToggle, onColor, onDelete,
+  effect, choice, vocabulary, disabled, mark, picking, onPicking, onToggle, onColor, onDelete,
 }: {
   effect: EffectDef
   choice: EffectChoice | undefined
@@ -18,6 +24,9 @@ function EffectRow({
   disabled: boolean
   /** Where a user's effect comes from; '' for the platform's. */
   mark: string
+  /** Its free-colour picker is the open one: one at a time, one set of ids. */
+  picking: boolean
+  onPicking: (open: boolean) => void
   onToggle: (on: boolean) => void
   onColor: (color: string) => void
   onDelete?: () => void
@@ -25,10 +34,17 @@ function EffectRow({
   const id = `lightFx-${effect.key}`
   const color = choice?.color ?? ''
   const free = vocabulary.palette.some((c) => c.key === color) ? '' : color
+  const otherRef = useRef<HTMLButtonElement | null>(null)
+  const colored = Boolean(choice && takesColor(effect))
+  const approx = free ? colorFromName(free) : null
+  const closePicker = () => {
+    onPicking(false)
+    otherRef.current?.focus()
+  }
   return (
-    <li className="flex flex-col gap-[5px]" data-light-effect={effect.key}>
-      <div className="flex items-center gap-[6px] text-[12.5px]">
-        <input id={id} type="checkbox" className="w-auto" checked={Boolean(choice)} disabled={disabled}
+    <li className={`flex min-w-0 flex-col gap-[5px] ${colored ? 'col-span-full' : ''}`} data-light-effect={effect.key}>
+      <div className="flex items-start gap-[6px] text-[12.5px]">
+        <input id={id} type="checkbox" className="mt-[2px] w-auto" checked={Boolean(choice)} disabled={disabled}
                onChange={(event) => onToggle(event.target.checked)} />
         <label htmlFor={id} className="min-w-0 flex-1">
           {effect.label}
@@ -42,33 +58,61 @@ function EffectRow({
           </button>
         )}
       </div>
-      {choice && takesColor(effect) && (
-        <div className="ml-[20px] flex flex-wrap items-center gap-[5px]" role="group"
-             aria-label={`Couleur de ${effect.label}`}>
-          {vocabulary.palette.map((c) => (
+      {colored && (
+        <>
+          <div className="relative ml-[20px] flex flex-wrap items-center gap-[5px]" role="group"
+               aria-label={`Couleur de ${effect.label}`}>
+            {vocabulary.palette.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                aria-label={c.label}
+                aria-pressed={color === c.key}
+                title={c.label}
+                data-color={c.key}
+                disabled={disabled}
+                className={`h-[20px] w-[20px] rounded-[4px] border-2 ${color === c.key ? 'border-txt' : 'border-line'}`}
+                style={{ backgroundColor: c.swatch }}
+                onClick={() => onColor(c.key)}
+              />
+            ))}
             <button
-              key={c.key}
+              ref={otherRef}
               type="button"
-              aria-label={c.label}
-              aria-pressed={color === c.key}
-              title={c.label}
-              data-color={c.key}
+              aria-pressed={Boolean(free)}
+              aria-haspopup="dialog"
+              aria-expanded={picking}
+              data-color-other
               disabled={disabled}
-              className={`h-[20px] w-[20px] rounded-[4px] border-2 ${color === c.key ? 'border-txt' : 'border-line'}`}
-              style={{ backgroundColor: c.swatch }}
-              onClick={() => onColor(c.key)}
-            />
-          ))}
-          <label className="sr-only" htmlFor={`${id}-free`}>Autre couleur, en anglais</label>
-          <input
-            id={`${id}-free`}
-            className="h-[24px] w-[110px] text-[12px]"
-            placeholder="autre : deep violet"
-            value={free}
-            disabled={disabled}
-            onChange={(event) => onColor(event.target.value)}
-          />
-        </div>
+              className={`flex h-[20px] items-center gap-[5px] rounded-[4px] border bg-transparent py-0 pr-[7px] pl-[2px]
+                          text-[12px] ${free ? 'border-txt text-txt' : 'border-line text-dim hover:text-txt'}`}
+              onClick={() => onPicking(!picking)}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-[14px] w-[14px] rounded-[3px] ${approx ? '' : 'border border-dashed border-dim2'}`}
+                style={approx ? { background: oklchToHex(approx.l, approx.c, approx.h) } : undefined}
+              />
+              Autre…
+            </button>
+            {picking && (
+              <EffectColorPicker
+                effectLabel={effect.label}
+                initial={free}
+                onCancel={closePicker}
+                onUse={(words) => {
+                  onColor(words)
+                  closePicker()
+                }}
+              />
+            )}
+          </div>
+          {free && (
+            <span className="ml-[20px] text-[12px] text-dim" data-color-free>
+              {frenchName(free) ?? 'Couleur libre'} · <span className="font-code">{free}</span>
+            </span>
+          )}
+        </>
       )}
     </li>
   )
@@ -90,6 +134,7 @@ export function LightEffectsField({
   onDeleteEffect: (effect: LightEffectEntry) => void
 }) {
   const [creating, setCreating] = useState(false)
+  const [picking, setPicking] = useState<string | null>(null)
   const [label, setLabel] = useState('')
   const [fragment, setFragment] = useState('')
 
@@ -104,6 +149,8 @@ export function LightEffectsField({
         disabled={disabled}
         mark={mark}
         onDelete={onDelete}
+        picking={picking === effect.key}
+        onPicking={(open) => setPicking(open ? effect.key : null)}
         onToggle={(on) => onChange(on ? [...chosen, { key: effect.key, color: '' }]
                                       : chosen.filter((c) => c.key !== effect.key))}
         onColor={(color) => onChange(chosen.map((c) => (c.key === effect.key ? { ...c, color } : c)))}
@@ -120,16 +167,24 @@ export function LightEffectsField({
   }
 
   return (
-    <div className="flex flex-col gap-[6px]" id="lightEffects">
-      <span className="lab">Effets</span>
-      <ul className="m-0 flex list-none flex-col gap-[7px] p-0">
+    <div className="flex flex-col gap-[8px]" id="lightEffects">
+      <div className="flex items-center gap-[8px]">
+        <span className="lab flex-1">Effets · {chosen.length} choisi{chosen.length > 1 ? 's' : ''}</span>
+        {!creating && (
+          <button type="button" className="btn sm" id="btnLightEffectNew" disabled={disabled}
+                  onClick={() => setCreating(true)}>
+            Créer un effet…
+          </button>
+        )}
+      </div>
+      <ul className="m-0 grid list-none grid-cols-3 gap-x-[16px] gap-y-[8px] p-0">
         {vocabulary.effects.map((effect) => row(effect, ''))}
         {custom.map((effect) =>
           row({ key: effect.key, label: effect.label || effect.key, fragment: effect.fragment ?? '' },
               effect.couche === 'personnage' ? 'à vous' : 'du monde',
               () => onDeleteEffect(effect)))}
       </ul>
-      {creating ? (
+      {creating && (
         <div className="mt-[4px] flex flex-col gap-[6px] rounded-card border border-line p-[10px]" id="lightEffectNew">
           <label className="lab" htmlFor="lightEffectLabel">Nouvel effet</label>
           <input id="lightEffectLabel" className="text-[13px]" placeholder="Lueur de bougie" value={label}
@@ -152,11 +207,6 @@ export function LightEffectsField({
             </button>
           </div>
         </div>
-      ) : (
-        <button type="button" className="btn sm self-start" id="btnLightEffectNew" disabled={disabled}
-                onClick={() => setCreating(true)}>
-          Créer un effet…
-        </button>
       )}
     </div>
   )

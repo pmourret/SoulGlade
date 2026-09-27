@@ -2,7 +2,7 @@
 
    The routes of `/api/lights`, `/api/light-effects` and `/api/lighting`, and
    nothing else: LightsView composes, this hook loads and mutates,
-   LightInspector only shows (frontend.md, the three roles). Every light
+   LightSheet only shows (frontend.md, the three roles). Every light
    carries its `couche`, its `texte` — what a scene that wears it receives —
    and its `erreur` when it does not resolve.
 

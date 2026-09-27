@@ -69,7 +69,15 @@ const EFFET = 'Fumée de fumigation';
     dire(await page.isVisible('#bankView [data-vue="lights"]'), 'l\'onglet « Lumières » est là');
 
     console.log('\n[2] créer une lumière depuis un schéma, la phrase suit sous les yeux');
-    await page.click('#btnLightNew');
+    /* Design-pass lumieres: with no light the new sheet is already open and
+       « Créer la lumière » is the only call; « Nouvelle lumière » only exists
+       next to a list. */
+    if (avant.length === 0) {
+      dire(!(await page.isVisible('#btnLightNew')) && await page.isVisible('#lightsEmpty'),
+           'aucune lumière : la fiche neuve est ouverte, un seul appel de création');
+    } else {
+      await page.click('#btnLightNew');
+    }
     await page.waitForSelector('#lightSchemes [data-scheme="cyberpunk"]');
     await page.fill('#lightLabel', LABEL);
     await page.click('#lightSchemes [data-scheme="cyberpunk"]');
@@ -80,7 +88,14 @@ const EFFET = 'Fumée de fumigation';
     dire((await phrase()).includes('from behind the subject'), 'la direction, choisie sur le schéma, suit');
     await page.click('[data-light-effect="neon_reflections"] [data-color="green"]');
     dire((await phrase()).includes('green neon reflections'), 'la couleur de palette d\'un effet suit');
-    await page.fill('#lightFx-wet_floor-free', 'deep violet');
+    // The free colour: « Autre… » opens the wheel, which proposes words; the
+    // words are the user's to rewrite, and only they reach the prompt.
+    await page.click('[data-light-effect="wet_floor"] [data-color-other]');
+    await page.waitForSelector('#lightFxColor');
+    const propose = await page.inputValue('#lightFxColorName');
+    dire(/^[a-z ]+$/.test(propose), `la roue propose des mots anglais (« ${propose} »), jamais une valeur`);
+    await page.fill('#lightFxColorName', 'deep violet');
+    await page.click('#btnLightFxColorUse');
     dire((await phrase()).includes('wet ground reflecting deep violet lights'), 'une couleur libre aussi');
     await page.click('#btnLightEffectNew');
     await page.fill('#lightEffectLabel', EFFET);
