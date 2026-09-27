@@ -15,7 +15,12 @@
    Windows (no graceful shutdown signal, TerminateProcess cuts mid-job) —
    said before acting, not after. Ported verbatim from the Application
    screen's own `onAppStop`/`onComfyStop`, which now call this instead of
-   carrying the logic themselves. */
+   carrying the logic themselves.
+
+   `unloadMemory` JOINED THEM on 27/09/2026: the RAM and VRAM probes of the
+   header offer it too, so it could no longer live in the Application screen
+   alone. One route frees both — ComfyUI's /free unloads the models and drops
+   what it caches, on the card and in memory. */
 import { useCallback, useState, type ReactNode } from 'react'
 
 import { errorOf, type Schema } from '../api/client'
@@ -33,9 +38,12 @@ export function useProcessControls() {
   const confirm = useConfirm()
   const toast = useToast()
   const { append } = useServerLog()
-  const { refresh: refreshProbes } = useComfyStats()
+  const { stats, refresh: refreshStats } = useComfyStats()
   const { state } = useSystemState()
   const running = Boolean(state?.running)
+  /** Why unloading is not possible now, '' when it is: only if ComfyUI
+      answers, and never under a production (the server refuses it too). */
+  const unloadReason = running ? 'une production est en cours' : stats?.en_ligne ? '' : 'ComfyUI ne répond pas'
   /** Set only by `stopApp` — a stopped dashboard replaces the whole screen
       with this message, wherever the button that triggered it lives
       (`Takeover` portals to `document.body`, so it covers everything
@@ -104,8 +112,8 @@ export function useProcessControls() {
     if (!(await post('/api/app/comfy/stop'))) return
     append('ComfyUI arrêté')
     toast('ComfyUI arrêté')
-    refreshProbes()
-  }, [confirm, post, append, toast, refreshProbes, running])
+    refreshStats()
+  }, [confirm, post, append, toast, refreshStats, running])
 
   /* Not destructive the way a stop is — it comes back — but it costs 30 s to
      2 min and kills a running batch, so it confirms like its siblings. */
@@ -132,5 +140,27 @@ export function useProcessControls() {
     toast('redémarrage de ComfyUI lancé (~30 s à 2 min)')
   }, [confirm, post, append, toast, running])
 
-  return { stopApp, stopComfy, restartComfy, takeover }
+  const unloadMemory = useCallback(async () => {
+    const ok = await confirm({
+      title: 'Décharger la mémoire ?',
+      button: 'Décharger',
+      body: (
+        <>
+          <p>
+            Libère la VRAM et la RAM que les modèles chargés retiennent. ComfyUI{' '}
+            <b>reste en ligne</b> : les modèles se rechargent d'eux-mêmes à la
+            prochaine génération, qui sera donc un peu plus longue.
+          </p>
+          <p className="tiny">Rien n'est perdu — ni file d'attente, ni image.</p>
+        </>
+      ),
+    })
+    if (!ok) return
+    if (!(await post('/api/app/comfy/unload'))) return
+    append('mémoire ComfyUI déchargée')
+    toast('mémoire déchargée')
+    refreshStats()
+  }, [confirm, post, append, toast, refreshStats])
+
+  return { stopApp, stopComfy, restartComfy, unloadMemory, unloadReason, takeover }
 }

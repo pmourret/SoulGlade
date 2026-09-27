@@ -19,8 +19,14 @@
    vanished — while the card still reported 1.6 GB held and 53 °C. Those are
    facts about the MACHINE, not about ComfyUI, and it is precisely when ComfyUI
    is down that one wants to know whether something is holding the VRAM. So we
-   show what we know, and nothing more. */
+   show what we know, and nothing more.
+
+   RAM AND VRAM UNLOAD ON A CLICK (27/09/2026): the gesture of the Application
+   screen, from where the figure is read. Same confirmation, same refusal
+   under a production (`useProcessControls`); when it is not possible, the
+   probe stays a plain reading and its tooltip says why. */
 import { useComfyStats, type ComfyStats } from '../state/ComfyStatsContext'
+import { useProcessControls } from './useProcessControls'
 
 /* The `gpu` field is `Optional[Any]` in the Pydantic model, so the generated
    schema types it as unknown. This is the narrow shape the UI actually READS —
@@ -70,18 +76,32 @@ function known(stats: ComfyStats | null) {
    only on hover would be lost to keyboard navigation. The label is the probe's
    name, the figure is its reading: the threshold colours the FIGURE only, so
    colour never carries the information alone. */
-function Probe({ label, value, hint, level }: { label: string; value: string; hint: string; level: string }) {
-  return (
-    <span className={`sonde-hd${level ? ' ' + level : ''}`} tabIndex={0} data-hint-text={hint}>
+function Probe({
+  label, value, hint, level, onClick,
+}: { label: string; value: string; hint: string; level: string; onClick?: () => void }) {
+  const className = `sonde-hd${level ? ' ' + level : ''}`
+  const inner = (
+    <>
       <span className="sonde-hd-lab">{label}</span>
       <b>{value}</b>
-    </span>
+    </>
+  )
+  return onClick ? (
+    <button type="button" className={`${className} cursor-pointer border-0 bg-transparent p-0 hover:text-txt`}
+            data-hint-text={hint} aria-label={`${label} ${value} — décharger la mémoire`} onClick={onClick}>
+      {inner}
+    </button>
+  ) : (
+    <span className={className} tabIndex={0} data-hint-text={hint}>{inner}</span>
   )
 }
 
 export function ProbeStrip() {
   const { stats } = useComfyStats()
   const { ram, vram, gpu } = known(stats)
+  const { unloadMemory, unloadReason } = useProcessControls()
+  const unload = unloadReason ? undefined : () => void unloadMemory()
+  const unloadHint = unloadReason ? ` · déchargement impossible : ${unloadReason}` : ' · cliquer pour décharger la mémoire'
 
   return (
     <div className="sondes-hd" id="sondesHd">
@@ -89,8 +109,9 @@ export function ProbeStrip() {
         <Probe
           label="RAM"
           value={`${percent(ram.utilisee, ram.total)} %`}
-          hint={`Mémoire vive — ${gb(ram.utilisee)} / ${gb(ram.total)} Go utilisés`}
+          hint={`Mémoire vive — ${gb(ram.utilisee)} / ${gb(ram.total)} Go utilisés${unloadHint}`}
           level={memoryLevel(percent(ram.utilisee, ram.total))}
+          onClick={unload}
         />
       )}
       {vram && (
@@ -100,9 +121,11 @@ export function ProbeStrip() {
           hint={
             `Mémoire de la carte (VRAM) — ${gb(vram.utilisee)} / ${gb(vram.total)} Go utilisés · ` +
             `${gpu?.nom || vram.nom || 'carte graphique'}` +
-            (vram.source === 'pilote' ? ' · relevé par le pilote, ComfyUI étant arrêté' : '')
+            (vram.source === 'pilote' ? ' · relevé par le pilote, ComfyUI étant arrêté' : '') +
+            unloadHint
           }
           level={memoryLevel(percent(vram.utilisee, vram.total))}
+          onClick={unload}
         />
       )}
       {/* Absent on a machine without nvidia-smi, and that is a normal case: we

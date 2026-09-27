@@ -54,7 +54,7 @@ export function ApplicationScreen() {
   const toast = useToast()
   const { state } = useSystemState()
   const { stats, refresh: refreshProbes } = useComfyStats()
-  const { lines, append } = useServerLog()
+  const { lines } = useServerLog()
   const { sheet } = useCharacter()
   const nsfw = useNsfwState()
   const journal = useJournal()
@@ -62,22 +62,14 @@ export function ApplicationScreen() {
   /* Stop THIS dashboard / stop ComfyUI / restart ComfyUI: shared with the
      header's power menu and the fault banner, same confirmation, same
      consequence — see chrome/useProcessControls.tsx. Restart of the dashboard
-     and unload stay local: only this screen offers them. */
-  const { stopApp, stopComfy, restartComfy, takeover: stopTakeover } = useProcessControls()
+     stays local: only this screen offers it. Unloading the memory is shared
+     with the header's RAM and VRAM probes (27/09). */
+  const { stopApp, stopComfy, restartComfy, unloadMemory, unloadReason, takeover: stopTakeover } =
+    useProcessControls()
 
   usePolling(refreshProbes, { intervalMs: SCREEN_PROBE_MS, pauseWhenHidden: true })
 
   const online = Boolean(state?.comfy)
-  const running = Boolean(state?.running)
-
-  /* Unloading only makes sense if ComfyUI answers, and never under a production.
-     The state comes from the shared probe and the shared tick — one source for
-     what is displayed AND for what the button allows. */
-  const unloadReason = running
-    ? 'une production est en cours'
-    : stats?.en_ligne
-      ? ''
-      : 'ComfyUI ne répond pas'
 
   const post = useCallback(
     async (url: string): Promise<boolean> => {
@@ -91,28 +83,6 @@ export function ApplicationScreen() {
     },
     [api, toast],
   )
-
-  const onUnload = async () => {
-    const ok = await confirm({
-      title: 'Décharger la mémoire ?',
-      button: 'Décharger',
-      body: (
-        <>
-          <p>
-            Libère la VRAM que les modèles chargés retiennent. ComfyUI{' '}
-            <b>reste en ligne</b> : les modèles se rechargent d'eux-mêmes à la
-            prochaine génération, qui sera donc un peu plus longue.
-          </p>
-          <p className="tiny">Rien n'est perdu — ni file d'attente, ni image.</p>
-        </>
-      ),
-    })
-    if (!ok) return
-    if (!(await post('/api/app/comfy/unload'))) return
-    append('mémoire ComfyUI déchargée')
-    toast('mémoire déchargée')
-    refreshProbes()
-  }
 
   const onAppRestart = async () => {
     const ok = await confirm({
@@ -201,7 +171,7 @@ export function ApplicationScreen() {
             known={state !== null}
             stats={stats}
             unloadReason={unloadReason}
-            onUnload={onUnload}
+            onUnload={() => void unloadMemory()}
             onRestart={restartComfy}
             onStop={stopComfy}
           />
