@@ -35,11 +35,11 @@ from ..schemas.state import (
     AppearanceBrief, BaseCandidatesRequest, BaseCandidatesResponse,
     BaseFreezeRequest, BaseGenerateRequest, BaseGenerateResponse,
     BaseNameResponse, BaseUploadRequest, CharacterListResponse, CharacterSheet,
-    CreateCharacterRequest, CreateCharacterResponse,
+    CreateCharacterRequest, CreateCharacterResponse, GenderRequest,
     JournalResponse, NsfwStateResponse, SystemStateResponse,
     UniverseToolsResponse, WizardOptionsResponse,
 )
-from ..services.character import save_appearance
+from ..services.character import save_appearance, save_gender
 from ..services.creative import is_edit_tier
 
 router = APIRouter(responses=ERROR_RESPONSES)
@@ -207,6 +207,7 @@ async def get_character(character_id: RequiredCharacterId):
         "base": frozen_base_brief(cid),
         "nsfw_tool": nsfw_batch.edit_tool_state(cid),
         "appearance": reg.get("appearance") or {},
+        "gender": reg.get("gender"),
     }
 
 
@@ -220,6 +221,16 @@ async def set_character_appearance(payload: AppearanceBrief, character_id: Requi
                             payload.neutral_intensity, payload.accent_hue)
     ss.push_log(f"apparence personnalisee ({character_id})")
     return kept
+
+
+@router.post("/api/character/gender", response_model=GenderRequest,
+             summary="Déclarer le genre du personnage courant")
+async def set_character_gender(payload: GenderRequest, character_id: RequiredCharacterId):
+    """Writes the character's declared gender, or clears it with `null`. An
+    unknown value never reaches here: the schema rejects it as a 400."""
+    save_gender(character_id, payload.gender)
+    ss.push_log(f"genre {'déclaré' if payload.gender else 'retiré'} ({character_id})")
+    return {"gender": payload.gender}
 
 
 @router.get("/api/characters", response_model=CharacterListResponse,

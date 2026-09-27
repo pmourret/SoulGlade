@@ -132,6 +132,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/character/gender": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Déclarer le genre du personnage courant
+         * @description Writes the character's declared gender, or clears it with `null`. An
+         *     unknown value never reaches here: the schema rejects it as a 400.
+         */
+        post: operations["set_character_gender_api_character_gender_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/characters": {
         parameters: {
             query?: never;
@@ -2623,6 +2644,8 @@ export interface components {
             base: components["schemas"]["FrozenBaseBrief"];
             nsfw_tool: components["schemas"]["EditToolState"];
             appearance: components["schemas"]["AppearanceBrief"];
+            /** Gender */
+            gender?: ("feminine" | "masculine" | "neutral") | null;
         } & {
             [key: string]: unknown;
         };
@@ -3409,6 +3432,16 @@ export interface components {
             juges: number;
         } & {
             [key: string]: unknown;
+        };
+        /**
+         * GenderRequest
+         * @description The character's declared gender (`DOCS/cadrage/2026-09-27-genre-du-
+         *     personnage.md`). `None` clears it: absent means « not said », never an
+         *     empty string. A value outside the three is REJECTED (400), not guessed.
+         */
+        GenderRequest: {
+            /** Gender */
+            gender?: ("feminine" | "masculine" | "neutral") | null;
         };
         /** GradientDef */
         GradientDef: {
@@ -5990,6 +6023,51 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AppearanceBrief"];
+                };
+            };
+            /** @description Requête refusée */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorResponse"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_character_gender_api_character_gender_post: {
+        parameters: {
+            query?: {
+                /** @description Identifiant du personnage (registre CHARACTERS/). Obligatoire. */
+                character?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenderRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenderRequest"];
                 };
             };
             /** @description Requête refusée */

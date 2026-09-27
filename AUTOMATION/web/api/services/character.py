@@ -38,3 +38,29 @@ def save_appearance(character_id, neutral_hue, neutral_intensity, accent_hue):
     target.write_text(json.dumps(registry, ensure_ascii=False, indent=2),
                        encoding="utf-8")
     return kept
+
+
+GENDERS = ("feminine", "masculine", "neutral")
+
+
+def save_gender(character_id, gender):
+    """Writes the character's declared gender into `character.json`, key
+    `gender` (`DOCS/cadrage/2026-09-27-genre-du-personnage.md`). Same idiom as
+    `save_appearance`: `None` DROPS the key — absent is « not said » — and a
+    value outside `GENDERS` raises `ValueError` rather than being written.
+
+    Nothing that produces an image reads it: it is declared data, for the
+    outfit workshop's default silhouette and, later, the creation wizard.
+    """
+    if gender is not None and gender not in GENDERS:
+        raise ValueError(f"genre inconnu : « {gender} »")
+    target = lb.character_json_path(character_id)
+    registry = lb.load_character(character_id)
+    if gender is None:
+        registry.pop("gender", None)
+    else:
+        registry["gender"] = gender
+    shutil.copy(target, target.with_suffix(".json.bak"))
+    target.write_text(json.dumps(registry, ensure_ascii=False, indent=2),
+                       encoding="utf-8")
+    return gender

@@ -254,6 +254,75 @@
         }
       }
     },
+    "/api/character/gender": {
+      "post": {
+        "summary": "Déclarer le genre du personnage courant",
+        "description": "Writes the character's declared gender, or clears it with `null`. An\nunknown value never reaches here: the schema rejects it as a 400.",
+        "operationId": "set_character_gender_api_character_gender_post",
+        "parameters": [
+          {
+            "name": "character",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire.",
+              "title": "Character"
+            },
+            "description": "Identifiant du personnage (registre CHARACTERS/). Obligatoire."
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenderRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenderRequest"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Requête refusée",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/characters": {
       "get": {
         "summary": "Registre des personnages",
@@ -6629,6 +6698,22 @@
           },
           "appearance": {
             "$ref": "#/components/schemas/AppearanceBrief"
+          },
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "feminine",
+                  "masculine",
+                  "neutral"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
           }
         },
         "additionalProperties": true,
@@ -8310,6 +8395,29 @@
         ],
         "title": "GalleryResponse",
         "description": "Content of one sorting folder — of THIS character, and of it alone.\n\n`sans_mesure` is counted over the WHOLE folder, not over the 200 items\ndisplayed: the button announces what /api/mesurer will really have to do,\nand that one walks everything. The two figures contradicted each other as\nsoon as a folder went past 200 images."
+      },
+      "GenderRequest": {
+        "properties": {
+          "gender": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "feminine",
+                  "masculine",
+                  "neutral"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gender"
+          }
+        },
+        "type": "object",
+        "title": "GenderRequest",
+        "description": "The character's declared gender (`DOCS/cadrage/2026-09-27-genre-du-\npersonnage.md`). `None` clears it: absent means « not said », never an\nempty string. A value outside the three is REJECTED (400), not guessed."
       },
       "GradientDef": {
         "properties": {

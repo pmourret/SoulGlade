@@ -30,10 +30,12 @@ import { Link } from 'react-router-dom'
 
 import { useCharacter } from '../../character/CharacterContext'
 import { useChrome } from '../../chrome/ChromeContext'
+import { Segmented } from '../../chrome/Segmented'
 import { useSystemState } from '../../state/SystemStateContext'
 import { PATHS, appSectionPath, worldPlacesPath } from '../../app/routes'
 import { PropertyRow, PropertySection, StatusDot } from './PropertySection'
 import { SheetAside } from './SheetAside'
+import { useGender, type Gender } from './useGender'
 import {
   adultState, baseName, baseState, contentTypes, productionRows, styleLabel,
 } from './sheetRows'
@@ -55,6 +57,7 @@ export function CharacterSheetScreen() {
   const { claimed, sheet, sheetError, refreshSheet } = useCharacter()
   const { openIdentityMenu } = useChrome()
   const { state } = useSystemState()
+  const gender = useGender()
 
   /* The portrait URL is built HERE, where the claimed id lives, and handed to
      the presentation as a prop — a subcomponent never calls the API. The
@@ -211,6 +214,35 @@ export function CharacterSheetScreen() {
               }
             >
               {sheet.world?.label || '—'}
+            </PropertyRow>
+          </PropertySection>
+
+          {/* Declared, not frozen: it corrects like the appearance, and nothing
+              that produces an image reads it (cadrage 2026-09-27). */}
+          <PropertySection
+            title="Personnage"
+            rule="déclaré ici · donne la silhouette par défaut des Tenues"
+          >
+            <PropertyRow term="Genre">
+              <span className="inline-flex flex-wrap items-center gap-[10px]">
+                <Segmented<Gender | 'none'>
+                  id="sheetGender"
+                  label="Genre du personnage"
+                  value={sheet.gender ?? 'none'}
+                  options={[
+                    { value: 'feminine', label: 'Féminin' },
+                    { value: 'masculine', label: 'Masculin' },
+                    { value: 'neutral', label: 'Neutre' },
+                    { value: 'none', label: 'Non dit' },
+                  ]}
+                  /* Never disabled while it writes: a disabled button drops
+                     the keyboard focus. A second pick meanwhile is ignored. */
+                  onPick={(value) => !gender.busy && void gender.save(value === 'none' ? null : value)}
+                />
+                {gender.error && (
+                  <span className="text-[12.5px] text-danger-txt" role="alert">{gender.error}</span>
+                )}
+              </span>
             </PropertyRow>
           </PropertySection>
 

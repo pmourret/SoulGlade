@@ -3,7 +3,7 @@
 System state, character registry, wizard, universe tools, journal, NSFW state,
 lifecycle of the two processes.
 """
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -114,6 +114,16 @@ class EditToolState(BaseModel):
     reason: Optional[str] = None
 
 
+Gender = Literal["feminine", "masculine", "neutral"]
+
+
+class GenderRequest(BaseModel):
+    """The character's declared gender (`DOCS/cadrage/2026-09-27-genre-du-
+    personnage.md`). `None` clears it: absent means « not said », never an
+    empty string. A value outside the three is REJECTED (400), not guessed."""
+    gender: Optional[Gender] = None
+
+
 class AppearanceBrief(BaseModel):
     """The character's theme override (Phase 0b, `DOCS/design-pass/
     phase-0b-theme-utilisateur.md`) — hue/intensity of the neutral scale and
@@ -166,6 +176,9 @@ class CharacterSheet(BaseModel):
     base: FrozenBaseBrief
     nsfw_tool: EditToolState
     appearance: AppearanceBrief
+    # Declared, not frozen, and read by nothing that produces an image: only
+    # the outfit workshop's default silhouette (cadrage 2026-09-27).
+    gender: Optional[Gender] = None
 
 
 class CharacterRow(BaseModel):

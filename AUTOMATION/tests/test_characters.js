@@ -142,6 +142,20 @@ const BASE = process.env.DASHBOARD_URL || 'http://127.0.0.1:8199';
   dire(armants === 0, 'aucun controle d armement dans la fiche');
   dire(!(await vu('#armBox')), "aucune boite d'armement ouverte");
 
+  console.log('\n[6 bis] le genre se declare dans la fiche, et se relit (cadrage 2026-09-27)');
+  // Rendu tel qu'il etait : la valeur de depart est relue, puis reposee.
+  const genreDe = () => page.evaluate(async () =>
+    (await (await fetch('/api/character?character=abyssiaelle')).json()).gender ?? null);
+  const genreAvant = await genreDe();
+  await page.click('#sheetGender [data-value="masculine"]');
+  await page.waitForFunction(() =>
+    document.querySelector('#sheetGender [data-value="masculine"]')?.getAttribute('aria-pressed') === 'true',
+    null, { timeout: 5000 }).catch(() => {});
+  dire(await genreDe() === 'masculine', 'un clic ecrit le genre, et la fiche le relit');
+  await page.click(`#sheetGender [data-value="${genreAvant ?? 'none'}"]`);
+  await page.waitForTimeout(400);
+  dire(await genreDe() === genreAvant, `rendu a son etat de depart (${genreAvant ?? 'non dit'})`);
+
   console.log('\n[7] « Tous les personnages » rouvre le menu de l en-tete');
   dire(await vu('#ficheAutres'), 'le renvoi est present');
   await page.click('#ficheAutres');
