@@ -220,7 +220,7 @@ instruire, dans cet ordre (règle 6 : les données avant l'hypothèse) :
 | 1 | **Le service** | `AUTOMATION/enhance.py` : détection de la langue, traduction, amélioration par type, lecture de la réponse JSON. Le réglage `PLATFORM/llm.json`. Une route `POST /api/enhance` qui reçoit un type, un texte et le genre du sujet, et rend le texte proposé et s'il y a eu traduction. |
 | 2 | **Le bouton sur les fragments** | Dans `PromptField` (3 sites du composeur) et sur les champs des familles A et B-10. Comparaison `WordDiff`, ou côte à côte après une traduction. Accepter ou laisser. **Livré le 27/09.** Sur les tenues, le bouton ne porte que la pièce en cours d'écriture : une pièce déjà posée tient sur une ligne compacte, qu'un bloc de proposition casserait. |
 | 3 | **La scène entière** | `AiPanel` : consigne, raccourcis, les trois fragments ensemble ou un seul. **Rouvre la méthode, sur le modèle de Maestro** (décidé le 27/09) : dialecte du modèle d'image porté par le pack, consigne libre prioritaire, et le cas de Qwen Image Edit pour la famille D. **Livré le 27/09** : un appel par fragment, sans contexte ; « Proposer autre chose », portée, Appliquer en un seul geste annulable. À l'audit (étape 5) : les mots non repris sont en anglais sous un texte d'origine français. |
-| 3 bis | **Le moteur llama.cpp** | Décidé le 27/09 sur la comparaison de l'étape 3 : `PLATFORM/llm.json` choisit le moteur (ComfyUI ou `llama-server`). Installation par le manifeste, lancement, surveillance et place en VRAM ; Gemma 4 E4B heretic y devient le modèle par défaut. **Cadré le 27/09** (section « Étape 3 bis ») : ComfyUI et `qwen3vl_4b` en repli, cohabitation mesurée. |
+| 3 bis | **Le moteur llama.cpp** | Décidé le 27/09 sur la comparaison de l'étape 3 : `PLATFORM/llm.json` choisit le moteur (ComfyUI ou `llama-server`). Installation par le manifeste, lancement, surveillance et place en VRAM ; Gemma 4 E4B heretic y devient le modèle par défaut. **Cadré et livré le 27/09** (section « Étape 3 bis ») : ComfyUI et `qwen3vl_4b` en repli, cohabitation mesurée, veille native de llama-server. |
 | 4 | **Les consignes d'édition** | Le même bouton sur `EditStep` et `AiRetouchPanel`, en traduction seule. |
 | 5 | **Audit UX/UI vérifié en vrai** | Sur chaque écran touché (skill `audit-ux-ui`). |
 
@@ -398,8 +398,12 @@ et 4 scènes), avec un appel de chauffe avant chaque série :
      instance ;
    - il lance le serveur à la première demande, sans fenêtre, avec son
      journal dans un fichier ;
-   - il l'arrête après N minutes d'inactivité, mais seulement une instance
-     qu'il a lancée lui-même ;
+   - ~~il l'arrête après N minutes d'inactivité~~ **amendé le 27/09, avant
+     le code** : llama-server a sa propre veille (`--sleep-idle-seconds`).
+     Mesuré : après l'inactivité, il rend ses 3,2 Go de VRAM, et il se
+     réveille en 2,2 s au premier appel. Pas de minuteur ni de suivi de PID
+     chez nous, et, comme ComfyUI, le processus n'est jamais tué
+     automatiquement ;
    - il appelle `/v1/chat/completions` avec `enable_thinking: false`,
      toujours.
 4. **Le repli.** `enhance` passe par `llm_server`. Si l'exécutable ou le
@@ -417,10 +421,24 @@ et 4 scènes), avec un appel de chauffe avant chaque série :
    - qu'aucune seconde instance ne se lance si le port répond déjà ;
    - que `enable_thinking: false` part dans chaque requête ;
    - que l'ancre n'est jamais reçue, comme aujourd'hui ;
-   - l'arrêt après inactivité, et seulement pour une instance lancée par
-     nous.
+   - ~~l'arrêt après inactivité~~ (voir l'amendement du point 3) : deux
+     appels concurrents ne lancent jamais deux serveurs à la fois.
 7. **Le banc réel et l'essai dans l'interface**, avec le moteur installé par
    la commande et non celui de Maestro.
+
+**Livré le 27/09.** Vérifié en vrai :
+- **installation** par `--install` : `b10809` et le GGUF dans `.toolchain/llama/` ;
+- **banc par `enhance`** : démarrage à froid 5,2 s, puis 0,4 à 1,2 s par
+  fragment, et environ 2 s par scène ;
+- **veille** : la VRAM rendue (13,1 → 9,9 Go), réveil en 2,7 s ;
+- **repli** : exécutable absent, la réponse vient de `qwen3vl_4b` en 7,1 s,
+  avec la cause dans le journal ;
+- **panneau IA dans l'interface** : 1,9 s à chaud, contre 13,6 s avant.
+  Appliquer, puis Ctrl+Z, sans erreur.
+
+La route garde son 503 quand ComfyUI est éteint, et le bouton reste lié à
+ComfyUI en ligne. Dans le studio, ComfyUI tourne toujours ; lever cette
+condition viendra si le besoin se présente.
 
 **Hors de l'étape.**
 - **Les usages avec image** (le légendeur, l'analyse d'assets, le

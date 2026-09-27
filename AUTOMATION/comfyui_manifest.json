@@ -155,5 +155,14 @@
     {"filename": "ltx-av-step-1751000_vocoder_24K.safetensors", "dest": null, "url": null, "provenance": "Absent du depot officiel Lightricks/LTX-2.3 (releve le 2026-09-09) : repack communautaire non retrouve. Pipeline video hors V1.", "packs": ["nsfw", "experimental"], "note": "dest inconnue -- le provisionneur passe cette entree sans rien tenter."},
     {"filename": "ltx_2.3_22b_distilled_1.1_lora_dynamic_fro09_avg_rank_111_bf16.safetensors", "dest": "loras", "url": null, "provenance": "Absent du depot officiel Lightricks/LTX-2.3, qui publie ltx-2.3-22b-distilled-lora-384-1.1.safetensors (7,6 Go) ; ce repack dynamic_fro09 n'y figure pas (releve le 2026-09-09). Hors V1.", "packs": ["nsfw", "experimental"]},
     {"filename": "ltx-2.3-22b-dev-fp8.safetensors", "dest": null, "url": null, "provenance": "Le depot officiel Lightricks/LTX-2.3 publie ltx-2.3-22b-dev.safetensors (46,1 Go, non quantifie) ; la variante fp8 est un repack non retrouve (releve le 2026-09-09). Hors V1.", "packs": ["nsfw", "experimental"], "note": "dest inconnue -- le provisionneur passe cette entree sans rien tenter."}
-  ]
+  ],
+  "llm_server": {
+    "note": "Hors de ComfyUI : le moteur de l'amelioration des prompts (IT-10 chantier 8, etape 3 bis). Installe par `python AUTOMATION/llm_server.py --install` dans .toolchain/llama/, jamais au demarrage (6 Go). Absent, l'amelioration repart par ComfyUI. Archive CUDA 12.4 : une autre carte garde le repli. URL verifiees le 2026-09-27.",
+    "version": "b10809",
+    "archives": [
+      {"filename": "llama-b10809-bin-win-cuda-12.4-x64.zip", "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/llama-b10809-bin-win-cuda-12.4-x64.zip", "note": "242 Mo, contient llama-server.exe."},
+      {"filename": "cudart-llama-bin-win-cuda-12.4-x64.zip", "url": "https://github.com/ggml-org/llama.cpp/releases/download/b10809/cudart-llama-bin-win-cuda-12.4-x64.zip", "note": "373 Mo, les bibliotheques CUDA a poser a cote de l'executable."}
+    ],
+    "model": {"filename": "gemma-4-E4B-it-heretic-Q4_K_M.gguf", "url": "https://huggingface.co/Abhiray/gemma-4-E4B-it-heretic-GGUF/resolve/main/gemma-4-E4B-it-heretic-Q4_K_M.gguf", "note": "5,3 Go. Gemma 4 E4B decensure (Heretic), celui de Maestro. Choisi au banc du 27/09."}
+  }
 }

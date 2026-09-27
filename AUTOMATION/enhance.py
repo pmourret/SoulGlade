@@ -18,9 +18,13 @@ camera angle. The prompt carries NO example: under a user instruction, the
 model returned the example itself, word for word, as the rewrite (27/09).
 """
 import json
+import logging
 import re
 
 import llm_local
+import llm_server
+
+log = logging.getLogger(__name__)
 
 # Function words and accents: enough to tell a French fragment from an English
 # one without a model call. 13 out of 13 on the bench of 27/09.
@@ -118,8 +122,14 @@ _ANSWER = re.compile(r'"text"\s*:\s*("(?:[^"\\]|\\.)*")')
 
 
 def _ask(prompt, temperature, comfy_url):
-    raw = llm_local.texte(prompt, comfy_url=comfy_url, temperature=temperature,
-                          max_length=200, client_id="enhance")
+    """llama-server first (step 3 bis), ComfyUI when it cannot answer: the
+    user never sees which engine spoke, only a slower answer."""
+    try:
+        raw = llm_server.chat(prompt, temperature=temperature, max_tokens=200)
+    except llm_server.Unavailable as e:
+        log.warning("enhance: fallback to ComfyUI (%s)", e)
+        raw = llm_local.texte(prompt, comfy_url=comfy_url, temperature=temperature,
+                              max_length=200, client_id="enhance")
     m = _ANSWER.search(raw or "")
     text = " ".join(json.loads(m.group(1)).split()).strip(" ,.") if m else ""
     if not text:

@@ -1,6 +1,14 @@
 {
   "model": "qwen3vl_4b_fp8_scaled.safetensors",
   "loader_type": "krea2",
+  "server": {
+    "model_file": "gemma-4-E4B-it-heretic-Q4_K_M.gguf",
+    "port": 8199,
+    "gpu_layers": 99,
+    "context": 4096,
+    "sleep_idle_seconds": 300,
+    "start_timeout_seconds": 60
+  },
   "dialects": {
     "flux": [
       "Natural English descriptive phrases with their articles and prepositions, comma-separated, never a pile of keywords or tags.",
@@ -31,6 +39,12 @@
     "`dialects` : comment chaque FAMILLE de modele d'image lit un prompt",
     "(guides officiels, repris de Maestro). Le pack declare sa famille",
     "(universe.json / model_family) ; une famille sans dialecte recoit",
-    "`generic`. Ajouter une famille ecrit son dialecte ici (skill nouvel-pack)."
+    "`generic`. Ajouter une famille ecrit son dialecte ici (skill nouvel-pack).",
+    "`server` : le moteur de l'amelioration des prompts, llama-server",
+    "(llama.cpp) avec Gemma 4 E4B heretic, installe par",
+    "`python AUTOMATION/llm_server.py --install` dans .toolchain/llama/. Absent",
+    "ou en panne, l'amelioration repart par ComfyUI et `model`. Il se met en",
+    "veille apres `sleep_idle_seconds` et rend alors sa VRAM. Les usages avec",
+    "image restent sur ComfyUI. Mesure le 27/09 (cadrage, etape 3 bis)."
   ]
 }

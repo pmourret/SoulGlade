@@ -22,7 +22,15 @@ bouchon qui note chaque consigne recue et rend une reponse fixe) :
      `only` ne reecrit que le fragment vise ; un fragment vide le reste, sans
      appel ; `vary` monte la temperature ; la consigne passe EN PRIORITE ;
      avec une consigne, une perte est signalee sans relance (« plus court »
-     peut la demander) ; sans, une relance.
+     peut la demander) ; sans, une relance ;
+  9. LE MOTEUR llama-server (etape 3 bis), devant un faux serveur : sa reponse
+     est rendue sans passer par ComfyUI ; chaque requete coupe la reflexion ;
+     un port qui repond deja ne lance rien, deux appels concurrents ne lancent
+     jamais deux serveurs a la fois ; absent ou en erreur, l'appel repart par
+     ComfyUI ; le manifeste declare l'executable et le modele avec leur url.
+
+Le VRAI llama-server est coupe des l'en-tete (executable absent, port ferme) :
+sur un poste ou il est installe, aucun test ne le lance.
 
 Les personnages de sonde n'ont qu'un character.json, crees puis retires :
 aucun test ne suppose CHARACTERS/ peuple.
@@ -42,6 +50,7 @@ sys.path.insert(0, str(AUTOMATION))
 import compose                                # noqa: E402
 import enhance                                # noqa: E402
 import llm_local                              # noqa: E402
+import llm_server                             # noqa: E402
 import shared_state as ss                     # noqa: E402
 from api.main import app                      # noqa: E402
 from fastapi.testclient import TestClient     # noqa: E402
@@ -70,6 +79,17 @@ def bouchon(prompt, temperature=None, **_):
 
 
 llm_local.texte = bouchon
+
+
+def port_libre():
+    import socket
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", 0))
+        return sock.getsockname()[1]
+
+
+llm_server.EXE = Path("absent") / "llama-server.exe"
+llm_server.PORT = port_libre()
 
 
 async def vivant():
@@ -254,6 +274,97 @@ try:
 finally:
     for cid in SONDES:
         shutil.rmtree(OFM / "CHARACTERS" / cid, ignore_errors=True)
+
+print("9. le moteur llama-server")
+import http.server                            # noqa: E402
+import subprocess                             # noqa: E402
+import threading                              # noqa: E402
+import time                                   # noqa: E402
+
+RECUES = []
+STATUT = {"code": 200}
+
+
+class FauxServeur(http.server.BaseHTTPRequestHandler):
+    def log_message(self, *_):
+        pass
+
+    def _rend(self, code, corps):
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.end_headers()
+        self.wfile.write(json.dumps(corps).encode())
+
+    def do_GET(self):
+        self._rend(200, {"status": "ok"})
+
+    def do_POST(self):
+        RECUES.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+        self._rend(STATUT["code"], {"choices": [{"message": {"content": '{"text": "from llama"}'}}]})
+
+
+faux = http.server.ThreadingHTTPServer(("127.0.0.1", 0), FauxServeur)
+threading.Thread(target=faux.serve_forever, daemon=True).start()
+LANCES, MOMENTS = [], []
+popen_reel = subprocess.Popen
+subprocess.Popen = lambda cmd, **_: (LANCES.append(cmd), MOMENTS.append(time.time()))
+port_ferme = llm_server.PORT
+try:
+    llm_server.PORT = faux.server_address[1]
+    APPELS.clear()
+    r = enhance.enhance("light", "from llama")
+    verifie(r["text"] == "from llama" and APPELS == [], "la reponse vient de llama-server, pas de ComfyUI")
+    verifie(RECUES and all(b["chat_template_kwargs"] == {"enable_thinking": False} for b in RECUES),
+            "chaque requete coupe la reflexion")
+    verifie(RECUES[-1]["temperature"] == 0.2, "la temperature demandee est transmise")
+    verifie(LANCES == [], "le port repond deja : aucun serveur lance")
+
+    STATUT["code"] = 500
+    REPONSE["brut"] = '{"text": "from comfy"}'
+    r = enhance.enhance("light", "from comfy")
+    verifie(r["text"] == "from comfy" and APPELS, "serveur en erreur : repli sur ComfyUI")
+    STATUT["code"] = 200
+
+    llm_server.PORT = port_ferme
+    APPELS.clear()
+    r = enhance.enhance("light", "from comfy")
+    verifie(r["text"] == "from comfy" and APPELS and LANCES == [],
+            "non installe, port ferme : repli sur ComfyUI, rien de lance")
+
+    # Installed but never answering: each ensure() launches under the lock,
+    # so two concurrent calls never launch two servers at the same time.
+    exe, modele = llm_server.EXE, llm_server.MODEL
+    llm_server.EXE = llm_server.MODEL = Path(__file__)
+    delai = llm_server.SETTINGS["start_timeout_seconds"]
+    llm_server.SETTINGS["start_timeout_seconds"] = 1
+    erreurs = []
+
+    def demarre():
+        try:
+            llm_server.ensure()
+        except llm_server.Unavailable as e:
+            erreurs.append(e)
+
+    fils = [threading.Thread(target=demarre) for _ in range(2)]
+    for f in fils:
+        f.start()
+    for f in fils:
+        f.join()
+    llm_server.SETTINGS["start_timeout_seconds"] = delai
+    llm_server.EXE, llm_server.MODEL = exe, modele
+    verifie(len(erreurs) == 2, "installe mais muet : Unavailable, jamais un blocage")
+    verifie(len(LANCES) == 2 and MOMENTS[1] - MOMENTS[0] >= 0.9,
+            "deux appels concurrents : le second lance apres l'attente du premier (verrou)")
+    verifie("--sleep-idle-seconds" in LANCES[0] and "--jinja" in LANCES[0],
+            "lance avec la veille et le gabarit de chat")
+finally:
+    subprocess.Popen = popen_reel
+    faux.shutdown()
+
+manifeste = json.loads((AUTOMATION / "comfyui_manifest.json").read_text(encoding="utf-8"))["llm_server"]
+verifie(all(a.get("url") for a in manifeste["archives"]) and bool(manifeste["model"].get("url"))
+        and manifeste["model"]["filename"] == llm_server.SETTINGS["model_file"],
+        "manifeste : executable et modele declares avec leur url, le modele du reglage")
 
 print(f"\n{'OK' if not KO else f'{KO} ECHEC(S)'}")
 sys.exit(1 if KO else 0)
